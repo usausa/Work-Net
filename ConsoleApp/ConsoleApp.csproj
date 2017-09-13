@@ -1,17 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <CodeAnalysisRuleSet>..\Smart.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>Smart</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="1.1.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.0.2" />
-    <PackageReference Include="System.ComponentModel" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Smart\Work-Smart.csproj" />
   </ItemGroup>
 
 </Project>
