@@ -1,4 +1,4 @@
-﻿namespace Smart.Refrection
+﻿namespace Smart.Reflection
 {
     public static class NewConstraintFactory<T>
         where T : new()
