@@ -30,7 +30,9 @@
             AssemblyBuilderAccess.RunAndSave);
             //AssemblyBuilderAccess.Run); // TODO
 
-        private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule("DynamicActivator");
+        private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule(
+            "DynamicActivator",
+            "test.dll");    // TODO remove
 
         private static readonly Type CtorType = typeof(ConstructorInfo);
 
@@ -40,7 +42,7 @@
         {
             var typeBuilder = ModuleBuilder.DefineType(
                 ci.DeclaringType.FullName + "_DynamicActivator",
-                TypeAttributes.Public | TypeAttributes.AutoClass | TypeAttributes.AnsiClass | TypeAttributes.Sealed);
+                TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit);
 
             typeBuilder.AddInterfaceImplementation(typeof(IActivator));
 
@@ -51,7 +53,7 @@
                 FieldAttributes.Private | FieldAttributes.InitOnly);
             var sourceProperty = typeBuilder.DefineProperty(
                 "Source",
-                PropertyAttributes.None,
+                PropertyAttributes.HasDefault,
                 CtorType,
                 null);
             var getSourceProperty = typeBuilder.DefineMethod(
