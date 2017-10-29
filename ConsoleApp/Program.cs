@@ -28,12 +28,12 @@
         // TODO Assembly?
 
         private static readonly AssemblyBuilder AssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
-            new AssemblyName("DynamicActivator"),
+            new AssemblyName("DynamicActivatorAssembly"),
             AssemblyBuilderAccess.RunAndSave);
             //AssemblyBuilderAccess.Run); // TODO
 
         private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule(
-            "DynamicActivator",
+            "DynamicActivatorModule",
             "test.dll");    // TODO remove
 
         private static readonly Type CtorType = typeof(ConstructorInfo);
