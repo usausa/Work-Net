@@ -12,6 +12,8 @@
     {
         public static void Main(string[] args)
         {
+            //WorkDynamicProxy.Test();
+
             var type0 = typeof(Class0);
             var type1 = typeof(Class1);
             var ctor0 = type0.GetConstructors().First();
