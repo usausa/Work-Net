@@ -1,5 +1,7 @@
 ﻿namespace ConsoleApp
 {
+    using Smart.ComponentModel;
+
     public class Class0
     {
     }
@@ -12,5 +14,16 @@
         {
             Value = value;
         }
+    }
+
+    public class DataClass
+    {
+        public int IntValue { get; set; }
+
+        public string StringValue { get; set; }
+
+        public IValueHolder<int> IntNotificationValue { get; } = new NotificationValue<int>();
+
+        public IValueHolder<string> StringNotificationValue { get; } = new NotificationValue<string>();
     }
 }
