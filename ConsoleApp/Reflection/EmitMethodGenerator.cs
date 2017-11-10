@@ -122,9 +122,9 @@
             createIl.Emit(OpCodes.Newobj, ci);
             createIl.Emit(OpCodes.Ret);
 
-            var type = typeBuilder.CreateType();
+            var typeInfo = typeBuilder.CreateTypeInfo();
 
-            return (IActivator)Activator.CreateInstance(type, ci);
+            return (IActivator)Activator.CreateInstance(typeInfo.AsType(), ci);
         }
     }
 }
