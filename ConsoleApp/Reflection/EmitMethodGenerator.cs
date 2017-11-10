@@ -1,6 +1,4 @@
-﻿using ConsoleApp.Reflection;
-
-namespace ConsoleApp
+﻿namespace ConsoleApp.Reflection
 {
     using System;
     using System.Linq;
@@ -10,40 +8,55 @@ namespace ConsoleApp
     using Smart.Reflection;
     using Smart.Reflection.Emit;
 
-    public static class Program
+    /// <summary>
+    ///
+    /// </summary>
+    public static class EmitMethodGenerator
     {
-        public static void Main(string[] args)
-        {
-            //WorkDynamicProxy.Test();
+        private const string AssemblyName = "SmartDynamicActivatorAssembly";
 
-            var type0 = typeof(Class0);
-            var type1 = typeof(Class1);
-            var ctor0 = type0.GetConstructors().First();
-            var ctor1 = type1.GetConstructors().First();
-
-            var activator0 = EmitMethodGenerator.CreateActivator(ctor0);
-            var o = activator0.Create(null);
-        }
-
-        // Test
-
-        // TODO Assembly?
-
-        private static readonly AssemblyBuilder AssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
-            new AssemblyName("DynamicActivatorAssembly"),
-            AssemblyBuilderAccess.RunAndSave);
-            //AssemblyBuilderAccess.Run); // TODO
-
-        private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule(
-            "DynamicActivatorModule",
-            "test.dll");    // TODO remove
+        private const string ModuleName = "SmartDynamicActivatorModule";
 
         private static readonly Type CtorType = typeof(ConstructorInfo);
 
-        // TODO Attribute check
+        private static readonly object Sync = new object();
 
+        private static ModuleBuilder moduleBuilder;
+
+        /// <summary>
+        ///
+        /// </summary>
+        private static ModuleBuilder ModuleBuilder
+        {
+            get
+            {
+                lock (Sync)
+                {
+                    if (moduleBuilder == null)
+                    {
+                        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+                            new AssemblyName(AssemblyName),
+                            AssemblyBuilderAccess.Run);
+                        moduleBuilder = assemblyBuilder.DefineDynamicModule(
+                            ModuleName);
+                    }
+                    return moduleBuilder;
+                }
+            }
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="ci"></param>
+        /// <returns></returns>
         public static IActivator CreateActivator(ConstructorInfo ci)
         {
+            if (ci == null)
+            {
+                throw new ArgumentNullException(nameof(ci));
+            }
+
             var typeBuilder = ModuleBuilder.DefineType(
                 ci.DeclaringType.FullName + "_DynamicActivator",
                 TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit);
@@ -111,42 +124,7 @@ namespace ConsoleApp
 
             var type = typeBuilder.CreateType();
 
-            // TODO Debug
-            AssemblyBuilder.Save("test.dll");
-
             return (IActivator)Activator.CreateInstance(type, ci);
-        }
-    }
-
-    // Sample
-
-    public sealed class Sample0Activator : IActivator
-    {
-        public ConstructorInfo Source { get; }
-
-        public Sample0Activator(ConstructorInfo source)
-        {
-            Source = source;
-        }
-
-        public object Create(params object[] arguments)
-        {
-            return new Class0();
-        }
-    }
-
-    public sealed class Sample1Activator : IActivator
-    {
-        public ConstructorInfo Source { get; }
-
-        public Sample1Activator(ConstructorInfo source)
-        {
-            Source = source;
-        }
-
-        public object Create(params object[] arguments)
-        {
-            return new Class1((int)arguments[0]);
         }
     }
 }
