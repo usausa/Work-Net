@@ -7,19 +7,36 @@
 
     public sealed class IntValueAccessor : IAccessor
     {
-        public PropertyInfo Source { get; }
+        private readonly PropertyInfo source;
 
-        public string Name => Source.Name;
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
 
-        public Type Type => Source.PropertyType;
+        public string Name
+        {
+            get { return source.Name; }
+        }
 
-        public bool CanRead { get; } = true;
+        public Type Type
+        {
+            get { return source.PropertyType; }
+        }
 
-        public bool CanWrite { get; } = true;
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
 
         public IntValueAccessor(PropertyInfo pi)
         {
-            Source = pi;
+            source = pi;
         }
 
         public object GetValue(object target)
@@ -35,19 +52,36 @@
 
     public sealed class StringValueAccessor : IAccessor
     {
-        public PropertyInfo Source { get; }
+        private readonly PropertyInfo source;
 
-        public string Name => Source.Name;
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
 
-        public Type Type => Source.PropertyType;
+        public string Name
+        {
+            get { return source.Name; }
+        }
 
-        public bool CanRead { get; } = true;
+        public Type Type
+        {
+            get { return source.PropertyType; }
+        }
 
-        public bool CanWrite { get; } = true;
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
 
         public StringValueAccessor(PropertyInfo pi)
         {
-            Source = pi;
+            source = pi;
         }
 
         public object GetValue(object target)
@@ -63,19 +97,36 @@
 
     public sealed class IntNotificationValueAccessor : IAccessor
     {
-        public PropertyInfo Source { get; }
+        private readonly PropertyInfo source;
 
-        public string Name => Source.Name;
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
 
-        public Type Type => Source.PropertyType;
+        public string Name
+        {
+            get { return source.Name; }
+        }
 
-        public bool CanRead { get; } = true;
+        public Type Type
+        {
+            get { return source.PropertyType; }
+        }
 
-        public bool CanWrite { get; } = true;
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
 
         public IntNotificationValueAccessor(PropertyInfo pi)
         {
-            Source = pi;
+            source = pi;
         }
 
         public object GetValue(object target)
@@ -91,19 +142,36 @@
 
     public sealed class StringNotificationValueAccessor : IAccessor
     {
-        public PropertyInfo Source { get; }
+        private readonly PropertyInfo source;
 
-        public string Name => Source.Name;
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
 
-        public Type Type => Source.PropertyType;
+        public string Name
+        {
+            get { return source.Name; }
+        }
 
-        public bool CanRead { get; } = true;
+        public Type Type
+        {
+            get { return source.PropertyType; }
+        }
 
-        public bool CanWrite { get; } = true;
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
 
         public StringNotificationValueAccessor(PropertyInfo pi)
         {
-            Source = pi;
+            source = pi;
         }
 
         public object GetValue(object target)
@@ -119,19 +187,36 @@
 
     public sealed class UnsuportedAccessor : IAccessor
     {
-        public PropertyInfo Source { get; }
+        private readonly PropertyInfo source;
 
-        public string Name => Source.Name;
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
 
-        public Type Type => Source.PropertyType;
+        public string Name
+        {
+            get { return source.Name; }
+        }
 
-        public bool CanRead { get; } = false;
+        public Type Type
+        {
+            get { return source.PropertyType; }
+        }
 
-        public bool CanWrite { get; } = false;
+        public bool CanRead
+        {
+            get { return false; }
+        }
+
+        public bool CanWrite
+        {
+            get { return false; }
+        }
 
         public UnsuportedAccessor(PropertyInfo pi)
         {
-            Source = pi;
+            source = pi;
         }
 
         public object GetValue(object target)

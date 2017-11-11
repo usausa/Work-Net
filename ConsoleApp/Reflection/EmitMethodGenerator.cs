@@ -58,14 +58,14 @@
             }
 
             var typeBuilder = ModuleBuilder.DefineType(
-                ci.DeclaringType.FullName + "_DynamicActivator",
+                $"{ci.DeclaringType.FullName}_DynamicActivator",
                 TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit);
 
             typeBuilder.AddInterfaceImplementation(typeof(IActivator));
 
             // Source
             var sourceField = typeBuilder.DefineField(
-                "_source",
+                "source",
                 CtorType,
                 FieldAttributes.Private | FieldAttributes.InitOnly);
             var sourceProperty = typeBuilder.DefineProperty(

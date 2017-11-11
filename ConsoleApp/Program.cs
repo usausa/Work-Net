@@ -36,80 +36,98 @@
             "DynamicActivatorModule",
             "test.dll");
 
+        private static readonly Type PropertyInfoType = typeof(PropertyInfo);
 
-        //public static IActivator CreateActivator(ConstructorInfo ci)
-        //{
-        //    var typeBuilder = ModuleBuilder.DefineType(
-        //        ci.DeclaringType.FullName + "_DynamicActivator",
-        //        TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit);
+        private static readonly Type BoolType = typeof(bool);
 
-        //    typeBuilder.AddInterfaceImplementation(typeof(IActivator));
+        public static IActivator CreateAccessor(PropertyInfo pi)
+        {
+            var typeBuilder = ModuleBuilder.DefineType(
+                $"{pi.DeclaringType.FullName}_{pi.Name}_DynamicActivator",
+                TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit);
 
-        //    // Source
-        //    var sourceField = typeBuilder.DefineField(
-        //        "_source",
-        //        CtorType,
-        //        FieldAttributes.Private | FieldAttributes.InitOnly);
-        //    var sourceProperty = typeBuilder.DefineProperty(
-        //        "Source",
-        //        PropertyAttributes.HasDefault,
-        //        CtorType,
-        //        null);
-        //    var getSourceProperty = typeBuilder.DefineMethod(
-        //        "get_Source",
-        //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
-        //        CtorType,
-        //        Type.EmptyTypes);
-        //    sourceProperty.SetGetMethod(getSourceProperty);
+            typeBuilder.AddInterfaceImplementation(typeof(IAccessor));
 
-        //    var getSourceIl = getSourceProperty.GetILGenerator();
+            // Fields
+            var sourceField = typeBuilder.DefineField(
+                 "source",
+                 PropertyInfoType,
+                 FieldAttributes.Private | FieldAttributes.InitOnly);
+            var canReadField = typeBuilder.DefineField(
+                "canRead",
+                PropertyInfoType,
+                FieldAttributes.Private | FieldAttributes.InitOnly);
+            var canWriteField = typeBuilder.DefineField(
+                "canWrite",
+                PropertyInfoType,
+                FieldAttributes.Private | FieldAttributes.InitOnly);
 
-        //    getSourceIl.Emit(OpCodes.Ldarg_0);
-        //    getSourceIl.Emit(OpCodes.Ldfld, sourceField);
-        //    getSourceIl.Emit(OpCodes.Ret);
+            // Property
 
-        //    // Constructor
-        //    var ctor = typeBuilder.DefineConstructor(
-        //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
-        //        CallingConventions.Standard,
-        //        new[] { CtorType });
-        //    var superCtor = typeof(object).GetConstructors().First();
+            //    // Source
+            //    var sourceProperty = typeBuilder.DefineProperty(
+            //        "Source",
+            //        PropertyAttributes.HasDefault,
+            //        CtorType,
+            //        null);
 
-        //    var ctorIl = ctor.GetILGenerator();
-        //    ctorIl.Emit(OpCodes.Ldarg_0);
-        //    ctorIl.Emit(OpCodes.Call, superCtor);
-        //    ctorIl.Emit(OpCodes.Ldarg_0);
-        //    ctorIl.Emit(OpCodes.Ldarg_1);
-        //    ctorIl.Emit(OpCodes.Stfld, sourceField);
-        //    ctorIl.Emit(OpCodes.Ret);
+            //    var getSourceProperty = typeBuilder.DefineMethod(
+            //        "get_Source",
+            //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
+            //        CtorType,
+            //        Type.EmptyTypes);
+            //    sourceProperty.SetGetMethod(getSourceProperty);
 
-        //    // Create
-        //    var createMethod = typeBuilder.DefineMethod(
-        //        nameof(IActivator.Create),
-        //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
-        //        typeof(object),
-        //        new[] { typeof(object[]) });
-        //    typeBuilder.DefineMethodOverride(createMethod, typeof(IActivator).GetMethod(nameof(IActivator.Create)));
+            //    var getSourceIl = getSourceProperty.GetILGenerator();
 
-        //    var createIl = createMethod.GetILGenerator();
+            //    getSourceIl.Emit(OpCodes.Ldarg_0);
+            //    getSourceIl.Emit(OpCodes.Ldfld, sourceField);
+            //    getSourceIl.Emit(OpCodes.Ret);
 
-        //    for (var i = 0; i < ci.GetParameters().Length; i++)
-        //    {
-        //        createIl.Emit(OpCodes.Ldarg_1);
-        //        createIl.EmitLdcI4(i);
-        //        createIl.Emit(OpCodes.Ldelem_Ref);
-        //        createIl.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
-        //    }
 
-        //    createIl.Emit(OpCodes.Newobj, ci);
-        //    createIl.Emit(OpCodes.Ret);
+            //    // Constructor
+            //    var ctor = typeBuilder.DefineConstructor(
+            //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+            //        CallingConventions.Standard,
+            //        new[] { CtorType });
+            //    var superCtor = typeof(object).GetConstructors().First();
 
-        //    var type = typeBuilder.CreateType();
+            //    var ctorIl = ctor.GetILGenerator();
+            //    ctorIl.Emit(OpCodes.Ldarg_0);
+            //    ctorIl.Emit(OpCodes.Call, superCtor);
+            //    ctorIl.Emit(OpCodes.Ldarg_0);
+            //    ctorIl.Emit(OpCodes.Ldarg_1);
+            //    ctorIl.Emit(OpCodes.Stfld, sourceField);
+            //    ctorIl.Emit(OpCodes.Ret);
 
-        //    // TODO Debug
-        //    AssemblyBuilder.Save("test.dll");
+            //    // Create
+            //    var createMethod = typeBuilder.DefineMethod(
+            //        nameof(IActivator.Create),
+            //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
+            //        typeof(object),
+            //        new[] { typeof(object[]) });
+            //    typeBuilder.DefineMethodOverride(createMethod, typeof(IActivator).GetMethod(nameof(IActivator.Create)));
 
-        //    return (IActivator)Activator.CreateInstance(type, ci);
-        //}
+            //    var createIl = createMethod.GetILGenerator();
+
+            //    for (var i = 0; i < ci.GetParameters().Length; i++)
+            //    {
+            //        createIl.Emit(OpCodes.Ldarg_1);
+            //        createIl.EmitLdcI4(i);
+            //        createIl.Emit(OpCodes.Ldelem_Ref);
+            //        createIl.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
+            //    }
+
+            //    createIl.Emit(OpCodes.Newobj, ci);
+            //    createIl.Emit(OpCodes.Ret);
+
+            //    var type = typeBuilder.CreateType();
+
+            //    // TODO Debug
+            //    AssemblyBuilder.Save("test.dll");
+
+            //    return (IActivator)Activator.CreateInstance(type, ci);
+            return null;
+        }
     }
 }
