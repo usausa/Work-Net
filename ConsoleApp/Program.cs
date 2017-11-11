@@ -30,7 +30,6 @@
         private static readonly AssemblyBuilder AssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
             new AssemblyName("DynamicActivatorAssembly"),
             AssemblyBuilderAccess.RunAndSave);
-            //AssemblyBuilderAccess.Run);
 
         private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule(
             "DynamicActivatorModule",
@@ -40,7 +39,11 @@
 
         private static readonly Type BoolType = typeof(bool);
 
-        public static IActivator CreateAccessor(PropertyInfo pi)
+        private static readonly Type TypeType = typeof(Type);
+
+        private static readonly Type StringType = typeof(string);
+
+        public static IAccessor CreateAccessor(PropertyInfo pi)
         {
             var typeBuilder = ModuleBuilder.DefineType(
                 $"{pi.DeclaringType.FullName}_{pi.Name}_DynamicActivator",
@@ -53,37 +56,34 @@
                  "source",
                  PropertyInfoType,
                  FieldAttributes.Private | FieldAttributes.InitOnly);
-            var canReadField = typeBuilder.DefineField(
-                "canRead",
-                PropertyInfoType,
-                FieldAttributes.Private | FieldAttributes.InitOnly);
-            var canWriteField = typeBuilder.DefineField(
-                "canWrite",
-                PropertyInfoType,
-                FieldAttributes.Private | FieldAttributes.InitOnly);
 
             // Property
+            DefineSourceProperty(typeBuilder, sourceField);
 
-            //    // Source
-            //    var sourceProperty = typeBuilder.DefineProperty(
-            //        "Source",
-            //        PropertyAttributes.HasDefault,
-            //        CtorType,
-            //        null);
+            // TODO
+            // Name
+            var nameProperty = typeBuilder.DefineProperty(
+                "Name",
+                PropertyAttributes.None,
+                StringType,
+                null);
 
-            //    var getSourceProperty = typeBuilder.DefineMethod(
-            //        "get_Source",
-            //        MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
-            //        CtorType,
-            //        Type.EmptyTypes);
-            //    sourceProperty.SetGetMethod(getSourceProperty);
+            // TODO
+            // Type
+            var typeProperty = typeBuilder.DefineProperty(
+                "Type",
+                PropertyAttributes.None,
+                TypeType,
+                null);
 
-            //    var getSourceIl = getSourceProperty.GetILGenerator();
+            // CanRead
+            DefineAccessibilityProperty(typeBuilder, pi.CanRead, "CanRead");
+            // CanWrite
+            DefineAccessibilityProperty(typeBuilder, pi.CanWrite, "CanWrite");
 
-            //    getSourceIl.Emit(OpCodes.Ldarg_0);
-            //    getSourceIl.Emit(OpCodes.Ldfld, sourceField);
-            //    getSourceIl.Emit(OpCodes.Ret);
-
+            // TODO ctor
+            // TODO get
+            // TODO set
 
             //    // Constructor
             //    var ctor = typeBuilder.DefineConstructor(
@@ -110,24 +110,63 @@
 
             //    var createIl = createMethod.GetILGenerator();
 
-            //    for (var i = 0; i < ci.GetParameters().Length; i++)
-            //    {
-            //        createIl.Emit(OpCodes.Ldarg_1);
-            //        createIl.EmitLdcI4(i);
-            //        createIl.Emit(OpCodes.Ldelem_Ref);
-            //        createIl.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
-            //    }
-
             //    createIl.Emit(OpCodes.Newobj, ci);
             //    createIl.Emit(OpCodes.Ret);
 
-            //    var type = typeBuilder.CreateType();
+            var type = typeBuilder.CreateType();
 
-            //    // TODO Debug
-            //    AssemblyBuilder.Save("test.dll");
+            // Debug
+            AssemblyBuilder.Save("test.dll");
 
-            //    return (IActivator)Activator.CreateInstance(type, ci);
-            return null;
+            return (IAccessor)Activator.CreateInstance(type, pi);
+        }
+
+        private static void DefineSourceProperty(TypeBuilder typeBuilder, FieldBuilder sourceField)
+        {
+            var property = typeBuilder.DefineProperty(
+                "Source",
+                PropertyAttributes.None,
+                PropertyInfoType,
+                null);
+            var method = typeBuilder.DefineMethod(
+                "get_Source",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
+                PropertyInfoType,
+                Type.EmptyTypes);
+            property.SetGetMethod(method);
+
+            var ilGenerator = method.GetILGenerator();
+
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldfld, sourceField);
+            ilGenerator.Emit(OpCodes.Ret);
+        }
+
+        private static void DefineAccessibilityProperty(TypeBuilder typeBuilder, bool enable, string name)
+        {
+            var property = typeBuilder.DefineProperty(
+                name,
+                PropertyAttributes.None,
+                BoolType,
+                null);
+            var method = typeBuilder.DefineMethod(
+                $"get_{name}",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
+                BoolType,
+                Type.EmptyTypes);
+            property.SetGetMethod(method);
+
+            var ilGenerator = method.GetILGenerator();
+
+            if (enable)
+            {
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+            }
+            else
+            {
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+            }
+            ilGenerator.Emit(OpCodes.Ret);
         }
     }
 }
