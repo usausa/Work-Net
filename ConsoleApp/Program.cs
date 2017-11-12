@@ -16,13 +16,13 @@
         {
             //WorkDynamicProxy.Test();
 
-            //var type0 = typeof(Class0);
-            //var type1 = typeof(Class1);
-            //var ctor0 = type0.GetConstructors().First();
-            //var ctor1 = type1.GetConstructors().First();
+            var type0 = typeof(Class0);
+            var type1 = typeof(Class1);
+            var ctor0 = type0.GetConstructor(Type.EmptyTypes);
+            var ctor1 = type1.GetConstructors().First();
 
-            //var activator0 = EmitMethodGenerator.CreateActivator(ctor0);
-            //var o = activator0.Create(null);
+            var activator0 = EmitMethodGenerator.CreateActivator(ctor0);
+            var o = activator0.Create(null);
 
             var data = new DataClass();
             var pi = data.GetType().GetProperty(nameof(DataClass.StringValue));

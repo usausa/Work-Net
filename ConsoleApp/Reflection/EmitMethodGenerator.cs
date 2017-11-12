@@ -136,7 +136,7 @@
         {
             var sourceProperty = typeBuilder.DefineProperty(
                 "Source",
-                PropertyAttributes.HasDefault,
+                PropertyAttributes.None,
                 CtorType,
                 null);
             var getSourceProperty = typeBuilder.DefineMethod(
