@@ -30,21 +30,23 @@
 
         private static readonly Type PropertyInfoType = typeof(PropertyInfo);
 
-        private static readonly ConstructorInfo ObjectConstructor = ObjectType.GetConstructor(Type.EmptyTypes);
+        private static readonly ConstructorInfo ObjectCotor = typeof(object).GetConstructor(Type.EmptyTypes);
+
+        private static readonly ConstructorInfo NotSupportedExceptionCtor = typeof(NotSupportedException).GetConstructor(Type.EmptyTypes);
 
         private static readonly MethodInfo PropertyInfoNameGetMethod =
-            PropertyInfoType.GetProperty(nameof(PropertyInfo.Name)).GetGetMethod();
+            typeof(PropertyInfo).GetProperty(nameof(PropertyInfo.Name)).GetGetMethod();
 
         private static readonly MethodInfo PropertyInfoPropertyTypeGetMethod =
-            PropertyInfoType.GetProperty(nameof(PropertyInfo.PropertyType)).GetGetMethod();
+            typeof(PropertyInfo).GetProperty(nameof(PropertyInfo.PropertyType)).GetGetMethod();
 
         // Activator
 
         private static readonly Type ActivatorType = typeof(IActivator);
 
-        private static readonly MethodInfo ActivatorCreateMethodInfo = ActivatorType.GetMethod(nameof(IActivator.Create));
+        private static readonly MethodInfo ActivatorCreateMethodInfo = typeof(IActivator).GetMethod(nameof(IActivator.Create));
 
-        private static readonly Type[] ActivatorConstructorArgumentTypes = { CtorType };
+        private static readonly Type[] ActivatorConstructorArgumentTypes = { typeof(ConstructorInfo) };
 
         private static readonly Type[] ActivatorCreateArgumentTypes = { typeof(object[]) };
 
@@ -52,15 +54,15 @@
 
         private static readonly Type AccessorType = typeof(IAccessor);
 
-        private static readonly MethodInfo AccessorGetValueMethodInfo = AccessorType.GetMethod(nameof(IAccessor.GetValue));
+        private static readonly MethodInfo AccessorGetValueMethodInfo = typeof(IAccessor).GetMethod(nameof(IAccessor.GetValue));
 
-        private static readonly MethodInfo AccessorSetValueMethodInfo = AccessorType.GetMethod(nameof(IAccessor.SetValue));
+        private static readonly MethodInfo AccessorSetValueMethodInfo = typeof(IAccessor).GetMethod(nameof(IAccessor.SetValue));
 
-        private static readonly Type[] AccessorConstructorArgumentTypes = { PropertyInfoType };
+        private static readonly Type[] AccessorConstructorArgumentTypes = { typeof(PropertyInfo) };
 
-        private static readonly Type[] AccessorGetValueArgumentTypes = { ObjectType };
+        private static readonly Type[] AccessorGetValueArgumentTypes = { typeof(object) };
 
-        private static readonly Type[] AccessorSetValueArgumentTypes = { ObjectType, ObjectType };
+        private static readonly Type[] AccessorSetValueArgumentTypes = { typeof(object), typeof(object) };
 
         // Member
 
@@ -162,7 +164,7 @@
 
             var ctorIl = ctor.GetILGenerator();
             ctorIl.Emit(OpCodes.Ldarg_0);
-            ctorIl.Emit(OpCodes.Call, ObjectConstructor);
+            ctorIl.Emit(OpCodes.Call, ObjectCotor);
             ctorIl.Emit(OpCodes.Ldarg_0);
             ctorIl.Emit(OpCodes.Ldarg_1);
             ctorIl.Emit(OpCodes.Stfld, sourceField);
@@ -332,7 +334,7 @@
             var ilGenerator = ctor.GetILGenerator();
 
             ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Call, ObjectConstructor);
+            ilGenerator.Emit(OpCodes.Call, ObjectCotor);
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Stfld, sourceField);
@@ -349,6 +351,13 @@
             typeBuilder.DefineMethodOverride(method, AccessorGetValueMethodInfo);
 
             var ilGenerator = method.GetILGenerator();
+
+            if (!pi.CanRead)
+            {
+                ilGenerator.Emit(OpCodes.Newobj, NotSupportedExceptionCtor);
+                ilGenerator.Emit(OpCodes.Throw);
+                return;
+            }
 
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
