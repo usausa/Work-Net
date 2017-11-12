@@ -68,6 +68,8 @@
 
         private static readonly object Sync = new object();
 
+        private static AssemblyBuilder assemblyBuilder;
+
         private static ModuleBuilder moduleBuilder;
 
         /// <summary>
@@ -81,11 +83,14 @@
                 {
                     if (moduleBuilder == null)
                     {
-                        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+                        assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
                             new AssemblyName(AssemblyName),
-                            AssemblyBuilderAccess.Run);
+                            AssemblyBuilderAccess.RunAndSave);
+                            //AssemblyBuilderAccess.Run);
                         moduleBuilder = assemblyBuilder.DefineDynamicModule(
-                            ModuleName);
+                            ModuleName,
+                            "test.dll");
+                            //ModuleName);
                     }
                     return moduleBuilder;
                 }
@@ -216,6 +221,7 @@
             DefineAccessorPropertySource(typeBuilder, sourceField);
             DefineAccessorPropertyName(typeBuilder, sourceField);
             DefineAccessorPropertyType(typeBuilder, sourceField);
+            // TODO IValueHolder
             DefineAccessorPropertyAccessibility(typeBuilder, pi.CanRead, nameof(IAccessor.CanRead));
             DefineAccessorPropertyAccessibility(typeBuilder, pi.CanWrite, nameof(IAccessor.CanWrite));
 
@@ -227,6 +233,8 @@
             DefineAccessorMethodSetValue(typeBuilder, pi);
 
             var type = typeBuilder.CreateType();
+
+            assemblyBuilder.Save("test.dll");
 
             return (IAccessor)Activator.CreateInstance(type, pi);
         }
@@ -254,6 +262,7 @@
 
         private static void DefineAccessorPropertyName(TypeBuilder typeBuilder, FieldBuilder sourceField)
         {
+            // TODO IValueHolder
             var property = typeBuilder.DefineProperty(
                 "Name",
                 PropertyAttributes.None,
@@ -276,6 +285,7 @@
 
         private static void DefineAccessorPropertyType(TypeBuilder typeBuilder, FieldBuilder sourceField)
         {
+            // TODO IValueHolder
             var property = typeBuilder.DefineProperty(
                 "Type",
                 PropertyAttributes.None,
@@ -298,6 +308,7 @@
 
         private static void DefineAccessorPropertyAccessibility(TypeBuilder typeBuilder, bool enable, string name)
         {
+            // TODO IValueHolder
             var property = typeBuilder.DefineProperty(
                 name,
                 PropertyAttributes.None,
@@ -325,6 +336,7 @@
 
         private static void DefineAccessorConstructor(TypeBuilder typeBuilder, FieldBuilder sourceField)
         {
+            // TODO IValueHolder
             var ctor = typeBuilder.DefineConstructor(
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName |
                 MethodAttributes.RTSpecialName,
@@ -344,7 +356,7 @@
         private static void DefineAccessorMethodGetValue(TypeBuilder typeBuilder, PropertyInfo pi)
         {
             var method = typeBuilder.DefineMethod(
-                nameof(IActivator.Create),
+                nameof(IAccessor.GetValue),
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
                 ObjectType,
                 AccessorGetValueArgumentTypes);
@@ -359,16 +371,21 @@
                 return;
             }
 
+            // TODO IValueHolder
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
             ilGenerator.Emit(OpCodes.Callvirt, pi.GetGetMethod());
+            if (pi.PropertyType.IsValueType)
+            {
+                ilGenerator.Emit(OpCodes.Box, pi.PropertyType);
+            }
             ilGenerator.Emit(OpCodes.Ret);
         }
 
         private static void DefineAccessorMethodSetValue(TypeBuilder typeBuilder, PropertyInfo pi)
         {
             var method = typeBuilder.DefineMethod(
-                nameof(IActivator.Create),
+                nameof(IAccessor.SetValue),
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
                 VoidType,
                 AccessorSetValueArgumentTypes);
@@ -376,10 +393,41 @@
 
             var ilGenerator = method.GetILGenerator();
 
+            if (!pi.CanWrite)
+            {
+                ilGenerator.Emit(OpCodes.Newobj, NotSupportedExceptionCtor);
+                ilGenerator.Emit(OpCodes.Throw);
+                return;
+            }
+
+            // TODO IValueHolder
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
-            ilGenerator.Emit(OpCodes.Ldarg_2);
-            ilGenerator.Emit(OpCodes.Castclass, pi.PropertyType);
+
+            if (pi.PropertyType.IsValueType)
+            {
+                // TODO name
+                var label1 = ilGenerator.DefineLabel();
+                var label2 = ilGenerator.DefineLabel();
+
+                ilGenerator.Emit(OpCodes.Ldarg_2);
+                ilGenerator.Emit(OpCodes.Brfalse_S, label1);
+
+                ilGenerator.Emit(OpCodes.Ldarg_2);
+                ilGenerator.Emit(OpCodes.Unbox_Any, pi.PropertyType);
+                ilGenerator.Emit(OpCodes.Br_S, label2);
+
+                ilGenerator.MarkLabel(label1);
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+
+                ilGenerator.MarkLabel(label2);
+            }
+            else
+            {
+                ilGenerator.Emit(OpCodes.Ldarg_2);
+                ilGenerator.Emit(OpCodes.Castclass, pi.PropertyType);
+            }
+
             ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
             ilGenerator.Emit(OpCodes.Ret);
         }
