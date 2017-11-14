@@ -1,6 +1,7 @@
 ﻿namespace ConsoleApp.Reflection
 {
     using System;
+    using System.Collections.Generic;
     using System.Reflection;
     using System.Reflection.Emit;
 
@@ -153,11 +154,12 @@
                 Type.EmptyTypes);
             sourceProperty.SetGetMethod(getSourceProperty);
 
-            var getSourceIl = getSourceProperty.GetILGenerator();
+            var ilGenerator = getSourceProperty.GetILGenerator();
 
-            getSourceIl.Emit(OpCodes.Ldarg_0);
-            getSourceIl.Emit(OpCodes.Ldfld, sourceField);
-            getSourceIl.Emit(OpCodes.Ret);
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldfld, sourceField);
+
+            ilGenerator.Emit(OpCodes.Ret);
         }
 
         private static void DefineActivatorConstructor(TypeBuilder typeBuilder, FieldBuilder sourceField)
@@ -167,13 +169,16 @@
                 CallingConventions.Standard,
                 ActivatorConstructorArgumentTypes);
 
-            var ctorIl = ctor.GetILGenerator();
-            ctorIl.Emit(OpCodes.Ldarg_0);
-            ctorIl.Emit(OpCodes.Call, ObjectCotor);
-            ctorIl.Emit(OpCodes.Ldarg_0);
-            ctorIl.Emit(OpCodes.Ldarg_1);
-            ctorIl.Emit(OpCodes.Stfld, sourceField);
-            ctorIl.Emit(OpCodes.Ret);
+            var ilGenerator = ctor.GetILGenerator();
+
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Call, ObjectCotor);
+
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldarg_1);
+            ilGenerator.Emit(OpCodes.Stfld, sourceField);
+
+            ilGenerator.Emit(OpCodes.Ret);
         }
 
         private static void DefineActivatorMethodCreate(TypeBuilder typeBuilder, ConstructorInfo ci)
@@ -196,6 +201,7 @@
             }
 
             ilGenerator.Emit(OpCodes.Newobj, ci);
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -234,7 +240,7 @@
 
             var type = typeBuilder.CreateType();
 
-            assemblyBuilder.Save("test.dll");
+            //assemblyBuilder.Save("test.dll");
 
             return (IAccessor)Activator.CreateInstance(type, pi);
         }
@@ -257,6 +263,7 @@
 
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, sourceField);
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -280,6 +287,7 @@
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, sourceField);
             ilGenerator.Emit(OpCodes.Callvirt, PropertyInfoNameGetMethod);
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -303,6 +311,7 @@
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, sourceField);
             ilGenerator.Emit(OpCodes.Callvirt, PropertyInfoPropertyTypeGetMethod);
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -347,9 +356,11 @@
 
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Call, ObjectCotor);
+
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Stfld, sourceField);
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -379,6 +390,7 @@
             {
                 ilGenerator.Emit(OpCodes.Box, pi.PropertyType);
             }
+
             ilGenerator.Emit(OpCodes.Ret);
         }
 
@@ -412,12 +424,17 @@
                 ilGenerator.Emit(OpCodes.Ldarg_1);
                 ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
 
-                // TODO int固有 ldc.r4 (float) ldc.r8
-                // struct
-                //  IL_0009:  ldloca.s   V_0
-                //  IL_000b:  initobj    ConsoleApp.Size
-                //  IL_0011:  ldloc.0
-                ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                if (LdcDictionary.TryGetValue(pi.PropertyType, out var action))
+                {
+                    action(ilGenerator);
+                }
+                else
+                {
+                    var local = ilGenerator.DeclareLocal(pi.PropertyType);
+                    ilGenerator.Emit(OpCodes.Ldloca_S, local);
+                    ilGenerator.Emit(OpCodes.Initobj, pi.PropertyType);
+                    ilGenerator.Emit(OpCodes.Ldloc_0);
+                }
 
                 ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
 
@@ -449,5 +466,24 @@
                 ilGenerator.Emit(OpCodes.Ret);
             }
         }
+
+        // TODO
+        private static readonly Dictionary<Type, Action<ILGenerator>> LdcDictionary = new Dictionary<Type, Action<ILGenerator>>
+        {
+            { typeof(bool), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(byte), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(char), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(short), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(int), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(sbyte), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(ushort), il => il.Emit(OpCodes.Ldc_I4_0) },
+            { typeof(uint), il => il.Emit(OpCodes.Ldc_I4_0) },      // Simplicity
+            { typeof(long), il => il.Emit(OpCodes.Ldc_I8, 0L) },
+            { typeof(ulong), il => il.Emit(OpCodes.Ldc_I8, 0L) },   // Simplicity
+            { typeof(float), il => il.Emit(OpCodes.Ldc_R4, 0f) },
+            { typeof(double), il => il.Emit(OpCodes.Ldc_R8, 0d) },
+            { typeof(IntPtr), il => il.Emit(OpCodes.Ldc_I4_0) },    // Simplicity
+            { typeof(UIntPtr), il => il.Emit(OpCodes.Ldc_I4_0) },   // Simplicity
+        };
     }
 }
