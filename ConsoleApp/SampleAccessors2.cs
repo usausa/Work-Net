@@ -4,8 +4,102 @@
     using System.Reflection;
 
     using Smart.Reflection;
+    public sealed class IntNotificationValueAccessor : IAccessor
+    {
+        private readonly PropertyInfo source;   // IValueHolder<T>
 
-    public sealed class SampleByteValueAccessor : IAccessor
+        private readonly Type type; // T
+
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
+
+        public string Name
+        {
+            get { return source.Name; }
+        }
+
+        public Type Type
+        {
+            get { return type; }
+        }
+
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
+
+        public IntNotificationValueAccessor(PropertyInfo pi, Type type)
+        {
+            source = pi;
+        }
+
+        public object GetValue(object target)
+        {
+            return ((DataClass)target).IntNotificationValue.Value;
+        }
+
+        public void SetValue(object target, object value)
+        {
+            ((DataClass)target).IntNotificationValue.Value = value == null ? default : (int)value;
+        }
+    }
+
+    public sealed class StringNotificationValueAccessor : IAccessor
+    {
+        private readonly PropertyInfo source;   // IValueHolder<T>
+
+        private readonly Type type; // T
+
+        public PropertyInfo Source
+        {
+            get { return source; }
+        }
+
+        public string Name
+        {
+            get { return source.Name; }
+        }
+
+        public Type Type
+        {
+            get { return type; }
+        }
+
+        public bool CanRead
+        {
+            get { return true; }
+        }
+
+        public bool CanWrite
+        {
+            get { return true; }
+        }
+
+        public StringNotificationValueAccessor(PropertyInfo pi, Type type)
+        {
+            source = pi;
+            this.type = type;
+        }
+
+        public object GetValue(object target)
+        {
+            return ((DataClass)target).StringNotificationValue.Value;
+        }
+
+        public void SetValue(object target, object value)
+        {
+            ((DataClass)target).StringNotificationValue.Value = (string)value;
+        }
+    }
+
+    public sealed class UnsuportedAccessor : IAccessor
     {
         private readonly PropertyInfo source;
 
@@ -26,346 +120,28 @@
 
         public bool CanRead
         {
-            get { return true; }
+            get { return false; }
         }
 
         public bool CanWrite
         {
-            get { return true; }
+            get { return false; }
         }
 
-        public SampleByteValueAccessor(PropertyInfo pi)
+        public UnsuportedAccessor(PropertyInfo pi)
         {
             source = pi;
         }
 
         public object GetValue(object target)
         {
-            return ((DataClass)target).ByteValue;
+            throw new NotSupportedException();
         }
 
         public void SetValue(object target, object value)
         {
-            if (value == null)
-            {
-                ((DataClass)target).ByteValue = default;
-            }
-            else
-            {
-                ((DataClass)target).ByteValue = (byte)value;
-            }
+            throw new NotSupportedException();
         }
     }
 
-    public sealed class SampleCharValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleCharValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).CharValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).CharValue = default;
-            }
-            else
-            {
-                ((DataClass)target).CharValue = (char)value;
-            }
-        }
-    }
-
-    public sealed class SampleShortValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleShortValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).ShortValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).ShortValue = default;
-            }
-            else
-            {
-                ((DataClass)target).ShortValue = (short)value;
-            }
-        }
-    }
-
-    public sealed class SampleLongValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleLongValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).LongValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).LongValue = default;
-            }
-            else
-            {
-                ((DataClass)target).LongValue = (short)value;
-            }
-        }
-    }
-
-    public sealed class SampleFloatValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleFloatValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).FloatValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).FloatValue = default;
-            }
-            else
-            {
-                ((DataClass)target).FloatValue = (short)value;
-            }
-        }
-    }
-
-    public sealed class SampleDoubleValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleDoubleValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).DoubleValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).DoubleValue = default;
-            }
-            else
-            {
-                ((DataClass)target).DoubleValue = (short)value;
-            }
-        }
-    }
-
-    public sealed class SampleStructValueAccessor : IAccessor
-    {
-        private readonly PropertyInfo source;
-
-        public PropertyInfo Source
-        {
-            get { return source; }
-        }
-
-        public string Name
-        {
-            get { return source.Name; }
-        }
-
-        public Type Type
-        {
-            get { return source.PropertyType; }
-        }
-
-        public bool CanRead
-        {
-            get { return true; }
-        }
-
-        public bool CanWrite
-        {
-            get { return true; }
-        }
-
-        public SampleStructValueAccessor(PropertyInfo pi)
-        {
-            source = pi;
-        }
-
-        public object GetValue(object target)
-        {
-            return ((DataClass)target).StructValue;
-        }
-
-        public void SetValue(object target, object value)
-        {
-            if (value == null)
-            {
-                ((DataClass)target).StructValue = default;
-            }
-            else
-            {
-                ((DataClass)target).StructValue = (Size)value;
-            }
-        }
-    }
 }
