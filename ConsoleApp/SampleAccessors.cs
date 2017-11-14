@@ -46,7 +46,14 @@
 
         public void SetValue(object target, object value)
         {
-            ((DataClass)target).IntValue = value == null ? default : (int)value;
+            if (value == null)
+            {
+                ((DataClass)target).IntValue = default(int);
+            }
+            else
+            {
+                ((DataClass)target).IntValue = (int)value;
+            }
         }
     }
 

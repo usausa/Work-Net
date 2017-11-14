@@ -16,9 +16,30 @@
         }
     }
 
+    public struct Size
+    {
+        public int X;
+
+        public int Y;
+    }
+
     public class DataClass
     {
         public int IntValue { get; set; }
+
+        public byte ByteValue { get; set; }
+
+        public char CharValue { get; set; }
+
+        public short ShortValue { get; set; }
+
+        public long LongValue { get; set; }
+
+        public float FloatValue { get; set; }
+
+        public double DoubleValue { get; set; }
+
+        public Size StructValue { get; set; }
 
         public string StringValue { get; set; }
 
