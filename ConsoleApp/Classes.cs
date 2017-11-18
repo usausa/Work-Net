@@ -47,4 +47,30 @@
 
         public IValueHolder<string> StringNotificationValue { get; } = new NotificationValue<string>();
     }
+
+    public enum MyEnum
+    {
+        Zero, One, Two
+    }
+
+    public class EnumPropertyData
+    {
+        public MyEnum EnumValue { get; set; }
+
+        public IValueHolder<MyEnum> EnumNotificationValue { get; } = new NotificationValue<MyEnum>();
+    }
+
+    public struct MyStruct
+    {
+        public int X { get; set; }
+
+        public int Y { get; set; }
+    }
+
+    public class StructPropertyData
+    {
+        public MyStruct StructValue { get; set; }
+
+        public IValueHolder<MyStruct> StructNotificationValue { get; } = new NotificationValue<MyStruct>();
+    }
 }
