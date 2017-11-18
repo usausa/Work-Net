@@ -28,13 +28,20 @@
             //var piStr = data.GetType().GetProperty(nameof(DataClass.StringValue));
             //var piInt = data.GetType().GetProperty(nameof(DataClass.IntValue));
             //var piStruct = data.GetType().GetProperty(nameof(DataClass.StructValue));
-            var piStrNotify = data.GetType().GetProperty(nameof(DataClass.StringNotificationValue));
+            //var piStrNotify = data.GetType().GetProperty(nameof(DataClass.StringNotificationValue));
+            var piIntNotify = data.GetType().GetProperty(nameof(DataClass.IntNotificationValue));
 
             // str notify
-            var accessorStrNotify = EmitMethodGenerator.CreateAccessor(piStrNotify);
-            accessorStrNotify.SetValue(data, "a");
-            //data.StringNotificationValue.Value = "a";
-            var retStrNotify = accessorStrNotify.GetValue(data);
+            //var accessorStrNotify = EmitMethodGenerator.CreateAccessor(piStrNotify);
+            //accessorStrNotify.SetValue(data, "a");
+            //var retStrNotify = accessorStrNotify.GetValue(data);
+
+            // int notify
+            var accessorIntNotify = EmitMethodGenerator.CreateAccessor(piIntNotify);
+            accessorIntNotify.SetValue(data, 1);
+            var retStrNotify = accessorIntNotify.GetValue(data);
+            accessorIntNotify.SetValue(data, null);
+            retStrNotify = accessorIntNotify.GetValue(data);
 
             //// struct
             //var accessorStruct = EmitMethodGenerator.CreateAccessor(piStruct);

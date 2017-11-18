@@ -48,7 +48,14 @@
 
         public void SetValue(object target, object value)
         {
-            ((DataClass)target).IntNotificationValue.Value = value == null ? default : (int)value;
+            if (value == null)
+            {
+                ((DataClass)target).IntNotificationValue.Value = default;
+            }
+            else
+            {
+                ((DataClass)target).IntNotificationValue.Value = (int)value;
+            }
         }
     }
 
