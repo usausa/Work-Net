@@ -333,8 +333,7 @@
 
             // Method
             DefineValueHolderAccessorMethodGetValue(typeBuilder, pi, holderType);
-            // TODO
-            DefineAccessorMethodSetValue(typeBuilder, pi);
+            DefineValueHolderAccessorMethodSetValue(typeBuilder, pi, holderType);
 
             var type = typeBuilder.CreateType();
 
@@ -630,7 +629,74 @@
             }
         }
 
-        // TODO IValueHolder
+        private static void DefineValueHolderAccessorMethodSetValue(TypeBuilder typeBuilder, PropertyInfo pi, Type holderType)
+        {
+            var valueProperty = AccessorHelper.GetValueTypeProperty(holderType);
+
+            var method = typeBuilder.DefineMethod(
+                nameof(IAccessor.SetValue),
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
+                VoidType,
+                AccessorSetValueArgumentTypes);
+            typeBuilder.DefineMethodOverride(method, AccessorSetValueMethodInfo);
+
+            var ilGenerator = method.GetILGenerator();
+
+            // TODO
+            //if (pi.PropertyType.IsValueType)
+            //{
+            //    var hasValue = ilGenerator.DefineLabel();
+
+            //    ilGenerator.Emit(OpCodes.Ldarg_2);
+            //    ilGenerator.Emit(OpCodes.Brtrue_S, hasValue);
+
+            //    // null
+            //    ilGenerator.Emit(OpCodes.Ldarg_1);
+            //    ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
+
+            //    if (LdcDictionary.TryGetValue(pi.PropertyType, out var action))
+            //    {
+            //        action(ilGenerator);
+            //    }
+            //    else
+            //    {
+            //        var local = ilGenerator.DeclareLocal(pi.PropertyType);
+            //        ilGenerator.Emit(OpCodes.Ldloca_S, local);
+            //        ilGenerator.Emit(OpCodes.Initobj, pi.PropertyType);
+            //        ilGenerator.Emit(OpCodes.Ldloc_0);
+            //    }
+
+            //    ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
+
+            //    ilGenerator.Emit(OpCodes.Ret);
+
+            //    // not null
+            //    ilGenerator.MarkLabel(hasValue);
+
+            //    ilGenerator.Emit(OpCodes.Ldarg_1);
+            //    ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
+
+            //    ilGenerator.Emit(OpCodes.Ldarg_2);
+            //    ilGenerator.Emit(OpCodes.Unbox_Any, pi.PropertyType);
+
+            //    ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
+
+            //    ilGenerator.Emit(OpCodes.Ret);
+            //}
+            //else
+            {
+                ilGenerator.Emit(OpCodes.Ldarg_1);
+                ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
+                ilGenerator.Emit(OpCodes.Callvirt, pi.GetGetMethod());
+
+                ilGenerator.Emit(OpCodes.Ldarg_2);
+                ilGenerator.Emit(OpCodes.Castclass, valueProperty.PropertyType);
+
+                ilGenerator.Emit(OpCodes.Callvirt, valueProperty.GetSetMethod());
+
+                ilGenerator.Emit(OpCodes.Ret);
+            }
+        }
 
         private static readonly Dictionary<Type, Action<ILGenerator>> LdcDictionary = new Dictionary<Type, Action<ILGenerator>>
         {

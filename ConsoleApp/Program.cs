@@ -32,8 +32,8 @@
 
             // str notify
             var accessorStrNotify = EmitMethodGenerator.CreateAccessor(piStrNotify);
-            //accessorStrNotify.SetValue(data, "a");
-            data.StringNotificationValue.Value = "a";
+            accessorStrNotify.SetValue(data, "a");
+            //data.StringNotificationValue.Value = "a";
             var retStrNotify = accessorStrNotify.GetValue(data);
 
             //// struct
