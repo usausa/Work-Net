@@ -38,6 +38,7 @@
         public IntNotificationValueAccessor(PropertyInfo pi, Type type)
         {
             source = pi;
+            this.type = type;
         }
 
         public object GetValue(object target)

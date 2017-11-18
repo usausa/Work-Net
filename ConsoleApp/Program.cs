@@ -25,32 +25,38 @@
             //var o = activator0.Create(null);
 
             var data = new DataClass();
-            var piStr = data.GetType().GetProperty(nameof(DataClass.StringValue));
-            var piInt = data.GetType().GetProperty(nameof(DataClass.IntValue));
-            var piStruct = data.GetType().GetProperty(nameof(DataClass.StructValue));
+            //var piStr = data.GetType().GetProperty(nameof(DataClass.StringValue));
+            //var piInt = data.GetType().GetProperty(nameof(DataClass.IntValue));
+            //var piStruct = data.GetType().GetProperty(nameof(DataClass.StructValue));
+            var piStrNotify = data.GetType().GetProperty(nameof(DataClass.StringNotificationValue));
 
-            // struct
-            var accessorStruct = EmitMethodGenerator.CreateAccessor(piStruct);
+            // str notify
+            var accessorStrNotify = EmitMethodGenerator.CreateAccessor(piStrNotify);
+            //accessorStrNotify.SetValue(data, "a");
+            data.StringNotificationValue.Value = "a";
+            var retStrNotify = accessorStrNotify.GetValue(data);
 
-            data.StructValue = new Size { X = 1, Y = 2 };
-            var i = data.StructValue.X;
-            accessorStruct.SetValue(data, null);
-            i = data.StructValue.X;
-            accessorStruct.SetValue(data, new Size { X = 2, Y = 3 });
-            i = data.StructValue.X;
+            //// struct
+            //var accessorStruct = EmitMethodGenerator.CreateAccessor(piStruct);
 
-            // str
-            var accessorStr = EmitMethodGenerator.CreateAccessor(piStr);
-            accessorStr.SetValue(data, "a");
-            var retStr = accessorStr.GetValue(data);
+            //data.StructValue = new Size { X = 1, Y = 2 };
+            //var i = data.StructValue.X;
+            //accessorStruct.SetValue(data, null);
+            //i = data.StructValue.X;
+            //accessorStruct.SetValue(data, new Size { X = 2, Y = 3 });
+            //i = data.StructValue.X;
 
-            // int
-            var accessorInt = EmitMethodGenerator.CreateAccessor(piInt);
-            // TODO
-            accessorInt.SetValue(data, 1);
-            var retInt = accessorInt.GetValue(data);
-            accessorInt.SetValue(data, null);
-            retInt = accessorInt.GetValue(data);
+            //// str
+            //var accessorStr = EmitMethodGenerator.CreateAccessor(piStr);
+            //accessorStr.SetValue(data, "a");
+            //var retStr = accessorStr.GetValue(data);
+
+            //// int
+            //var accessorInt = EmitMethodGenerator.CreateAccessor(piInt);
+            //accessorInt.SetValue(data, 1);
+            //var retInt = accessorInt.GetValue(data);
+            //accessorInt.SetValue(data, null);
+            //retInt = accessorInt.GetValue(data);
         }
     }
 }
