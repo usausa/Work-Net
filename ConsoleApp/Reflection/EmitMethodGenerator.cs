@@ -290,7 +290,7 @@
             DefineAccessorPropertyAccessibility(typeBuilder, pi.CanWrite, nameof(IAccessor.CanWrite));
 
             // Constructor
-            DefineAccessorConstructor(typeBuilder, sourceField);
+            DefineAccessorConstructor(typeBuilder, sourceField, null);
 
             // Method
             DefineAccessorMethodGetValue(typeBuilder, pi);
@@ -329,7 +329,7 @@
             DefineAccessorPropertyAccessibility(typeBuilder, true, nameof(IAccessor.CanWrite));
 
             // Constructor
-            DefineValueHolderAccessorConstructor(typeBuilder, sourceField, typeField);
+            DefineAccessorConstructor(typeBuilder, sourceField, typeField);
 
             // Method
             DefineValueHolderAccessorMethodGetValue(typeBuilder, pi, holderType);
@@ -459,13 +459,13 @@
             ilGenerator.Emit(OpCodes.Ret);
         }
 
-        private static void DefineAccessorConstructor(TypeBuilder typeBuilder, FieldBuilder sourceField)
+        private static void DefineAccessorConstructor(TypeBuilder typeBuilder, FieldBuilder sourceField, FieldBuilder typeField)
         {
             var ctor = typeBuilder.DefineConstructor(
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName |
                 MethodAttributes.RTSpecialName,
                 CallingConventions.Standard,
-                AccessorConstructorArgumentTypes);
+                typeField == null ? AccessorConstructorArgumentTypes : ValueHolderAccessorConstructorArgumentTypes);
 
             var ilGenerator = ctor.GetILGenerator();
 
@@ -476,29 +476,12 @@
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Stfld, sourceField);
 
-            ilGenerator.Emit(OpCodes.Ret);
-        }
-
-        private static void DefineValueHolderAccessorConstructor(TypeBuilder typeBuilder, FieldBuilder sourceField, FieldBuilder typeField)
-        {
-            var ctor = typeBuilder.DefineConstructor(
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName |
-                MethodAttributes.RTSpecialName,
-                CallingConventions.Standard,
-                ValueHolderAccessorConstructorArgumentTypes);
-
-            var ilGenerator = ctor.GetILGenerator();
-
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Call, ObjectCotor);
-
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldarg_1);
-            ilGenerator.Emit(OpCodes.Stfld, sourceField);
-
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldarg_2);
-            ilGenerator.Emit(OpCodes.Stfld, typeField);
+            if (typeField != null)
+            {
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldarg_2);
+                ilGenerator.Emit(OpCodes.Stfld, typeField);
+            }
 
             ilGenerator.Emit(OpCodes.Ret);
         }
