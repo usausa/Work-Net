@@ -285,7 +285,7 @@
             // Property
             DefineAccessorPropertySource(typeBuilder, sourceField);
             DefineAccessorPropertyName(typeBuilder, sourceField);
-            DefineAccessorPropertyType(typeBuilder, sourceField);
+            DefineAccessorPropertyType(typeBuilder, sourceField, true);
             DefineAccessorPropertyAccessibility(typeBuilder, pi.CanRead, nameof(IAccessor.CanRead));
             DefineAccessorPropertyAccessibility(typeBuilder, pi.CanWrite, nameof(IAccessor.CanWrite));
 
@@ -324,7 +324,7 @@
             // Property
             DefineAccessorPropertySource(typeBuilder, sourceField);
             DefineAccessorPropertyName(typeBuilder, sourceField);
-            DefineValueHolderAccessorPropertyType(typeBuilder, typeField);
+            DefineAccessorPropertyType(typeBuilder, typeField, false);
             DefineAccessorPropertyAccessibility(typeBuilder, true, nameof(IAccessor.CanRead));
             DefineAccessorPropertyAccessibility(typeBuilder, true, nameof(IAccessor.CanWrite));
 
@@ -387,7 +387,7 @@
             ilGenerator.Emit(OpCodes.Ret);
         }
 
-        private static void DefineAccessorPropertyType(TypeBuilder typeBuilder, FieldBuilder sourceField)
+        private static void DefineAccessorPropertyType(TypeBuilder typeBuilder, FieldBuilder field, bool isProperty)
         {
             var property = typeBuilder.DefineProperty(
                 "Type",
@@ -404,30 +404,11 @@
             var ilGenerator = method.GetILGenerator();
 
             ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, sourceField);
-            ilGenerator.Emit(OpCodes.Callvirt, PropertyInfoPropertyTypeGetMethod);
-
-            ilGenerator.Emit(OpCodes.Ret);
-        }
-
-        private static void DefineValueHolderAccessorPropertyType(TypeBuilder typeBuilder, FieldBuilder typeField)
-        {
-            var property = typeBuilder.DefineProperty(
-                "Type",
-                PropertyAttributes.None,
-                TypeType,
-                null);
-            var method = typeBuilder.DefineMethod(
-                "get_Type",
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.SpecialName | MethodAttributes.Virtual | MethodAttributes.Final,
-                TypeType,
-                Type.EmptyTypes);
-            property.SetGetMethod(method);
-
-            var ilGenerator = method.GetILGenerator();
-
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, typeField);
+            ilGenerator.Emit(OpCodes.Ldfld, field);
+            if (isProperty)
+            {
+                ilGenerator.Emit(OpCodes.Callvirt, PropertyInfoPropertyTypeGetMethod);
+            }
 
             ilGenerator.Emit(OpCodes.Ret);
         }
@@ -488,6 +469,8 @@
 
         private static void DefineAccessorMethodGetValue(TypeBuilder typeBuilder, PropertyInfo pi)
         {
+            var valueProperty = pi;
+
             var method = typeBuilder.DefineMethod(
                 nameof(IAccessor.GetValue),
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
@@ -507,9 +490,9 @@
             ilGenerator.Emit(OpCodes.Ldarg_1);
             ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
             ilGenerator.Emit(OpCodes.Callvirt, pi.GetGetMethod());
-            if (pi.PropertyType.IsValueType)
+            if (valueProperty.PropertyType.IsValueType)
             {
-                ilGenerator.Emit(OpCodes.Box, pi.PropertyType);
+                ilGenerator.Emit(OpCodes.Box, valueProperty.PropertyType);
             }
 
             ilGenerator.Emit(OpCodes.Ret);
@@ -542,6 +525,8 @@
 
         private static void DefineAccessorMethodSetValue(TypeBuilder typeBuilder, PropertyInfo pi)
         {
+            var valueProperty = pi;
+
             var method = typeBuilder.DefineMethod(
                 nameof(IAccessor.SetValue),
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
@@ -551,14 +536,14 @@
 
             var ilGenerator = method.GetILGenerator();
 
-            if (!pi.CanWrite)
+            if (!valueProperty.CanWrite)
             {
                 ilGenerator.Emit(OpCodes.Newobj, NotSupportedExceptionCtor);
                 ilGenerator.Emit(OpCodes.Throw);
                 return;
             }
 
-            if (pi.PropertyType.IsValueType)
+            if (valueProperty.PropertyType.IsValueType)
             {
                 var hasValue = ilGenerator.DefineLabel();
 
@@ -569,20 +554,20 @@
                 ilGenerator.Emit(OpCodes.Ldarg_1);
                 ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
 
-                var type = pi.PropertyType.IsEnum ? pi.PropertyType.GetEnumUnderlyingType() : pi.PropertyType;
+                var type = valueProperty.PropertyType.IsEnum ? valueProperty.PropertyType.GetEnumUnderlyingType() : valueProperty.PropertyType;
                 if (LdcDictionary.TryGetValue(type, out var action))
                 {
                     action(ilGenerator);
                 }
                 else
                 {
-                    var local = ilGenerator.DeclareLocal(pi.PropertyType);
+                    var local = ilGenerator.DeclareLocal(valueProperty.PropertyType);
                     ilGenerator.Emit(OpCodes.Ldloca_S, local);
-                    ilGenerator.Emit(OpCodes.Initobj, pi.PropertyType);
+                    ilGenerator.Emit(OpCodes.Initobj, valueProperty.PropertyType);
                     ilGenerator.Emit(OpCodes.Ldloc_0);
                 }
 
-                ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
+                ilGenerator.Emit(OpCodes.Callvirt, valueProperty.GetSetMethod());
 
                 ilGenerator.Emit(OpCodes.Ret);
 
@@ -593,9 +578,9 @@
                 ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
 
                 ilGenerator.Emit(OpCodes.Ldarg_2);
-                ilGenerator.Emit(OpCodes.Unbox_Any, pi.PropertyType);
+                ilGenerator.Emit(OpCodes.Unbox_Any, valueProperty.PropertyType);
 
-                ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
+                ilGenerator.Emit(OpCodes.Callvirt, valueProperty.GetSetMethod());
 
                 ilGenerator.Emit(OpCodes.Ret);
             }
@@ -605,9 +590,9 @@
                 ilGenerator.Emit(OpCodes.Castclass, pi.DeclaringType);
 
                 ilGenerator.Emit(OpCodes.Ldarg_2);
-                ilGenerator.Emit(OpCodes.Castclass, pi.PropertyType);
+                ilGenerator.Emit(OpCodes.Castclass, valueProperty.PropertyType);
 
-                ilGenerator.Emit(OpCodes.Callvirt, pi.GetSetMethod());
+                ilGenerator.Emit(OpCodes.Callvirt, valueProperty.GetSetMethod());
 
                 ilGenerator.Emit(OpCodes.Ret);
             }
