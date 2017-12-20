@@ -1,4 +1,6 @@
-﻿namespace WorkSplit
+﻿using System;
+
+namespace WorkSplit
 {
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -9,7 +11,20 @@
     {
         public static void Main(string[] args)
         {
-            TestTextReader();
+            TestSplit();
+        }
+
+        private static void TestSplit()
+        {
+            Debug.WriteLine("--");
+
+            var str = "テスト,データ,,だよもん,,";
+            foreach (var token in str.SplitAsEnumerable(','))
+            {
+                Debug.WriteLine(token);
+            }
+
+            Debug.WriteLine("--");
         }
 
         private static void TestTextReader()
@@ -33,7 +48,73 @@
     {
         // TODO bytes chop?/block?*
 
-        // TODO split
+        public static IEnumerable<string> SplitAsEnumerable(this string source, char separator)
+        {
+            var start = 0;
+            while (true)
+            {
+                var index = source.IndexOf(separator, start);
+                if (index == -1)
+                {
+                    yield return source.Substring(start);
+                    break;
+                }
+
+                yield return source.Substring(start, index - start);
+                start = index + 1;
+            }
+        }
+
+        public static IEnumerable<string> SplitAsEnumerable(this string source, char[] separators)
+        {
+            var start = 0;
+            while (true)
+            {
+                var index = source.IndexOfAny(separators, start);
+                if (index == -1)
+                {
+                    yield return source.Substring(start);
+                    break;
+                }
+
+                yield return source.Substring(start, index - start);
+                start = index + 1;
+            }
+        }
+
+        public static IEnumerable<string> SplitAsEnumerable(this string source, string separator)
+        {
+            var start = 0;
+            while (true)
+            {
+                var index = source.IndexOf(separator, start, StringComparison.Ordinal);
+                if (index == -1)
+                {
+                    yield return source.Substring(start);
+                    break;
+                }
+
+                yield return source.Substring(start, index - start);
+                start = index + 1;
+            }
+        }
+
+        public static IEnumerable<string> SplitAsEnumerable(this string source, string separator, StringComparison comparisonType)
+        {
+            var start = 0;
+            while (true)
+            {
+                var index = source.IndexOf(separator, start, comparisonType);
+                if (index == -1)
+                {
+                    yield return source.Substring(start);
+                    break;
+                }
+
+                yield return source.Substring(start, index - start);
+                start = index + 1;
+            }
+        }
 
         public static IEnumerable<string> AsEnumerable(this TextReader reader)
         {
