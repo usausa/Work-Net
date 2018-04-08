@@ -1,7 +1,6 @@
-﻿using System;
-
-namespace WorkSplit
+﻿namespace WorkSplit
 {
+    using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
