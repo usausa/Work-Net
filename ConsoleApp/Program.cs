@@ -5,7 +5,6 @@
     using System.Reflection;
     using System.Reflection.Emit;
 
-    using Smart.Reflection;
     using Smart.Reflection.Emit;
 
     public static class Program
