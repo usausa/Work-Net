@@ -16,6 +16,19 @@
         }
     }
 
+    public class Class2
+    {
+        public int Value1 { get; }
+
+        public string Value2 { get; }
+
+        public Class2(int value1, string value2)
+        {
+            Value1 = value1;
+            Value2 = value2;
+        }
+    }
+
     public struct Size
     {
         public int X;
