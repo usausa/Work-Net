@@ -19,11 +19,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp", "ConsoleApp\Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkSplit", "WorkSplit\WorkSplit.csproj", "{F0783854-6792-496C-9107-90767ABF87EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanaBenchmark", "KanaBenchmark\KanaBenchmark.csproj", "{D69CF261-87AA-4C87-900B-4D7DA7D3F2B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KanaBenchmark", "KanaBenchmark\KanaBenchmark.csproj", "{D69CF261-87AA-4C87-900B-4D7DA7D3F2B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KanaTest", "KanaTest\KanaTest.csproj", "{6B1A967C-F8CA-4DF3-8189-7C1461656AA2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KanaTest", "KanaTest\KanaTest.csproj", "{6B1A967C-F8CA-4DF3-8189-7C1461656AA2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParserTest", "ParserTest\ParserTest.csproj", "{A3534148-0797-4E81-9B53-B538B3DFFCD4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ParserTest", "ParserTest\ParserTest.csproj", "{A3534148-0797-4E81-9B53-B538B3DFFCD4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenchmarkApp", "BenchmarkApp\BenchmarkApp.csproj", "{8A37418E-CCA6-4E1E-B0C0-5968FB513FCB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +57,10 @@ Global
 		{A3534148-0797-4E81-9B53-B538B3DFFCD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3534148-0797-4E81-9B53-B538B3DFFCD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A3534148-0797-4E81-9B53-B538B3DFFCD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A37418E-CCA6-4E1E-B0C0-5968FB513FCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A37418E-CCA6-4E1E-B0C0-5968FB513FCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A37418E-CCA6-4E1E-B0C0-5968FB513FCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A37418E-CCA6-4E1E-B0C0-5968FB513FCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
