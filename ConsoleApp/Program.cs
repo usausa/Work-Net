@@ -11,10 +11,25 @@
         {
             var o = new DataClass();
 
-            var setter = CreateSetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntValue"), true);
-            var getter = CreateGetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntValue"), true);
-            setter(o, 123);
-            var i = getter(o);
+            var setterInt = CreateSetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntValue"), true);
+            var getterInt = CreateGetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntValue"), true);
+            setterInt(o, 123);
+            var i = getterInt(o);
+
+            var setterString = CreateSetterInternal<DataClass, string>(typeof(DataClass).GetProperty("StringValue"), true);
+            var getterString = CreateGetterInternal<DataClass, string>(typeof(DataClass).GetProperty("StringValue"), true);
+            setterString(o, "test");
+            var s = getterString(o);
+
+            var setterIntHolder = CreateSetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntNotificationValue"), true);
+            var getterIntHolder = CreateGetterInternal<DataClass, int>(typeof(DataClass).GetProperty("IntNotificationValue"), true);
+            setterIntHolder(o, 123);
+            var ih = getterIntHolder(o);
+
+            var setterStringHolder = CreateSetterInternal<DataClass, string>(typeof(DataClass).GetProperty("StringNotificationValue"), true);
+            var getterStringHolder = CreateGetterInternal<DataClass, string>(typeof(DataClass).GetProperty("StringNotificationValue"), true);
+            setterStringHolder(o, "test");
+            var sh = getterStringHolder(o);
         }
 
         private static readonly Type VoidType = typeof(void);
@@ -35,7 +50,7 @@
             var isValueProperty = holderType != null;
             var tpi = isValueProperty ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
 
-            if (tpi.DeclaringType != typeof(T))
+            if (pi.DeclaringType != typeof(T))
             {
                 throw new ArgumentException($"Invalid type parameter. name=[{pi.Name}]", nameof(pi));
             }
@@ -86,7 +101,7 @@
             var isValueProperty = holderType != null;
             var tpi = isValueProperty ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
 
-            if (tpi.DeclaringType != typeof(T))
+            if (pi.DeclaringType != typeof(T))
             {
                 throw new ArgumentException($"Invalid type parameter. name=[{pi.Name}]", nameof(pi));
             }
