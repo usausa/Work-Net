@@ -7,6 +7,64 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Collections\**" />
+    <Compile Remove="ComponentModel\**" />
+    <Compile Remove="Converter\**" />
+    <Compile Remove="Diagnostics\**" />
+    <Compile Remove="Functional\**" />
+    <Compile Remove="IO\**" />
+    <Compile Remove="Linq\**" />
+    <Compile Remove="Text\**" />
+    <Compile Remove="Threading\**" />
+    <EmbeddedResource Remove="Collections\**" />
+    <EmbeddedResource Remove="ComponentModel\**" />
+    <EmbeddedResource Remove="Converter\**" />
+    <EmbeddedResource Remove="Diagnostics\**" />
+    <EmbeddedResource Remove="Functional\**" />
+    <EmbeddedResource Remove="IO\**" />
+    <EmbeddedResource Remove="Linq\**" />
+    <EmbeddedResource Remove="Text\**" />
+    <EmbeddedResource Remove="Threading\**" />
+    <None Remove="Collections\**" />
+    <None Remove="ComponentModel\**" />
+    <None Remove="Converter\**" />
+    <None Remove="Diagnostics\**" />
+    <None Remove="Functional\**" />
+    <None Remove="IO\**" />
+    <None Remove="Linq\**" />
+    <None Remove="Text\**" />
+    <None Remove="Threading\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ArrayExtensions.ArrayEquals.cs" />
+    <Compile Remove="ArrayExtensions.Combine.cs" />
+    <Compile Remove="ArrayExtensions.cs" />
+    <Compile Remove="ArrayExtensions.Fill.cs" />
+    <Compile Remove="ArrayExtensions.IndexOf.cs" />
+    <Compile Remove="ArrayExtensions.Remove.cs" />
+    <Compile Remove="ArrayExtensions.SubArray.cs" />
+    <Compile Remove="Bytes.cs" />
+    <Compile Remove="DateTimeExtensions.cs" />
+    <Compile Remove="DebugMode.cs" />
+    <Compile Remove="Empty.cs" />
+    <Compile Remove="Enums.cs" />
+    <Compile Remove="Functions.cs" />
+    <Compile Remove="GlobalSuppressions.cs" />
+    <Compile Remove="IInitializable.cs" />
+    <Compile Remove="NumberExtensions.cs" />
+    <Compile Remove="StringExtensions.cs" />
+    <Compile Remove="TypeExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="ComponentModel\IValueHolder.cs" />
+    <Compile Include="ComponentModel\NotificationObject.cs" />
+    <Compile Include="ComponentModel\NotificationValue.cs" />
+    <Compile Include="ComponentModel\ValueHolderHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="2.6.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
