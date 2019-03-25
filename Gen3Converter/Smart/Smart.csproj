@@ -1,0 +1,84 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net462</TargetFrameworks>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CodeAnalysisRuleSet>..\Smart.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Collections\**" />
+    <Compile Remove="ComponentModel\**" />
+    <Compile Remove="Diagnostics\**" />
+    <Compile Remove="Functional\**" />
+    <Compile Remove="IO\**" />
+    <Compile Remove="Linq\**" />
+    <Compile Remove="Reflection\**" />
+    <Compile Remove="Text\**" />
+    <Compile Remove="Threading\**" />
+    <EmbeddedResource Remove="Collections\**" />
+    <EmbeddedResource Remove="ComponentModel\**" />
+    <EmbeddedResource Remove="Diagnostics\**" />
+    <EmbeddedResource Remove="Functional\**" />
+    <EmbeddedResource Remove="IO\**" />
+    <EmbeddedResource Remove="Linq\**" />
+    <EmbeddedResource Remove="Reflection\**" />
+    <EmbeddedResource Remove="Text\**" />
+    <EmbeddedResource Remove="Threading\**" />
+    <None Remove="Collections\**" />
+    <None Remove="ComponentModel\**" />
+    <None Remove="Diagnostics\**" />
+    <None Remove="Functional\**" />
+    <None Remove="IO\**" />
+    <None Remove="Linq\**" />
+    <None Remove="Reflection\**" />
+    <None Remove="Text\**" />
+    <None Remove="Threading\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ArrayExtensions.ArrayEquals.cs" />
+    <Compile Remove="ArrayExtensions.Combine.cs" />
+    <Compile Remove="ArrayExtensions.cs" />
+    <Compile Remove="ArrayExtensions.Fill.cs" />
+    <Compile Remove="ArrayExtensions.IndexOf.cs" />
+    <Compile Remove="ArrayExtensions.Remove.cs" />
+    <Compile Remove="ArrayExtensions.SubArray.cs" />
+    <Compile Remove="Bytes.cs" />
+    <Compile Remove="DateTimeExtensions.cs" />
+    <Compile Remove="DebugMode.cs" />
+    <Compile Remove="Empty.cs" />
+    <Compile Remove="Functions.cs" />
+    <Compile Remove="GlobalSuppressions.cs" />
+    <Compile Remove="IInitializable.cs" />
+    <Compile Remove="NumberExtensions.cs" />
+    <Compile Remove="StringExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Collections\Concurrent\HashArrayMapStrategy.cs" />
+    <Compile Include="Collections\Concurrent\ThreadsafeHashArrayMap.cs" />
+    <Compile Include="Collections\Concurrent\ThreadsafeObjectHashArrayMap.cs" />
+    <Compile Include="Collections\Concurrent\ThreadsafeTypeHashArrayMap.cs" />
+    <Compile Include="Collections\Generic\ArrayBuffer.cs" />
+    <Compile Include="ComponentModel\IValueHolder.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="2.6.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.ComponentModel" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+</Project>
