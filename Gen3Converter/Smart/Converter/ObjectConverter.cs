@@ -7,9 +7,6 @@
 
     using Smart.Converter.Converters;
 
-    /// <summary>
-    ///
-    /// </summary>
     public sealed class ObjectConverter : IObjectConverter
     {
         public static ObjectConverter Default { get; } = new ObjectConverter();
@@ -72,7 +69,7 @@
 
         public bool CanConvert(object value, Type targetType)
         {
-            if (value == null)
+            if (value is null)
             {
                 return true;
             }
@@ -100,7 +97,7 @@
         public object Convert(object value, Type targetType)
         {
             // Specialized null
-            if (value == null)
+            if (value is null)
             {
                 return targetType.GetDefaultValue();
             }
@@ -113,7 +110,7 @@
             }
 
             var converter = GetConverter(sourceType, targetType);
-            if (converter == null)
+            if (converter is null)
             {
                 throw new ObjectConverterException($"Type {sourceType} can't convert to {targetType}");
             }
@@ -124,7 +121,7 @@
         public Func<object, object> CreateConverter(Type sourceType, Type targetType)
         {
             var converter = GetConverter(sourceType.IsNullableType() ? Nullable.GetUnderlyingType(sourceType) : sourceType, targetType);
-            if (converter == null)
+            if (converter is null)
             {
                 return null;
             }
@@ -137,7 +134,7 @@
 
         private static Func<object, object> CreateConverter(object defaultValue, Type targetType, Func<object, object> converter)
         {
-            return value => value == null
+            return value => value is null
                 ? defaultValue
                 : value.GetType() == targetType
                     ? value

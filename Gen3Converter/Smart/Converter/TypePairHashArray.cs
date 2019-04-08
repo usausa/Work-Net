@@ -12,7 +12,7 @@
 
         private const double Factor = 2;
 
-        private static readonly Node[] EmptyNodes = new Node[0];
+        private static readonly Node[] EmptyNodes = Array.Empty<Node>();
 
         private readonly object sync = new object();
 
@@ -52,7 +52,7 @@
             return size + 1;
         }
 
-        private Table CreateInitialTable()
+        private static Table CreateInitialTable()
         {
             var mask = InitialSize - 1;
             var nodes = new Node[InitialSize][];
@@ -67,7 +67,7 @@
 
         private static Node[] AddNode(Node[] nodes, Node addNode)
         {
-            if (nodes == null)
+            if (nodes is null)
             {
                 return new[] { addNode };
             }
@@ -96,14 +96,14 @@
         {
             for (var i = 0; i < nodes.Length; i++)
             {
-                if (nodes[i] == null)
+                if (nodes[i] is null)
                 {
                     nodes[i] = EmptyNodes;
                 }
             }
         }
 
-        private Table CreateAddTable(Table oldTable, Node node)
+        private static Table CreateAddTable(Table oldTable, Node node)
         {
             var requestSize = Math.Max(InitialSize, (int)Math.Ceiling((oldTable.Count + 1) * Factor));
 
@@ -146,9 +146,6 @@
 
         public int Count => table.Count;
 
-        /// <summary>
-        ///
-        /// </summary>
         public void Clear()
         {
             lock (sync)

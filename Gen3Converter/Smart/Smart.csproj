@@ -6,69 +6,15 @@
     <CodeAnalysisRuleSet>..\Smart.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Collections\**" />
-    <Compile Remove="ComponentModel\**" />
-    <Compile Remove="Diagnostics\**" />
-    <Compile Remove="Functional\**" />
-    <Compile Remove="IO\**" />
-    <Compile Remove="Linq\**" />
-    <Compile Remove="Reflection\**" />
-    <Compile Remove="Text\**" />
-    <Compile Remove="Threading\**" />
-    <EmbeddedResource Remove="Collections\**" />
-    <EmbeddedResource Remove="ComponentModel\**" />
-    <EmbeddedResource Remove="Diagnostics\**" />
-    <EmbeddedResource Remove="Functional\**" />
-    <EmbeddedResource Remove="IO\**" />
-    <EmbeddedResource Remove="Linq\**" />
-    <EmbeddedResource Remove="Reflection\**" />
-    <EmbeddedResource Remove="Text\**" />
-    <EmbeddedResource Remove="Threading\**" />
-    <None Remove="Collections\**" />
-    <None Remove="ComponentModel\**" />
-    <None Remove="Diagnostics\**" />
-    <None Remove="Functional\**" />
-    <None Remove="IO\**" />
-    <None Remove="Linq\**" />
-    <None Remove="Reflection\**" />
-    <None Remove="Text\**" />
-    <None Remove="Threading\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="ArrayExtensions.ArrayEquals.cs" />
-    <Compile Remove="ArrayExtensions.Combine.cs" />
-    <Compile Remove="ArrayExtensions.cs" />
-    <Compile Remove="ArrayExtensions.Fill.cs" />
-    <Compile Remove="ArrayExtensions.IndexOf.cs" />
-    <Compile Remove="ArrayExtensions.Remove.cs" />
-    <Compile Remove="ArrayExtensions.SubArray.cs" />
-    <Compile Remove="Bytes.cs" />
-    <Compile Remove="DateTimeExtensions.cs" />
-    <Compile Remove="DebugMode.cs" />
-    <Compile Remove="Empty.cs" />
-    <Compile Remove="Functions.cs" />
-    <Compile Remove="GlobalSuppressions.cs" />
-    <Compile Remove="IInitializable.cs" />
-    <Compile Remove="NumberExtensions.cs" />
-    <Compile Remove="StringExtensions.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="Collections\Concurrent\HashArrayMapStrategy.cs" />
-    <Compile Include="Collections\Concurrent\ThreadsafeHashArrayMap.cs" />
-    <Compile Include="Collections\Concurrent\ThreadsafeObjectHashArrayMap.cs" />
-    <Compile Include="Collections\Concurrent\ThreadsafeTypeHashArrayMap.cs" />
-    <Compile Include="Collections\Generic\ArrayBuffer.cs" />
-    <Compile Include="ComponentModel\IValueHolder.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="2.6.3">
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="2.9.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.0.2" />
   </ItemGroup>
 
@@ -79,6 +25,39 @@
 
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Reflection\DelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DelegateFactory.Generate.cs</LastGenOutput>
+    </None>
+    <None Update="Reflection\DynamicDelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DynamicDelegateFactory.Generate.cs</LastGenOutput>
+    </None>
+    <None Update="Reflection\ReflectionDelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ReflectionDelegateFactory.Generate.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Reflection\DelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Reflection\DynamicDelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DynamicDelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Reflection\ReflectionDelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ReflectionDelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>
