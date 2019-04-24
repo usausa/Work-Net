@@ -1,4 +1,4 @@
-﻿namespace Smart.Reflection
+namespace Smart.Reflection
 {
     using System;
     using System.Reflection;
@@ -8,8 +8,6 @@
         // Array
 
         Func<int, Array> CreateArrayAllocator(Type type);
-
-        // Factory
 
         Func<object[], object> CreateFactory(ConstructorInfo ci);
 
@@ -83,6 +81,10 @@
 
         Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, TP16, T> CreateFactory<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, TP16, T>();
 
+        // Factory
+
+        // TODO Delegate版
+
         // Accessor
 
         Func<object, object> CreateGetter(PropertyInfo pi);
@@ -102,6 +104,12 @@
         Action<T, TMember> CreateSetter<T, TMember>(PropertyInfo pi);
 
         Action<T, TMember> CreateSetter<T, TMember>(PropertyInfo pi, bool extension);
+
+        // Accessor
+
+        // TODO Delegate版
+
+        // TODO Delegate版
 
         // Etc
 

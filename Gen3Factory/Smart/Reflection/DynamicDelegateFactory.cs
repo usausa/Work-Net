@@ -1,4 +1,4 @@
-﻿namespace Smart.Reflection
+namespace Smart.Reflection
 {
     using System;
     using System.Collections.Concurrent;
@@ -47,18 +47,23 @@
 
         private readonly ConcurrentDictionary<Type, Func<int, Array>> arrayAllocatorCache = new ConcurrentDictionary<Type, Func<int, Array>>();
 
+        // TODO Delegate
         private readonly ConcurrentDictionary<ConstructorInfo, Func<object[], object>> factoryCache = new ConcurrentDictionary<ConstructorInfo, Func<object[], object>>();
 
         private readonly ConcurrentDictionary<ConstructorInfo, Delegate> factoryDelegateCache = new ConcurrentDictionary<ConstructorInfo, Delegate>();
 
         private readonly ConcurrentDictionary<ConstructorInfo, Delegate> typedFactoryCache = new ConcurrentDictionary<ConstructorInfo, Delegate>();
 
+        // TODO Delegate ?
         private readonly ConcurrentDictionary<PropertyInfo, Func<object, object>> getterCache = new ConcurrentDictionary<PropertyInfo, Func<object, object>>();
 
+        // TODO Delegate ?
         private readonly ConcurrentDictionary<PropertyInfo, Func<object, object>> extensionGetterCache = new ConcurrentDictionary<PropertyInfo, Func<object, object>>();
 
+        // TODO Delegate ?
         private readonly ConcurrentDictionary<PropertyInfo, Action<object, object>> setterCache = new ConcurrentDictionary<PropertyInfo, Action<object, object>>();
 
+        // TODO Delegate ?
         private readonly ConcurrentDictionary<PropertyInfo, Action<object, object>> extensionSetterCache = new ConcurrentDictionary<PropertyInfo, Action<object, object>>();
 
         private readonly ConcurrentDictionary<PropertyInfo, Delegate> typedGetterCache = new ConcurrentDictionary<PropertyInfo, Delegate>();
@@ -132,6 +137,7 @@
             il.Emit(OpCodes.Newobj, ci);
             il.Emit(OpCodes.Ret);
 
+            // TODO ret
             return (Func<object[], object>)dynamic.CreateDelegate(FactoryType, null);
         }
 
@@ -142,6 +148,7 @@
                 throw new ArgumentException($"Constructor parameter length is invalid. length={ci.GetParameters().Length}", nameof(ci));
             }
 
+            // TODO ret 1
             var dynamic = new DynamicMethod(string.Empty, ObjectType, parameterTypes, true);
             var il = dynamic.GetILGenerator();
 
@@ -227,11 +234,13 @@
             }
             if (tpi.PropertyType.IsValueType)
             {
+                // TODO ?
                 il.Emit(OpCodes.Box, tpi.PropertyType);
             }
 
             il.Emit(OpCodes.Ret);
 
+            // TODO ret
             return (Func<object, object>)dynamic.CreateDelegate(GetterType, null);
         }
 
