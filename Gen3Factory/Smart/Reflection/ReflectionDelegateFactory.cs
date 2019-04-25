@@ -1,4 +1,4 @@
-﻿namespace Smart.Reflection
+namespace Smart.Reflection
 {
     using System;
     using System.Reflection;
@@ -15,7 +15,9 @@
         {
         }
 
+        //--------------------------------------------------------------------------------
         // Array
+        //--------------------------------------------------------------------------------
 
         public Func<int, Array> CreateArrayAllocator(Type type)
         {
@@ -27,7 +29,9 @@
             return length => Array.CreateInstance(type, length);
         }
 
+        //--------------------------------------------------------------------------------
         // Factory
+        //--------------------------------------------------------------------------------
 
         public Func<object[], object> CreateFactory(ConstructorInfo ci)
         {
@@ -57,7 +61,14 @@
             return Activator.CreateInstance<T>;
         }
 
+        public Delegate CreateFactoryDelegate(ConstructorInfo ci)
+        {
+            throw new NotImplementedException();
+        }
+
+        //--------------------------------------------------------------------------------
         // Accessor
+        //--------------------------------------------------------------------------------
 
         public Func<object, object> CreateGetter(PropertyInfo pi)
         {
@@ -205,7 +216,31 @@
             };
         }
 
+        // Accessor
+
+        public Delegate CreateGetterDelegate(PropertyInfo pi)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Delegate CreateSetterDelegate(PropertyInfo pi)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
+        {
+            throw new NotImplementedException();
+        }
+
+        //--------------------------------------------------------------------------------
         // Etc
+        //--------------------------------------------------------------------------------
 
         public Type GetExtendedPropertyType(PropertyInfo pi)
         {

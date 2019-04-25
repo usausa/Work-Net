@@ -1,4 +1,4 @@
-﻿namespace Smart.Reflection
+namespace Smart.Reflection
 {
     using System;
     using System.Reflection;
@@ -21,21 +21,34 @@
             }
         }
 
+        //--------------------------------------------------------------------------------
         // Array
+        //--------------------------------------------------------------------------------
 
         public Func<int, Array> CreateArrayAllocator(Type type)
         {
             return Factory.CreateArrayAllocator(type);
         }
 
+        //--------------------------------------------------------------------------------
         // Factory
+        //--------------------------------------------------------------------------------
 
         public Func<object[], object> CreateFactory(ConstructorInfo ci)
         {
             return Factory.CreateFactory(ci);
         }
 
+        // Factory
+
+        public Delegate CreateFactoryDelegate(ConstructorInfo ci)
+        {
+            return Factory.CreateFactoryDelegate(ci);
+        }
+
+        //--------------------------------------------------------------------------------
         // Accessor
+        //--------------------------------------------------------------------------------
 
         public Func<object, object> CreateGetter(PropertyInfo pi)
         {
@@ -79,7 +92,31 @@
             return Factory.CreateSetter<T, TMember>(pi, extension);
         }
 
+        // Accessor
+
+        public Delegate CreateGetterDelegate(PropertyInfo pi)
+        {
+            return Factory.CreateGetterDelegate(pi);
+        }
+
+        public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
+        {
+            return Factory.CreateGetterDelegate(pi, extension);
+        }
+
+        public Delegate CreateSetterDelegate(PropertyInfo pi)
+        {
+            return Factory.CreateSetterDelegate(pi);
+        }
+
+        public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
+        {
+            return Factory.CreateSetterDelegate(pi, extension);
+        }
+
+        //--------------------------------------------------------------------------------
         // Etc
+        //--------------------------------------------------------------------------------
 
         public Type GetExtendedPropertyType(PropertyInfo pi)
         {

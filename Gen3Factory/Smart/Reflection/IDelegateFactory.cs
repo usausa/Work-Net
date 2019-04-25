@@ -9,6 +9,8 @@ namespace Smart.Reflection
 
         Func<int, Array> CreateArrayAllocator(Type type);
 
+        // Factory
+
         Func<object[], object> CreateFactory(ConstructorInfo ci);
 
         Func<object> CreateFactory0(ConstructorInfo ci);
@@ -83,7 +85,7 @@ namespace Smart.Reflection
 
         // Factory
 
-        // TODO Delegate版
+        Delegate CreateFactoryDelegate(ConstructorInfo ci);
 
         // Accessor
 
@@ -107,9 +109,13 @@ namespace Smart.Reflection
 
         // Accessor
 
-        // TODO Delegate版
+        Delegate CreateGetterDelegate(PropertyInfo pi);
 
-        // TODO Delegate版
+        Delegate CreateGetterDelegate(PropertyInfo pi, bool extension);
+
+        Delegate CreateSetterDelegate(PropertyInfo pi);
+
+        Delegate CreateSetterDelegate(PropertyInfo pi, bool extension);
 
         // Etc
 
