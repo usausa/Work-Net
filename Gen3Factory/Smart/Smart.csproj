@@ -82,6 +82,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Reflection2\DelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DelegateFactory.Generate.cs</LastGenOutput>
+    </None>
+    <None Update="Reflection2\DynamicDelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>DynamicDelegateFactory.Generate.cs</LastGenOutput>
+    </None>
+    <None Update="Reflection2\ReflectionDelegateFactory.Generate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ReflectionDelegateFactory.Generate.cs</LastGenOutput>
+    </None>
     <None Update="Reflection\DelegateFactory.Generate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>DelegateFactory.Generate.cs</LastGenOutput>
@@ -97,6 +109,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Reflection2\DelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Reflection2\DynamicDelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>DynamicDelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Reflection2\ReflectionDelegateFactory.Generate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ReflectionDelegateFactory.Generate.tt</DependentUpon>
+    </Compile>
     <Compile Update="Reflection\DelegateFactory.Generate.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
