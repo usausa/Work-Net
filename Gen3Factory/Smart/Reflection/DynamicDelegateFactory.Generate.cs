@@ -82,7 +82,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory0ParameterTypes, Factory0Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object) },
+                    typeof(Func<object>)));
         }
 
         public Func<object, object> CreateFactory1(ConstructorInfo ci)
@@ -93,7 +97,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory1ParameterTypes, Factory1Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object) },
+                    typeof(Func<object, object>)));
         }
 
         public Func<object, object, object> CreateFactory2(ConstructorInfo ci)
@@ -104,7 +112,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory2ParameterTypes, Factory2Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object>)));
         }
 
         public Func<object, object, object, object> CreateFactory3(ConstructorInfo ci)
@@ -115,7 +127,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory3ParameterTypes, Factory3Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object> CreateFactory4(ConstructorInfo ci)
@@ -126,7 +142,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory4ParameterTypes, Factory4Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object> CreateFactory5(ConstructorInfo ci)
@@ -137,7 +157,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory5ParameterTypes, Factory5Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object> CreateFactory6(ConstructorInfo ci)
@@ -148,7 +172,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory6ParameterTypes, Factory6Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object> CreateFactory7(ConstructorInfo ci)
@@ -159,7 +187,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory7ParameterTypes, Factory7Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object> CreateFactory8(ConstructorInfo ci)
@@ -170,7 +202,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory8ParameterTypes, Factory8Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object> CreateFactory9(ConstructorInfo ci)
@@ -181,7 +217,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory9ParameterTypes, Factory9Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object> CreateFactory10(ConstructorInfo ci)
@@ -192,7 +232,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory10ParameterTypes, Factory10Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory11(ConstructorInfo ci)
@@ -203,7 +247,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory11ParameterTypes, Factory11Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory12(ConstructorInfo ci)
@@ -214,7 +262,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory12ParameterTypes, Factory12Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory13(ConstructorInfo ci)
@@ -225,7 +277,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory13ParameterTypes, Factory13Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory14(ConstructorInfo ci)
@@ -236,7 +292,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory14ParameterTypes, Factory14Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory15(ConstructorInfo ci)
@@ -247,7 +307,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory15ParameterTypes, Factory15Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object> CreateFactory16(ConstructorInfo ci)
@@ -258,7 +322,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory16ParameterTypes, Factory16Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object), typeof(object) },
+                    typeof(Func<object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object, object>)));
         }
 
         public Func<T> CreateFactory<T>()
@@ -271,8 +339,9 @@ namespace Smart.Reflection
 
             return (Func<T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object) },
                     typeof(Func<T>)));
         }
 
@@ -286,8 +355,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1) },
                     typeof(Func<TP1, T>)));
         }
 
@@ -301,8 +371,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2) },
                     typeof(Func<TP1, TP2, T>)));
         }
 
@@ -316,8 +387,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3) },
                     typeof(Func<TP1, TP2, TP3, T>)));
         }
 
@@ -331,8 +403,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4) },
                     typeof(Func<TP1, TP2, TP3, TP4, T>)));
         }
 
@@ -346,8 +419,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, T>)));
         }
 
@@ -361,8 +435,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, T>)));
         }
 
@@ -376,8 +451,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, T>)));
         }
 
@@ -391,8 +467,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, T>)));
         }
 
@@ -406,8 +483,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, T>)));
         }
 
@@ -421,8 +499,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, T>)));
         }
 
@@ -436,8 +515,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, T>)));
         }
 
@@ -451,8 +531,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, T>)));
         }
 
@@ -466,8 +547,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, T>)));
         }
 
@@ -481,8 +563,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, T>)));
         }
 
@@ -496,8 +579,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14), typeof(TP15) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14), typeof(TP15) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, T>)));
         }
 
@@ -511,8 +595,9 @@ namespace Smart.Reflection
 
             return (Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, TP16, T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14), typeof(TP15), typeof(TP16) },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object), typeof(TP1), typeof(TP2), typeof(TP3), typeof(TP4), typeof(TP5), typeof(TP6), typeof(TP7), typeof(TP8), typeof(TP9), typeof(TP10), typeof(TP11), typeof(TP12), typeof(TP13), typeof(TP14), typeof(TP15), typeof(TP16) },
                     typeof(Func<TP1, TP2, TP3, TP4, TP5, TP6, TP7, TP8, TP9, TP10, TP11, TP12, TP13, TP14, TP15, TP16, T>)));
         }
 

@@ -133,6 +133,7 @@ namespace Smart.Reflection
                     var delegateType = typeof(Func<>).MakeGenericType(types);
                     return CreateFactoryInternal(
                         ci,
+                        ci.DeclaringType,
                         ci.GetParameters().Select(p => p.ParameterType).ToArray(),
                         delegateType);
                 });
@@ -161,9 +162,12 @@ namespace Smart.Reflection
             return (Func<object[], object>)dynamic.CreateDelegate(delegateType, null);
         }
 
-        private static Delegate CreateFactoryInternal(ConstructorInfo ci, Type[] parameterTypes, Type delegateType)
+        private static Delegate CreateFactoryInternal(ConstructorInfo ci, Type returnType, Type[] parameterTypes, Type delegateType)
         {
-            var dynamic = new DynamicMethod(string.Empty, ci.DeclaringType, parameterTypes, true);
+            // TODO 生粋のパラメータタイプから、作る方式に変更？
+            // TODO Funcはメソッド定義、 Dynamicはobject付き？
+
+            var dynamic = new DynamicMethod(string.Empty, returnType, parameterTypes, true);
             var il = dynamic.GetILGenerator();
 
             for (var i = 0; i < ci.GetParameters().Length; i++)

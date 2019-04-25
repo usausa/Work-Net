@@ -23,7 +23,11 @@ namespace Smart.Reflection
             }
 
             return (Func<object<# for (var j = 0; j < i; j++) { #>, object<# } #>>)factoryDelegateCache
-                .GetOrAdd(ci, x => CreateFactoryInternal(x, Factory<#= i #>ParameterTypes, Factory<#= i #>Type));
+                .GetOrAdd(ci,  x => CreateFactoryInternal(
+                    x,
+                    typeof(object),
+                    new[] { typeof(object)<# for (var j = 1; j <= i; j++) { #>, typeof(object)<# } #> },
+                    typeof(Func<<# for (var j = 1; j <= i; j++) { #>object, <# } #>object>)));
         }
 
 <# } #>
@@ -38,8 +42,9 @@ namespace Smart.Reflection
 
             return (Func<<# for (var j = 1; j <= i; j++) { #>TP<#= j #>, <# } #>T>)typedFactoryCache
                 .GetOrAdd(ci, x => CreateFactoryInternal(
-                    ci,
-                    new[] { typeof(T)<# for (var j = 1; j <= i; j++) { #>, typeof(TP<#= j #>)<# } #> },
+                    x,
+                    x.DeclaringType,
+                    new[] { typeof(object)<# for (var j = 1; j <= i; j++) { #>, typeof(TP<#= j #>)<# } #> },
                     typeof(Func<<# for (var j = 1; j <= i; j++) { #>TP<#= j #>, <# } #>T>)));
         }
 
