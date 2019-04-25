@@ -83,6 +83,11 @@ namespace Smart.Reflection
                 throw new ArgumentNullException(nameof(pi));
             }
 
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
+            }
+
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             if (holderType == null)
             {
@@ -117,6 +122,11 @@ namespace Smart.Reflection
             if (pi == null)
             {
                 throw new ArgumentNullException(nameof(pi));
+            }
+
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
             }
 
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
@@ -157,6 +167,11 @@ namespace Smart.Reflection
                 throw new ArgumentNullException(nameof(pi));
             }
 
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
+            }
+
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             if (holderType == null)
             {
@@ -191,6 +206,11 @@ namespace Smart.Reflection
             if (pi == null)
             {
                 throw new ArgumentNullException(nameof(pi));
+            }
+
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
             }
 
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);

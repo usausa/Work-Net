@@ -203,14 +203,19 @@ namespace Smart.Reflection
                 throw new ArgumentNullException(nameof(pi));
             }
 
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
+            }
+
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             var isValueHolder = holderType != null;
             var tpi = isValueHolder ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
-            var returnType = tpi.PropertyType.IsValueType ? typeof(object) : tpi.PropertyType;
+            var memberType = tpi.PropertyType.IsValueType ? typeof(object) : tpi.PropertyType;
 
             return extension
-                ? extensionGetterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, isValueHolder, typeof(object), returnType))
-                : getterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, false, typeof(object), returnType));
+                ? extensionGetterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, isValueHolder, typeof(object), memberType))
+                : getterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, false, typeof(object), memberType));
         }
 
         public Action<object, object> CreateSetter(PropertyInfo pi)
@@ -223,6 +228,11 @@ namespace Smart.Reflection
             if (pi is null)
             {
                 throw new ArgumentNullException(nameof(pi));
+            }
+
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
             }
 
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
@@ -246,6 +256,11 @@ namespace Smart.Reflection
             if (pi is null)
             {
                 throw new ArgumentNullException(nameof(pi));
+            }
+
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
             }
 
             if (pi.DeclaringType != typeof(T))
@@ -277,6 +292,11 @@ namespace Smart.Reflection
             if (pi is null)
             {
                 throw new ArgumentNullException(nameof(pi));
+            }
+
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
             }
 
             if (pi.DeclaringType != typeof(T))
@@ -312,6 +332,11 @@ namespace Smart.Reflection
                 throw new ArgumentNullException(nameof(pi));
             }
 
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
+            }
+
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             var isValueHolder = holderType != null;
             var tpi = isValueHolder ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
@@ -333,6 +358,11 @@ namespace Smart.Reflection
                 throw new ArgumentNullException(nameof(pi));
             }
 
+            if (pi.DeclaringType.IsValueType)
+            {
+                throw new ArgumentException("Value type is not supported", nameof(pi));
+            }
+
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             var isValueHolder = holderType != null;
             var tpi = isValueHolder ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
@@ -344,9 +374,8 @@ namespace Smart.Reflection
 
         // Accessor helper
 
-        private Delegate CreateGetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type returnType)
+        private Delegate CreateGetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type memberType)
         {
-            // TODO 統合？
             if (isValueHolder && !pi.CanRead)
             {
                 throw new ArgumentException($"Value holder is not readable. name=[{pi.Name}]", nameof(pi));
@@ -357,7 +386,7 @@ namespace Smart.Reflection
                 return null;
             }
 
-            var dynamic = new DynamicMethod(string.Empty, returnType, new[] { typeof(object), targetType }, true);
+            var dynamic = new DynamicMethod(string.Empty, memberType, new[] { typeof(object), targetType }, true);
             var il = dynamic.GetILGenerator();
 
             if (!pi.GetGetMethod().IsStatic)
@@ -365,7 +394,6 @@ namespace Smart.Reflection
                 il.Emit(OpCodes.Ldarg_1);
                 if (targetType == typeof(object))
                 {
-                    // TODO Unbox ?
                     il.Emit(OpCodes.Castclass, pi.DeclaringType);
                 }
             }
@@ -377,16 +405,19 @@ namespace Smart.Reflection
                 il.Emit(OpCodes.Callvirt, tpi.GetGetMethod());
             }
 
-            if ((returnType == typeof(object)) && (tpi.PropertyType.IsValueType))
+            if ((memberType == typeof(object)) && (tpi.PropertyType.IsValueType))
             {
                 il.Emit(OpCodes.Box, tpi.PropertyType);
             }
 
             il.Emit(OpCodes.Ret);
 
-            var delegateType = typeof(Func<,>).MakeGenericType(targetType, returnType);
+            var delegateType = typeof(Func<,>).MakeGenericType(targetType, memberType);
             return dynamic.CreateDelegate(delegateType, null);
         }
+
+        //--------------------------------------------------------------------------------
+        // TODO Mix
 
         private static readonly Dictionary<Type, Action<ILGenerator>> LdcDictionary = new Dictionary<Type, Action<ILGenerator>>
         {
@@ -408,7 +439,6 @@ namespace Smart.Reflection
 
         private Action<object, object> CreateSetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder)
         {
-            // TODO 統合？、object自体の時の不要キャスト
             if (isValueHolder && !pi.CanRead)
             {
                 throw new ArgumentException($"Value holder is not readable. name=[{pi.Name}]", nameof(pi));
@@ -507,17 +537,6 @@ namespace Smart.Reflection
 
         private Delegate CreateSetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type memberType)
         {
-            // TODO 統合？
-            if (pi.DeclaringType != targetType)
-            {
-                throw new ArgumentException($"Invalid type parameter. name=[{pi.Name}]", nameof(pi));
-            }
-
-            if (tpi.PropertyType != memberType)
-            {
-                throw new ArgumentException($"Invalid type parameter. name=[{pi.Name}]", nameof(pi));
-            }
-
             if (isValueHolder && !pi.CanRead)
             {
                 throw new ArgumentException($"Value holder is not readable. name=[{pi.Name}]", nameof(pi));
