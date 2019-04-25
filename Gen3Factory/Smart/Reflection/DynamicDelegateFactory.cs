@@ -206,10 +206,11 @@ namespace Smart.Reflection
             var holderType = !extension ? null : ValueHolderHelper.FindValueHolderType(pi);
             var isValueHolder = holderType != null;
             var tpi = isValueHolder ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
+            var returnType = tpi.PropertyType.IsValueType ? typeof(object) : tpi.PropertyType;
 
             return extension
-                ? extensionGetterCache.GetOrAdd(pi, x => CreateGetterInternal(x, tpi, isValueHolder))
-                : getterCache.GetOrAdd(pi, x => CreateGetterInternal(x, tpi, false));
+                ? extensionGetterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, isValueHolder, typeof(object), returnType))
+                : getterCache.GetOrAdd(pi, x => (Func<object, object>)CreateGetterInternal(x, tpi, false, typeof(object), returnType));
         }
 
         public Action<object, object> CreateSetter(PropertyInfo pi)
@@ -343,48 +344,7 @@ namespace Smart.Reflection
 
         // Accessor helper
 
-        private Func<object, object> CreateGetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder)
-        {
-            // TODO 統合？、object自体の時の不要キャスト？
-            var returnType = tpi.PropertyType.IsValueType ? typeof(object) : tpi.PropertyType;
-
-            if (isValueHolder && !pi.CanRead)
-            {
-                throw new ArgumentException($"Value holder is not readable. name=[{pi.Name}]", nameof(pi));
-            }
-
-            if (!tpi.CanRead)
-            {
-                return null;
-            }
-
-            var dynamic = new DynamicMethod(string.Empty, returnType, new[] { typeof(object), typeof(object) }, true);
-            var il = dynamic.GetILGenerator();
-
-            if (!pi.GetGetMethod().IsStatic)
-            {
-                il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Castclass, pi.DeclaringType);
-            }
-
-            il.Emit(pi.GetGetMethod().IsStatic ? OpCodes.Call : OpCodes.Callvirt, pi.GetGetMethod());
-
-            if (isValueHolder)
-            {
-                il.Emit(OpCodes.Callvirt, tpi.GetGetMethod());
-            }
-            if (tpi.PropertyType.IsValueType)
-            {
-                il.Emit(OpCodes.Box, tpi.PropertyType);
-            }
-
-            il.Emit(OpCodes.Ret);
-
-            var delegateType = typeof(Func<,>).MakeGenericType(typeof(object), returnType);
-            return (Func<object, object>)dynamic.CreateDelegate(delegateType, null);
-        }
-
-        private Delegate CreateGetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type memberType)
+        private Delegate CreateGetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type returnType)
         {
             // TODO 統合？
             if (isValueHolder && !pi.CanRead)
@@ -397,12 +357,17 @@ namespace Smart.Reflection
                 return null;
             }
 
-            var dynamic = new DynamicMethod(string.Empty, memberType, new[] { typeof(object), targetType }, true);
+            var dynamic = new DynamicMethod(string.Empty, returnType, new[] { typeof(object), targetType }, true);
             var il = dynamic.GetILGenerator();
 
             if (!pi.GetGetMethod().IsStatic)
             {
                 il.Emit(OpCodes.Ldarg_1);
+                if (targetType == typeof(object))
+                {
+                    // TODO Unbox ?
+                    il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                }
             }
 
             il.Emit(pi.GetGetMethod().IsStatic ? OpCodes.Call : OpCodes.Callvirt, pi.GetGetMethod());
@@ -412,9 +377,14 @@ namespace Smart.Reflection
                 il.Emit(OpCodes.Callvirt, tpi.GetGetMethod());
             }
 
+            if ((returnType == typeof(object)) && (tpi.PropertyType.IsValueType))
+            {
+                il.Emit(OpCodes.Box, tpi.PropertyType);
+            }
+
             il.Emit(OpCodes.Ret);
 
-            var delegateType = typeof(Func<,>).MakeGenericType(targetType, memberType);
+            var delegateType = typeof(Func<,>).MakeGenericType(targetType, returnType);
             return dynamic.CreateDelegate(delegateType, null);
         }
 

@@ -63,6 +63,7 @@ namespace Smart.Reflection
 
         public Delegate CreateFactoryDelegate(ConstructorInfo ci)
         {
+            // TODO 数でDispatch
             throw new NotImplementedException();
         }
 
@@ -220,21 +221,23 @@ namespace Smart.Reflection
 
         public Delegate CreateGetterDelegate(PropertyInfo pi)
         {
-            throw new NotImplementedException();
+            return CreateGetterDelegate(pi, true);
         }
 
         public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
         {
+            // TODO 数でDispatch
             throw new NotImplementedException();
         }
 
         public Delegate CreateSetterDelegate(PropertyInfo pi)
         {
-            throw new NotImplementedException();
+            return CreateSetterDelegate(pi, true);
         }
 
         public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
         {
+            // TODO 数でDispatch
             throw new NotImplementedException();
         }
 
