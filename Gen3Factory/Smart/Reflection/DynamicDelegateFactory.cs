@@ -121,29 +121,19 @@ namespace Smart.Reflection
         public Delegate CreateFactoryDelegate(ConstructorInfo ci)
         {
             return typedFactoryCache
-                .GetOrAdd(ci, x =>
-                {
-                    var types = new Type[ci.GetParameters().Length + 1];
-                    for (var i = 0; i < types.Length; i++)
-                    {
-                        types[i] = ci.GetParameters()[i].ParameterType;
-                    }
-                    types[types.Length - 1] = ci.DeclaringType;
-
-                    var delegateType = typeof(Func<>).MakeGenericType(types);
-                    return CreateFactoryInternal(
-                        ci,
-                        ci.DeclaringType,
-                        ci.GetParameters().Select(p => p.ParameterType).ToArray(),
-                        delegateType);
-                });
+                .GetOrAdd(ci, x => CreateFactoryInternal(
+                    ci,
+                    ci.DeclaringType,
+                    ci.GetParameters().Select(p => p.ParameterType).ToArray()));
         }
 
         // Factory Helper
 
         private Func<object[], object> CreateFactoryInternal(ConstructorInfo ci)
         {
-            var dynamic = new DynamicMethod(string.Empty, ci.DeclaringType, FactoryParameterTypes, true);
+            var returnType = ci.DeclaringType.IsValueType ? ObjectType : ci.DeclaringType;
+
+            var dynamic = new DynamicMethod(string.Empty, returnType, FactoryParameterTypes, true);
             var il = dynamic.GetILGenerator();
 
             for (var i = 0; i < ci.GetParameters().Length; i++)
@@ -151,21 +141,57 @@ namespace Smart.Reflection
                 il.Emit(OpCodes.Ldarg_1);
                 il.EmitLdcI4(i);
                 il.Emit(OpCodes.Ldelem_Ref);
-                var paramType = ci.GetParameters()[i].ParameterType;
-                il.Emit(paramType.GetTypeInfo().IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, paramType);
+                il.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
             }
 
             il.Emit(OpCodes.Newobj, ci);
+            if (ci.DeclaringType.IsValueType)
+            {
+                il.Emit(OpCodes.Box, ci.DeclaringType);
+            }
             il.Emit(OpCodes.Ret);
 
-            var delegateType = typeof(Func<,>).MakeGenericType(ObjectArrayType, ci.DeclaringType);
+            var delegateType = typeof(Func<,>).MakeGenericType(ObjectArrayType, returnType);
             return (Func<object[], object>)dynamic.CreateDelegate(delegateType, null);
         }
 
-        private static Delegate CreateFactoryInternal(ConstructorInfo ci, Type returnType, Type[] parameterTypes, Type delegateType)
+        private static readonly Dictionary<int, Type> FactoryDelegateTypes = new Dictionary<int, Type>
         {
-            // TODO 生粋のパラメータタイプから、作る方式に変更？
-            // TODO Funcはメソッド定義、 Dynamicはobject付き？
+            { 0, typeof(Func<>) },
+            { 1, typeof(Func<,>) },
+            { 2, typeof(Func<,,>) },
+            { 3, typeof(Func<,,,>) },
+            { 4, typeof(Func<,,,,>) },
+            { 5, typeof(Func<,,,,,>) },
+            { 6, typeof(Func<,,,,,,>) },
+            { 7, typeof(Func<,,,,,,,>) },
+            { 8, typeof(Func<,,,,,,,,>) },
+            { 9, typeof(Func<,,,,,,,,,>) },
+            { 10, typeof(Func<,,,,,,,,,,>) },
+            { 11, typeof(Func<,,,,,,,,,,,>) },
+            { 12, typeof(Func<,,,,,,,,,,,,>) },
+            { 13, typeof(Func<,,,,,,,,,,,,,>) },
+            { 14, typeof(Func<,,,,,,,,,,,,,,>) },
+            { 15, typeof(Func<,,,,,,,,,,,,,,,>) },
+            { 16, typeof(Func<,,,,,,,,,,,,,,,,>) }
+        };
+
+        private static Delegate CreateFactoryInternal(ConstructorInfo ci, Type returnType, Type[] argumentTypes)
+        {
+            if (!FactoryDelegateTypes.TryGetValue(argumentTypes.Length, out var delegateOpenType))
+            {
+                throw new ArgumentNullException(nameof(argumentTypes));
+            }
+
+            var parameterTypes = new Type[argumentTypes.Length + 1];
+            parameterTypes[0] = ObjectType;
+            Array.Copy(argumentTypes, 0, parameterTypes, 1, argumentTypes.Length);
+
+            var typeArguments = new Type[argumentTypes.Length + 1];
+            Array.Copy(argumentTypes, 0, typeArguments, 0, argumentTypes.Length);
+            typeArguments[typeArguments.Length - 1] = returnType;
+
+            var delegateType = delegateOpenType.MakeGenericType(typeArguments);
 
             var dynamic = new DynamicMethod(string.Empty, returnType, parameterTypes, true);
             var il = dynamic.GetILGenerator();
@@ -173,13 +199,17 @@ namespace Smart.Reflection
             for (var i = 0; i < ci.GetParameters().Length; i++)
             {
                 il.EmitLdarg(i + 1);
-                if (parameterTypes[i + 1] != ci.GetParameters()[i].ParameterType)
+                if (argumentTypes[i] == ObjectType)
                 {
                     il.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
                 }
             }
 
             il.Emit(OpCodes.Newobj, ci);
+            if ((returnType == ObjectType) && (ci.DeclaringType.IsValueType))
+            {
+                il.Emit(OpCodes.Box, ci.DeclaringType);
+            }
             il.Emit(OpCodes.Ret);
 
             return dynamic.CreateDelegate(delegateType, null);
