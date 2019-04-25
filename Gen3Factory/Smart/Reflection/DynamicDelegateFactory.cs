@@ -240,8 +240,8 @@ namespace Smart.Reflection
             var tpi = isValueHolder ? ValueHolderHelper.GetValueTypeProperty(holderType) : pi;
 
             return extension
-                ? extensionSetterCache.GetOrAdd(pi, x => CreateSetterInternal(x, tpi, isValueHolder))
-                : setterCache.GetOrAdd(pi, x => CreateSetterInternal(x, tpi, false));
+                ? extensionSetterCache.GetOrAdd(pi, x => (Action<object, object>)CreateSetterInternal(x, tpi, isValueHolder, typeof(object), typeof(object)))
+                : setterCache.GetOrAdd(pi, x => (Action<object, object>)CreateSetterInternal(x, tpi, false, typeof(object), typeof(object)));
         }
 
         // Accessor
@@ -416,9 +416,6 @@ namespace Smart.Reflection
             return dynamic.CreateDelegate(delegateType, null);
         }
 
-        //--------------------------------------------------------------------------------
-        // TODO Mix
-
         private static readonly Dictionary<Type, Action<ILGenerator>> LdcDictionary = new Dictionary<Type, Action<ILGenerator>>
         {
             { typeof(bool), il => il.Emit(OpCodes.Ldc_I4_0) },
@@ -437,7 +434,7 @@ namespace Smart.Reflection
             { typeof(UIntPtr), il => il.Emit(OpCodes.Ldc_I4_0) },   // Simplicity
         };
 
-        private Action<object, object> CreateSetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder)
+        private Delegate CreateSetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type memberType)
         {
             if (isValueHolder && !pi.CanRead)
             {
@@ -451,10 +448,10 @@ namespace Smart.Reflection
 
             var isStatic = isValueHolder ? pi.GetGetMethod().IsStatic : pi.GetSetMethod().IsStatic;
 
-            var dynamic = new DynamicMethod(string.Empty, typeof(void), new[] { typeof(object), typeof(object), typeof(object) }, true);
+            var dynamic = new DynamicMethod(string.Empty, typeof(void), new[] { typeof(object), targetType, memberType }, true);
             var il = dynamic.GetILGenerator();
 
-            if (tpi.PropertyType.IsValueType)
+            if ((memberType == typeof(object)) && tpi.PropertyType.IsValueType)
             {
                 var hasValue = il.DefineLabel();
 
@@ -465,7 +462,10 @@ namespace Smart.Reflection
                 if (!isStatic)
                 {
                     il.Emit(OpCodes.Ldarg_1);
-                    il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    if (targetType == typeof(object))
+                    {
+                        il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    }
                 }
 
                 if (isValueHolder)
@@ -496,7 +496,10 @@ namespace Smart.Reflection
                 if (!isStatic)
                 {
                     il.Emit(OpCodes.Ldarg_1);
-                    il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    if (targetType == typeof(object))
+                    {
+                        il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    }
                 }
 
                 if (isValueHolder)
@@ -516,7 +519,10 @@ namespace Smart.Reflection
                 if (!isStatic)
                 {
                     il.Emit(OpCodes.Ldarg_1);
-                    il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    if (targetType == typeof(object))
+                    {
+                        il.Emit(OpCodes.Castclass, pi.DeclaringType);
+                    }
                 }
 
                 if (isValueHolder)
@@ -525,48 +531,15 @@ namespace Smart.Reflection
                 }
 
                 il.Emit(OpCodes.Ldarg_2);
-                il.Emit(OpCodes.Castclass, tpi.PropertyType);
+                if (memberType == typeof(object))
+                {
+                    il.Emit(OpCodes.Castclass, tpi.PropertyType);
+                }
 
                 il.Emit(tpi.GetSetMethod().IsStatic ? OpCodes.Call : OpCodes.Callvirt, tpi.GetSetMethod());
 
                 il.Emit(OpCodes.Ret);
             }
-
-            return (Action<object, object>)dynamic.CreateDelegate(typeof(Action<object, object>), null);
-        }
-
-        private Delegate CreateSetterInternal(PropertyInfo pi, PropertyInfo tpi, bool isValueHolder, Type targetType, Type memberType)
-        {
-            if (isValueHolder && !pi.CanRead)
-            {
-                throw new ArgumentException($"Value holder is not readable. name=[{pi.Name}]", nameof(pi));
-            }
-
-            if (!tpi.CanWrite)
-            {
-                return null;
-            }
-
-            var isStatic = isValueHolder ? pi.GetGetMethod().IsStatic : pi.GetSetMethod().IsStatic;
-
-            var dynamic = new DynamicMethod(string.Empty, typeof(void), new[] { typeof(object), targetType, memberType }, true);
-            var il = dynamic.GetILGenerator();
-
-            if (!isStatic)
-            {
-                il.Emit(OpCodes.Ldarg_1);
-            }
-
-            if (isValueHolder)
-            {
-                il.Emit(pi.GetGetMethod().IsStatic ? OpCodes.Call : OpCodes.Callvirt, pi.GetGetMethod());
-            }
-
-            il.Emit(OpCodes.Ldarg_2);
-
-            il.Emit(tpi.GetSetMethod().IsStatic ? OpCodes.Call : OpCodes.Callvirt, tpi.GetSetMethod());
-
-            il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(Action<,>).MakeGenericType(targetType, memberType);
             return dynamic.CreateDelegate(delegateType, null);
