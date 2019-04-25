@@ -61,12 +61,6 @@ namespace Smart.Reflection
             return Activator.CreateInstance<T>;
         }
 
-        public Delegate CreateFactoryDelegate(ConstructorInfo ci)
-        {
-            // TODO 数でDispatch
-            throw new NotImplementedException();
-        }
-
         //--------------------------------------------------------------------------------
         // Accessor
         //--------------------------------------------------------------------------------
@@ -235,28 +229,6 @@ namespace Smart.Reflection
                 var holder = pi.GetValue(obj, null);
                 vpi.SetValue(holder, value, null);
             };
-        }
-
-        // Accessor
-
-        public Delegate CreateGetterDelegate(PropertyInfo pi)
-        {
-            return CreateGetterDelegate(pi, true);
-        }
-
-        public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
-        {
-            return CreateGetter(pi, extension);
-        }
-
-        public Delegate CreateSetterDelegate(PropertyInfo pi)
-        {
-            return CreateSetterDelegate(pi, true);
-        }
-
-        public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
-        {
-            return CreateSetter(pi, extension);
         }
 
         //--------------------------------------------------------------------------------

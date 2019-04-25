@@ -39,13 +39,6 @@ namespace Smart.Reflection
             return Factory.CreateFactory(ci);
         }
 
-        // Factory
-
-        public Delegate CreateFactoryDelegate(ConstructorInfo ci)
-        {
-            return Factory.CreateFactoryDelegate(ci);
-        }
-
         //--------------------------------------------------------------------------------
         // Accessor
         //--------------------------------------------------------------------------------
@@ -90,28 +83,6 @@ namespace Smart.Reflection
         public Action<T, TMember> CreateSetter<T, TMember>(PropertyInfo pi, bool extension)
         {
             return Factory.CreateSetter<T, TMember>(pi, extension);
-        }
-
-        // Accessor
-
-        public Delegate CreateGetterDelegate(PropertyInfo pi)
-        {
-            return Factory.CreateGetterDelegate(pi);
-        }
-
-        public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
-        {
-            return Factory.CreateGetterDelegate(pi, extension);
-        }
-
-        public Delegate CreateSetterDelegate(PropertyInfo pi)
-        {
-            return Factory.CreateSetterDelegate(pi);
-        }
-
-        public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
-        {
-            return Factory.CreateSetterDelegate(pi, extension);
         }
 
         //--------------------------------------------------------------------------------
