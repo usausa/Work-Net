@@ -246,8 +246,7 @@ namespace Smart.Reflection
 
         public Delegate CreateGetterDelegate(PropertyInfo pi, bool extension)
         {
-            // TODO 数でDispatch
-            throw new NotImplementedException();
+            return CreateGetter(pi, extension);
         }
 
         public Delegate CreateSetterDelegate(PropertyInfo pi)
@@ -257,8 +256,7 @@ namespace Smart.Reflection
 
         public Delegate CreateSetterDelegate(PropertyInfo pi, bool extension)
         {
-            // TODO 数でDispatch
-            throw new NotImplementedException();
+            return CreateSetter(pi, extension);
         }
 
         //--------------------------------------------------------------------------------
