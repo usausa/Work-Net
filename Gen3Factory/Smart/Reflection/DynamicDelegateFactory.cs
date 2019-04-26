@@ -64,14 +64,14 @@ namespace Smart.Reflection
 
         private Func<int, Array> CreateArrayAllocatorInternal(Type type)
         {
-            var dynamic = new DynamicMethod(string.Empty, typeof(Array), new[] { typeof(object), typeof(int) }, true);
-            var il = dynamic.GetILGenerator();
+            var dynamicMethod = new DynamicMethod(string.Empty, typeof(Array), new[] { typeof(object), typeof(int) }, true);
+            var il = dynamicMethod.GetILGenerator();
 
             il.Emit(OpCodes.Ldarg_1);
             il.Emit(OpCodes.Newarr, type);
             il.Emit(OpCodes.Ret);
 
-            return (Func<int, Array>)dynamic.CreateDelegate(typeof(Func<int, Array>), null);
+            return (Func<int, Array>)dynamicMethod.CreateDelegate(typeof(Func<int, Array>), null);
         }
 
         //--------------------------------------------------------------------------------
@@ -105,8 +105,8 @@ namespace Smart.Reflection
         {
             var returnType = ci.DeclaringType.IsValueType ? typeof(object) : ci.DeclaringType;
 
-            var dynamic = new DynamicMethod(string.Empty, returnType, new[] { typeof(object), typeof(object[]) }, true);
-            var il = dynamic.GetILGenerator();
+            var dynamicMethod = new DynamicMethod(string.Empty, returnType, new[] { typeof(object), typeof(object[]) }, true);
+            var il = dynamicMethod.GetILGenerator();
 
             for (var i = 0; i < ci.GetParameters().Length; i++)
             {
@@ -124,7 +124,7 @@ namespace Smart.Reflection
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(Func<,>).MakeGenericType(typeof(object[]), returnType);
-            return (Func<object[], object>)dynamic.CreateDelegate(delegateType, null);
+            return (Func<object[], object>)dynamicMethod.CreateDelegate(delegateType, null);
         }
 
         private static readonly Dictionary<int, Type> FactoryDelegateTypes = new Dictionary<int, Type>
@@ -165,8 +165,8 @@ namespace Smart.Reflection
 
             var delegateType = delegateOpenType.MakeGenericType(typeArguments);
 
-            var dynamic = new DynamicMethod(string.Empty, returnType, parameterTypes, true);
-            var il = dynamic.GetILGenerator();
+            var dynamicMethod = new DynamicMethod(string.Empty, returnType, parameterTypes, true);
+            var il = dynamicMethod.GetILGenerator();
 
             for (var i = 0; i < ci.GetParameters().Length; i++)
             {
@@ -184,7 +184,7 @@ namespace Smart.Reflection
             }
             il.Emit(OpCodes.Ret);
 
-            return dynamic.CreateDelegate(delegateType, null);
+            return dynamicMethod.CreateDelegate(delegateType, null);
         }
 
         //--------------------------------------------------------------------------------
@@ -386,8 +386,8 @@ namespace Smart.Reflection
                 return null;
             }
 
-            var dynamic = new DynamicMethod(string.Empty, memberType, new[] { typeof(object), targetType }, true);
-            var il = dynamic.GetILGenerator();
+            var dynamicMethod = new DynamicMethod(string.Empty, memberType, new[] { typeof(object), targetType }, true);
+            var il = dynamicMethod.GetILGenerator();
 
             if (!pi.GetGetMethod().IsStatic)
             {
@@ -413,7 +413,7 @@ namespace Smart.Reflection
             il.Emit(OpCodes.Ret);
 
             var delegateType = typeof(Func<,>).MakeGenericType(targetType, memberType);
-            return dynamic.CreateDelegate(delegateType, null);
+            return dynamicMethod.CreateDelegate(delegateType, null);
         }
 
         private static readonly Dictionary<Type, Action<ILGenerator>> LdcDictionary = new Dictionary<Type, Action<ILGenerator>>
@@ -448,8 +448,8 @@ namespace Smart.Reflection
 
             var isStatic = isValueHolder ? pi.GetGetMethod().IsStatic : pi.GetSetMethod().IsStatic;
 
-            var dynamic = new DynamicMethod(string.Empty, typeof(void), new[] { typeof(object), targetType, memberType }, true);
-            var il = dynamic.GetILGenerator();
+            var dynamicMethod = new DynamicMethod(string.Empty, typeof(void), new[] { typeof(object), targetType, memberType }, true);
+            var il = dynamicMethod.GetILGenerator();
 
             if ((memberType == typeof(object)) && tpi.PropertyType.IsValueType)
             {
@@ -542,7 +542,7 @@ namespace Smart.Reflection
             }
 
             var delegateType = typeof(Action<,>).MakeGenericType(targetType, memberType);
-            return dynamic.CreateDelegate(delegateType, null);
+            return dynamicMethod.CreateDelegate(delegateType, null);
         }
 
         //--------------------------------------------------------------------------------
