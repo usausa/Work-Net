@@ -7,6 +7,8 @@ namespace Benchmark
     [Config(typeof(BenchmarkConfig))]
     public class PrimitiveObjectBenchmark
     {
+        private readonly object parameter = 1;
+
         private Func<int, int> primitiveConverter;
         private Func<object, object> primitiveCallObjectConverter;
         private Func<object, object> objectCastConverter;   // better than call, but...
@@ -22,24 +24,24 @@ namespace Benchmark
         }
 
         [Benchmark]
-        public int PrimitiveConverter() => primitiveConverter(1);
+        public int PrimitiveConverter() => primitiveConverter((int)parameter);
 
         [Benchmark]
-        public object PrimitiveCallObjectConverter() => primitiveCallObjectConverter(1);
+        public object PrimitiveCallObjectConverter() => primitiveCallObjectConverter(parameter);
 
         [Benchmark]
-        public object ObjectCastConverter() => objectCastConverter(1);
+        public object ObjectCastConverter() => objectCastConverter(parameter);
 
         [Benchmark]
-        public object PrimitiveConverterDelegate() => primitiveConverterDelegate.DynamicInvoke(1);
+        public object PrimitiveConverterDelegate() => primitiveConverterDelegate.DynamicInvoke(parameter);
 
         [Benchmark]
-        public int PrimitiveCallObjectConverter2() => (int)primitiveCallObjectConverter(1);
+        public int PrimitiveCallObjectConverter2() => (int)primitiveCallObjectConverter(parameter);
 
         [Benchmark]
-        public int ObjectCastConverter2() => (int)objectCastConverter(1);
+        public int ObjectCastConverter2() => (int)objectCastConverter(parameter);
 
         [Benchmark]
-        public int PrimitiveConverterDelegate2() => (int)primitiveConverterDelegate.DynamicInvoke(1);
+        public int PrimitiveConverterDelegate2() => (int)primitiveConverterDelegate.DynamicInvoke(parameter);
     }
 }
