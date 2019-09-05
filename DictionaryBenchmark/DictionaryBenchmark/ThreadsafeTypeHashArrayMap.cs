@@ -11,13 +11,35 @@ namespace Smart.Collections.Concurrent
     [DebuggerDisplay("Count = {" + nameof(Count) + "}")]
     public sealed class ThreadsafeTypeHashArrayMap<TValue> : IEnumerable<KeyValuePair<Type, TValue>>
     {
-        private static readonly Node[] EmptyNodes = Array.Empty<Node>();
+        private static readonly Node EmptyNode = new Node(typeof(EmptyKey), default);
 
         private readonly object sync = new object();
 
         private readonly IHashArrayMapStrategy strategy;
 
         private Table table;
+
+        public void Dump()
+        {
+            var nodes = table.Nodes;
+            Debug.WriteLine(nodes.Length);
+            for (var i = 0; i < nodes.Length; i++)
+            {
+                var node = nodes[i];
+                if (node != EmptyNode)
+                {
+                    Debug.Write($"{i:D5} :");
+                    do
+                    {
+                        Debug.Write(" ");
+                        Debug.Write(node.Key.Name);
+                        node = node.Next;
+                    } while (node != null);
+
+                    Debug.WriteLine("");
+                }
+            }
+        }
 
         //--------------------------------------------------------------------------------
         // Constructor
@@ -50,12 +72,24 @@ namespace Smart.Collections.Concurrent
             return size + 1;
         }
 
-        private static int CalculateDepth(Node[][] nodes)
+        private static int CalculateDepth(Node[] nodes)
         {
             var depth = 0;
             for (var i = 0; i < nodes.Length; i++)
             {
-                depth = Math.Max(nodes[i].Length, depth);
+                var node = nodes[i];
+                if (node != EmptyNode)
+                {
+                    var length = 0;
+
+                    do
+                    {
+                        length++;
+                        node = node.Next;
+                    } while (node != null);
+
+                    depth = Math.Max(length, depth);
+                }
             }
 
             return depth;
@@ -64,52 +98,62 @@ namespace Smart.Collections.Concurrent
         private Table CreateInitialTable()
         {
             var size = CalculateSize(strategy.CalculateInitialSize());
-            var mask = (int)(size - 1);
 
-            var nodes = new Node[size][];
+            var nodes = new Node[size];
 
             for (var i = 0; i < nodes.Length; i++)
             {
-                nodes[i] = EmptyNodes;
+                nodes[i] = EmptyNode;
             }
 
-            return new Table(mask, nodes, 0, 0);
+            return new Table(nodes, 0, 0);
         }
 
-        private static Node[] AddNode(Node[] nodes, Node addNode)
+        private static Node AddNode(Node node, Node addNode)
         {
-            if (nodes is null)
+            if (node is null)
             {
-                return new[] { addNode };
+                return addNode;
             }
 
-            var newNodes = new Node[nodes.Length + 1];
-            Array.Copy(nodes, 0, newNodes, 0, nodes.Length);
-            newNodes[nodes.Length] = addNode;
+            var last = node;
+            while (last.Next != null)
+            {
+                last = last.Next;
+            }
+            last.Next = addNode;
 
-            return newNodes;
+            return node;
         }
 
-        private static void RelocateNodes(Node[][] nodes, Node[][] oldNodes, int mask)
+        private static void RelocateNodes(Node[] nodes, Node[] oldNodes, int mask)
         {
             for (var i = 0; i < oldNodes.Length; i++)
             {
-                for (var j = 0; j < oldNodes[i].Length; j++)
+                var node = oldNodes[i];
+                if (node != EmptyNode)
                 {
-                    var node = oldNodes[i][j];
-                    var relocateIndex = node.Key.GetHashCode() & mask;
-                    nodes[relocateIndex] = AddNode(nodes[relocateIndex], node);
+                    do
+                    {
+                        var next = node.Next;
+                        node.Next = null;
+
+                        var relocateIndex = node.Key.GetHashCode() & mask;
+                        nodes[relocateIndex] = AddNode(nodes[relocateIndex], node);
+
+                        node = next;
+                    } while (node != null);
                 }
             }
         }
 
-        private static void FillEmptyIfNull(Node[][] nodes)
+        private static void FillEmptyIfNull(Node[] nodes)
         {
             for (var i = 0; i < nodes.Length; i++)
             {
                 if (nodes[i] is null)
                 {
-                    nodes[i] = EmptyNodes;
+                    nodes[i] = EmptyNode;
                 }
             }
         }
@@ -120,7 +164,7 @@ namespace Smart.Collections.Concurrent
 
             var size = CalculateSize(requestSize);
             var mask = (int)(size - 1);
-            var newNodes = new Node[size][];
+            var newNodes = new Node[size];
 
             RelocateNodes(newNodes, oldTable.Nodes, mask);
 
@@ -129,7 +173,7 @@ namespace Smart.Collections.Concurrent
 
             FillEmptyIfNull(newNodes);
 
-            return new Table(mask, newNodes, oldTable.Count + 1, CalculateDepth(newNodes));
+            return new Table(newNodes, oldTable.Count + 1, CalculateDepth(newNodes));
         }
 
         private Table CreateAddRangeTable(Table oldTable, ICollection<Node> addNodes)
@@ -138,7 +182,7 @@ namespace Smart.Collections.Concurrent
 
             var size = CalculateSize(requestSize);
             var mask = (int)(size - 1);
-            var newNodes = new Node[size][];
+            var newNodes = new Node[size];
 
             RelocateNodes(newNodes, oldTable.Nodes, mask);
 
@@ -150,23 +194,22 @@ namespace Smart.Collections.Concurrent
 
             FillEmptyIfNull(newNodes);
 
-            return new Table(mask, newNodes, oldTable.Count + addNodes.Count, CalculateDepth(newNodes));
+            return new Table(newNodes, oldTable.Count + addNodes.Count, CalculateDepth(newNodes));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool TryGetValueInternal(Table targetTable, Type key, out TValue value)
         {
-            var index = key.GetHashCode() & targetTable.HashMask;
-            var array = targetTable.Nodes[index];
-            for (var i = 0; i < array.Length; i++)
+            var node = targetTable.Nodes[key.GetHashCode() & (targetTable.Nodes.Length - 1)];
+            do
             {
-                var node = array[i];
                 if (node.Key == key)
                 {
                     value = node.Value;
                     return true;
                 }
-            }
+                node = node.Next;
+            } while (node != null);
 
             value = default;
             return false;
@@ -295,10 +338,14 @@ namespace Smart.Collections.Concurrent
 
             for (var i = 0; i < nodes.Length; i++)
             {
-                for (var j = 0; j < nodes[i].Length; j++)
+                var node = nodes[i];
+                if (node != EmptyNode)
                 {
-                    var node = nodes[i][j];
-                    yield return new KeyValuePair<Type, TValue>(node.Key, node.Value);
+                    do
+                    {
+                        yield return new KeyValuePair<Type, TValue>(node.Key, node.Value);
+                        node = node.Next;
+                    } while (node != null);
                 }
             }
         }
@@ -328,12 +375,18 @@ namespace Smart.Collections.Concurrent
         // Inner
         //--------------------------------------------------------------------------------
 
+        private class EmptyKey
+        {
+        }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Performance")]
         private sealed class Node
         {
             public readonly Type Key;
 
             public readonly TValue Value;
+
+            public Node Next;
 
             public Node(Type key, TValue value)
             {
@@ -345,17 +398,14 @@ namespace Smart.Collections.Concurrent
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Performance")]
         private sealed class Table
         {
-            public readonly int HashMask;
-
-            public readonly Node[][] Nodes;
+            public readonly Node[] Nodes;
 
             public readonly int Count;
 
             public readonly int Depth;
 
-            public Table(int hashMask, Node[][] nodes, int count, int depth)
+            public Table(Node[] nodes, int count, int depth)
             {
-                HashMask = hashMask;
                 Nodes = nodes;
                 Count = count;
                 Depth = depth;
