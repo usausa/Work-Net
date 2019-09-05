@@ -4,7 +4,6 @@ namespace Smart.Collections.Concurrent
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading;
 
@@ -17,11 +16,10 @@ namespace Smart.Collections.Concurrent
 
         private readonly IHashArrayMapStrategy strategy;
 
-        private Table table;
+        private Node[] nodes;
 
         public void Dump()
         {
-            var nodes = table.Nodes;
             Debug.WriteLine(nodes.Length);
             for (var i = 0; i < nodes.Length; i++)
             {
@@ -53,7 +51,7 @@ namespace Smart.Collections.Concurrent
         public ThreadsafeTypeHashArrayMap(IHashArrayMapStrategy strategy)
         {
             this.strategy = strategy;
-            table = CreateInitialTable();
+            nodes = CreateInitialTable();
         }
 
         //--------------------------------------------------------------------------------
@@ -72,12 +70,31 @@ namespace Smart.Collections.Concurrent
             return size + 1;
         }
 
-        private static int CalculateDepth(Node[] nodes)
+        private static int CalculateCount(Node[] targetNodes)
+        {
+            var count = 0;
+            for (var i = 0; i < targetNodes.Length; i++)
+            {
+                var node = targetNodes[i];
+                if (node != EmptyNode)
+                {
+                    do
+                    {
+                        count++;
+                        node = node.Next;
+                    } while (node != null);
+                }
+            }
+
+            return count;
+        }
+
+        private static int CalculateDepth(Node[] targetNodes)
         {
             var depth = 0;
-            for (var i = 0; i < nodes.Length; i++)
+            for (var i = 0; i < targetNodes.Length; i++)
             {
-                var node = nodes[i];
+                var node = targetNodes[i];
                 if (node != EmptyNode)
                 {
                     var length = 0;
@@ -95,19 +112,20 @@ namespace Smart.Collections.Concurrent
             return depth;
         }
 
-        private Table CreateInitialTable()
+        private Node[] CreateInitialTable()
         {
             var size = CalculateSize(strategy.CalculateInitialSize());
+            var newNodes = new Node[size];
 
-            var nodes = new Node[size];
-
-            for (var i = 0; i < nodes.Length; i++)
+            for (var i = 0; i < newNodes.Length; i++)
             {
-                nodes[i] = EmptyNode;
+                newNodes[i] = EmptyNode;
             }
 
-            return new Table(nodes, 0, 0);
+            return newNodes;
         }
+
+        // TODO 以下、更新の見なおし
 
         private static Node AddNode(Node node, Node addNode)
         {
@@ -147,60 +165,83 @@ namespace Smart.Collections.Concurrent
             }
         }
 
-        private static void FillEmptyIfNull(Node[] nodes)
+        private static void FillEmptyIfNull(Node[] targetNodes)
         {
-            for (var i = 0; i < nodes.Length; i++)
+            for (var i = 0; i < targetNodes.Length; i++)
             {
-                if (nodes[i] is null)
+                if (targetNodes[i] is null)
                 {
-                    nodes[i] = EmptyNode;
+                    targetNodes[i] = EmptyNode;
                 }
             }
         }
 
-        private Table CreateAddTable(Table oldTable, Node node)
+        private Node[] CreateAddTable(Node node)
         {
-            var requestSize = strategy.CalculateRequestSize(new AddResizeContext(oldTable.Nodes.Length, oldTable.Depth, oldTable.Count, 1));
+            // TODO 配置最適化 & メモリバリアはこの中
+            var depth = CalculateDepth(nodes);
+            var count = CalculateCount(nodes);
+            var requestSize = strategy.CalculateRequestSize(new AddResizeContext(nodes.Length, depth, count, 1));
 
             var size = CalculateSize(requestSize);
             var mask = (int)(size - 1);
             var newNodes = new Node[size];
 
-            RelocateNodes(newNodes, oldTable.Nodes, mask);
+            RelocateNodes(newNodes, nodes, mask);
 
             var index = node.Key.GetHashCode() & mask;
             newNodes[index] = AddNode(newNodes[index], node);
 
             FillEmptyIfNull(newNodes);
 
-            return new Table(newNodes, oldTable.Count + 1, CalculateDepth(newNodes));
+            return newNodes;
         }
 
-        private Table CreateAddRangeTable(Table oldTable, ICollection<Node> addNodes)
+        //private Table CreateAddRangeTable(ICollection<Node> addNodes)
+        //{
+        //    var requestSize = strategy.CalculateRequestSize(new AddResizeContext(oldTable.Nodes.Length, oldTable.Depth, oldTable.Count, addNodes.Count));
+
+        //    var size = CalculateSize(requestSize);
+        //    var mask = (int)(size - 1);
+        //    var newNodes = new Node[size];
+
+        //    RelocateNodes(newNodes, oldTable.Nodes, mask);
+
+        //    foreach (var node in addNodes)
+        //    {
+        //        var index = node.Key.GetHashCode() & mask;
+        //        newNodes[index] = AddNode(newNodes[index], node);
+        //    }
+
+        //    FillEmptyIfNull(newNodes);
+
+        //    return new Table(newNodes, oldTable.Count + addNodes.Count, CalculateDepth(newNodes));
+        //}
+
+        //--------------------------------------------------------------------------------
+        // Public
+        //--------------------------------------------------------------------------------
+
+        public int Count => CalculateCount(nodes);
+
+        public int Depth => CalculateDepth(nodes);
+
+        public void Clear()
         {
-            var requestSize = strategy.CalculateRequestSize(new AddResizeContext(oldTable.Nodes.Length, oldTable.Depth, oldTable.Count, addNodes.Count));
-
-            var size = CalculateSize(requestSize);
-            var mask = (int)(size - 1);
-            var newNodes = new Node[size];
-
-            RelocateNodes(newNodes, oldTable.Nodes, mask);
-
-            foreach (var node in addNodes)
+            lock (sync)
             {
-                var index = node.Key.GetHashCode() & mask;
-                newNodes[index] = AddNode(newNodes[index], node);
+                // TODO バリア移動？
+                var newNodes = CreateInitialTable();
+                Interlocked.MemoryBarrier();
+                nodes = newNodes;
             }
-
-            FillEmptyIfNull(newNodes);
-
-            return new Table(newNodes, oldTable.Count + addNodes.Count, CalculateDepth(newNodes));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool TryGetValueInternal(Table targetTable, Type key, out TValue value)
+        public bool TryGetValue(Type key, out TValue value)
         {
-            var node = targetTable.Nodes[key.GetHashCode() & (targetTable.Nodes.Length - 1)];
+            var node = nodes[key.GetHashCode() & (nodes.Length - 1)];
             do
             {
                 if (node.Key == key)
@@ -215,118 +256,94 @@ namespace Smart.Collections.Concurrent
             return false;
         }
 
-        //--------------------------------------------------------------------------------
-        // Public
-        //--------------------------------------------------------------------------------
-
-        public int Count => table.Count;
-
-        public int Depth => table.Depth;
-
-        public void Clear()
-        {
-            lock (sync)
-            {
-                var newTable = CreateInitialTable();
-                Interlocked.MemoryBarrier();
-                table = newTable;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetValue(Type key, out TValue value)
-        {
-            return TryGetValueInternal(table, key, out value);
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
         public TValue AddIfNotExist(Type key, TValue value)
         {
             lock (sync)
             {
                 // Double checked locking
-                if (TryGetValueInternal(table, key, out var currentValue))
+                if (TryGetValue(key, out var currentValue))
                 {
                     return currentValue;
                 }
 
+                // TODO 中へ移動
                 // Rebuild
-                var newTable = CreateAddTable(table, new Node(key, value));
+                var newTable = CreateAddTable(new Node(key, value));
                 Interlocked.MemoryBarrier();
-                table = newTable;
+                nodes = newTable;
 
                 return value;
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
-        public TValue AddIfNotExist(Type key, Func<Type, TValue> valueFactory)
-        {
-            lock (sync)
-            {
-                // Double checked locking
-                if (TryGetValueInternal(table, key, out var currentValue))
-                {
-                    return currentValue;
-                }
+        //[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
+        //public TValue AddIfNotExist(Type key, Func<Type, TValue> valueFactory)
+        //{
+        //    lock (sync)
+        //    {
+        //        // Double checked locking
+        //        if (TryGetValueInternal(table, key, out var currentValue))
+        //        {
+        //            return currentValue;
+        //        }
 
-                var value = valueFactory(key);
+        //        var value = valueFactory(key);
 
-                // Check if added by recursive
-                if (TryGetValueInternal(table, key, out currentValue))
-                {
-                    return currentValue;
-                }
+        //        // Check if added by recursive
+        //        if (TryGetValueInternal(table, key, out currentValue))
+        //        {
+        //            return currentValue;
+        //        }
 
-                // Rebuild
-                var newTable = CreateAddTable(table, new Node(key, value));
-                Interlocked.MemoryBarrier();
-                table = newTable;
+        //        // Rebuild
+        //        var newTable = CreateAddTable(table, new Node(key, value));
+        //        Interlocked.MemoryBarrier();
+        //        table = newTable;
 
-                return value;
-            }
-        }
+        //        return value;
+        //    }
+        //}
 
-        public int AddRangeIfNotExist(IEnumerable<KeyValuePair<Type, TValue>> pairs)
-        {
-            lock (sync)
-            {
-                var nodes = pairs
-                    .GroupBy(x => x.Key, (key, g) => g.First())
-                    .Where(x => !TryGetValueInternal(table, x.Key, out _))
-                    .Select(x => new Node(x.Key, x.Value))
-                    .ToList();
+        //public int AddRangeIfNotExist(IEnumerable<KeyValuePair<Type, TValue>> pairs)
+        //{
+        //    lock (sync)
+        //    {
+        //        var nodes = pairs
+        //            .GroupBy(x => x.Key, (key, g) => g.First())
+        //            .Where(x => !TryGetValueInternal(table, x.Key, out _))
+        //            .Select(x => new Node(x.Key, x.Value))
+        //            .ToList();
 
-                // Rebuild
-                var newTable = CreateAddRangeTable(table, nodes);
-                Interlocked.MemoryBarrier();
-                table = newTable;
+        //        // Rebuild
+        //        var newTable = CreateAddRangeTable(table, nodes);
+        //        Interlocked.MemoryBarrier();
+        //        table = newTable;
 
-                return nodes.Count;
-            }
-        }
+        //        return nodes.Count;
+        //    }
+        //}
 
-        public int AddRangeIfNotExist(IEnumerable<Type> keys, Func<Type, TValue> valueFactory)
-        {
-            lock (sync)
-            {
-                var nodes = keys
-                    .Distinct()
-                    .Where(x => !TryGetValueInternal(table, x, out _))
-                    .Select(x => new KeyValuePair<Type, TValue>(x, valueFactory(x)))
-                    .Where(x => !TryGetValueInternal(table, x.Key, out _))
-                    .Select(x => new Node(x.Key, x.Value))
-                    .ToList();
+        //public int AddRangeIfNotExist(IEnumerable<Type> keys, Func<Type, TValue> valueFactory)
+        //{
+        //    lock (sync)
+        //    {
+        //        var nodes = keys
+        //            .Distinct()
+        //            .Where(x => !TryGetValueInternal(table, x, out _))
+        //            .Select(x => new KeyValuePair<Type, TValue>(x, valueFactory(x)))
+        //            .Where(x => !TryGetValueInternal(table, x.Key, out _))
+        //            .Select(x => new Node(x.Key, x.Value))
+        //            .ToList();
 
-                // Rebuild
-                var newTable = CreateAddRangeTable(table, nodes);
-                Interlocked.MemoryBarrier();
-                table = newTable;
+        //        // Rebuild
+        //        var newTable = CreateAddRangeTable(table, nodes);
+        //        Interlocked.MemoryBarrier();
+        //        table = newTable;
 
-                return nodes.Count;
-            }
-        }
+        //        return nodes.Count;
+        //    }
+        //}
 
         //--------------------------------------------------------------------------------
         // IEnumerable
@@ -334,8 +351,7 @@ namespace Smart.Collections.Concurrent
 
         public IEnumerator<KeyValuePair<Type, TValue>> GetEnumerator()
         {
-            var nodes = table.Nodes;
-
+            // TODO local
             for (var i = 0; i < nodes.Length; i++)
             {
                 var node = nodes[i];
@@ -392,23 +408,6 @@ namespace Smart.Collections.Concurrent
             {
                 Key = key;
                 Value = value;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:FieldsMustBePrivate", Justification = "Performance")]
-        private sealed class Table
-        {
-            public readonly Node[] Nodes;
-
-            public readonly int Count;
-
-            public readonly int Depth;
-
-            public Table(Node[] nodes, int count, int depth)
-            {
-                Nodes = nodes;
-                Count = count;
-                Depth = depth;
             }
         }
 
