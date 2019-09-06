@@ -18,6 +18,10 @@ namespace Smart.Collections.Concurrent
 
         private Node[] nodes;
 
+        private int count;
+
+        private int depth;
+
         public void Dump()
         {
             Debug.WriteLine(nodes.Length);
@@ -43,7 +47,7 @@ namespace Smart.Collections.Concurrent
         // Constructor
         //--------------------------------------------------------------------------------
 
-        public ThreadsafeTypeHashArrayMap(int initialSize = 64, double factor = 1.5)
+        public ThreadsafeTypeHashArrayMap(int initialSize = 64, double factor = 3.0)
             : this(new GrowthHashArrayMapStrategy(initialSize, factor))
         {
         }
@@ -58,16 +62,16 @@ namespace Smart.Collections.Concurrent
         // Private
         //--------------------------------------------------------------------------------
 
-        private static uint CalculateSize(int count)
+        private static int CalculateSize(int requestSize)
         {
             uint size = 0;
 
-            for (var i = 1L; i < count; i *= 2)
+            for (var i = 1L; i < requestSize; i *= 2)
             {
                 size = (size << 1) + 1;
             }
 
-            return size + 1;
+            return (int)(size + 1);
         }
 
         private static int CalculateCount(Node[] targetNodes)
@@ -89,23 +93,29 @@ namespace Smart.Collections.Concurrent
             return count;
         }
 
+        private static int CalculateDepth(Node node)
+        {
+            var length = 0;
+
+            do
+            {
+                length++;
+                node = node.Next;
+            } while (node != null);
+
+            return length;
+        }
+
         private static int CalculateDepth(Node[] targetNodes)
         {
             var depth = 0;
+
             for (var i = 0; i < targetNodes.Length; i++)
             {
                 var node = targetNodes[i];
                 if (node != EmptyNode)
                 {
-                    var length = 0;
-
-                    do
-                    {
-                        length++;
-                        node = node.Next;
-                    } while (node != null);
-
-                    depth = Math.Max(length, depth);
+                    depth = Math.Max(CalculateDepth(node), depth);
                 }
             }
 
@@ -125,115 +135,121 @@ namespace Smart.Collections.Concurrent
             return newNodes;
         }
 
-        // TODO 以下、更新の見なおし
-
-        private static Node AddNode(Node node, Node addNode)
+        private static Node FindLastNode(Node node)
         {
-            if (node is null)
+            while (node.Next != null)
             {
-                return addNode;
+                node = node.Next;
             }
-
-            var last = node;
-            while (last.Next != null)
-            {
-                last = last.Next;
-            }
-            last.Next = addNode;
 
             return node;
         }
 
-        private static void RelocateNodes(Node[] nodes, Node[] oldNodes, int mask)
+        private static void UpdateLink(ref Node node, Node addNode)
+        {
+            if (node == EmptyNode)
+            {
+                node = addNode;
+            }
+            else
+            {
+                var last = FindLastNode(node);
+                last.Next = addNode;
+            }
+        }
+
+        private static void RelocateNodes(Node[] nodes, Node[] oldNodes)
         {
             for (var i = 0; i < oldNodes.Length; i++)
             {
                 var node = oldNodes[i];
-                if (node != EmptyNode)
+                if (node == EmptyNode)
                 {
-                    do
-                    {
-                        var next = node.Next;
-                        node.Next = null;
-
-                        var relocateIndex = node.Key.GetHashCode() & mask;
-                        nodes[relocateIndex] = AddNode(nodes[relocateIndex], node);
-
-                        node = next;
-                    } while (node != null);
+                    continue;
                 }
+
+                do
+                {
+                    var next = node.Next;
+                    node.Next = null;
+
+                    UpdateLink(ref nodes[node.Key.GetHashCode() & (nodes.Length - 1)], node);
+
+                    node = next;
+                } while (node != null);
             }
         }
 
-        private static void FillEmptyIfNull(Node[] targetNodes)
+        private void AddNode(Node node)
         {
-            for (var i = 0; i < targetNodes.Length; i++)
-            {
-                if (targetNodes[i] is null)
-                {
-                    targetNodes[i] = EmptyNode;
-                }
-            }
-        }
-
-        private Node[] CreateAddTable(Node node)
-        {
-            // TODO 配置最適化 & メモリバリアはこの中
-            var depth = CalculateDepth(nodes);
-            var count = CalculateCount(nodes);
             var requestSize = strategy.CalculateRequestSize(new AddResizeContext(nodes.Length, depth, count, 1));
-
             var size = CalculateSize(requestSize);
-            var mask = (int)(size - 1);
-            var newNodes = new Node[size];
+            if (size > nodes.Length)
+            {
+                var newNodes = new Node[size];
+                for (var i = 0; i < newNodes.Length; i++)
+                {
+                    newNodes[i] = EmptyNode;
+                }
 
-            RelocateNodes(newNodes, nodes, mask);
+                RelocateNodes(newNodes, nodes);
 
-            var index = node.Key.GetHashCode() & mask;
-            newNodes[index] = AddNode(newNodes[index], node);
+                UpdateLink(ref newNodes[node.Key.GetHashCode() & (newNodes.Length - 1)], node);
 
-            FillEmptyIfNull(newNodes);
+                Interlocked.MemoryBarrier();
 
-            return newNodes;
+                nodes = newNodes;
+                depth = CalculateDepth(newNodes);
+                count = CalculateCount(newNodes);
+            }
+            else
+            {
+                Interlocked.MemoryBarrier();
+
+                UpdateLink(ref nodes[node.Key.GetHashCode() & (nodes.Length - 1)], node);
+
+                depth = Math.Max(CalculateDepth(nodes[node.Key.GetHashCode() & (nodes.Length - 1)]), depth);
+                count++;
+            }
         }
-
-        //private Table CreateAddRangeTable(ICollection<Node> addNodes)
-        //{
-        //    var requestSize = strategy.CalculateRequestSize(new AddResizeContext(oldTable.Nodes.Length, oldTable.Depth, oldTable.Count, addNodes.Count));
-
-        //    var size = CalculateSize(requestSize);
-        //    var mask = (int)(size - 1);
-        //    var newNodes = new Node[size];
-
-        //    RelocateNodes(newNodes, oldTable.Nodes, mask);
-
-        //    foreach (var node in addNodes)
-        //    {
-        //        var index = node.Key.GetHashCode() & mask;
-        //        newNodes[index] = AddNode(newNodes[index], node);
-        //    }
-
-        //    FillEmptyIfNull(newNodes);
-
-        //    return new Table(newNodes, oldTable.Count + addNodes.Count, CalculateDepth(newNodes));
-        //}
 
         //--------------------------------------------------------------------------------
         // Public
         //--------------------------------------------------------------------------------
 
-        public int Count => CalculateCount(nodes);
+        public int Count
+        {
+            get
+            {
+                lock (sync)
+                {
+                    return count;
+                }
+            }
+        }
 
-        public int Depth => CalculateDepth(nodes);
+        public int Depth
+        {
+            get
+            {
+                lock (sync)
+                {
+                    return depth;
+                }
+            }
+        }
 
         public void Clear()
         {
             lock (sync)
             {
-                // TODO バリア移動？
                 var newNodes = CreateInitialTable();
+
                 Interlocked.MemoryBarrier();
+
                 nodes = newNodes;
+                count = 0;
+                depth = 0;
             }
         }
 
@@ -267,83 +283,36 @@ namespace Smart.Collections.Concurrent
                     return currentValue;
                 }
 
-                // TODO 中へ移動
-                // Rebuild
-                var newTable = CreateAddTable(new Node(key, value));
-                Interlocked.MemoryBarrier();
-                nodes = newTable;
+                AddNode(new Node(key, value));
 
                 return value;
             }
         }
 
-        //[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
-        //public TValue AddIfNotExist(Type key, Func<Type, TValue> valueFactory)
-        //{
-        //    lock (sync)
-        //    {
-        //        // Double checked locking
-        //        if (TryGetValueInternal(table, key, out var currentValue))
-        //        {
-        //            return currentValue;
-        //        }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Performance")]
+        public TValue AddIfNotExist(Type key, Func<Type, TValue> valueFactory)
+        {
+            lock (sync)
+            {
+                // Double checked locking
+                if (TryGetValue(key, out var currentValue))
+                {
+                    return currentValue;
+                }
 
-        //        var value = valueFactory(key);
+                var value = valueFactory(key);
 
-        //        // Check if added by recursive
-        //        if (TryGetValueInternal(table, key, out currentValue))
-        //        {
-        //            return currentValue;
-        //        }
+                // Check if added by recursive
+                if (TryGetValue(key, out currentValue))
+                {
+                    return currentValue;
+                }
 
-        //        // Rebuild
-        //        var newTable = CreateAddTable(table, new Node(key, value));
-        //        Interlocked.MemoryBarrier();
-        //        table = newTable;
+                AddNode(new Node(key, value));
 
-        //        return value;
-        //    }
-        //}
-
-        //public int AddRangeIfNotExist(IEnumerable<KeyValuePair<Type, TValue>> pairs)
-        //{
-        //    lock (sync)
-        //    {
-        //        var nodes = pairs
-        //            .GroupBy(x => x.Key, (key, g) => g.First())
-        //            .Where(x => !TryGetValueInternal(table, x.Key, out _))
-        //            .Select(x => new Node(x.Key, x.Value))
-        //            .ToList();
-
-        //        // Rebuild
-        //        var newTable = CreateAddRangeTable(table, nodes);
-        //        Interlocked.MemoryBarrier();
-        //        table = newTable;
-
-        //        return nodes.Count;
-        //    }
-        //}
-
-        //public int AddRangeIfNotExist(IEnumerable<Type> keys, Func<Type, TValue> valueFactory)
-        //{
-        //    lock (sync)
-        //    {
-        //        var nodes = keys
-        //            .Distinct()
-        //            .Where(x => !TryGetValueInternal(table, x, out _))
-        //            .Select(x => new KeyValuePair<Type, TValue>(x, valueFactory(x)))
-        //            .Where(x => !TryGetValueInternal(table, x.Key, out _))
-        //            .Select(x => new Node(x.Key, x.Value))
-        //            .ToList();
-
-        //        // Rebuild
-        //        var newTable = CreateAddRangeTable(table, nodes);
-        //        Interlocked.MemoryBarrier();
-        //        table = newTable;
-
-        //        return nodes.Count;
-        //    }
-        //}
+                return value;
+            }
+        }
 
         //--------------------------------------------------------------------------------
         // IEnumerable
@@ -351,10 +320,11 @@ namespace Smart.Collections.Concurrent
 
         public IEnumerator<KeyValuePair<Type, TValue>> GetEnumerator()
         {
-            // TODO local
-            for (var i = 0; i < nodes.Length; i++)
+            var copy = nodes;
+
+            for (var i = 0; i < copy.Length; i++)
             {
-                var node = nodes[i];
+                var node = copy[i];
                 if (node != EmptyNode)
                 {
                     do
