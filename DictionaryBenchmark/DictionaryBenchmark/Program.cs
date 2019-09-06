@@ -13,8 +13,39 @@ namespace DictionaryBenchmark
 {
     public class Program
     {
+        private static void Test()
+        {
+            var hashArrayMap = new ThreadsafeIntHashArrayMap<object>(16, 1);
+
+            for (var i = 0; i < 1024; i++)
+            {
+                Debug.Assert(hashArrayMap.TryGetValue(i, out _) == false);
+                hashArrayMap.AddIfNotExist(i, new object());
+
+                for (var j = 0; j < 1024; j++)
+                {
+                    if (!hashArrayMap.TryGetValue(j, out _))
+                    {
+                        Debug.WriteLine("--");
+                        hashArrayMap.Dump();
+                    }
+
+                    if (i == j)
+                    {
+                        break;
+                    }
+                }
+
+                Debug.Assert(hashArrayMap.Count == i + 1);
+                Debug.Assert(hashArrayMap.Depth == 1);
+            }
+        }
+
+
         public static void Main(string[] args)
         {
+            Test();
+
             // TODO
             var hashArrayMap = new ThreadsafeTypeHashArrayMap<object>();
             foreach (var type in Classes.Types)
