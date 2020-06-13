@@ -85,48 +85,144 @@ namespace NewConverterBenchmark
         }
 
         [Benchmark(OperationsPerInvoke = N)]
-        public int ValueToValue()
+        public int ValueToValueAsObject()
         {
             var ret = 0;
             for (var i = 0; i < 1000; i++)
             {
-                ret = (int)converter.ConvertValueToValue(0);
+                ret = converter.ConvertValueToValueAsObject(0);
             }
 
             return ret;
         }
 
         [Benchmark(OperationsPerInvoke = N)]
-        public string ValueToClass()
+        public string ValueToClassAsObject()
         {
             var ret = string.Empty;
             for (var i = 0; i < 1000; i++)
             {
-                ret = (string)converter.ConvertValueToClass(0);
+                ret = converter.ConvertValueToClassAsObject(0);
             }
 
             return ret;
         }
 
         [Benchmark(OperationsPerInvoke = N)]
-        public int ClassToValue()
+        public int ClassToValueAsObject()
         {
             var ret = 0;
             for (var i = 0; i < 1000; i++)
             {
-                ret = (int)converter.ConvertClassToValue(string.Empty);
+                ret = converter.ConvertClassToValueAsObject(string.Empty);
             }
 
             return ret;
         }
 
         [Benchmark(OperationsPerInvoke = N)]
-        public string ClassToClass()
+        public string ClassToClassAsObject()
         {
             var ret = string.Empty;
             for (var i = 0; i < 1000; i++)
             {
-                ret = (string)converter.ConvertClassToClass(string.Empty);
+                ret = converter.ConvertClassToClassAsObject(string.Empty);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public int ValueToValueCast()
+        {
+            var ret = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (int)converter.ConvertValueToValueCast(0);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public string ValueToClassCast()
+        {
+            var ret = string.Empty;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (string)converter.ConvertValueToClassCast(0);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public int ClassToValueCast()
+        {
+            var ret = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (int)converter.ConvertClassToValueCast(string.Empty);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public string ClassToClassCast()
+        {
+            var ret = string.Empty;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (string)converter.ConvertClassToClassCast(string.Empty);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public int ValueToValueAsObjectCast()
+        {
+            var ret = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (int)converter.ConvertValueToValueAsObjectCast(0);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public string ValueToClassAsObjectCast()
+        {
+            var ret = string.Empty;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (string)converter.ConvertValueToClassAsObjectCast(0);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public int ClassToValueAsObjectCast()
+        {
+            var ret = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (int)converter.ConvertClassToValueAsObjectCast(string.Empty);
+            }
+
+            return ret;
+        }
+
+        [Benchmark(OperationsPerInvoke = N)]
+        public string ClassToClassAsObjectCast()
+        {
+            var ret = string.Empty;
+            for (var i = 0; i < 1000; i++)
+            {
+                ret = (string)converter.ConvertClassToClassAsObjectCast(string.Empty);
             }
 
             return ret;
@@ -140,10 +236,15 @@ namespace NewConverterBenchmark
         private readonly Func<string, int> classToValueRaw;
         private readonly Func<string, string> classToClassRaw;
 
-        private readonly Func<object, object> valueToValue;
-        private readonly Func<object, object> valueToClass;
-        private readonly Func<object, object> classToValue;
-        private readonly Func<object, object> classToClass;
+        private readonly Func<object, object> valueToValueCast;
+        private readonly Func<object, object> valueToClassCast;
+        private readonly Func<object, object> classToValueCast;
+        private readonly Func<object, object> classToClassCast;
+
+        private readonly object valueToValueRawAsObject;
+        private readonly object valueToClassRawAsObject;
+        private readonly object classToValueRawAsObject;
+        private readonly object classToClassRawAsObject;
 
         private static int ValueToValue(int x) => 0;
         private static string ValueToClass(int x) => string.Empty;
@@ -158,10 +259,14 @@ namespace NewConverterBenchmark
             classToValueRaw = x => ClassToValue(x);
             classToClassRaw = x => ClassToClass(x);
             // ReSharper restore ConvertClosureToMethodGroup
-            valueToValue = x => ValueToValue((int)x);
-            valueToClass = x => ValueToClass((int)x);
-            classToValue = x => ClassToValue((string)x);
-            classToClass = x => ClassToClass((string)x);
+            valueToValueCast = x => ValueToValue((int)x);
+            valueToClassCast = x => ValueToClass((int)x);
+            classToValueCast = x => ClassToValue((string)x);
+            classToClassCast = x => ClassToClass((string)x);
+            valueToValueRawAsObject = valueToValueRaw;
+            valueToClassRawAsObject = valueToClassRaw;
+            classToValueRawAsObject = classToValueRaw;
+            classToClassRawAsObject = classToClassRaw;
         }
 
         public int ConvertValueToValueRaw(int x) => valueToValueRaw(x);
@@ -169,9 +274,19 @@ namespace NewConverterBenchmark
         public int ConvertClassToValueRaw(string x) => classToValueRaw(x);
         public string ConvertClassToClassRaw(string x) => classToClassRaw(x);
 
-        public object ConvertValueToValue(object x) => valueToValue(x);
-        public object ConvertValueToClass(object x) => valueToClass(x);
-        public object ConvertClassToValue(object x) => classToValue(x);
-        public object ConvertClassToClass(object x) => classToClass(x);
+        public int ConvertValueToValueAsObject(int x) => ((Func<int, int>)valueToValueRawAsObject)(x);
+        public string ConvertValueToClassAsObject(int x) => ((Func<int, string>)valueToClassRawAsObject)(x);
+        public int ConvertClassToValueAsObject(string x) => ((Func<string, int>)classToValueRawAsObject)(x);
+        public string ConvertClassToClassAsObject(string x) => ((Func<string, string>)classToClassRawAsObject)(x);
+
+        public object ConvertValueToValueCast(object x) => valueToValueCast(x);
+        public object ConvertValueToClassCast(object x) => valueToClassCast(x);
+        public object ConvertClassToValueCast(object x) => classToValueCast(x);
+        public object ConvertClassToClassCast(object x) => classToClassCast(x);
+
+        public object ConvertValueToValueAsObjectCast(object x) => ((Func<int, int>)valueToValueRawAsObject)((int)x);
+        public object ConvertValueToClassAsObjectCast(object x) => ((Func<int, string>)valueToClassRawAsObject)((int)x);
+        public object ConvertClassToValueAsObjectCast(object x) => ((Func<string, int>)classToValueRawAsObject)((string)x);
+        public object ConvertClassToClassAsObjectCast(object x) => ((Func<string, string>)classToClassRawAsObject)((string)x);
     }
 }
