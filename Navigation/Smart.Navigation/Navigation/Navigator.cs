@@ -1,10 +1,11 @@
+using System.Threading.Tasks;
+
 namespace Smart.Navigation
 {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Linq;
-    using System.Threading.Tasks;
 
     using Smart.ComponentModel;
     using Smart.Functional;
@@ -150,36 +151,6 @@ namespace Smart.Navigation
                 return false;
             }
 
-            NavigateCore(strategy, navigationContext, controller);
-
-            return true;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2007:DoNotDirectlyAwaitATask", Justification = "Ignore")]
-        async Task<bool> INavigator.NavigateAsync(INavigationStrategy strategy, INavigationParameter parameter)
-        {
-            var controller = new Controller(this);
-            var result = strategy.Initialize(controller);
-            if (result is null)
-            {
-                return false;
-            }
-
-            var navigationContext = new NavigationContext(CurrentViewId, result.ToId, result.Attribute, parameter ?? EmptyParameter);
-
-            var confirmResult = await ConfirmNavigationAsync(navigationContext);
-            if (!confirmResult)
-            {
-                return false;
-            }
-
-            NavigateCore(strategy, navigationContext, controller);
-
-            return true;
-        }
-
-        private void NavigateCore(INavigationStrategy strategy, INavigationContext navigationContext, Controller controller)
-        {
             if (Executing)
             {
                 throw new InvalidOperationException("Navigator is already executing.");
@@ -248,6 +219,98 @@ namespace Smart.Navigation
                 ExecutingChanged?.Invoke(this, EventArgs.Empty);
                 PropertyChanged?.Invoke(this, ExecutingEventArgs);
             }
+
+            return true;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2007:DoNotDirectlyAwaitATask", Justification = "Ignore")]
+        async Task<bool> INavigator.NavigateAsync(INavigationStrategy strategy, INavigationParameter parameter)
+        {
+            var controller = new Controller(this);
+            var result = strategy.Initialize(controller);
+            if (result is null)
+            {
+                return false;
+            }
+
+            var navigationContext = new NavigationContext(CurrentViewId, result.ToId, result.Attribute, parameter ?? EmptyParameter);
+
+            var confirmResult = await ConfirmNavigationAsync(navigationContext);
+            if (!confirmResult)
+            {
+                return false;
+            }
+
+            if (Executing)
+            {
+                throw new InvalidOperationException("Navigator is already executing.");
+            }
+
+            try
+            {
+                Executing = true;
+                ExecutingChanged?.Invoke(this, EventArgs.Empty);
+                PropertyChanged?.Invoke(this, ExecutingEventArgs);
+
+                var pluginContext = new PluginContext();
+                controller.PluginContext = pluginContext;
+
+                var fromView = CurrentView;
+                var fromTarget = CurrentTarget;
+
+                var toView = strategy.ResolveToView(controller);
+                var toTarget = provider.ResolveTarget(toView);
+
+                var args = new NavigationEventArgs(navigationContext, fromView, fromTarget, toView, toTarget);
+
+                // Process from view
+                if (fromView != null)
+                {
+                    (fromTarget as INavigationEventSupport)?.OnNavigatingFrom(navigationContext);
+
+                    foreach (var plugin in plugins)
+                    {
+                        plugin.OnNavigatingFrom(pluginContext, fromView, fromTarget);
+                    }
+                }
+
+                // Process navigating
+                foreach (var plugin in plugins)
+                {
+                    plugin.OnNavigatingTo(pluginContext, toView, toTarget);
+                }
+
+                (toTarget as INavigationEventSupport)?.OnNavigatingTo(navigationContext);
+
+                // End pre process
+                Navigating?.Invoke(this, args);
+
+                // Update stack
+                await strategy.UpdateStackAsync(controller, toView);
+
+                // Update view mapper
+                viewMapper.CurrentUpdated(CurrentViewId);
+
+                // Process navigated
+                foreach (var plugin in plugins)
+                {
+                    plugin.OnNavigatedTo(pluginContext, toView, toTarget);
+                }
+
+                (toTarget as INavigationEventSupport)?.OnNavigatedTo(navigationContext);
+
+                // End post process
+                NotifyCurrentChanged();
+                Navigated?.Invoke(this, args);
+            }
+            finally
+            {
+                Executing = false;
+                ExecutingChanged?.Invoke(this, EventArgs.Empty);
+                PropertyChanged?.Invoke(this, ExecutingEventArgs);
+            }
+
+            return true;
         }
 
         // ------------------------------------------------------------
