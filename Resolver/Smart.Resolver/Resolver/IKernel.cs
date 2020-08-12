@@ -4,10 +4,10 @@ namespace Smart.Resolver
 
     using Smart.Resolver.Constraints;
 
-    public interface IKernel
+    public interface IKernel : IResolver
     {
-        bool TryResolveFactory(Type type, IConstraint constraint, out Func<IResolver, object> factory);
+        bool TryResolveFactory(Type type, IConstraint constraint, out Func<object> factory);
 
-        bool TryResolveFactories(Type type, IConstraint constraint, out Func<IResolver, object>[] factories);
+        bool TryResolveFactories(Type type, IConstraint constraint, out Func<object>[] factories);
     }
 }

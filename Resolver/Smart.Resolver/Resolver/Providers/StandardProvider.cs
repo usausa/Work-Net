@@ -44,7 +44,7 @@ namespace Smart.Resolver.Providers
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public Func<IResolver, object> CreateFactory(IKernel kernel, IBinding binding)
+        public Func<object> CreateFactory(IKernel kernel, IBinding binding)
         {
             var constructors = CreateConstructorMetadata();
             if (constructors.Length == 0)
@@ -56,7 +56,7 @@ namespace Smart.Resolver.Providers
             foreach (var constructor in constructors)
             {
                 var match = true;
-                var argumentFactories = new List<Func<IResolver, object>>(constructor.Parameters.Length);
+                var argumentFactories = new List<Func<object>>(constructor.Parameters.Length);
 
                 foreach (var parameter in constructor.Parameters)
                 {
@@ -66,7 +66,7 @@ namespace Smart.Resolver.Providers
                     var argument = binding.ConstructorArguments.GetParameter(pi.Name);
                     if (argument != null)
                     {
-                        argumentFactories.Add(k => argument.Resolve(k));
+                        argumentFactories.Add(() => argument.Resolve(kernel));
                         continue;
                     }
 
@@ -89,7 +89,7 @@ namespace Smart.Resolver.Providers
                     // DefaultValue
                     if (pi.HasDefaultValue)
                     {
-                        argumentFactories.Add(k => pi.DefaultValue);
+                        argumentFactories.Add(() => pi.DefaultValue);
                         continue;
                     }
 
@@ -99,7 +99,7 @@ namespace Smart.Resolver.Providers
 
                 if (match)
                 {
-                    var actions = CreateActions(binding);
+                    var actions = CreateActions(kernel, binding);
                     return builder.CreateFactory(constructor.Constructor, argumentFactories.ToArray(), actions);
                 }
             }
@@ -123,14 +123,14 @@ namespace Smart.Resolver.Providers
                 .ToArray();
         }
 
-        private Action<IResolver, object>[] CreateActions(IBinding binding)
+        private Action<object>[] CreateActions(IResolver resolver, IBinding binding)
         {
             var targetInjectors = injectors
-                .Select(x => x.CreateInjector(TargetType, binding))
+                .Select(x => x.CreateInjector(resolver, TargetType, binding))
                 .Where(x => x != null);
             var targetProcessors = processors
                 .OrderByDescending(x => x.Order)
-                .Select(x => x.CreateProcessor(TargetType))
+                .Select(x => x.CreateProcessor(resolver, TargetType))
                 .Where(x => x != null);
             return targetInjectors.Concat(targetProcessors).ToArray();
         }

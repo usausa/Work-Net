@@ -6,6 +6,6 @@ namespace Smart.Resolver.Processors
     {
         int Order { get; }
 
-        Action<IResolver, object> CreateProcessor(Type type);
+        Action<object> CreateProcessor(IResolver resolver, Type type);
     }
 }

@@ -19,7 +19,7 @@ namespace Smart.Resolver.Injectors
             this.delegateFactory = delegateFactory;
         }
 
-        public Action<IResolver, object> CreateInjector(Type type, IBinding binding)
+        public Action<object> CreateInjector(IResolver resolver, Type type, IBinding binding)
         {
             var entries = type.GetRuntimeProperties()
                 .Where(p => p.IsInjectDefined())
@@ -30,7 +30,7 @@ namespace Smart.Resolver.Injectors
                 return null;
             }
 
-            var injector = new Injector(entries);
+            var injector = new Injector(resolver, entries);
             return injector.Inject;
         }
 
@@ -85,14 +85,17 @@ namespace Smart.Resolver.Injectors
 
         private sealed class Injector
         {
+            private readonly IResolver resolver;
+
             private readonly InjectEntry[] entries;
 
-            public Injector(InjectEntry[] entries)
+            public Injector(IResolver resolver, InjectEntry[] entries)
             {
+                this.resolver = resolver;
                 this.entries = entries;
             }
 
-            public void Inject(IResolver resolver, object instance)
+            public void Inject(object instance)
             {
                 for (var i = 0; i < entries.Length; i++)
                 {

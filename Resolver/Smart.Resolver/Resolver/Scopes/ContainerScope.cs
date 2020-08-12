@@ -12,17 +12,16 @@ namespace Smart.Resolver.Scopes
             return this;
         }
 
-        public Func<IResolver, object> Create(IBinding binding, Func<object> factory)
+        public Func<object> Create(IResolver resolver, IBinding binding, Func<object> factory)
         {
-            return resolver =>
+            if (resolver is IContainer container)
             {
-                if (resolver is IContainer container)
-                {
-                    return container.Create(binding, factory);
-                }
-
-                return factory();
-            };
+                return () => container.Create(binding, factory);
+            }
+            else
+            {
+                return factory;
+            }
         }
     }
 }

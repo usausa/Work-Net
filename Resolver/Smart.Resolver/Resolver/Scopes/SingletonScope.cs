@@ -10,7 +10,7 @@ namespace Smart.Resolver.Scopes
     {
         private object value;
 
-        private Func<IResolver, object> objectFactory;
+        private Func<object> objectFactory;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
         public SingletonScope(IComponentContainer container)
@@ -29,12 +29,12 @@ namespace Smart.Resolver.Scopes
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public Func<IResolver, object> Create(IBinding binding, Func<object> factory)
+        public Func<object> Create(IResolver resolver, IBinding binding, Func<object> factory)
         {
             if (objectFactory is null)
             {
                 value = factory();
-                objectFactory = k => value;
+                objectFactory = () => value;
             }
 
             return objectFactory;

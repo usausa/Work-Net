@@ -45,7 +45,7 @@ namespace Smart.Resolver.Providers
             this.bindings = bindings;
         }
 
-        public Func<IResolver, object> CreateFactory(IKernel kernel, IBinding binding)
+        public Func<object> CreateFactory(IKernel kernel, IBinding binding)
         {
             var factories = bindings
                 .Select(b => b.Provider.CreateFactory(kernel, b))
