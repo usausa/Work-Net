@@ -9,12 +9,12 @@ namespace Smart.Resolver.Builders
 
     public sealed class EmitFactoryBuilder : IFactoryBuilder
     {
-        private static readonly Action<IResolver, object>[] EmptyActions = Array.Empty<Action<IResolver, object>>();
+        private static readonly Action<object>[] EmptyActions = Array.Empty<Action<object>>();
 
         private static readonly HolderBuilder DefaultHolderBuilder = new HolderBuilder();
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public Func<IResolver, object> CreateFactory(ConstructorInfo ci, Func<IResolver, object>[] factories, Action<IResolver, object>[] actions)
+        public Func<object> CreateFactory(ConstructorInfo ci, Func<object>[] factories, Action<object>[] actions)
         {
             var holder = DefaultHolderBuilder.CreateHolder(factories, actions);
             var holderType = holder?.GetType() ?? typeof(object);
@@ -28,8 +28,7 @@ namespace Smart.Resolver.Builders
             {
                 var invokeMethod = factories[i].GetType().GetMethod("Invoke");
                 if ((invokeMethod == null) ||
-                    (invokeMethod.GetParameters().Length != 1) ||
-                    (invokeMethod.GetParameters()[0].ParameterType != typeof(IResolver)))
+                    (invokeMethod.GetParameters().Length != 0))
                 {
                     throw new ArgumentException($"Invalid factory[{i}]");
                 }
@@ -38,7 +37,6 @@ namespace Smart.Resolver.Builders
 
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldfld, field);
-                ilGenerator.Emit(OpCodes.Ldarg_1);
                 ilGenerator.Emit(OpCodes.Call, invokeMethod);
                 ilGenerator.EmitTypeConversion(ci.GetParameters()[i].ParameterType);
             }
@@ -55,8 +53,7 @@ namespace Smart.Resolver.Builders
                 {
                     var invokeMethod = actions[i].GetType().GetMethod("Invoke");
                     if ((invokeMethod == null) ||
-                        (invokeMethod.GetParameters().Length != 2) ||
-                        (invokeMethod.GetParameters()[0].ParameterType != typeof(IResolver)))
+                        (invokeMethod.GetParameters().Length != 1))
                     {
                         throw new ArgumentException($"Invalid actions[{i}]");
                     }
@@ -65,7 +62,6 @@ namespace Smart.Resolver.Builders
 
                     ilGenerator.Emit(OpCodes.Ldarg_0);
                     ilGenerator.Emit(OpCodes.Ldfld, field);
-                    ilGenerator.Emit(OpCodes.Ldarg_1);
                     ilGenerator.Emit(OpCodes.Ldloc_0);
                     ilGenerator.Emit(OpCodes.Callvirt, invokeMethod);
                 }
@@ -80,12 +76,12 @@ namespace Smart.Resolver.Builders
 
             ilGenerator.Emit(OpCodes.Ret);
 
-            var funcType = typeof(Func<,>).MakeGenericType(typeof(IResolver), returnType);
-            return (Func<IResolver, object>)dynamicMethod.CreateDelegate(funcType, holder);
+            var funcType = typeof(Func<>).MakeGenericType(returnType);
+            return (Func<object>)dynamicMethod.CreateDelegate(funcType, holder);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public Func<IResolver, object> CreateArrayFactory(Type type, Func<IResolver, object>[] factories)
+        public Func<object> CreateArrayFactory(Type type, Func<object>[] factories)
         {
             var holder = DefaultHolderBuilder.CreateHolder(factories, EmptyActions);
             var holderType = holder?.GetType() ?? typeof(object);
@@ -107,8 +103,7 @@ namespace Smart.Resolver.Builders
 
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldfld, field);
-                ilGenerator.Emit(OpCodes.Ldarg_1);
-                var invokeMethod = factories[i].GetType().GetMethod("Invoke", new[] { typeof(IResolver) });
+                var invokeMethod = factories[i].GetType().GetMethod("Invoke", Type.EmptyTypes);
                 ilGenerator.Emit(OpCodes.Call, invokeMethod);
 
                 ilGenerator.Emit(OpCodes.Stelem_Ref);
@@ -116,8 +111,8 @@ namespace Smart.Resolver.Builders
 
             ilGenerator.Emit(OpCodes.Ret);
 
-            var funcType = typeof(Func<,>).MakeGenericType(typeof(IResolver), arrayType);
-            return (Func<IResolver, object>)dynamicMethod.CreateDelegate(funcType, holder);
+            var funcType = typeof(Func<>).MakeGenericType(arrayType);
+            return (Func<object>)dynamicMethod.CreateDelegate(funcType, holder);
         }
 
         private sealed class HolderBuilder
@@ -145,7 +140,7 @@ namespace Smart.Resolver.Builders
                 }
             }
 
-            public object CreateHolder(Func<IResolver, object>[] factories, Action<IResolver, object>[] actions)
+            public object CreateHolder(Func<object>[] factories, Action<object>[] actions)
             {
                 if ((factories.Length == 0) && (actions.Length == 0))
                 {
@@ -192,7 +187,7 @@ namespace Smart.Resolver.Builders
                 {
                     typeBuilder.DefineField(
                         $"factory{i}",
-                        typeof(Func<IResolver, object>),
+                        typeof(Func<object>),
                         FieldAttributes.Public);
                 }
 
@@ -201,7 +196,7 @@ namespace Smart.Resolver.Builders
                 {
                     typeBuilder.DefineField(
                         $"action{i}",
-                        typeof(Action<IResolver, object>),
+                        typeof(Action<object>),
                         FieldAttributes.Public);
                 }
 
