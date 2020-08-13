@@ -21,7 +21,7 @@ namespace Smart.Resolver.Builders
 
             var returnType = ci.DeclaringType.IsValueType ? typeof(object) : ci.DeclaringType;
 
-            var dynamicMethod = new DynamicMethod(string.Empty, returnType, new[] { holderType, typeof(IResolver) }, true);
+            var dynamicMethod = new DynamicMethod(string.Empty, returnType, new[] { holderType }, true);
             var ilGenerator = dynamicMethod.GetILGenerator();
 
             for (var i = 0; i < factories.Length; i++)
@@ -88,7 +88,7 @@ namespace Smart.Resolver.Builders
 
             var arrayType = type.MakeArrayType();
 
-            var dynamicMethod = new DynamicMethod(string.Empty, arrayType, new[] { holderType, typeof(IResolver) }, true);
+            var dynamicMethod = new DynamicMethod(string.Empty, arrayType, new[] { holderType }, true);
             var ilGenerator = dynamicMethod.GetILGenerator();
 
             ilGenerator.EmitLdcI4(factories.Length);

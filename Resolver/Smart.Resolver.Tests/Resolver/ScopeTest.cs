@@ -141,9 +141,9 @@ namespace Smart.Resolver
                 return this;
             }
 
-            public Func<IResolver, object> Create(IBinding binding, Func<object> factory)
+            public Func<object> Create(IResolver resolver, IBinding binding, Func<object> factory)
             {
-                return resolver =>
+                return () =>
                 {
                     if (Cache.Value.TryGetValue(binding, out var value))
                     {
