@@ -58,7 +58,7 @@ namespace Smart.Resolver
                     syntax.InTransientScope();
                     break;
                 case ServiceLifetime.Scoped:
-                    syntax.InContainerScope();
+                    syntax.InThreadLocalScope();
                     break;
             }
         }

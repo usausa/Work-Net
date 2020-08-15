@@ -3,7 +3,6 @@ namespace Smart.Resolver.Scopes
     using System;
 
     using Smart.ComponentModel;
-    using Smart.Resolver.Bindings;
     using Smart.Resolver.Components;
 
     public sealed class SingletonScope : IScope, IDisposable
@@ -29,7 +28,7 @@ namespace Smart.Resolver.Scopes
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public Func<object> Create(IResolver resolver, IBinding binding, Func<object> factory)
+        public Func<object> Create(Func<object> factory)
         {
             if (objectFactory is null)
             {

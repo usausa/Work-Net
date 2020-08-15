@@ -974,7 +974,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind(serviceType).To(implementationType).InContainerScope();
+            config.Bind(serviceType).To(implementationType).InThreadLocalScope();
             return config;
         }
 
@@ -1006,7 +1006,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind(serviceType).To(implementationType);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1024,7 +1024,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind(serviceType).ToSelf().InContainerScope();
+            config.Bind(serviceType).ToSelf().InThreadLocalScope();
             return config;
         }
 
@@ -1050,7 +1050,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind(serviceType).ToSelf();
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1063,7 +1063,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().To<TImplementation>().InContainerScope();
+            config.Bind<TService>().To<TImplementation>().InThreadLocalScope();
             return config;
         }
 
@@ -1085,7 +1085,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().To<TImplementation>();
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1097,7 +1097,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().ToSelf().InContainerScope();
+            config.Bind<TService>().ToSelf().InThreadLocalScope();
             return config;
         }
 
@@ -1118,7 +1118,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().ToSelf();
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1142,7 +1142,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind(serviceType).ToConstant(value).InContainerScope();
+            config.Bind(serviceType).ToConstant(value).InThreadLocalScope();
             return config;
         }
 
@@ -1174,7 +1174,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind(serviceType).ToConstant(value);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1193,7 +1193,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().ToConstant(value).InContainerScope();
+            config.Bind<TService>().ToConstant(value).InThreadLocalScope();
             return config;
         }
 
@@ -1220,7 +1220,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().ToConstant(value);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1240,7 +1240,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().ToConstant(value).InContainerScope();
+            config.Bind<TService>().ToConstant(value).InThreadLocalScope();
             return config;
         }
 
@@ -1268,7 +1268,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().ToConstant(value);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1292,7 +1292,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind(serviceType).ToMethod(factory).InContainerScope();
+            config.Bind(serviceType).ToMethod(factory).InThreadLocalScope();
             return config;
         }
 
@@ -1324,7 +1324,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind(serviceType).ToMethod(factory);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1343,7 +1343,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().ToMethod(factory).InContainerScope();
+            config.Bind<TService>().ToMethod(factory).InThreadLocalScope();
             return config;
         }
 
@@ -1370,7 +1370,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().ToMethod(factory);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
 
@@ -1390,7 +1390,7 @@ namespace Smart.Resolver
                 throw new ArgumentNullException(nameof(config));
             }
 
-            config.Bind<TService>().ToMethod(factory).InContainerScope();
+            config.Bind<TService>().ToMethod(factory).InThreadLocalScope();
             return config;
         }
 
@@ -1418,7 +1418,7 @@ namespace Smart.Resolver
 
             var syntax = config.Bind<TService>().ToMethod(factory);
             option(syntax);
-            syntax.InContainerScope();
+            syntax.InThreadLocalScope();
             return config;
         }
     }

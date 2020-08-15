@@ -89,9 +89,9 @@ namespace Smart.Resolver.Configs
             return this;
         }
 
-        public IBindingNamedWithSyntax InContainerScope()
+        public IBindingNamedWithSyntax InThreadLocalScope()
         {
-            InScope(c => new ContainerScope());
+            InScope(c => new ThreadLocalScope(c));
             return this;
         }
 

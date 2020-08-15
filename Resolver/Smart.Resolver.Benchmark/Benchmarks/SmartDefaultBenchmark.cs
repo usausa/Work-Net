@@ -59,7 +59,7 @@ namespace Smart.Resolver.Benchmark.Benchmarks
             config.Bind<ITransientService1>().To<TransientService1>().InTransientScope();
             config.Bind<ITransientService2>().To<TransientService2>().InTransientScope();
             config.Bind<ITransientService3>().To<TransientService3>().InTransientScope();
-            config.Bind<IScopedService>().To<ScopedService>().InContainerScope();
+            config.Bind<IScopedService>().To<ScopedService>().InThreadLocalScope();
 
             resolver = config.ToResolver();
 

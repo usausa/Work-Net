@@ -33,7 +33,7 @@ namespace Smart.Resolver.Configs
 
         IBindingNamedWithSyntax InSingletonScope();
 
-        IBindingNamedWithSyntax InContainerScope();
+        IBindingNamedWithSyntax InThreadLocalScope();
     }
 
     public interface IBindingNamedSyntax
