@@ -1,6 +1,7 @@
 namespace Smart.Navigation.Strategies
 {
     using System;
+    using System.Threading.Tasks;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class PopStrategy : INavigationStrategy
@@ -43,6 +44,11 @@ namespace Smart.Navigation.Strategies
             }
 
             controller.ViewStack.RemoveRange(controller.ViewStack.Count - level, level);
+        }
+
+        public Task UpdateStackAsync(INavigationController controller, object toView)
+        {
+            throw new NotImplementedException();
         }
     }
 }

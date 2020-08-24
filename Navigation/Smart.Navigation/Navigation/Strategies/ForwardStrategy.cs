@@ -1,5 +1,7 @@
 namespace Smart.Navigation.Strategies
 {
+    using System.Threading.Tasks;
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class ForwardStrategy : INavigationStrategy
     {
@@ -41,6 +43,11 @@ namespace Smart.Navigation.Strategies
 
                 controller.ViewStack.RemoveAt(index);
             }
+        }
+
+        public Task UpdateStackAsync(INavigationController controller, object toView)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

@@ -2,6 +2,7 @@ namespace Smart.Navigation.Strategies
 {
     using System;
     using System.Reflection;
+    using System.Threading.Tasks;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class GroupPopStrategy : INavigationStrategy
@@ -80,6 +81,11 @@ namespace Smart.Navigation.Strategies
             // Activate restored
             controller.ActivateView(restoreStackInfo.View, restoreStackInfo.RestoreParameter);
             restoreStackInfo.RestoreParameter = null;
+        }
+
+        public Task UpdateStackAsync(INavigationController controller, object toView)
+        {
+            throw new NotImplementedException();
         }
     }
 }

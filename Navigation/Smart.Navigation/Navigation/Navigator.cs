@@ -1,11 +1,10 @@
-using System.Threading.Tasks;
-
 namespace Smart.Navigation
 {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Linq;
+    using System.Threading.Tasks;
 
     using Smart.ComponentModel;
     using Smart.Functional;

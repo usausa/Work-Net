@@ -1,5 +1,7 @@
 namespace Smart.Navigation.Strategies
 {
+    using System.Threading.Tasks;
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class PushStrategy : INavigationStrategy
     {
@@ -39,6 +41,11 @@ namespace Smart.Navigation.Strategies
 
                 controller.ViewStack[index].RestoreParameter = controller.DeactivateView(controller.ViewStack[index].View);
             }
+        }
+
+        public Task UpdateStackAsync(INavigationController controller, object toView)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

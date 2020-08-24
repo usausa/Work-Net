@@ -3,6 +3,7 @@ namespace Smart.Navigation.Strategies
     using System;
     using System.Collections.Generic;
     using System.Reflection;
+    using System.Threading.Tasks;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class GroupPushStrategy : INavigationStrategy
@@ -137,6 +138,11 @@ namespace Smart.Navigation.Strategies
             {
                 deactivateStackInfo.RestoreParameter = controller.DeactivateView(deactivateStackInfo.View);
             }
+        }
+
+        public Task UpdateStackAsync(INavigationController controller, object toView)
+        {
+            throw new NotImplementedException();
         }
     }
 }
