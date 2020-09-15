@@ -1,11 +1,13 @@
 namespace Smart.Navigation.Strategies
 {
-    public interface INavigationStrategy
+    using System.Threading.Tasks;
+
+    public interface IAsyncNavigationStrategy
     {
         StrategyResult Initialize(INavigationController controller);
 
         object ResolveToView(INavigationController controller);
 
-        void UpdateStack(INavigationController controller, object toView);
+        Task UpdateStackAsync(INavigationController controller, object toView);
     }
 }

@@ -82,10 +82,5 @@ namespace Smart.Navigation.Strategies
             controller.ActivateView(restoreStackInfo.View, restoreStackInfo.RestoreParameter);
             restoreStackInfo.RestoreParameter = null;
         }
-
-        public Task UpdateStackAsync(INavigationController controller, object toView)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

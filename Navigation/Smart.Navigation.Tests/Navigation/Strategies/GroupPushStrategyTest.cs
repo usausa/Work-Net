@@ -314,54 +314,54 @@ namespace Smart.Navigation.Strategies
         // Async
         // ------------------------------------------------------------
 
-        [Fact]
-        public static async ValueTask TestNavigatorGropedPushAsyncExistAndNotBring()
-        {
-            // prepare
-            var navigator = new NavigatorConfig()
-                .UseMockFormProvider()
-                .ToNavigator();
+        //[Fact]
+        //public static async ValueTask TestNavigatorGropedPushAsyncExistAndNotBring()
+        //{
+        //    // prepare
+        //    var navigator = new NavigatorConfig()
+        //        .UseMockFormProvider()
+        //        .ToNavigator();
 
-            // test
-            await navigator.ForwardAsync(typeof(FormA1));
+        //    // test
+        //    await navigator.ForwardAsync(typeof(FormA1));
 
-            var formA1 = (FormA1)navigator.CurrentView;
+        //    var formA1 = (FormA1)navigator.CurrentView;
 
-            await navigator.GroupPushAsync(typeof(FormB1));
+        //    await navigator.GroupPushAsync(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+        //    var formB1 = (FormB1)navigator.CurrentView;
 
-            Assert.False(await navigator.GroupPushAsync(typeof(FormB1)));
+        //    Assert.False(await navigator.GroupPushAsync(typeof(FormB1)));
 
-            Assert.Equal(2, navigator.StackedCount);
-            Assert.False(formA1.IsVisible);
-            Assert.True(formB1.IsVisible);
+        //    Assert.Equal(2, navigator.StackedCount);
+        //    Assert.False(formA1.IsVisible);
+        //    Assert.True(formB1.IsVisible);
 
-            await navigator.PopAsync();
+        //    await navigator.PopAsync();
 
-            Assert.True(formA1.IsVisible);
-            Assert.False(formB1.IsOpen);
-        }
+        //    Assert.True(formA1.IsVisible);
+        //    Assert.False(formB1.IsOpen);
+        //}
 
-        [Fact]
-        public static async ValueTask TestNavigatorGropedPushAsyncWithParameter()
-        {
-            // prepare
-            var navigator = new NavigatorConfig()
-                .UseMockFormProvider()
-                .ToNavigator();
+        //[Fact]
+        //public static async ValueTask TestNavigatorGropedPushAsyncWithParameter()
+        //{
+        //    // prepare
+        //    var navigator = new NavigatorConfig()
+        //        .UseMockFormProvider()
+        //        .ToNavigator();
 
-            var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+        //    var context = new Holder<INavigationContext>();
+        //    navigator.Navigating += (sender, args) => { context.Value = args.Context; };
 
-            // test
-            await navigator.ForwardAsync(typeof(FormA1));
+        //    // test
+        //    await navigator.ForwardAsync(typeof(FormA1));
 
-            await navigator.GroupPushAsync(typeof(FormB1), new NavigationParameter().SetValue("test"));
+        //    await navigator.GroupPushAsync(typeof(FormB1), new NavigationParameter().SetValue("test"));
 
-            Assert.NotNull(context.Value);
-            Assert.Equal("test", context.Value.Parameter.GetValue<string>());
-        }
+        //    Assert.NotNull(context.Value);
+        //    Assert.Equal("test", context.Value.Parameter.GetValue<string>());
+        //}
 
         // ------------------------------------------------------------
         // Failed

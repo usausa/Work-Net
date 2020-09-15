@@ -139,10 +139,5 @@ namespace Smart.Navigation.Strategies
                 deactivateStackInfo.RestoreParameter = controller.DeactivateView(deactivateStackInfo.View);
             }
         }
-
-        public Task UpdateStackAsync(INavigationController controller, object toView)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

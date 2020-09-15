@@ -223,7 +223,7 @@ namespace Smart.Navigation
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2007:DoNotDirectlyAwaitATask", Justification = "Ignore")]
-        async Task<bool> INavigator.NavigateAsync(INavigationStrategy strategy, INavigationParameter parameter)
+        async Task<bool> INavigator.NavigateAsync(IAsyncNavigationStrategy strategy, INavigationParameter parameter)
         {
             var controller = new Controller(this);
             var result = strategy.Initialize(controller);
