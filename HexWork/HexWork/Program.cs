@@ -52,18 +52,17 @@
         public string ToHexBase() => HexEncoder.ToHex(bytes);
 
         [Benchmark]
-        public string ToHexSimple() => HexEncoder.ToHexSimple(bytes);
+        public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
 
-        [Benchmark]
-        public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
+        //[Benchmark]
+        //public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
     }
 
     public static class HexEncoder
     {
-        // TODO ToHex tuning
-        // TODO ToHex span version 1, 2
-        // TODO ToBytes tuning
-        // TODO ToBytes span version 1, 2
+        // TODO ToHex util version, Span-Length
+        // TODO ToBytes Custom
+        // TODO ToBytes Span-Length
 
         public static string ToHex(byte[] bytes)
         {
@@ -123,39 +122,37 @@
             return sb.ToString();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ToHexSimple(byte[] bytes)
-        {
-            return ToHexSimple(bytes, 0, bytes.Length);
-        }
-
-        public static string ToHexSimple(byte[] bytes, int start, int length)
-        {
-            var bufferSize = length * 2;
-
-            var sb = new StringBuilder(bufferSize);
-            for (var i = start; i < start + length; i++)
-            {
-                var b = bytes[i];
-                sb.Append(ToHex2(b >> 4));
-                sb.Append(ToHex2(b & 0x0F));
-            }
-
-            return sb.ToString();
-        }
-
         // TODO unsafe
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static char ToHex(int x)
         {
             return x < 10 ? (char)(x + '0') : (char)(x + 'A' - 10);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static char ToHex2(int x)
+        public static string ToHexSpan(ReadOnlySpan<byte> bytes)
         {
-            return x < 10 ? (char)(x + '0') : (char)(x + 'A' - 10);
+            var length = bytes.Length * 2;
+            var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+            Span<char> hex = stackalloc char[]
+            {
+                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+            };
+
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                var b = bytes[i];
+                temp[i * 2] = hex[b >> 4];
+                temp[i * 2 + 1] = hex[b & 0xF];
+            }
+
+            return new string(temp);
         }
+
+        // TODO unsafe ?, length ?
+
+        // --------------------------------------------------------------------------------
 
         public static byte[] ToBytes(string text)
         {
