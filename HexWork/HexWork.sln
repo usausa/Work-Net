@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30517.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HexWork", "HexWork\HexWork.csproj", "{6DCA9DF3-3737-465C-97CE-20F720D13201}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6DCA9DF3-3737-465C-97CE-20F720D13201}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DCA9DF3-3737-465C-97CE-20F720D13201}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DCA9DF3-3737-465C-97CE-20F720D13201}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DCA9DF3-3737-465C-97CE-20F720D13201}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0BE7A17A-FC3C-42D3-8404-E2EDB75C917D}
+	EndGlobalSection
+EndGlobal
