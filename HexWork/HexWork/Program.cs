@@ -16,17 +16,6 @@
     {
         public static void Main()
         {
-            var bytes = new byte[256];
-            for (var i = 0; i < bytes.Length; i++)
-            {
-                bytes[i] = (byte)i;
-            }
-
-            var h1 = HexEncoder.ToHex(bytes);
-            var h2 = HexEncoder.ToHexSpanUnsafe(bytes);
-            var b = h1 == h2;
-
-
             BenchmarkRunner.Run<Benchmark>();
         }
     }
@@ -59,47 +48,50 @@
             text = BitConverter.ToString(bytes).Replace("-", "");
         }
 
-        [Benchmark]
-        public string ToHexBase() => HexEncoder.ToHex(bytes);
-
-        [Benchmark]
-        public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
-
-        [Benchmark]
-        public string ToHexSpanUnsafe() => HexEncoder.ToHexSpanUnsafe(bytes);
-
-        [Benchmark]
-        public string ToHexSpanUnsafeB() => HexEncoder.ToHexSpanUnsafe2(bytes);
-
-        [Benchmark]
-        public string ToHexSpan32() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 32));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe32() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 32));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe32B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 32));
-
-        [Benchmark]
-        public string ToHexSpan16() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 16));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe16() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 16));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe16B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 16));
-
-        [Benchmark]
-        public string ToHexSpan4() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 4));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe4() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 4));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe4B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 4));
+        //[Benchmark]
+        //public string ToHexBase() => HexEncoder.ToHex(bytes);
 
         //[Benchmark]
-        //public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
+        //public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe() => HexEncoder.ToHexSpanUnsafe(bytes);
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafeB() => HexEncoder.ToHexSpanUnsafe2(bytes);
+
+        //[Benchmark]
+        //public string ToHexSpan32() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 32));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe32() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 32));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe32B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 32));
+
+        //[Benchmark]
+        //public string ToHexSpan16() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 16));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe16() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 16));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe16B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 16));
+
+        //[Benchmark]
+        //public string ToHexSpan4() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 4));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe4() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 4));
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe4B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 4));
+
+        [Benchmark]
+        public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
+
+        [Benchmark]
+        public byte[] ToBytes2() => HexEncoder.ToBytes2(text.AsSpan());
     }
 
     public static class HexEncoder
@@ -231,7 +223,6 @@
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
             };
 
-            // TODO ?
             fixed (char* pTemp = temp)
             fixed (byte* pBytes = bytes)
             {
@@ -262,6 +253,49 @@
             }
 
             return bytes;
+        }
+
+        public static unsafe byte[] ToBytes2(ReadOnlySpan<char> text)
+        {
+            var bytes = new byte[text.Length / 2];
+
+            fixed (byte* pBytes = &bytes[0])
+            fixed (char* pString = text)
+            {
+                var pb = pBytes;
+                var ps = pString;
+                for (var i = 0; i < bytes.Length; i++)
+                {
+                    var b = CharToNumber(*ps) << 8;
+                    ps++;
+                    *pb = (byte)(b + CharToNumber(*ps));
+                    ps++;
+                    pb++;
+                }
+            }
+
+            return bytes;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int CharToNumber(char c)
+        {
+            if ((c <= '9') && (c >= '0'))
+            {
+                return c - '0';
+            }
+
+            if ((c <= 'F') && (c >= 'A'))
+            {
+                return c - 'A';
+            }
+
+            if ((c <= 'F') && (c >= 'a'))
+            {
+                return c - 'a';
+            }
+
+            return 0;
         }
     }
 }
