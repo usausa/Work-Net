@@ -266,7 +266,7 @@
                 var ps = pString;
                 for (var i = 0; i < bytes.Length; i++)
                 {
-                    var b = CharToNumber(*ps) << 8;
+                    var b = CharToNumber(*ps) << 4;
                     ps++;
                     *pb = (byte)(b + CharToNumber(*ps));
                     ps++;
@@ -287,12 +287,12 @@
 
             if ((c <= 'F') && (c >= 'A'))
             {
-                return c - 'A';
+                return c - 'A' + 10;
             }
 
             if ((c <= 'F') && (c >= 'a'))
             {
-                return c - 'a';
+                return c - 'a' + 10;
             }
 
             return 0;
