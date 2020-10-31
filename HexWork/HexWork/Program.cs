@@ -48,44 +48,44 @@
             text = BitConverter.ToString(bytes).Replace("-", "");
         }
 
-        //[Benchmark]
-        //public string ToHexBase() => HexEncoder.ToHex(bytes);
+        [Benchmark]
+        public string ToHexBase() => HexEncoder.ToHex(bytes);
 
-        //[Benchmark]
-        //public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
+        [Benchmark]
+        public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe() => HexEncoder.ToHexSpanUnsafe(bytes);
+        [Benchmark]
+        public string ToHexSpanUnsafe() => HexEncoder.ToHexSpanUnsafe(bytes);
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafeB() => HexEncoder.ToHexSpanUnsafe2(bytes);
+        [Benchmark]
+        public string ToHexSpanUnsafeB() => HexEncoder.ToHexSpanUnsafe2(bytes);
 
-        //[Benchmark]
-        //public string ToHexSpan32() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 32));
+        [Benchmark]
+        public string ToHexSpan32() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 32));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe32() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 32));
+        [Benchmark]
+        public string ToHexSpanUnsafe32() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 32));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe32B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 32));
+        [Benchmark]
+        public string ToHexSpanUnsafe32B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 32));
 
-        //[Benchmark]
-        //public string ToHexSpan16() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 16));
+        [Benchmark]
+        public string ToHexSpan16() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 16));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe16() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 16));
+        [Benchmark]
+        public string ToHexSpanUnsafe16() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 16));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe16B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 16));
+        [Benchmark]
+        public string ToHexSpanUnsafe16B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 16));
 
-        //[Benchmark]
-        //public string ToHexSpan4() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 4));
+        [Benchmark]
+        public string ToHexSpan4() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 4));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe4() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 4));
+        [Benchmark]
+        public string ToHexSpanUnsafe4() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 4));
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe4B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 4));
+        [Benchmark]
+        public string ToHexSpanUnsafe4B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 4));
 
         [Benchmark]
         public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
