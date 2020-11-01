@@ -1,9 +1,8 @@
 ﻿namespace HexWork
 {
     using System;
-    using System.Globalization;
     using System.Runtime.CompilerServices;
-    using System.Text;
+    using System.Runtime.InteropServices;
 
     using BenchmarkDotNet.Attributes;
     using BenchmarkDotNet.Configs;
@@ -48,164 +47,116 @@
             text = BitConverter.ToString(bytes).Replace("-", "");
         }
 
-        [Benchmark]
-        public string ToHexBase() => HexEncoder.ToHex(bytes);
+        // --------------------------------------------------------------------------------
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe256T1() => HexEncoder.ToHexTableMember(bytes);
 
         [Benchmark]
-        public string ToHexSpan() => HexEncoder.ToHexSpan(bytes);
+        public string ToHexSpanUnsafe256T2() => HexEncoder.ToHexTableMember2(bytes);
 
         [Benchmark]
-        public string ToHexSpanUnsafe() => HexEncoder.ToHexSpanUnsafe(bytes);
+        public string ToHexSpanUnsafe256T3() => HexEncoder.ToHexTableMember3(bytes);
+
+        // --------------------------------------------------------------------------------
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe32T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 32));
 
         [Benchmark]
-        public string ToHexSpanUnsafeB() => HexEncoder.ToHexSpanUnsafe2(bytes);
+        public string ToHexSpanUnsafe32T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 32));
 
         [Benchmark]
-        public string ToHexSpan32() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 32));
+        public string ToHexSpanUnsafe32T3() => HexEncoder.ToHexTableMember3(bytes.AsSpan(0, 32));
+
+        // --------------------------------------------------------------------------------
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe16T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 16));
 
         [Benchmark]
-        public string ToHexSpanUnsafe32() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 32));
+        public string ToHexSpanUnsafe16T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 16));
+
 
         [Benchmark]
-        public string ToHexSpanUnsafe32B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 32));
+        public string ToHexSpanUnsafe16T3() => HexEncoder.ToHexTableMember3(bytes.AsSpan(0, 16));
+
+        // --------------------------------------------------------------------------------
+
+        //[Benchmark]
+        //public string ToHexSpanUnsafe4T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 4));
 
         [Benchmark]
-        public string ToHexSpan16() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 16));
+        public string ToHexSpanUnsafe4T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 4));
 
         [Benchmark]
-        public string ToHexSpanUnsafe16() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 16));
+        public string ToHexSpanUnsafe4T3() => HexEncoder.ToHexTableMember3(bytes.AsSpan(0, 4));
 
-        [Benchmark]
-        public string ToHexSpanUnsafe16B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 16));
+        // --------------------------------------------------------------------------------
 
-        [Benchmark]
-        public string ToHexSpan4() => HexEncoder.ToHexSpan(bytes.AsSpan(0, 4));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe4() => HexEncoder.ToHexSpanUnsafe(bytes.AsSpan(0, 4));
-
-        [Benchmark]
-        public string ToHexSpanUnsafe4B() => HexEncoder.ToHexSpanUnsafe2(bytes.AsSpan(0, 4));
-
-        [Benchmark]
-        public byte[] ToBytesBase() => HexEncoder.ToBytes(text);
-
-        [Benchmark]
-        public byte[] ToBytes2() => HexEncoder.ToBytes2(text.AsSpan());
+        //[Benchmark]
+        //public byte[] ToBytes2() => HexEncoder.ToBytes(text.AsSpan());
     }
 
     public static class HexEncoder
     {
-        // TODO ToHex util version, Span-Length
-        // TODO ToBytes Custom
-        // TODO ToBytes Span-Length
+        // TODO Unsafe, MemoryMarshal version
 
-        public static string ToHex(byte[] bytes)
+        private static byte[] HexTable => new[]
         {
-            return ToHexInternal(bytes, 0, bytes.Length, null, null, 0, Environment.NewLine);
-        }
+            (byte)'0', (byte)'1', (byte)'2', (byte)'3',
+            (byte)'4', (byte)'5', (byte)'6', (byte)'7',
+            (byte)'8', (byte)'9', (byte)'A', (byte)'B',
+            (byte)'C', (byte)'D', (byte)'E', (byte)'F'
+        };
 
-        private static string ToHexInternal(byte[] bytes, int start, int length, string prefix, string separator, int lineSize, string lineSeparator)
+        private static ReadOnlySpan<byte> HexCharactersTable => new[]
         {
-            var addPrefix = !String.IsNullOrEmpty(prefix);
-            var addSeparator = !String.IsNullOrEmpty(separator);
+            (byte)'0', (byte)'1', (byte)'2', (byte)'3',
+            (byte)'4', (byte)'5', (byte)'6', (byte)'7',
+            (byte)'8', (byte)'9', (byte)'A', (byte)'B',
+            (byte)'C', (byte)'D', (byte)'E', (byte)'F'
+        };
 
-            var bufferSize = length * 2;
-            var lines = lineSize > 0 ? (length - 1) / lineSize : 0;
-            if (lineSize > 0)
-            {
-                bufferSize += lines * lineSeparator.Length;
-            }
+        //public static unsafe string ToHexTableMember(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
 
-            if (addPrefix)
-            {
-                bufferSize += prefix.Length * length;
-            }
+        //    fixed (char* ptr = temp)
+        //    {
+        //        char* p = ptr;
+        //        for (var i = 0; i < bytes.Length; i++)
+        //        {
+        //            var b = bytes[i];
+        //            var high = b >> 4;  // TODO?
+        //            var low = b & 0xF;
+        //            *p = (char)HexCharactersTable[high];
+        //            p++;
+        //            *p = (char)HexCharactersTable[low];
+        //            p++;
+        //        }
+        //    }
 
-            if (addSeparator)
-            {
-                bufferSize += (length - lines - 1) * separator.Length;
-            }
+        //    return new string(temp);
+        //}
 
-            var sb = new StringBuilder(bufferSize);
-            var count = 0;
-            for (var i = start; i < start + length; i++)
-            {
-                if (count != 0)
-                {
-                    if (count == lineSize)
-                    {
-                        sb.Append(lineSeparator);
-                        count = 0;
-                    }
-                    else if (addSeparator)
-                    {
-                        sb.Append(separator);
-                    }
-                }
-
-                if (addPrefix)
-                {
-                    sb.Append(prefix);
-                }
-
-                var b = bytes[i];
-                sb.Append(ToHex(b >> 4));
-                sb.Append(ToHex(b & 0x0F));
-                count++;
-            }
-
-            return sb.ToString();
-        }
-
-        // TODO unsafe
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static char ToHex(int x)
-        {
-            return x < 10 ? (char)(x + '0') : (char)(x + 'A' - 10);
-        }
-
-        public static string ToHexSpan(ReadOnlySpan<byte> bytes)
+        // Large size faster than 3
+        public static unsafe string ToHexTableMember2(ReadOnlySpan<byte> bytes)
         {
             var length = bytes.Length * 2;
             var temp = length < 2048 ? stackalloc char[length] : new char[length];
 
-            Span<char> hex = stackalloc char[]
-            {
-                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-            };
-
-            for (var i = 0; i < bytes.Length; i++)
-            {
-                var b = bytes[i];
-                temp[i * 2] = hex[b >> 4];
-                temp[i * 2 + 1] = hex[b & 0xF];
-            }
-
-            return new string(temp);
-        }
-
-        public static unsafe string ToHexSpanUnsafe(ReadOnlySpan<byte> bytes)
-        {
-            var length = bytes.Length * 2;
-            var temp = length < 2048 ? stackalloc char[length] : new char[length];
-
-            Span<char> hex = stackalloc char[]
-            {
-                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-            };
-
-            // TODO ?
+            fixed (byte* hex = &HexTable[0])
             fixed (char* ptr = temp)
             {
                 char* p = ptr;
                 for (var i = 0; i < bytes.Length; i++)
                 {
                     var b = bytes[i];
-                    *p = hex[b >> 4];
+                    *p = (char)hex[b >> 4];
                     p++;
-                    *p = hex[b & 0xF];
+                    *p = (char)hex[b & 0xF];
                     p++;
                 }
             }
@@ -213,49 +164,151 @@
             return new string(temp);
         }
 
-        public static unsafe string ToHexSpanUnsafe2(ReadOnlySpan<byte> bytes)
+
+        public static unsafe string ToHexTableMember3(ReadOnlySpan<byte> bytes)
         {
             var length = bytes.Length * 2;
             var temp = length < 2048 ? stackalloc char[length] : new char[length];
+            ref var hex = ref MemoryMarshal.GetReference(HexCharactersTable);
 
-            Span<char> hex = stackalloc char[]
+            fixed (char* ptr = temp)
             {
-                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-            };
-
-            fixed (char* pTemp = temp)
-            fixed (byte* pBytes = bytes)
-            {
-                var p = pTemp;
-                var bp = pBytes;
+                char* p = ptr;
                 for (var i = 0; i < bytes.Length; i++)
                 {
-                    var b = *bp;
-                    *p = hex[b >> 4];
+                    var b = bytes[i];
+                    *p = (char)Unsafe.Add(ref hex, b >> 4);
                     p++;
-                    *p = hex[b & 0xF];
+                    *p = (char)Unsafe.Add(ref hex, b & 0xF);
                     p++;
-                    bp++;
                 }
             }
 
             return new string(temp);
         }
 
+        //public static unsafe string ToHexTableMember3(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+        //    ref var hex = ref MemoryMarshal.GetReference(HexCharactersTable);
+
+        //    for (var i = 0; i < bytes.Length; i++)
+        //    {
+        //        var b = bytes[i];
+        //        var high = b >> 4;
+        //        var low = b & 0xF;
+        //        var offset = i << 1;
+        //        temp[offset] = (char)Unsafe.Add(ref hex, high);
+        //        temp[offset + 1] = (char)Unsafe.Add(ref hex, low);
+        //    }
+
+        //    return new string(temp);
+        //}
+
+        //public static unsafe string ToHexTableMember3(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+        //    ref var hex = ref MemoryMarshal.GetReference(HexCharactersTable);
+        //    ref var ptr = ref MemoryMarshal.GetReference(temp);
+
+        //    for (var i = 0; i < bytes.Length; i++)
+        //    {
+        //        var b = bytes[i];
+        //        var high = b >> 4;
+        //        var low = b & 0xF;
+        //        var offset = i * 2;
+        //        ref var p1 = ref Unsafe.Add(ref ptr, offset);
+        //        p1 = (char)Unsafe.Add(ref hex, high);
+        //        ref var p2 = ref Unsafe.Add(ref ptr, offset + 1);
+        //        p2 = (char)Unsafe.Add(ref hex, low);
+        //    }
+
+        //    return new string(temp);
+        //}
+
+        //public static string ToHexSpan(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+        //    Span<char> hex = stackalloc char[]
+        //    {
+        //        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        //    };
+
+        //    for (var i = 0; i < bytes.Length; i++)
+        //    {
+        //        var b = bytes[i];
+        //        temp[i * 2] = hex[b >> 4];
+        //        temp[i * 2 + 1] = hex[b & 0xF];
+        //    }
+
+        //    return new string(temp);
+        //}
+
+        //public static unsafe string ToHexSpanUnsafe(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+        //    Span<char> hex = stackalloc char[]
+        //    {
+        //        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        //    };
+
+        //    // TODO ?
+        //    fixed (char* ptr = temp)
+        //    {
+        //        char* p = ptr;
+        //        for (var i = 0; i < bytes.Length; i++)
+        //        {
+        //            var b = bytes[i];
+        //            *p = hex[b >> 4];
+        //            p++;
+        //            *p = hex[b & 0xF];
+        //            p++;
+        //        }
+        //    }
+
+        //    return new string(temp);
+        //}
+
+        //public static unsafe string ToHexSpanUnsafe2(ReadOnlySpan<byte> bytes)
+        //{
+        //    var length = bytes.Length * 2;
+        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+
+        //    Span<char> hex = stackalloc char[]
+        //    {
+        //        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        //    };
+
+        //    fixed (char* pTemp = temp)
+        //    fixed (byte* pBytes = bytes)
+        //    {
+        //        var p = pTemp;
+        //        var bp = pBytes;
+        //        for (var i = 0; i < bytes.Length; i++)
+        //        {
+        //            var b = *bp;
+        //            *p = hex[b >> 4];
+        //            p++;
+        //            *p = hex[b & 0xF];
+        //            p++;
+        //            bp++;
+        //        }
+        //    }
+
+        //    return new string(temp);
+        //}
+
         // --------------------------------------------------------------------------------
 
-        public static byte[] ToBytes(string text)
-        {
-            var bytes = new byte[text.Length / 2];
-            for (var index = 0; index < bytes.Length; index++)
-            {
-                bytes[index] = byte.Parse(text.Substring(index * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            }
-
-            return bytes;
-        }
-
-        public static unsafe byte[] ToBytes2(ReadOnlySpan<char> text)
+        public static unsafe byte[] ToBytes(ReadOnlySpan<char> text)
         {
             var bytes = new byte[text.Length / 2];
 
