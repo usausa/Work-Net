@@ -49,8 +49,8 @@
 
         // --------------------------------------------------------------------------------
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe256T1() => HexEncoder.ToHexTableMember(bytes);
+        [Benchmark]
+        public string ToHexSpanUnsafe256T1() => HexEncoder.ToHexTableMember(bytes);
 
         [Benchmark]
         public string ToHexSpanUnsafe256T2() => HexEncoder.ToHexTableMember2(bytes);
@@ -60,8 +60,8 @@
 
         // --------------------------------------------------------------------------------
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe32T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 32));
+        [Benchmark]
+        public string ToHexSpanUnsafe32T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 32));
 
         [Benchmark]
         public string ToHexSpanUnsafe32T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 32));
@@ -71,8 +71,8 @@
 
         // --------------------------------------------------------------------------------
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe16T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 16));
+        [Benchmark]
+        public string ToHexSpanUnsafe16T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 16));
 
         [Benchmark]
         public string ToHexSpanUnsafe16T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 16));
@@ -83,8 +83,8 @@
 
         // --------------------------------------------------------------------------------
 
-        //[Benchmark]
-        //public string ToHexSpanUnsafe4T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 4));
+        [Benchmark]
+        public string ToHexSpanUnsafe4T1() => HexEncoder.ToHexTableMember(bytes.AsSpan(0, 4));
 
         [Benchmark]
         public string ToHexSpanUnsafe4T2() => HexEncoder.ToHexTableMember2(bytes.AsSpan(0, 4));
@@ -118,30 +118,24 @@
             (byte)'C', (byte)'D', (byte)'E', (byte)'F'
         };
 
-        //public static unsafe string ToHexTableMember(ReadOnlySpan<byte> bytes)
-        //{
-        //    var length = bytes.Length * 2;
-        //    var temp = length < 2048 ? stackalloc char[length] : new char[length];
+        public static unsafe string ToHexTableMember(ReadOnlySpan<byte> bytes)
+        {
+            var length = bytes.Length * 2;
+            var temp = length < 2048 ? stackalloc char[length] : new char[length];
+            ref var hex = ref MemoryMarshal.GetReference(HexCharactersTable);
 
-        //    fixed (char* ptr = temp)
-        //    {
-        //        char* p = ptr;
-        //        for (var i = 0; i < bytes.Length; i++)
-        //        {
-        //            var b = bytes[i];
-        //            var high = b >> 4;  // TODO?
-        //            var low = b & 0xF;
-        //            *p = (char)HexCharactersTable[high];
-        //            p++;
-        //            *p = (char)HexCharactersTable[low];
-        //            p++;
-        //        }
-        //    }
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                var offset = i * 2;
+                var b = bytes[i];
+                temp[offset] = (char)Unsafe.Add(ref hex, b >> 4);
+                temp[offset + 1] = (char)Unsafe.Add(ref hex, b & 0xF);
+            }
 
-        //    return new string(temp);
-        //}
+            return new string(temp);
+        }
 
-        // Large size faster than 3
+        // Large size faster than 3 (< 3.1)
         public static unsafe string ToHexTableMember2(ReadOnlySpan<byte> bytes)
         {
             var length = bytes.Length * 2;
@@ -163,7 +157,6 @@
 
             return new string(temp);
         }
-
 
         public static unsafe string ToHexTableMember3(ReadOnlySpan<byte> bytes)
         {
@@ -308,6 +301,9 @@
 
         // --------------------------------------------------------------------------------
 
+        // TODO span引数版
+
+        // TODO index再度、偶数チェック？
         public static unsafe byte[] ToBytes(ReadOnlySpan<char> text)
         {
             var bytes = new byte[text.Length / 2];
