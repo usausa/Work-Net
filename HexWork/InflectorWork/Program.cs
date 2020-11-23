@@ -3,7 +3,6 @@
     using System;
     using System.Text;
     using System.Runtime.CompilerServices;
-    using System.Runtime.InteropServices;
 
     using BenchmarkDotNet.Attributes;
     using BenchmarkDotNet.Configs;
@@ -33,19 +32,72 @@
     [Config(typeof(BenchmarkConfig))]
     public class Benchmark
     {
-        //[Benchmark]
-        //public string PascalizeOld() => Inflector.Pascalize("aaa_bbb_ccc_ddd");
+        [Benchmark]
+        public string PascalizeOld() => Inflector.Pascalize("aaa_bbb_ccc_ddd");
+
+        [Benchmark]
+        public string PascalizeNew() => Inflector.Pascalize2("aaa_bbb_ccc_ddd");
 
         [Benchmark]
         public string UnderscoreOld() => Inflector.Underscore("aaaBbbCccDdd");
 
         [Benchmark]
         public string UnderscoreNew() => Inflector.Underscore2("aaaBbbCccDdd");
+
+        [Benchmark]
+        public string UnderscoreNewB() => Inflector.Underscore3("aaaBbbCccDdd");
     }
 
     public static class Inflector
     {
-        // TODO new version
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string Pascalize2(string word) => Camelize2(word, true);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string Camelize2(string word) => Camelize2(word, false);
+
+        public static unsafe string Camelize2(string word, bool toUpper)
+        {
+            if ((word is null) || (word.Length == 0))
+            {
+                return word;
+            }
+
+            var buffer = word.Length < 2048 ? stackalloc char[word.Length] : new char[word.Length];
+            var length = 0;
+
+            fixed (char* pBuffer = buffer)
+            {
+                var isLowerPrevious = false;
+                foreach (var c in word)
+                {
+                    if (c == '_')
+                    {
+                        toUpper = true;
+                    }
+                    else
+                    {
+                        if (toUpper)
+                        {
+                            pBuffer[length++] = Char.ToUpperInvariant(c);
+                            toUpper = false;
+                        }
+                        else if (isLowerPrevious)
+                        {
+                            pBuffer[length++] = c;
+                        }
+                        else
+                        {
+                            pBuffer[length++] = Char.ToLowerInvariant(c);
+                        }
+
+                        isLowerPrevious = Char.IsLower(c);
+                    }
+                }
+
+                return new string(pBuffer, 0, length);
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Underscore2(string word)
@@ -55,7 +107,7 @@
 
         public static unsafe string Underscore2(string word, bool toUpper)
         {
-            if (String.IsNullOrEmpty(word))
+            if ((word is null) || (word.Length == 0))
             {
                 return word;
             }
@@ -64,23 +116,123 @@
             var buffer = bufferSize < 2048 ? stackalloc char[bufferSize] : new char[bufferSize];
             var length = 0;
 
-            // TODO ptr slide
             fixed (char* pBuffer = buffer)
             {
-                // TODO for ?
-                foreach (var c in word)
+                if (toUpper)
                 {
-                    if (Char.IsUpper(c) && (length > 0))
+                    foreach (var c in word)
                     {
-                        pBuffer[length++] = '_';
-                    }
+                        if (Char.IsUpper(c))
+                        {
+                            if (length > 0)
+                            {
+                                pBuffer[length++] = '_';
+                            }
 
-                    pBuffer[length++] = toUpper ? Char.ToUpperInvariant(c) : Char.ToLowerInvariant(c);
+                            pBuffer[length++] = c;
+                        }
+                        else
+                        {
+                            pBuffer[length++] = Char.ToUpperInvariant(c);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var c in word)
+                    {
+                        if (Char.IsUpper(c))
+                        {
+                            if (length > 0)
+                            {
+                                pBuffer[length++] = '_';
+                            }
+
+                            pBuffer[length++] = Char.ToLowerInvariant(c);
+                        }
+                        else
+                        {
+                            pBuffer[length++] = c;
+                        }
+                    }
                 }
 
                 return new string(pBuffer, 0, length);
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string Underscore3(string word)
+        {
+            return Underscore3(word, false);
+        }
+
+        public static unsafe string Underscore3(string word, bool toUpper)
+        {
+            if ((word is null) || (word.Length == 0))
+            {
+                return word;
+            }
+
+            var bufferSize = word.Length << 1;
+            var buffer = bufferSize < 2048 ? stackalloc char[bufferSize] : new char[bufferSize];
+            var length = 0;
+
+            fixed (char* pBuffer = buffer)
+            {
+                if (toUpper)
+                {
+                    foreach (var c in word)
+                    {
+                        if (IsUpper(c))
+                        {
+                            if (length > 0)
+                            {
+                                pBuffer[length++] = '_';
+                            }
+
+                            pBuffer[length++] = c;
+                        }
+                        else
+                        {
+                            pBuffer[length++] = ToUpper(c);
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var c in word)
+                    {
+                        if (IsUpper(c))
+                        {
+                            if (length > 0)
+                            {
+                                pBuffer[length++] = '_';
+                            }
+
+                            pBuffer[length++] = ToLower(c);
+                        }
+                        else
+                        {
+                            pBuffer[length++] = c;
+                        }
+                    }
+                }
+
+                return new string(pBuffer, 0, length);
+            }
+        }
+
+        public const int Offset = 'A' - 'a';
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsUpper(char c) => (c >= 'A') && (c >= 'Z');
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static char ToLower(char c) => (char)(c - Offset);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static char ToUpper(char c) => (char)(c + Offset);
 
         // --------------------------------------------------------------------------------
         // Old
