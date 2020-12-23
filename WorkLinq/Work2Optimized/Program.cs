@@ -461,8 +461,6 @@ namespace Work2Optimized
                 {
                     return index;
                 }
-
-                start++;
             }
 
             return -1;
