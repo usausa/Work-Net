@@ -16,8 +16,8 @@ namespace Work2Optimized
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<IntBenchmark>();
-            //BenchmarkRunner.Run<StringBenchmark>();
+            //BenchmarkRunner.Run<IntBenchmark>();
+            BenchmarkRunner.Run<StringBenchmark>();
         }
     }
 
@@ -45,12 +45,13 @@ namespace Work2Optimized
     {
         public IEnumerable<object[]> ArrayData()
         {
-            yield return new object[] { new int[1], 0 };
-            yield return new object[] { new int[4], -1 };
-            yield return new object[] { new int[16], -1 };
-            yield return new object[] { new int[64], -1 };
-            yield return new object[] { new int[256], -1 };
-            yield return new object[] { new int[1024], -1 };
+            //yield return new object[] { new int[1], 0 };
+            //yield return new object[] { new int[4], -1 };
+            //yield return new object[] { new int[16], -1 };
+            //yield return new object[] { new int[64], -1 };
+            //yield return new object[] { new int[256], -1 };
+            //yield return new object[] { new int[1024], -1 };
+            yield return new object[] { new int[4096], -1 };
         }
 
         public IEnumerable<object[]> ListData()
@@ -63,8 +64,8 @@ namespace Work2Optimized
             yield return new object[] { new List<int>(new int[1024]), -1 };
         }
 
-        [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int Span(int[] values, int find) => Finder.Span<int>(values, x => x == find);
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int Span(int[] values, int find) => Finder.Span<int>(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
         [Benchmark] public int SpanPointer(int[] values, int find) => Finder.SpanPointer<int>(values, x => x == find);
@@ -72,54 +73,118 @@ namespace Work2Optimized
         [ArgumentsSource(nameof(ArrayData))]
         [Benchmark] public int SpanPointer2(int[] values, int find) => Finder.SpanPointer2<int>(values, x => x == find);
 
-        [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int SpanUnsafeWhile(int[] values, int find) => Finder.SpanUnsafeWhile<int>(values, x => x == find);
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int SpanUnsafeWhile(int[] values, int find) => Finder.SpanUnsafeWhile<int>(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int SpanUnsafeFor(int[] values, int find) => Finder.SpanUnsafeFor<int>(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int Array(int[] values, int find) => Finder.Array(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayPointer(int[] values, int find) => Finder.ArrayPointer(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayPointer2(int[] values, int find) => Finder.ArrayPointer2(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayRangeMax(int[] values, int find) => Finder.ArrayRangeMax(values, 0, values.Length, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayRangeLengthDec(int[] values, int find) => Finder.ArrayRangeLengthDec(values, 0, values.Length, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayRangeWhile(int[] values, int find) => Finder.ArrayRangeWhile(values, 0, values.Length, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayRangePointer(int[] values, int find) => Finder.ArrayRangePointer(values, 0, values.Length, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int ArrayRangePointer2(int[] values, int find) => Finder.ArrayRangePointer2(values, 0, values.Length, x => x == find);
+
+        //// List
+
+        //[ArgumentsSource(nameof(ListData))]
+        //[Benchmark] public int List(List<int> values, int find) => Finder.List(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ListData))]
+        //[Benchmark] public int ListRange(List<int> values, int find) => Finder.ListRangeMax(values, 0, values.Count, x => x == find);
+
+        //// Interface
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int InterfaceList(int[] values, int find) => Finder.InterfaceList(values, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int InterfaceListRangeMax(int[] values, int find) => Finder.InterfaceListRangeMax(values, 0, values.Length, x => x == find);
+
+        //[ArgumentsSource(nameof(ArrayData))]
+        //[Benchmark] public int Enumerable(int[] values, int find) => Finder.Enumerable(values, x => x == find);
+    }
+
+        [Config(typeof(BenchmarkConfig))]
+    public class StringBenchmark
+    {
+        public IEnumerable<object?[]> ArrayData()
+        {
+            yield return new object?[] { new string?[1], null };
+            yield return new object?[] { new string?[4], string.Empty };
+            yield return new object?[] { new string?[16], string.Empty };
+            yield return new object?[] { new string?[64], string.Empty };
+            yield return new object?[] { new string?[256], string.Empty };
+            yield return new object?[] { new string?[1024], string.Empty };
+        }
+
+        public IEnumerable<object?[]> ListData()
+        {
+            yield return new object?[] { new List<string?>(new string?[1]), null };
+            yield return new object?[] { new List<string?>(new string?[4]), string.Empty };
+            yield return new object?[] { new List<string?>(new string?[16]), string.Empty };
+            yield return new object?[] { new List<string?>(new string?[64]), string.Empty };
+            yield return new object?[] { new List<string?>(new string?[256]), string.Empty };
+            yield return new object?[] { new List<string?>(new string?[1024]), string.Empty };
+        }
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int SpanUnsafeFor(int[] values, int find) => Finder.SpanUnsafeFor<int>(values, x => x == find);
+        [Benchmark] public int Span(string?[] values, string? find) => Finder.Span<string?>(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int Array(int[] values, int find) => Finder.Array(values, x => x == find);
+        [Benchmark] public int SpanUnsafeWhile(string?[] values, string? find) => Finder.SpanUnsafeWhile<string?>(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayPointer(int[] values, int find) => Finder.ArrayPointer(values, x => x == find);
+        [Benchmark] public int SpanUnsafeFor(string?[] values, string? find) => Finder.SpanUnsafeFor<string?>(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayPointer2(int[] values, int find) => Finder.ArrayPointer2(values, x => x == find);
+        [Benchmark] public int Array(string?[] values, string? find) => Finder.Array(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayRangeMax(int[] values, int find) => Finder.ArrayRangeMax(values, 0, values.Length, x => x == find);
+        [Benchmark] public int ArrayRangeMax(string?[] values, string? find) => Finder.ArrayRangeMax(values, 0, values.Length, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayRangeLengthDec(int[] values, int find) => Finder.ArrayRangeLengthDec(values, 0, values.Length, x => x == find);
+        [Benchmark] public int ArrayRangeLengthDec(string?[] values, string? find) => Finder.ArrayRangeLengthDec(values, 0, values.Length, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayRangeWhile(int[] values, int find) => Finder.ArrayRangeWhile(values, 0, values.Length, x => x == find);
-
-        [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayRangePointer(int[] values, int find) => Finder.ArrayRangePointer(values, 0, values.Length, x => x == find);
-
-        [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int ArrayRangePointer2(int[] values, int find) => Finder.ArrayRangePointer2(values, 0, values.Length, x => x == find);
+        [Benchmark] public int ArrayRangeWhile(string?[] values, string? find) => Finder.ArrayRangeWhile(values, 0, values.Length, x => x == find);
 
         // List
 
         [ArgumentsSource(nameof(ListData))]
-        [Benchmark] public int List(List<int> values, int find) => Finder.List(values, x => x == find);
+        [Benchmark] public int List(List<string?> values, string? find) => Finder.List(values, x => x == find);
 
         [ArgumentsSource(nameof(ListData))]
-        [Benchmark] public int ListRange(List<int> values, int find) => Finder.ListRangeMax(values, 0, values.Count, x => x == find);
+        [Benchmark] public int ListRange(List<string?> values, string? find) => Finder.ListRangeMax(values, 0, values.Count, x => x == find);
 
         // Interface
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int InterfaceList(int[] values, int find) => Finder.InterfaceList(values, x => x == find);
+        [Benchmark] public int InterfaceList(string?[] values, string? find) => Finder.InterfaceList(values, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int InterfaceListRangeMax(int[] values, int find) => Finder.InterfaceListRangeMax(values, 0, values.Length, x => x == find);
+        [Benchmark] public int InterfaceListRangeMax(string?[] values, string? find) => Finder.InterfaceListRangeMax(values, 0, values.Length, x => x == find);
 
         [ArgumentsSource(nameof(ArrayData))]
-        [Benchmark] public int Enumerable(int[] values, int find) => Finder.Enumerable(values, x => x == find);
+        [Benchmark] public int Enumerable(string?[] values, string? find) => Finder.Enumerable(values, x => x == find);
     }
 
     public static class Finder
