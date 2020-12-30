@@ -5,9 +5,11 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLinq", "WorkLinq\WorkLinq.csproj", "{65C0FAE4-422A-4659-87D2-4F60B47E3669}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Work1Predicate", "Work1Predicate\Work1Predicate.csproj", "{36FB26A5-3072-4C7F-BA80-ED1B2F9B6AA3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Work1Predicate", "Work1Predicate\Work1Predicate.csproj", "{36FB26A5-3072-4C7F-BA80-ED1B2F9B6AA3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Work2Optimized", "Work2Optimized\Work2Optimized.csproj", "{5440F0C1-A740-4342-AED2-D329387A127D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Work2Optimized", "Work2Optimized\Work2Optimized.csproj", "{5440F0C1-A740-4342-AED2-D329387A127D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Work3Incubator", "Work3Incubator\Work3Incubator.csproj", "{8C2C9330-6B61-4621-B8BA-8A017BE49EAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{5440F0C1-A740-4342-AED2-D329387A127D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5440F0C1-A740-4342-AED2-D329387A127D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5440F0C1-A740-4342-AED2-D329387A127D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C2C9330-6B61-4621-B8BA-8A017BE49EAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C2C9330-6B61-4621-B8BA-8A017BE49EAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C2C9330-6B61-4621-B8BA-8A017BE49EAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C2C9330-6B61-4621-B8BA-8A017BE49EAA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
