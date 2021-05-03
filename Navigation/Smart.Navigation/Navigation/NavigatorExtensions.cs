@@ -4,7 +4,6 @@ namespace Smart.Navigation
 
     using Smart.Navigation.Strategies;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Extension method")]
     public static class NavigatorExtensions
     {
         // ------------------------------------------------------------
@@ -17,10 +16,6 @@ namespace Smart.Navigation
             {
                 notifySupport.NavigatorNotify(parameter);
             }
-            else
-            {
-                (navigator.CurrentTarget as INotifySupport)?.NavigatorNotify(parameter);
-            }
         }
 
         public static Task NotifyAsync<T>(this INavigator navigator, T parameter)
@@ -30,19 +25,13 @@ namespace Smart.Navigation
                 return notifySupportAsyncT.NavigatorNotifyAsync(parameter);
             }
 
-            if (navigator.CurrentTarget is INotifySupportAsync notifySupportAsync)
-            {
-                return notifySupportAsync.NavigatorNotifyAsync(parameter);
-            }
-
             if (navigator.CurrentTarget is INotifySupport<T> notifySupport)
             {
                 notifySupport.NavigatorNotify(parameter);
-                return default;
+                return Task.CompletedTask;
             }
 
-            (navigator.CurrentTarget as INotifySupport)?.NavigatorNotify(parameter);
-            return default;
+            return Task.CompletedTask;
         }
 
         // ------------------------------------------------------------

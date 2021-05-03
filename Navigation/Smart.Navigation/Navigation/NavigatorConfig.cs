@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     using System;
 
@@ -12,7 +12,7 @@
 
     public sealed class NavigatorConfig : INavigatorConfig
     {
-        private readonly ComponentConfig config = new ComponentConfig();
+        private readonly ComponentConfig config = new();
 
         public NavigatorConfig()
         {
@@ -26,17 +26,12 @@
 
         public NavigatorConfig Configure(Action<ComponentConfig> action)
         {
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
-
             action(config);
 
             return this;
         }
 
-        IComponentContainer INavigatorConfig.ResolveComponents()
+        ComponentContainer INavigatorConfig.ResolveComponents()
         {
             return config.ToContainer();
         }

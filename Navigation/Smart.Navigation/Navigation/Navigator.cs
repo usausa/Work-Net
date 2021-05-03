@@ -3,11 +3,11 @@ namespace Smart.Navigation
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using System.Threading.Tasks;
 
     using Smart.ComponentModel;
-    using Smart.Functional;
     using Smart.Navigation.Components;
     using Smart.Navigation.Mappers;
     using Smart.Navigation.Plugins;
@@ -15,37 +15,37 @@ namespace Smart.Navigation
 
     public sealed class Navigator : DisposableObject, INavigator, INavigatorComponentSource
     {
-        private static readonly PropertyChangedEventArgs StackCountEventArgs = new PropertyChangedEventArgs(nameof(StackedCount));
-        private static readonly PropertyChangedEventArgs CurrentViewIdEventArgs = new PropertyChangedEventArgs(nameof(CurrentViewId));
-        private static readonly PropertyChangedEventArgs CurrentViewEventArgs = new PropertyChangedEventArgs(nameof(CurrentView));
-        private static readonly PropertyChangedEventArgs CurrentTargetEventArgs = new PropertyChangedEventArgs(nameof(CurrentTarget));
-        private static readonly PropertyChangedEventArgs ExecutingEventArgs = new PropertyChangedEventArgs(nameof(Executing));
+        private static readonly PropertyChangedEventArgs StackCountEventArgs = new(nameof(StackedCount));
+        private static readonly PropertyChangedEventArgs CurrentViewIdEventArgs = new(nameof(CurrentViewId));
+        private static readonly PropertyChangedEventArgs CurrentViewEventArgs = new(nameof(CurrentView));
+        private static readonly PropertyChangedEventArgs CurrentTargetEventArgs = new(nameof(CurrentTarget));
+        private static readonly PropertyChangedEventArgs ExecutingEventArgs = new(nameof(Executing));
 
         // ------------------------------------------------------------
         // Event
         // ------------------------------------------------------------
 
-        public event EventHandler<ConfirmEventArgs> Confirm;
+        public event EventHandler<ConfirmEventArgs>? Confirm;
 
-        public event EventHandler<NavigationEventArgs> Navigating;
+        public event EventHandler<NavigationEventArgs>? Navigating;
 
-        public event EventHandler<NavigationEventArgs> Navigated;
+        public event EventHandler<NavigationEventArgs>? Navigated;
 
-        public event EventHandler<EventArgs> Exited;
+        public event EventHandler<EventArgs>? Exited;
 
-        public event EventHandler<EventArgs> ExecutingChanged;
+        public event EventHandler<EventArgs>? ExecutingChanged;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         // ------------------------------------------------------------
         // Member
         // ------------------------------------------------------------
 
-        private static readonly NavigationParameter EmptyParameter = new NavigationParameter();
+        private static readonly NavigationParameter EmptyParameter = new();
 
-        private readonly IComponentContainer components;
+        private readonly ComponentContainer components;
 
-        private readonly List<ViewStackInfo> viewStack = new List<ViewStackInfo>();
+        private readonly List<ViewStackInfo> viewStack = new();
 
         private readonly INavigationProvider provider;
 
@@ -59,17 +59,17 @@ namespace Smart.Navigation
         // Property
         // ------------------------------------------------------------
 
-        IComponentContainer INavigatorComponentSource.Components => components;
+        ComponentContainer INavigatorComponentSource.Components => components;
 
-        private ViewStackInfo CurrentStack => viewStack.Count > 0 ? viewStack[^1] : null;
+        private ViewStackInfo? CurrentStack => viewStack.Count > 0 ? viewStack[^1] : null;
 
         public int StackedCount => viewStack.Count;
 
-        public object CurrentViewId => CurrentStack?.Descriptor.Id;
+        public object? CurrentViewId => CurrentStack?.Descriptor.Id;
 
-        public object CurrentView => CurrentStack?.View;
+        public object? CurrentView => CurrentStack?.View;
 
-        public object CurrentTarget => CurrentStack?.View.MapOrDefault(x => provider.ResolveTarget(x));
+        public object? CurrentTarget => CurrentStack?.View.MapOrDefault(x => provider.ResolveTarget(x));
 
         public bool Executing { get; private set; }
 
@@ -79,11 +79,6 @@ namespace Smart.Navigation
 
         public Navigator(INavigatorConfig config)
         {
-            if (config is null)
-            {
-                throw new ArgumentNullException(nameof(config));
-            }
-
             components = config.ResolveComponents();
 
             provider = components.Get<INavigationProvider>();
@@ -134,7 +129,7 @@ namespace Smart.Navigation
             Exited?.Invoke(this, EventArgs.Empty);
         }
 
-        bool INavigator.Navigate(INavigationStrategy strategy, INavigationParameter parameter)
+        bool INavigator.Navigate(INavigationStrategy strategy, INavigationParameter? parameter)
         {
             var controller = new Controller(this);
             var result = strategy.Initialize(controller);
@@ -150,6 +145,35 @@ namespace Smart.Navigation
                 return false;
             }
 
+            NavigateCore(strategy, navigationContext, controller);
+
+            return true;
+        }
+
+        async Task<bool> INavigator.NavigateAsync(INavigationStrategy strategy, INavigationParameter? parameter)
+        {
+            var controller = new Controller(this);
+            var result = strategy.Initialize(controller);
+            if (result is null)
+            {
+                return false;
+            }
+
+            var navigationContext = new NavigationContext(CurrentViewId, result.ToId, result.Attribute, parameter ?? EmptyParameter);
+
+            var confirmResult = await ConfirmNavigationAsync(navigationContext).ConfigureAwait(false);
+            if (!confirmResult)
+            {
+                return false;
+            }
+
+            NavigateCore(strategy, navigationContext, controller);
+
+            return true;
+        }
+
+        private void NavigateCore(INavigationStrategy strategy, INavigationContext navigationContext, Controller controller)
+        {
             if (Executing)
             {
                 throw new InvalidOperationException("Navigator is already executing.");
@@ -173,7 +197,7 @@ namespace Smart.Navigation
                 var args = new NavigationEventArgs(navigationContext, fromView, fromTarget, toView, toTarget);
 
                 // Process from view
-                if (fromView != null)
+                if (fromView is not null)
                 {
                     (fromTarget as INavigationEventSupport)?.OnNavigatingFrom(navigationContext);
 
@@ -218,98 +242,6 @@ namespace Smart.Navigation
                 ExecutingChanged?.Invoke(this, EventArgs.Empty);
                 PropertyChanged?.Invoke(this, ExecutingEventArgs);
             }
-
-            return true;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2007:DoNotDirectlyAwaitATask", Justification = "Ignore")]
-        async Task<bool> INavigator.NavigateAsync(IAsyncNavigationStrategy strategy, INavigationParameter parameter)
-        {
-            var controller = new Controller(this);
-            var result = strategy.Initialize(controller);
-            if (result is null)
-            {
-                return false;
-            }
-
-            var navigationContext = new NavigationContext(CurrentViewId, result.ToId, result.Attribute, parameter ?? EmptyParameter);
-
-            var confirmResult = await ConfirmNavigationAsync(navigationContext);
-            if (!confirmResult)
-            {
-                return false;
-            }
-
-            if (Executing)
-            {
-                throw new InvalidOperationException("Navigator is already executing.");
-            }
-
-            try
-            {
-                Executing = true;
-                ExecutingChanged?.Invoke(this, EventArgs.Empty);
-                PropertyChanged?.Invoke(this, ExecutingEventArgs);
-
-                var pluginContext = new PluginContext();
-                controller.PluginContext = pluginContext;
-
-                var fromView = CurrentView;
-                var fromTarget = CurrentTarget;
-
-                var toView = strategy.ResolveToView(controller);
-                var toTarget = provider.ResolveTarget(toView);
-
-                var args = new NavigationEventArgs(navigationContext, fromView, fromTarget, toView, toTarget);
-
-                // Process from view
-                if (fromView != null)
-                {
-                    (fromTarget as INavigationEventSupport)?.OnNavigatingFrom(navigationContext);
-
-                    foreach (var plugin in plugins)
-                    {
-                        plugin.OnNavigatingFrom(pluginContext, fromView, fromTarget);
-                    }
-                }
-
-                // Process navigating
-                foreach (var plugin in plugins)
-                {
-                    plugin.OnNavigatingTo(pluginContext, toView, toTarget);
-                }
-
-                (toTarget as INavigationEventSupport)?.OnNavigatingTo(navigationContext);
-
-                // End pre process
-                Navigating?.Invoke(this, args);
-
-                // Update stack
-                await strategy.UpdateStackAsync(controller, toView);
-
-                // Update view mapper
-                viewMapper.CurrentUpdated(CurrentViewId);
-
-                // Process navigated
-                foreach (var plugin in plugins)
-                {
-                    plugin.OnNavigatedTo(pluginContext, toView, toTarget);
-                }
-
-                (toTarget as INavigationEventSupport)?.OnNavigatedTo(navigationContext);
-
-                // End post process
-                NotifyCurrentChanged();
-                Navigated?.Invoke(this, args);
-            }
-            finally
-            {
-                Executing = false;
-                ExecutingChanged?.Invoke(this, EventArgs.Empty);
-                PropertyChanged?.Invoke(this, ExecutingEventArgs);
-            }
-
-            return true;
         }
 
         // ------------------------------------------------------------
@@ -328,7 +260,7 @@ namespace Smart.Navigation
             }
 
             var handler = Confirm;
-            if (handler != null)
+            if (handler is not null)
             {
                 var args = new ConfirmEventArgs(context);
                 handler(this, args);
@@ -341,12 +273,11 @@ namespace Smart.Navigation
             return true;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2007:DoNotDirectlyAwaitATask", Justification = "Ignore")]
         private async Task<bool> ConfirmNavigationAsync(NavigationContext context)
         {
             if (CurrentTarget is IConfirmRequestAsync confirm)
             {
-                var canNavigate = await confirm.CanNavigateAsync(context);
+                var canNavigate = await confirm.CanNavigateAsync(context).ConfigureAwait(false);
                 if (!canNavigate)
                 {
                     return false;
@@ -368,6 +299,7 @@ namespace Smart.Navigation
 
             public List<ViewStackInfo> ViewStack => navigator.viewStack;
 
+            [AllowNull]
             public PluginContext PluginContext { private get; set; }
 
             public Controller(Navigator navigator)
@@ -411,12 +343,12 @@ namespace Smart.Navigation
                 navigator.provider.CloseView(view);
             }
 
-            public void ActivateView(object view, object parameter)
+            public void ActivateView(object view, object? parameter)
             {
                 navigator.provider.ActivateView(view, parameter);
             }
 
-            public object DeactivateView(object view)
+            public object? DeactivateView(object view)
             {
                 return navigator.provider.DeactivateView(view);
             }

@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     using Smart.Mock;
 
@@ -14,12 +14,12 @@
             var navigator = new NavigatorConfig()
                 .UseMockFormProvider()
                 .ToNavigator();
-            navigator.Exited += (sender, args) => called.Value = true;
+            navigator.Exited += (_, _) => called.Value = true;
 
             // test
             navigator.Forward(typeof(Form1));
 
-            var form1 = (Form1)navigator.CurrentView;
+            var form1 = (Form1)navigator.CurrentView!;
 
             navigator.Exit();
 
@@ -38,15 +38,15 @@
             // test
             navigator.Forward(typeof(Form1));
 
-            var form1 = (Form1)navigator.CurrentView;
+            var form1 = (Form1)navigator.CurrentView!;
 
             navigator.Push(typeof(Form2));
 
-            var form2 = (Form2)navigator.CurrentView;
+            var form2 = (Form2)navigator.CurrentView!;
 
             navigator.Push(typeof(Form3));
 
-            var form3 = (Form3)navigator.CurrentView;
+            var form3 = (Form3)navigator.CurrentView!;
 
             navigator.Exit();
 

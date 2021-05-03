@@ -3,20 +3,18 @@ namespace Smart.Navigation.Components
     using System;
     using System.Collections.Generic;
 
-    using Smart.Resolver.Bindings;
-
     public class PageContextStorage
     {
         private sealed class ScopeEntry
         {
-            private Dictionary<Type, object> map;
+            private Dictionary<int, object>? map;
 
-            public Dictionary<Type, object> Map => map ??= new Dictionary<Type, object>();
+            public Dictionary<int, object> Map => map ??= new();
 
             public int Counter { get; set; }
         }
 
-        private readonly Dictionary<string, ScopeEntry> entries = new Dictionary<string, ScopeEntry>();
+        private readonly Dictionary<string, ScopeEntry> entries = new();
 
         public void Push(string name)
         {
@@ -50,19 +48,18 @@ namespace Smart.Navigation.Components
             entries.Remove(name);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
-        public object Resolve(string name, IBinding binding, Func<object> factory)
+        public object Resolve(string name, int key, Func<object> factory)
         {
             if (entries.TryGetValue(name, out var entry))
             {
-                return entry.Map[binding.Type];
+                return entry.Map[key];
             }
 
             entry = new ScopeEntry();
             entries[name] = entry;
 
             var component = factory();
-            entry.Map[binding.Type] = component;
+            entry.Map[key] = component;
 
             return component;
         }

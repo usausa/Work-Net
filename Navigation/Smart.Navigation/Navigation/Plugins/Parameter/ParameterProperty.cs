@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation.Plugins.Parameter
+namespace Smart.Navigation.Plugins.Parameter
 {
     using System;
 
@@ -8,15 +8,15 @@
 
         public Type PropertyType { get; }
 
-        public Func<object, object> Getter { get; }
+        public Func<object?, object?>? Getter { get; }
 
-        public Action<object, object> Setter { get; }
+        public Action<object?, object?>? Setter { get; }
 
         public ParameterProperty(
             string name,
             Type propertyType,
-            Func<object, object> getter,
-            Action<object, object> setter)
+            Func<object?, object?>? getter,
+            Action<object?, object?>? setter)
         {
             Name = name;
             PropertyType = propertyType;

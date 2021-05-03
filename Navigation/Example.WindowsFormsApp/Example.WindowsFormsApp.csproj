@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <CodeAnalysisRuleSet>..\Smart.Navigation.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Usa.Smart.Core" Version="2.0.0-beta5" />
+    <PackageReference Include="Usa.Smart.Resolver" Version="2.0.0-beta3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Smart.Navigation.Resolver\Smart.Navigation.Resolver.csproj" />
+    <ProjectReference Include="..\Smart.Navigation.Windows.Forms\Smart.Navigation.Windows.Forms.csproj" />
+    <ProjectReference Include="..\Smart.Navigation\Smart.Navigation.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,18 +1,13 @@
-﻿namespace Smart.Navigation.Mappers
+namespace Smart.Navigation.Mappers
 {
     using System;
     using System.Collections.Generic;
 
     public sealed class DirectViewMapper : IViewMapper
     {
-        private readonly Dictionary<Type, ViewDescriptor> descriptors = new Dictionary<Type, ViewDescriptor>();
+        private readonly Dictionary<Type, ViewDescriptor> descriptors = new();
 
         private readonly ITypeConstraint constraint;
-
-        public DirectViewMapper()
-            : this(null)
-        {
-        }
 
         public DirectViewMapper(ITypeConstraint constraint)
         {
@@ -35,7 +30,7 @@
             throw new InvalidOperationException($"View id is invalid id type. id=[{id}]");
         }
 
-        public void CurrentUpdated(object id)
+        public void CurrentUpdated(object? id)
         {
         }
     }

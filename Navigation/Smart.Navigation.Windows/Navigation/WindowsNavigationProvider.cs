@@ -6,7 +6,6 @@ namespace Smart.Navigation
     using System.Windows.Data;
     using System.Windows.Input;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Provider")]
     public class WindowsNavigationProvider : INavigationProvider
     {
         private readonly IContainerResolver resolver;
@@ -66,7 +65,7 @@ namespace Smart.Navigation
             container.Children.Remove(element);
         }
 
-        public void ActivateView(object view, object parameter)
+        public void ActivateView(object view, object? parameter)
         {
             var element = (FrameworkElement)view;
 
@@ -90,7 +89,7 @@ namespace Smart.Navigation
             }
         }
 
-        public object DeactivateView(object view)
+        public object? DeactivateView(object view)
         {
             var element = (FrameworkElement)view;
 

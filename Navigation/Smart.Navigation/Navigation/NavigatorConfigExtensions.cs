@@ -11,7 +11,6 @@ namespace Smart.Navigation
     using Smart.Navigation.Plugins;
     using Smart.Reflection;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Extension method")]
     public static class NavigatorConfigExtensions
     {
         public static NavigatorConfig UseProvider<TProvider>(this NavigatorConfig config)
@@ -28,11 +27,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseProvider(this NavigatorConfig config, INavigationProvider provider)
         {
-            if (provider is null)
-            {
-                throw new ArgumentNullException(nameof(provider));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<INavigationProvider>();
@@ -56,11 +50,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseViewMapper(this NavigatorConfig config, IViewMapper mapper)
         {
-            if (mapper is null)
-            {
-                throw new ArgumentNullException(nameof(mapper));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<IViewMapper>();
@@ -72,14 +61,11 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseDirectViewMapper(this NavigatorConfig config, Type baseType)
         {
-            if (baseType != null)
+            config.Configure(c =>
             {
-                config.Configure(c =>
-                {
-                    c.RemoveAll<ITypeConstraint>();
-                    c.Add<ITypeConstraint>(new AssignableTypeConstraint(baseType));
-                });
-            }
+                c.RemoveAll<ITypeConstraint>();
+                c.Add<ITypeConstraint>(new AssignableTypeConstraint(baseType));
+            });
 
             return config.UseViewMapper<DirectViewMapper>();
         }
@@ -91,25 +77,15 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseDirectViewMapper(this NavigatorConfig config)
         {
-            return config.UseDirectViewMapper(null);
+            return config.UseViewMapper<DirectViewMapper>();
         }
 
         public static NavigatorConfig UseIdViewMapper(this NavigatorConfig config, Action<IIdViewRegister> action)
         {
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
-
-            var options = new IdViewMapperOptions
-            {
-                SetupAction = action
-            };
-
             config.Configure(c =>
             {
                 c.RemoveAll<IdViewMapperOptions>();
-                c.Add(options);
+                c.Add(new IdViewMapperOptions(action));
             });
 
             return config.UseViewMapper<IdViewMapper>();
@@ -117,11 +93,6 @@ namespace Smart.Navigation
 
         public static void AutoRegister(this IIdViewRegister register, IEnumerable<Type> types)
         {
-            if (types is null)
-            {
-                throw new ArgumentNullException(nameof(types));
-            }
-
             foreach (var type in types)
             {
                 foreach (var attr in type.GetTypeInfo().GetCustomAttributes<ViewAttribute>())
@@ -133,11 +104,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UsePathViewMapper(this NavigatorConfig config, Action<PathViewMapperOptions> action)
         {
-            if (action is null)
-            {
-                throw new ArgumentNullException(nameof(action));
-            }
-
             var options = new PathViewMapperOptions();
             action(options);
 
@@ -164,11 +130,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseTypeConstraint(this NavigatorConfig config, ITypeConstraint constraint)
         {
-            if (constraint is null)
-            {
-                throw new ArgumentNullException(nameof(constraint));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<ITypeConstraint>();
@@ -192,11 +153,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseActivator(this NavigatorConfig config, IActivator activator)
         {
-            if (activator is null)
-            {
-                throw new ArgumentNullException(nameof(activator));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<IActivator>();
@@ -208,11 +164,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseActivator(this NavigatorConfig config, Func<Type, object> callback)
         {
-            if (callback is null)
-            {
-                throw new ArgumentNullException(nameof(callback));
-            }
-
             return config.UseActivator(new CallbackActivator(callback));
         }
 
@@ -230,11 +181,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseConverter(this NavigatorConfig config, IConverter converter)
         {
-            if (converter is null)
-            {
-                throw new ArgumentNullException(nameof(converter));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<IConverter>();
@@ -244,7 +190,7 @@ namespace Smart.Navigation
             return config;
         }
 
-        public static NavigatorConfig UseConverter(this NavigatorConfig config, Func<object, Type, object> callback)
+        public static NavigatorConfig UseConverter(this NavigatorConfig config, Func<object?, Type, object?> callback)
         {
             return config.UseConverter(new CallbackConverter(callback));
         }
@@ -264,11 +210,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig AddPlugin(this NavigatorConfig config, IPlugin plugin)
         {
-            if (plugin is null)
-            {
-                throw new ArgumentNullException(nameof(plugin));
-            }
-
             config.Configure(c => c.Add(plugin));
 
             return config;
@@ -288,11 +229,6 @@ namespace Smart.Navigation
 
         public static NavigatorConfig UseDelegateFactory(this NavigatorConfig config, IDelegateFactory delegateFactory)
         {
-            if (delegateFactory is null)
-            {
-                throw new ArgumentNullException(nameof(delegateFactory));
-            }
-
             config.Configure(c =>
             {
                 c.RemoveAll<IDelegateFactory>();
@@ -304,7 +240,7 @@ namespace Smart.Navigation
 
         public static Navigator ToNavigator(this INavigatorConfig config)
         {
-            return new Navigator(config);
+            return new(config);
         }
     }
 }

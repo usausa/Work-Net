@@ -1,7 +1,6 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     using System;
-    using Smart.Functional;
     using Smart.Mock;
     using Smart.Resolver;
 
@@ -26,7 +25,7 @@
                 .ToNavigator();
 
             var eventArgs = new Holder<NavigationEventArgs>();
-            navigator.Navigating += (sender, args) => eventArgs.Value = args;
+            navigator.Navigating += (_, args) => eventArgs.Value = args;
 
             // test
             navigator.Forward(typeof(EventArgs1Window));
@@ -43,9 +42,9 @@
 
             Assert.NotNull(eventArgs.Value.Context);
             Assert.NotNull(eventArgs.Value.FromView);
-            Assert.Equal(typeof(EventArgs1Window), eventArgs.Value.FromView.GetType());
+            Assert.Equal(typeof(EventArgs1Window), eventArgs.Value.FromView!.GetType());
             Assert.NotNull(eventArgs.Value.FromTarget);
-            Assert.Equal(typeof(EventArgs1WindowViewModel), eventArgs.Value.FromTarget.GetType());
+            Assert.Equal(typeof(EventArgs1WindowViewModel), eventArgs.Value.FromTarget!.GetType());
             Assert.NotNull(eventArgs.Value.ToView);
             Assert.Equal(typeof(EventArgs2Window), eventArgs.Value.ToView.GetType());
             Assert.NotNull(eventArgs.Value.ToTarget);
@@ -88,8 +87,8 @@
             var navigator = new NavigatorConfig()
                 .UseMockFormProvider()
                 .ToNavigator();
-            navigator.Navigating += (sender, args) => recorder.Events.Add($"{((Type)args.Context.FromId)?.Name}.Navigating");
-            navigator.Navigated += (sender, args) => recorder.Events.Add($"{((Type)args.Context.ToId).Name}.Navigated");
+            navigator.Navigating += (_, args) => recorder.Events.Add($"{((Type?)args.Context.FromId)?.Name}.Navigating");
+            navigator.Navigated += (_, args) => recorder.Events.Add($"{((Type)args.Context.ToId).Name}.Navigated");
 
             // test
             navigator.Forward(typeof(Form1));

@@ -1,13 +1,13 @@
 namespace Smart.Navigation.Strategies
 {
     using System;
-    using System.Threading.Tasks;
+    using System.Diagnostics.CodeAnalysis;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
-    public sealed class PopStrategy : IAsyncNavigationStrategy, INavigationStrategy
+    public sealed class PopStrategy : INavigationStrategy
     {
         private readonly int level;
 
+        [AllowNull]
         private ViewStackInfo restoreStackInfo;
 
         public PopStrategy(int level)
@@ -44,23 +44,6 @@ namespace Smart.Navigation.Strategies
             }
 
             controller.ViewStack.RemoveRange(controller.ViewStack.Count - level, level);
-        }
-
-        public Task UpdateStackAsync(INavigationController controller, object toView)
-        {
-            // Activate restored
-            controller.ActivateView(restoreStackInfo.View, restoreStackInfo.RestoreParameter);
-            restoreStackInfo.RestoreParameter = null;
-
-            // Remove old
-            for (var i = controller.ViewStack.Count - 1; i > controller.ViewStack.Count - level - 1; i--)
-            {
-                controller.CloseView(controller.ViewStack[i].View);
-            }
-
-            controller.ViewStack.RemoveRange(controller.ViewStack.Count - level, level);
-
-            return Task.CompletedTask;
         }
     }
 }

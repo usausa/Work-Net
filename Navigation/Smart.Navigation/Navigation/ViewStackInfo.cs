@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     public sealed class ViewStackInfo
     {
@@ -6,7 +6,7 @@
 
         public object View { get; }
 
-        public object RestoreParameter { get; set; }
+        public object? RestoreParameter { get; set; }
 
         public ViewStackInfo(ViewDescriptor descriptor, object view)
         {

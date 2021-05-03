@@ -1,4 +1,4 @@
-﻿namespace Smart.Mock
+namespace Smart.Mock
 {
     using System;
 
@@ -10,7 +10,7 @@
 
         public bool IsVisible { get; set; }
 
-        public object Focused { get; set; }
+        public object? Focused { get; set; }
 
         ~MockForm()
         {

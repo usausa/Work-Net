@@ -1,16 +1,16 @@
 namespace Smart.Navigation.Strategies
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Reflection;
-    using System.Threading.Tasks;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
     public sealed class GroupPopStrategy : INavigationStrategy
     {
         private readonly bool leaveLast;
 
         private int start;
 
+        [AllowNull]
         private ViewStackInfo restoreStackInfo;
 
         public GroupPopStrategy(bool leaveLast)
@@ -18,7 +18,7 @@ namespace Smart.Navigation.Strategies
             this.leaveLast = leaveLast;
         }
 
-        public StrategyResult Initialize(INavigationController controller)
+        public StrategyResult? Initialize(INavigationController controller)
         {
             if (controller.ViewStack.Count == 0)
             {
@@ -37,7 +37,7 @@ namespace Smart.Navigation.Strategies
                 : controller.ViewStack.FindLastIndex(controller.ViewStack.Count - 2, stack =>
                 {
                     var groupOfStack = stack.Descriptor.Type.GetCustomAttribute<GroupAttribute>();
-                    return (groupOfStack != null) && Equals(group.Id, groupOfStack.Id);
+                    return (groupOfStack is not null) && Equals(group.Id, groupOfStack.Id);
                 });
             if (start == -1)
             {

@@ -4,35 +4,36 @@ namespace Smart.Resolver.Scopes
 
     using Smart.ComponentModel;
     using Smart.Navigation.Components;
-    using Smart.Resolver.Bindings;
 
     public sealed class PageContextScope : IScope
     {
         private readonly string name;
 
-        private PageContextStorage storage;
+        private PageContextStorage? storage;
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
+        private int key;
+
         public PageContextScope(string name)
         {
             this.name = name;
         }
 
-        public IScope Copy(IComponentContainer components)
+        public IScope Copy(ComponentContainer components)
         {
             return new PageContextScope(name);
         }
 
-        public Func<IResolver, object> Create(IBinding binding, Func<object> factory)
+        public Func<IResolver, object> Create(Func<object> factory)
         {
-            return k =>
+            return resolver =>
             {
                 if (storage is null)
                 {
-                    storage = k.Get<PageContextStorage>();
+                    storage = resolver.Get<PageContextStorage>();
+                    key = resolver.Get<PageContextKeyManager>().Acquire();
                 }
 
-                return storage.Resolve(name, binding, factory);
+                return storage.Resolve(name, key, factory);
             };
         }
     }

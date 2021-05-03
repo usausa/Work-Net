@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     using Smart.Mock;
 
@@ -14,7 +14,7 @@
         public static void NavigatorComponentSource()
         {
             var navigator = new NavigatorConfig()
-                .UseProvider<MockFormNavigationProvider>()
+                .UseMockFormProvider()
                 .Configure(c => c.Add<IDummyComponent, DummyComponent>())
                 .ToNavigator();
 

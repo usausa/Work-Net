@@ -4,7 +4,6 @@ namespace Smart.Navigation
 
     using Xamarin.Forms;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Provider")]
     public class FormsNavigationProvider : INavigationProvider
     {
         private readonly IContainerResolver resolver;
@@ -55,7 +54,7 @@ namespace Smart.Navigation
             container.Children.Remove(v);
         }
 
-        public void ActivateView(object view, object parameter)
+        public void ActivateView(object view, object? parameter)
         {
             var v = (View)view;
 
@@ -74,7 +73,7 @@ namespace Smart.Navigation
             }
         }
 
-        public object DeactivateView(object view)
+        public object? DeactivateView(object view)
         {
             var v = (View)view;
 
@@ -113,9 +112,9 @@ namespace Smart.Navigation
             }
         }
 
-        private static VisualElement GetFocused(Element parent)
+        private static VisualElement? GetFocused(Element parent)
         {
-            if (parent is VisualElement visualElement && visualElement.IsFocused)
+            if (parent is VisualElement { IsFocused: true } visualElement)
             {
                 return visualElement;
             }
@@ -125,7 +124,7 @@ namespace Smart.Navigation
                 foreach (var child in layout.Children)
                 {
                     var focused = GetFocused(child);
-                    if (focused != null)
+                    if (focused is not null)
                     {
                         return focused;
                     }
@@ -135,7 +134,7 @@ namespace Smart.Navigation
             if (parent is ContentView contentView)
             {
                 var focused = GetFocused(contentView.Content);
-                if (focused != null)
+                if (focused is not null)
                 {
                     return focused;
                 }

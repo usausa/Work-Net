@@ -1,9 +1,9 @@
-﻿namespace Smart.Navigation.Mappers
+namespace Smart.Navigation.Mappers
 {
     public interface IViewMapper
     {
         ViewDescriptor FindDescriptor(object id);
 
-        void CurrentUpdated(object id);
+        void CurrentUpdated(object? id);
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation.Plugins
+namespace Smart.Navigation.Plugins
 {
     public abstract class PluginBase : IPlugin
     {
@@ -10,7 +10,7 @@
         {
         }
 
-        public virtual void OnNavigatingFrom(IPluginContext context, object view, object target)
+        public virtual void OnNavigatingFrom(IPluginContext context, object? view, object? target)
         {
         }
 

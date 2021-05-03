@@ -15,16 +15,15 @@ namespace Smart.Navigation
             set => SetValue(NavigatorProperty, value);
         }
 
-        public AbsoluteLayout AssociatedObject { get; private set; }
+        public AbsoluteLayout? AssociatedObject { get; private set; }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
         protected override void OnAttachedTo(AbsoluteLayout bindable)
         {
             base.OnAttachedTo(bindable);
 
             AssociatedObject = bindable;
 
-            if (bindable.BindingContext != null)
+            if (bindable.BindingContext is not null)
             {
                 BindingContext = bindable.BindingContext;
             }
@@ -34,7 +33,6 @@ namespace Smart.Navigation
             AttachContainer(bindable);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Ignore")]
         protected override void OnDetachingFrom(AbsoluteLayout bindable)
         {
             base.OnDetachingFrom(bindable);
@@ -54,12 +52,12 @@ namespace Smart.Navigation
         {
             base.OnBindingContextChanged();
 
-            BindingContext = AssociatedObject.BindingContext;
+            BindingContext = AssociatedObject?.BindingContext;
 
             AttachContainer(AssociatedObject);
         }
 
-        private void AttachContainer(AbsoluteLayout layout)
+        private void AttachContainer(AbsoluteLayout? layout)
         {
             if (Navigator is INavigatorComponentSource componentSource)
             {

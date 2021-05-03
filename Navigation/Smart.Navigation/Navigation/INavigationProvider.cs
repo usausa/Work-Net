@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     public interface INavigationProvider
     {
@@ -8,8 +8,8 @@
 
         void CloseView(object view);
 
-        void ActivateView(object view, object parameter);
+        void ActivateView(object view, object? parameter);
 
-        object DeactivateView(object view);
+        object? DeactivateView(object view);
     }
 }

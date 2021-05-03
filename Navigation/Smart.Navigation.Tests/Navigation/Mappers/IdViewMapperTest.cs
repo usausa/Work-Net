@@ -1,4 +1,4 @@
-﻿namespace Smart.Navigation.Mappers
+namespace Smart.Navigation.Mappers
 {
     using System;
     using System.Reflection;
@@ -22,11 +22,11 @@
             // test
             navigator.Forward(ViewId.Form1);
 
-            Assert.Equal(typeof(Form1), navigator.CurrentView.GetType());
+            Assert.Equal(typeof(Form1), navigator.CurrentView!.GetType());
 
             navigator.Forward(ViewId.Form2);
 
-            Assert.Equal(typeof(Form2), navigator.CurrentView.GetType());
+            Assert.Equal(typeof(Form2), navigator.CurrentView!.GetType());
         }
 
         [Fact]
@@ -35,7 +35,7 @@
             // prepare
             var navigator = new NavigatorConfig()
                 .UseMockFormProvider()
-                .UseIdViewMapper(r => { })
+                .UseIdViewMapper(_ => { })
                 .ToNavigator();
 
             // test

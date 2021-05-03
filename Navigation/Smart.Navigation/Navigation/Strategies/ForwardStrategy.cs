@@ -1,12 +1,12 @@
 namespace Smart.Navigation.Strategies
 {
-    using System.Threading.Tasks;
+    using System.Diagnostics.CodeAnalysis;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
-    public sealed class ForwardStrategy : IAsyncNavigationStrategy, INavigationStrategy
+    public sealed class ForwardStrategy : INavigationStrategy
     {
         private readonly object id;
 
+        [AllowNull]
         private ViewDescriptor descriptor;
 
         public ForwardStrategy(object id)
@@ -43,27 +43,6 @@ namespace Smart.Navigation.Strategies
 
                 controller.ViewStack.RemoveAt(index);
             }
-        }
-
-        public Task UpdateStackAsync(INavigationController controller, object toView)
-        {
-            // Stack new
-            controller.ViewStack.Add(new ViewStackInfo(descriptor, toView));
-
-            controller.OpenView(toView);
-
-            // Remove old
-            var count = controller.ViewStack.Count;
-            if (count > 1)
-            {
-                var index = count - 2;
-
-                controller.CloseView(controller.ViewStack[index].View);
-
-                controller.ViewStack.RemoveAt(index);
-            }
-
-            return Task.CompletedTask;
         }
     }
 }

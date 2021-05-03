@@ -22,7 +22,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             // A1 B1       new []
@@ -31,7 +31,7 @@ namespace Smart.Navigation.Strategies
 
             navigator.GroupPush(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormC1));
 
@@ -52,18 +52,18 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             // A1 B1       new [0]
             // B1 A1 A2    D:B1 C:A2
             navigator.Forward(typeof(FormA1));
 
-            var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormA2));
 
@@ -102,18 +102,18 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             // A1 B1       new [1]
             // A1 B1 B2    D:B1 C:B2
             navigator.Forward(typeof(FormA1));
 
-            var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormB2));
 
@@ -152,18 +152,18 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             // A1 B1       exist [0]
             // B1 A1       D:B1 A:A1
             navigator.Forward(typeof(FormA1));
 
-            var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormA1));
 
@@ -194,18 +194,18 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             // A1 B1       exist [1]
             // A1 B1       -
             navigator.Forward(typeof(FormA1));
 
-            var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
             navigator.GroupPush(typeof(FormB1));
 
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             Assert.False(navigator.GroupPush(typeof(FormB1)));
 
@@ -232,7 +232,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -240,20 +240,20 @@ namespace Smart.Navigation.Strategies
             // group A
             // 1:A1
             navigator.GroupPush(typeof(FormA1));
-            var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
             // 1:A1:A2
             navigator.GroupPush(typeof(FormA2));
-            var formA2 = (FormA2)navigator.CurrentView;
+            var formA2 = (FormA2)navigator.CurrentView!;
 
             // group B
             // 1:A1:A2:B1
             navigator.GroupPush(typeof(FormB1));
-            var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
             // 1:A1:A2:B1:B2
             navigator.GroupPush(typeof(FormB2));
-            var formB2 = (FormB2)navigator.CurrentView;
+            var formB2 = (FormB2)navigator.CurrentView!;
 
             // group A
             // 1:B1:B2:A1:A2
@@ -299,7 +299,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(FormA1));
@@ -314,54 +314,54 @@ namespace Smart.Navigation.Strategies
         // Async
         // ------------------------------------------------------------
 
-        //[Fact]
-        //public static async ValueTask TestNavigatorGropedPushAsyncExistAndNotBring()
-        //{
-        //    // prepare
-        //    var navigator = new NavigatorConfig()
-        //        .UseMockFormProvider()
-        //        .ToNavigator();
+        [Fact]
+        public static async ValueTask TestNavigatorGropedPushAsyncExistAndNotBring()
+        {
+            // prepare
+            var navigator = new NavigatorConfig()
+                .UseMockFormProvider()
+                .ToNavigator();
 
-        //    // test
-        //    await navigator.ForwardAsync(typeof(FormA1));
+            // test
+            await navigator.ForwardAsync(typeof(FormA1));
 
-        //    var formA1 = (FormA1)navigator.CurrentView;
+            var formA1 = (FormA1)navigator.CurrentView!;
 
-        //    await navigator.GroupPushAsync(typeof(FormB1));
+            await navigator.GroupPushAsync(typeof(FormB1));
 
-        //    var formB1 = (FormB1)navigator.CurrentView;
+            var formB1 = (FormB1)navigator.CurrentView!;
 
-        //    Assert.False(await navigator.GroupPushAsync(typeof(FormB1)));
+            Assert.False(await navigator.GroupPushAsync(typeof(FormB1)));
 
-        //    Assert.Equal(2, navigator.StackedCount);
-        //    Assert.False(formA1.IsVisible);
-        //    Assert.True(formB1.IsVisible);
+            Assert.Equal(2, navigator.StackedCount);
+            Assert.False(formA1.IsVisible);
+            Assert.True(formB1.IsVisible);
 
-        //    await navigator.PopAsync();
+            await navigator.PopAsync();
 
-        //    Assert.True(formA1.IsVisible);
-        //    Assert.False(formB1.IsOpen);
-        //}
+            Assert.True(formA1.IsVisible);
+            Assert.False(formB1.IsOpen);
+        }
 
-        //[Fact]
-        //public static async ValueTask TestNavigatorGropedPushAsyncWithParameter()
-        //{
-        //    // prepare
-        //    var navigator = new NavigatorConfig()
-        //        .UseMockFormProvider()
-        //        .ToNavigator();
+        [Fact]
+        public static async ValueTask TestNavigatorGropedPushAsyncWithParameter()
+        {
+            // prepare
+            var navigator = new NavigatorConfig()
+                .UseMockFormProvider()
+                .ToNavigator();
 
-        //    var context = new Holder<INavigationContext>();
-        //    navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            var context = new Holder<INavigationContext>();
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
-        //    // test
-        //    await navigator.ForwardAsync(typeof(FormA1));
+            // test
+            await navigator.ForwardAsync(typeof(FormA1));
 
-        //    await navigator.GroupPushAsync(typeof(FormB1), new NavigationParameter().SetValue("test"));
+            await navigator.GroupPushAsync(typeof(FormB1), new NavigationParameter().SetValue("test"));
 
-        //    Assert.NotNull(context.Value);
-        //    Assert.Equal("test", context.Value.Parameter.GetValue<string>());
-        //}
+            Assert.NotNull(context.Value);
+            Assert.Equal("test", context.Value.Parameter.GetValue<string>());
+        }
 
         // ------------------------------------------------------------
         // Failed

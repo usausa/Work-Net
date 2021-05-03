@@ -1,12 +1,12 @@
 namespace Smart.Navigation.Strategies
 {
-    using System.Threading.Tasks;
+    using System.Diagnostics.CodeAnalysis;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Strategy")]
-    public sealed class PushStrategy : IAsyncNavigationStrategy, INavigationStrategy
+    public sealed class PushStrategy : INavigationStrategy
     {
         private readonly object id;
 
+        [AllowNull]
         private ViewDescriptor descriptor;
 
         public PushStrategy(object id)
@@ -41,25 +41,6 @@ namespace Smart.Navigation.Strategies
 
                 controller.ViewStack[index].RestoreParameter = controller.DeactivateView(controller.ViewStack[index].View);
             }
-        }
-
-        public Task UpdateStackAsync(INavigationController controller, object toView)
-        {
-            // Stack new
-            controller.ViewStack.Add(new ViewStackInfo(descriptor, toView));
-
-            controller.OpenView(toView);
-
-            // Deactive old
-            var count = controller.ViewStack.Count;
-            if (count > 1)
-            {
-                var index = count - 2;
-
-                controller.ViewStack[index].RestoreParameter = controller.DeactivateView(controller.ViewStack[index].View);
-            }
-
-            return Task.CompletedTask;
         }
     }
 }

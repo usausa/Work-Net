@@ -22,7 +22,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -30,7 +30,7 @@ namespace Smart.Navigation.Strategies
             navigator.PopAndForward(typeof(Form3));
 
             Assert.Equal(1, navigator.StackedCount);
-            var form3 = (MockForm)navigator.CurrentView;
+            var form3 = (MockForm)navigator.CurrentView!;
             Assert.Equal(typeof(Form3), form3.GetType());
             Assert.True(form3.IsOpen);
             Assert.True(form3.IsVisible);
@@ -49,7 +49,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -58,7 +58,7 @@ namespace Smart.Navigation.Strategies
             navigator.PopAndForward(typeof(Form4), 2);
 
             Assert.Equal(1, navigator.StackedCount);
-            var form4 = (MockForm)navigator.CurrentView;
+            var form4 = (MockForm)navigator.CurrentView!;
             Assert.Equal(typeof(Form4), form4.GetType());
             Assert.True(form4.IsOpen);
             Assert.True(form4.IsVisible);
@@ -77,7 +77,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -86,7 +86,7 @@ namespace Smart.Navigation.Strategies
             navigator.PopAllAndForward(typeof(Form4));
 
             Assert.Equal(1, navigator.StackedCount);
-            var form4 = (MockForm)navigator.CurrentView;
+            var form4 = (MockForm)navigator.CurrentView!;
             Assert.Equal(typeof(Form4), form4.GetType());
             Assert.True(form4.IsOpen);
             Assert.True(form4.IsVisible);
@@ -105,7 +105,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -125,7 +125,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -146,7 +146,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             navigator.Forward(typeof(Form1));
@@ -171,7 +171,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));
@@ -191,7 +191,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));
@@ -212,7 +212,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));
@@ -233,7 +233,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));
@@ -253,7 +253,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));
@@ -274,7 +274,7 @@ namespace Smart.Navigation.Strategies
                 .ToNavigator();
 
             var context = new Holder<INavigationContext>();
-            navigator.Navigating += (sender, args) => { context.Value = args.Context; };
+            navigator.Navigating += (_, args) => { context.Value = args.Context; };
 
             // test
             await navigator.ForwardAsync(typeof(Form1));

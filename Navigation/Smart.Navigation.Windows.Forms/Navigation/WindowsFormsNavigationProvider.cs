@@ -2,7 +2,6 @@ namespace Smart.Navigation
 {
     using System.Windows.Forms;
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods", Justification = "Provider")]
     public sealed class WindowsFormsNavigationProvider : INavigationProvider
     {
         private readonly Control container;
@@ -46,7 +45,7 @@ namespace Smart.Navigation
             control.Dispose();
         }
 
-        public void ActivateView(object view, object parameter)
+        public void ActivateView(object view, object? parameter)
         {
             var control = (Control)view;
 
@@ -65,7 +64,7 @@ namespace Smart.Navigation
             }
         }
 
-        public object DeactivateView(object view)
+        public object? DeactivateView(object view)
         {
             var control = (Control)view;
 
@@ -79,7 +78,7 @@ namespace Smart.Navigation
         private static Control GetFocused(Control control)
         {
             var containerControl = control as IContainerControl;
-            while (containerControl != null)
+            while (containerControl is not null)
             {
                 control = containerControl.ActiveControl;
                 containerControl = control as IContainerControl;

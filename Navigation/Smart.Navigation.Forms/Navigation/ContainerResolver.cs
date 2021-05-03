@@ -1,10 +1,10 @@
-﻿namespace Smart.Navigation
+namespace Smart.Navigation
 {
     using Xamarin.Forms;
 
-    public class ContainerResolver : IContainerResolver, IUpdateContainer
+    public sealed class ContainerResolver : IContainerResolver, IUpdateContainer
     {
-        public AbsoluteLayout Container { get; private set; }
+        public AbsoluteLayout? Container { get; private set; }
 
         public ContainerResolver()
         {
@@ -15,7 +15,7 @@
             Container = container;
         }
 
-        void IUpdateContainer.Attach(AbsoluteLayout container)
+        void IUpdateContainer.Attach(AbsoluteLayout? container)
         {
             Container = container;
         }
