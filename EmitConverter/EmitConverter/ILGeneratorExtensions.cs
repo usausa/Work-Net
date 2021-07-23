@@ -1,10 +1,34 @@
 ﻿namespace EmitConverter
 {
     using System;
+    using System.Linq;
+    using System.Reflection;
     using System.Reflection.Emit;
 
     public static class ILGeneratorExtensions
     {
+        private static MethodInfo ResolveImplicitMethod(Type targetType, Type parameterType, Type returnType)
+        {
+            return targetType.GetMethods()
+                .First(x => x.IsPublic &&
+                            x.IsStatic &&
+                            x.Name == "op_Implicit" &&
+                            x.ReturnParameter?.ParameterType == returnType &&
+                            x.GetParameters().Length == 1 &&
+                            x.GetParameters()[0].ParameterType == parameterType);
+        }
+
+        private static MethodInfo ResolveExplicitMethod(Type targetType, Type parameterType, Type returnType)
+        {
+            return targetType.GetMethods()
+                .First(x => x.IsPublic &&
+                            x.IsStatic &&
+                            x.Name == "op_Explicit" &&
+                            x.ReturnParameter?.ParameterType == returnType &&
+                            x.GetParameters().Length == 1 &&
+                            x.GetParameters()[0].ParameterType == parameterType);
+        }
+
         public static bool EmitPrimitiveConvert(this ILGenerator ilGenerator, Type sourceType, Type destinationType)
         {
             if (sourceType == typeof(byte))
@@ -60,16 +84,17 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(byte) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(byte), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(uint), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -128,16 +153,19 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(sbyte) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(sbyte), typeof(decimal)));
+
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -197,16 +225,17 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(char) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(char), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(uint), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -266,16 +295,18 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(short) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(short), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -335,16 +366,17 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(ushort) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(ushort), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(uint), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -403,16 +435,18 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(int) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(int), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(int), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -474,16 +508,18 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(uint) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(uint), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(uint), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -541,16 +577,17 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(long) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(long), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -610,16 +647,17 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(ulong) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(ulong), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -676,16 +714,19 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // explicit
-                    var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(float) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(float), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -741,16 +782,19 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // explicit
-                    var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(double) });
-                    ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(double), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -761,50 +805,58 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO return?
                     // explicit
-                    //var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(decimal) });
-                    //ilGenerator.Emit(OpCodes.Call, method!);
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(byte)));
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(sbyte)));
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(char)));
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(short)));
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(ushort)));
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(int)));
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(uint)));
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(long)));
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(ulong)));
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(float)));
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(double)));
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -812,11 +864,15 @@
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(long)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(decimal), typeof(decimal), typeof(ulong)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(ulong), typeof(UIntPtr)));
                 }
                 else
                 {
@@ -827,51 +883,71 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(int)));
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(long), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -879,7 +955,9 @@
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
-                    // TODO
+                    // Special
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(IntPtr), typeof(long)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else
                 {
@@ -890,55 +968,79 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(uint)));
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // explicit
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveImplicitMethod(typeof(decimal), typeof(ulong), typeof(decimal)));
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
-                    // TODO
+                    // Special
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(UIntPtr), typeof(UIntPtr), typeof(ulong)));
+                    ilGenerator.Emit(OpCodes.Call, ResolveExplicitMethod(typeof(IntPtr), typeof(long), typeof(IntPtr)));
                 }
                 else if (destinationType == typeof(UIntPtr))
                 {
