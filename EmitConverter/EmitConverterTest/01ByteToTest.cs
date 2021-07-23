@@ -141,6 +141,19 @@ namespace EmitConverterTest
             Assert.Equal(255d, converter(Byte.MaxValue));
         }
 
+        [Fact]
+        public void ToDecimal()
+        {
+            var converter = ConverterFactory.Create<byte, decimal>();
+
+            // Base
+            Assert.Equal(0m, converter(0));
+            Assert.Equal(1m, converter(1));
+            // Min/Max
+            Assert.Equal(0m, converter(Byte.MinValue));
+            Assert.Equal(255m, converter(Byte.MaxValue));
+        }
+
         // TODO decimal
         // TODO IntPtr
         // TODO UIntPtr

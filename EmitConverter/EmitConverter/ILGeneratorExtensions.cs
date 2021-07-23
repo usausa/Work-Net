@@ -60,7 +60,8 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    // TODO
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(byte) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -127,7 +128,8 @@
                 else if (destinationType == typeof(decimal))
                 {
                     // implicit
-                    // TODO
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(sbyte) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -194,7 +196,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(char) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -261,7 +265,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(short) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -328,7 +334,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(ushort) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -394,7 +402,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(int) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -463,7 +473,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(uint) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -528,7 +540,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(long) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -595,7 +609,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // implicit
+                    var method = typeof(decimal).GetMethod("op_Implicit", new[] { typeof(ulong) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -659,7 +675,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // explicit
+                    var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(float) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -722,7 +740,9 @@
                 }
                 else if (destinationType == typeof(decimal))
                 {
-                    // TODO
+                    // explicit
+                    var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(double) });
+                    ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(IntPtr))
                 {
@@ -741,7 +761,10 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    // TODO return?
+                    // explicit
+                    //var method = typeof(decimal).GetMethod("op_Explicit", new[] { typeof(decimal) });
+                    //ilGenerator.Emit(OpCodes.Call, method!);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
