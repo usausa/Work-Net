@@ -16,11 +16,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(Byte.MaxValue, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((byte)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((byte)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal(Byte.MinValue, converter(Byte.MinValue));
-            Assert.Equal(Byte.MaxValue, converter(Byte.MaxValue));
+            Assert.Equal(ManualConverter.SingleToByte(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToByte(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -33,11 +30,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(-1, converter(-1f));
             // Min/Max
-            Assert.Equal((sbyte)unchecked((byte)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((sbyte)unchecked((byte)Single.MaxValue)), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal(SByte.MinValue, converter(SByte.MinValue));
-            Assert.Equal(SByte.MaxValue, converter(SByte.MaxValue));
+            Assert.Equal(ManualConverter.SingleToSByte(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToSByte(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -50,11 +44,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(Char.MaxValue, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((char)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((char)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal(Char.MinValue, converter(Char.MinValue));
-            Assert.Equal(Char.MaxValue, converter(Char.MaxValue));
+            Assert.Equal(ManualConverter.SingleToChar(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToChar(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -67,11 +58,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(-1, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((short)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((short)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((float)Int16.MinValue, converter(Int16.MinValue));
-            Assert.Equal((float)Int16.MaxValue, converter(Int16.MaxValue));
+            Assert.Equal(ManualConverter.SingleToInt16(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToInt16(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -84,11 +72,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(UInt16.MaxValue, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((ushort)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((ushort)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((float)UInt16.MinValue, converter(UInt16.MinValue));
-            Assert.Equal((float)UInt16.MaxValue, converter(UInt16.MaxValue));
+            Assert.Equal(ManualConverter.SingleToUInt16(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToUInt16(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -101,11 +86,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(-1, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((int)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((int)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((float)Int32.MinValue, converter(Int32.MinValue));
-            Assert.Equal((float)Int32.MaxValue, converter(Int32.MaxValue));
+            Assert.Equal(ManualConverter.SingleToInt32(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToInt32(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -117,11 +99,8 @@ namespace EmitConverterTest
             Assert.Equal(0ul, converter(0f));
             Assert.Equal(1ul, converter(1f));
             // Min/Max
-            Assert.Equal(unchecked((uint)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((uint)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((uint)(float)UInt32.MinValue, converter(UInt32.MinValue));
-            Assert.Equal(unchecked((uint)(float)UInt32.MaxValue), converter(UInt32.MaxValue));
+            Assert.Equal(ManualConverter.SingleToUInt32(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToUInt32(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -134,11 +113,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(-1, converter(-1f));
             // Min/Max
-            Assert.Equal(unchecked((long)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((long)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((float)Int64.MinValue, converter(Int64.MinValue));
-            Assert.Equal((float)Int64.MaxValue, converter(Int64.MaxValue));
+            Assert.Equal(ManualConverter.SingleToInt64(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToInt64(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -150,11 +126,8 @@ namespace EmitConverterTest
             Assert.Equal(0ul, converter(0f));
             Assert.Equal(1ul, converter(1f));
             // Min/Max
-            Assert.Equal(unchecked((ulong)Single.MinValue), converter(Single.MinValue));
-            Assert.Equal(unchecked((ulong)Single.MaxValue), converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((ulong)(float)UInt64.MinValue, converter(UInt64.MinValue));
-            Assert.Equal(unchecked((ulong)(float)UInt64.MaxValue), converter(UInt64.MaxValue));
+            Assert.Equal(ManualConverter.SingleToUInt64(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToUInt64(Single.MaxValue), converter(Single.MaxValue));
         }
 
         // Nop float
@@ -169,11 +142,8 @@ namespace EmitConverterTest
             Assert.Equal(1, converter(1f));
             Assert.Equal(-1, converter(-1f));
             // Min/Max
-            Assert.Equal(Single.MinValue, converter(Single.MinValue));
-            Assert.Equal(Single.MaxValue, converter(Single.MaxValue));
-            // Compare to cast
-            Assert.Equal((float)Double.MinValue, converter((float)Double.MinValue));
-            Assert.Equal((float)Double.MaxValue, converter((float)Double.MaxValue));
+            Assert.Equal(ManualConverter.SingleToDouble(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToDouble(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -184,6 +154,8 @@ namespace EmitConverterTest
             // Base
             Assert.Equal(0m, converter(0f));
             Assert.Equal(1m, converter(1f));
+            //Assert.Equal(ManualConverter.SingleToDecimal(Single.MinValue), converter(Single.MinValue));
+            //Assert.Equal(ManualConverter.SingleToDecimal(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -194,9 +166,8 @@ namespace EmitConverterTest
             // Base
             Assert.Equal(IntPtr.Zero, converter(0f));
             Assert.Equal((IntPtr)1, converter(1f));
-            // Min/Max
-            Assert.Equal((IntPtr)Single.MinValue, converter(Single.MinValue));
-            Assert.Equal((IntPtr)Single.MaxValue, converter(Single.MaxValue));
+            Assert.Equal(ManualConverter.SingleToIntPtr(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToIntPtr(Single.MaxValue), converter(Single.MaxValue));
         }
 
         [Fact]
@@ -207,9 +178,8 @@ namespace EmitConverterTest
             // Base
             Assert.Equal(UIntPtr.Zero, converter(0f));
             Assert.Equal((UIntPtr)1, converter(1f));
-            // Min/Max
-            Assert.Equal((UIntPtr)Single.MinValue, converter(Single.MinValue));
-            Assert.Equal((UIntPtr)Single.MaxValue, converter(Single.MaxValue));
+            Assert.Equal(ManualConverter.SingleToUIntPtr(Single.MinValue), converter(Single.MinValue));
+            Assert.Equal(ManualConverter.SingleToUIntPtr(Single.MaxValue), converter(Single.MaxValue));
         }
     }
 }
