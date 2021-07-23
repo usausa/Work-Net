@@ -146,11 +146,11 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
@@ -158,35 +158,39 @@
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -209,47 +213,51 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
                     // Nop same
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // Nop
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -272,19 +280,19 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    // Nop
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
@@ -292,27 +300,31 @@
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // Nop implicit
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -335,23 +347,23 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
@@ -359,23 +371,26 @@
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // Nop
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -398,47 +413,53 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // Nop same
+                    // Nop
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    // Nop same
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -461,31 +482,31 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I4);
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U4);
                 }
                 else if (destinationType == typeof(long))
                 {
@@ -493,15 +514,17 @@
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    // Nop
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -524,35 +547,35 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I4);
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U4);
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    // Nop
                 }
                 else if (destinationType == typeof(ulong))
                 {
@@ -560,11 +583,15 @@
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // implicit
+                    ilGenerator.Emit(OpCodes.Conv_R_Un);
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -587,39 +614,39 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I4);
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U4);
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(float))
                 {
@@ -627,7 +654,8 @@
                 }
                 else if (destinationType == typeof(double))
                 {
-                    // TODO
+                    // Implicit
+                    ilGenerator.Emit(OpCodes.Conv_R8);
                 }
                 else if (destinationType == typeof(decimal))
                 {
@@ -650,43 +678,43 @@
             {
                 if (destinationType == typeof(byte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U1);
                 }
                 else if (destinationType == typeof(sbyte))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I1);
                 }
                 else if (destinationType == typeof(char))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(short))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I2);
                 }
                 else if (destinationType == typeof(ushort))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U2);
                 }
                 else if (destinationType == typeof(int))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I4);
                 }
                 else if (destinationType == typeof(uint))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U4);
                 }
                 else if (destinationType == typeof(long))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_I8);
                 }
                 else if (destinationType == typeof(ulong))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_U8);
                 }
                 else if (destinationType == typeof(float))
                 {
-                    // TODO
+                    ilGenerator.Emit(OpCodes.Conv_R4);
                 }
                 else if (destinationType == typeof(double))
                 {
