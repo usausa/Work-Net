@@ -20,10 +20,20 @@ namespace WorkCall
             action.Invoke();
         }
 
+        private static void TestNonSealed2()
+        {
+            new NonSealedAction().Invoke();
+        }
+
         private static void TestSealed()
         {
             var action = new SealedAction();
             action.Invoke();
+        }
+
+        private static void TestSealed2()
+        {
+            new SealedAction().Invoke();
         }
 
         private static void TestAction()
@@ -40,6 +50,19 @@ namespace WorkCall
         private static void TestArgumentAction(Action action)
         {
             action.Invoke();
+        }
+
+        private static void TestArgumentActionNullable1(Action action)
+        {
+            if (action is not null)
+            {
+                action.Invoke();
+            }
+        }
+
+        private static void TestArgumentActionNullable2(Action action)
+        {
+            action?.Invoke();
         }
     }
 
