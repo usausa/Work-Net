@@ -41,7 +41,7 @@ public class BenchmarkConfig : ManualConfig
 public class Benchmark
 {
     //[Params(2, 4, 8, 16)]
-    [Params(2, 16)]
+    [Params(2, 16, 32)]
     public int Size { get; set; }
 
     private Matcher matcher = default!;
@@ -75,6 +75,12 @@ public class Benchmark
 
     [Benchmark]
     public bool FindStructBySpanRefAdd2() => matcher.FindStructBySpanRefAdd2(structEntries);
+
+    [Benchmark]
+    public bool FindStructBySpanRefWhile() => matcher.FindStructBySpanRefWhile(structEntries);
+
+    [Benchmark]
+    public bool FindStructBySpanRefWhile2() => matcher.FindStructBySpanRefWhile2(structEntries);
 }
 
 public sealed class Matcher
@@ -230,6 +236,66 @@ public sealed class Matcher
 
             length--;
         } while (length != 0);
+
+        return true;
+    }
+
+    public bool FindStructBySpanRefWhile(StructEntry[] otherEntry)
+    {
+        var span1 = structEntries.AsSpan();
+        var span2 = otherEntry.AsSpan();
+
+        var length = span1.Length;
+        if (length != span2.Length)
+        {
+            return false;
+        }
+
+        ref var entry = ref MemoryMarshal.GetReference(span1);
+        ref var end = ref Unsafe.Add(ref entry, length);
+        ref var other = ref MemoryMarshal.GetReference(span2);
+        do
+        {
+            if ((entry.Type != other.Type) || (entry.Name != other.Name))
+            {
+                return false;
+            }
+
+            entry = ref Unsafe.Add(ref entry, 1);
+            other = ref Unsafe.Add(ref other, 1);
+        }
+        while (Unsafe.IsAddressLessThan(ref entry, ref end));
+
+        return true;
+    }
+
+    public bool FindStructBySpanRefWhile2(StructEntry[] otherEntry)
+    {
+        var span1 = structEntries.AsSpan();
+        var span2 = otherEntry.AsSpan();
+
+        var length = span1.Length;
+        if (length != span2.Length)
+        {
+            return false;
+        }
+
+        ref var entry = ref MemoryMarshal.GetReference(span1);
+        ref var end = ref Unsafe.Add(ref entry, length);
+        ref var other = ref MemoryMarshal.GetReference(span2);
+
+        Compare:
+        if ((entry.Type != other.Type) || (entry.Name != other.Name))
+        {
+            return false;
+        }
+
+        entry = ref Unsafe.Add(ref entry, 1);
+        if (Unsafe.IsAddressLessThan(ref entry, ref end))
+        {
+            other = ref Unsafe.Add(ref other, 1);
+            goto Compare;
+        }
 
         return true;
     }
