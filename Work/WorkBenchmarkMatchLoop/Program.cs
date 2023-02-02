@@ -40,8 +40,9 @@ public class BenchmarkConfig : ManualConfig
 [Config(typeof(BenchmarkConfig))]
 public class Benchmark
 {
-    //[Params(2, 4, 8, 16)]
-    [Params(2, 16, 32)]
+    private const int N = 1000000;
+
+    [Params(2, 4, 8, 16, 32, 64)]
     public int Size { get; set; }
 
     private Matcher matcher = default!;
@@ -58,29 +59,93 @@ public class Benchmark
         structEntries = Enumerable.Range(0, Size).Select(x => new StructEntry(typeof(object), $"Field{x}")).ToArray();
     }
 
-    [Benchmark]
-    public bool FindClassByLoop() => matcher.FindClassByLoop(classEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindClassByLoop()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindClassByLoop(classEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructByLoop() => matcher.FindStructByLoop(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructByLoop()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructByLoop(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructByRefLoop() => matcher.FindStructByRefLoop(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructByRefLoop()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructByRefLoop(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructBySpanRefLoop() => matcher.FindStructBySpanRefLoop(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructBySpanRefLoop()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructBySpanRefLoop(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructBySpanRefAdd() => matcher.FindStructBySpanRefAdd(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructBySpanRefAdd()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructBySpanRefAdd(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructBySpanRefAdd2() => matcher.FindStructBySpanRefAdd2(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructBySpanRefAdd2()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructBySpanRefAdd2(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructBySpanRefWhile() => matcher.FindStructBySpanRefWhile(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructBySpanRefWhile()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructBySpanRefWhile(structEntries);
+        }
+        return ret;
+    }
 
-    [Benchmark]
-    public bool FindStructBySpanRefWhile2() => matcher.FindStructBySpanRefWhile2(structEntries);
+    [Benchmark(OperationsPerInvoke = N)]
+    public bool FindStructBySpanRefWhile2()
+    {
+        var ret = false;
+        for (var i = 0; i < N; i++)
+        {
+            ret = matcher.FindStructBySpanRefWhile2(structEntries);
+        }
+        return ret;
+    }
 }
 
 public sealed class Matcher
