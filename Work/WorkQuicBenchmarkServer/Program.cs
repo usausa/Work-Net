@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel((context, options) =>
+builder.WebHost.ConfigureKestrel((_, options) =>
 {
     options.ListenAnyIP(5001, listenOptions =>
     {
@@ -12,7 +12,5 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 });
 
 var app = builder.Build();
-
-app.MapGet("/", () => "Hello World!");
 
 app.Run();
