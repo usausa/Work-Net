@@ -49,7 +49,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector.Pascalize("abc_xyz");
+            Inflector.Pascalize("abc_xyz_abc_xyz");
         }
     }
 
@@ -59,7 +59,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector.Camelize("abc_xyz");
+            Inflector.Camelize("abc_xyz_abc_xyz");
         }
     }
 
@@ -69,7 +69,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector.Underscore("AbcXyz");
+            Inflector.Underscore("AbcXyzAbcXyz");
         }
     }
 
@@ -79,7 +79,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector.Underscore("AbcXyz", true);
+            Inflector.Underscore("AbcXyzAbcXyz", true);
         }
     }
 
@@ -91,7 +91,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector2.Pascalize("abc_xyz");
+            Inflector2.Pascalize("abc_xyz_abc_xyz");
         }
     }
 
@@ -101,7 +101,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector2.Camelize("abc_xyz");
+            Inflector2.Camelize("abc_xyz_abc_xyz");
         }
     }
 
@@ -111,7 +111,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector2.Underscore("AbcXyz");
+            Inflector2.Underscore("AbcXyzAbcXyz");
         }
     }
 
@@ -121,7 +121,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector2.Underscore("AbcXyz", true);
+            Inflector2.Underscore("AbcXyzAbcXyz", true);
         }
     }
 
@@ -133,7 +133,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector3.Pascalize("abc_xyz");
+            Inflector3.Pascalize("abc_xyz_abc_xyz");
         }
     }
 
@@ -143,7 +143,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector3.Camelize("abc_xyz");
+            Inflector3.Camelize("abc_xyz_abc_xyz");
         }
     }
 
@@ -153,7 +153,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector3.Underscore("AbcXyz");
+            Inflector3.Underscore("AbcXyzAbcXyz");
         }
     }
 
@@ -163,7 +163,7 @@ public class Benchmark
     {
         for (var i = 0; i < N; i++)
         {
-            Inflector3.Underscore("AbcXyz", true);
+            Inflector3.Underscore("AbcXyzAbcXyz", true);
         }
     }
 }

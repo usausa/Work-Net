@@ -8,7 +8,7 @@ using System.Net;
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 internal static class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task Main()
     {
         var watch = Stopwatch.StartNew();
 
