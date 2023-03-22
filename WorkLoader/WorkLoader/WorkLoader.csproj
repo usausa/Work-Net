@@ -7,13 +7,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!--
   <ItemGroup>
     <ProjectReference Include="..\WorkLoader.Library\WorkLoader.Library.csproj" />
   </ItemGroup>
+  -->
 
+  <!--
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" PrivateAssets="All" />
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" PrivateAssets="All" />
   </ItemGroup>
+  -->
 
 </Project>

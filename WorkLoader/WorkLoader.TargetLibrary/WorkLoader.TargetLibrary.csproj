@@ -1,10 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <Target Name="CreateReference" AfterTargets="Build">
@@ -18,11 +17,5 @@
   <ItemGroup>
     <PackageReference Include="Usa.Smart.Core" Version="2.2.0" />
   </ItemGroup>
-
-  <!--
-  <ItemGroup>
-    <ProjectReference Include="..\WorkLoader.Library\WorkLoader.Library.csproj" />
-  </ItemGroup>
-  -->
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿namespace WorkLoader;
 
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -9,12 +10,12 @@ internal class Program
     {
         var referenceFile = @"..\..\..\..\WorkLoader.TargetApp\obj\Debug\net7.0-windows\Reference.txt";
         var targetFile = @"..\..\..\..\WorkLoader.TargetApp\bin\Debug\net7.0-windows\WorkLoader.TargetApp.dll";
+        //var referenceFile = @"..\..\..\..\WorkLoader.TargetLibrary\obj\Debug\net7.0\Reference.txt";
+        //var targetFile = @"..\..\..\..\WorkLoader.TargetLibrary\bin\Debug\net7.0\WorkLoader.TargetLibrary.dll";
 
         var references = File.ReadAllLines(Path.GetFullPath(referenceFile))
-            .Select(x => new Reference(x))
+            .Select(x => new { Name = Path.GetFileNameWithoutExtension(x), FilePath = x })
             .ToDictionary(x => x.Name);
-
-        // TODO Path
 
         var target = Path.GetFullPath(targetFile);
         var targetAssembly = Assembly.LoadFile(target);
@@ -23,29 +24,28 @@ internal class Program
         {
             if (references.TryGetValue(name.Name!, out var reference))
             {
-                return context.LoadFromAssemblyPath(reference.FilePath);
+                Debug.WriteLine($@"* Find reference: {name.FullName} {reference.FilePath}");
+
+                try
+                {
+                    return context.LoadFromAssemblyPath(reference.FilePath);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e);
+                    throw;
+                }
             }
+
+            Debug.WriteLine($@"* Failed: {name.FullName}");
 
             return null;
         };
 
         var assembly = context.LoadFromAssemblyPath(target);
-        foreach (var type in assembly.GetExportedTypes())
+        foreach (var type in assembly.ExportedTypes)
         {
-            System.Diagnostics.Debug.WriteLine(type);
+            Debug.WriteLine($"* Type: {type}");
         }
-    }
-}
-
-public class Reference
-{
-    public string Name { get; }
-
-    public string FilePath { get; }
-
-    public Reference(string filePath)
-    {
-        Name = Path.GetFileNameWithoutExtension(filePath);
-        FilePath = filePath;
     }
 }

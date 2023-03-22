@@ -1,8 +1,8 @@
-﻿using WorkLoader.Library;
+﻿//using WorkLoader.Library;
 
 namespace WorkLoader.TargetApp
 {
-    [Loader("Test")]
+    //[Loader("Test")]
     public class Service
     {
     }
