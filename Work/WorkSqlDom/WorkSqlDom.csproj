@@ -8,12 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="QuestPDF" Version="2023.4.2" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="161.8812.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="ipaexg.ttf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Update="test.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
