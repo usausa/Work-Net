@@ -63,7 +63,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Secret", "Secret", "{071D89
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sql", "Sql", "{4DEC74B5-EB95-4764-A9AD-C0B1F994857B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSqlDom", "WorkSqlDom\WorkSqlDom.csproj", "{9FEE0AD5-0688-4E30-801F-29EE0DF2172D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkSqlDom", "WorkSqlDom\WorkSqlDom.csproj", "{9FEE0AD5-0688-4E30-801F-29EE0DF2172D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Insights", "Insights", "{928C61FB-9F49-41F6-A8B3-3C5DA462C846}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Git", "Git", "{0B1FC45C-2F53-4988-A62A-2DF086C53DAE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Async", "Async", "{40EEF070-57A6-4C51-BBCD-E7FE6D7D9338}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
