@@ -14,7 +14,7 @@
       <StronglyTypedNamespace>$(RootNamespace).Resources</StronglyTypedNamespace>
       <StronglyTypedClassName>MyResources</StronglyTypedClassName>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\MyResources.ja-jp.restext"/>
+    <!--<EmbeddedResource Include="Resources\MyResources.ja-jp.restext"/>-->
   </ItemGroup>
 
 </Project>
