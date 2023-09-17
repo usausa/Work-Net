@@ -1,10 +1,6 @@
 ﻿namespace WorkWpf;
+
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 
 /// <summary>
@@ -12,4 +8,11 @@ using System.Windows;
 /// </summary>
 public partial class App : Application
 {
+    [STAThread]
+    public static void Main()
+    {
+        App app = new();
+        app.InitializeComponent();
+        app.Run();
+    }
 }
