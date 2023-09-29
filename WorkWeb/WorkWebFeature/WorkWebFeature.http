@@ -1,0 +1,6 @@
+@WorkWebFeature_HostAddress = http://localhost:5105
+
+GET {{WorkWebFeature_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
