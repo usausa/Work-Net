@@ -1,4 +1,5 @@
 using Microsoft.FeatureManagement;
+using Microsoft.FeatureManagement.FeatureFilters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +10,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddFeatureManagement();
+builder.Services
+    .AddFeatureManagement()
+    .AddFeatureFilter<PercentageFilter>();
 
 var app = builder.Build();
 
