@@ -7,4 +7,6 @@ public static class FeatureFlags
     public const string ExtendOption = nameof(ExtendOption);
 
     public const string PercentageOption = nameof(PercentageOption);
+
+    public const string TimeOption = nameof(TimeOption);
 }

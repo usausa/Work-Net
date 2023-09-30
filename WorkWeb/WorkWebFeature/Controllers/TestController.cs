@@ -32,4 +32,12 @@ public class TestController : ControllerBase
 
         return Ok();
     }
+
+    [HttpGet]
+    public async ValueTask<IActionResult> Time([FromServices] IFeatureManager featureManager)
+    {
+        Debug.WriteLine(await featureManager.IsEnabledAsync(FeatureFlags.TimeOption));
+
+        return Ok();
+    }
 }

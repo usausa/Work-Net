@@ -12,7 +12,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services
     .AddFeatureManagement()
-    .AddFeatureFilter<PercentageFilter>();
+    .AddFeatureFilter<PercentageFilter>()
+    .AddFeatureFilter<TimeWindowFilter>();
 
 var app = builder.Build();
 
