@@ -1,25 +1,20 @@
+using Microsoft.AspNetCore.Connections;
+using WorkSocket;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.WebHost.UseKestrel(options =>
+{
+    options.ListenLocalhost(8007, config =>
+    {
+        config.UseConnectionHandler<EchoConnectionHandler>();
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
 app.Run();
+
+// TODO Hosted版？
+// TODO 終了の問題？
+// TODO ログにhttpが出る問題
+// TODO Line & XML
