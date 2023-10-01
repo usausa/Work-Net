@@ -1,5 +1,7 @@
 using Serilog;
 
+using static WorkWebLogContext.LogContextAttribute;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Log
@@ -9,6 +11,8 @@ builder.Host
     {
         loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
     });
+
+builder.Services.AddSingleton<LogContextFilter>();
 
 // Add services to the container.
 
