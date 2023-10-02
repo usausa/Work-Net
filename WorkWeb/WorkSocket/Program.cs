@@ -5,7 +5,7 @@ using WorkSocket;
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseKestrel(options =>
 {
-    options.ListenLocalhost(8007, config =>
+    options.ListenLocalhost(9999, config =>
     {
         config.UseConnectionHandler<EchoConnectionHandler>();
     });
