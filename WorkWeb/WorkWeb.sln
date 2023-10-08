@@ -37,6 +37,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLogException", "WorkLog
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLobDataSource", "WorkLobDataSource\WorkLobDataSource.csproj", "{F24063F6-B245-4B9E-A00D-0A291B9DEC12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLogHttpClient", "WorkLogHttpClient\WorkLogHttpClient.csproj", "{0F75AA04-1DC4-4504-8CC6-44923A0460C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -84,6 +86,10 @@ Global
 		{F24063F6-B245-4B9E-A00D-0A291B9DEC12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F24063F6-B245-4B9E-A00D-0A291B9DEC12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F24063F6-B245-4B9E-A00D-0A291B9DEC12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F75AA04-1DC4-4504-8CC6-44923A0460C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F75AA04-1DC4-4504-8CC6-44923A0460C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F75AA04-1DC4-4504-8CC6-44923A0460C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F75AA04-1DC4-4504-8CC6-44923A0460C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -100,6 +106,7 @@ Global
 		{07EE035E-BBA8-4ABE-9DB8-8C0CFFE1A5C7} = {385DADFD-75AF-4A81-AC70-2D4D4A4C0C63}
 		{0D60876A-F93A-479E-9932-28EACC9A6196} = {385DADFD-75AF-4A81-AC70-2D4D4A4C0C63}
 		{F24063F6-B245-4B9E-A00D-0A291B9DEC12} = {385DADFD-75AF-4A81-AC70-2D4D4A4C0C63}
+		{0F75AA04-1DC4-4504-8CC6-44923A0460C8} = {385DADFD-75AF-4A81-AC70-2D4D4A4C0C63}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2FEB124-FCB5-4BB5-8B29-6C5BE60194E7}
