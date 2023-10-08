@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLogHttpClient", "WorkLo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStartup", "WorkStartup\WorkStartup.csproj", "{D6F9B94F-C497-4450-B750-4906CA1A5C1F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkVersion", "WorkVersion\WorkVersion.csproj", "{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +98,10 @@ Global
 		{D6F9B94F-C497-4450-B750-4906CA1A5C1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6F9B94F-C497-4450-B750-4906CA1A5C1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6F9B94F-C497-4450-B750-4906CA1A5C1F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
