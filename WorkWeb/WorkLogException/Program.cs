@@ -14,7 +14,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // *
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.Add("nodeId", Environment.MachineName);
+    };
+});
 
 var app = builder.Build();
 
