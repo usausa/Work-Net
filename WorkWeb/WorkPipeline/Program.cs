@@ -1,9 +1,14 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.MiddlewareAnalysis;
+using Microsoft.AspNetCore.ResponseCompression;
 
+using Prometheus;
 using Serilog;
 
 using System.Diagnostics;
+using System.IO.Compression;
+using System.Net.Mime;
 
 using WorkPipeline.Infrastructure;
 
@@ -37,11 +42,47 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
-// Swagger
-builder.Services.AddSwaggerGen();
+// SignalR
+builder.Services.AddSignalR();
+
+// Compress
+builder.Services.AddRequestDecompression();
+builder.Services.AddResponseCompression(options =>
+{
+    // Default false (for CRIME and BREACH attacks)
+    options.EnableForHttps = true;
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = new[] { MediaTypeNames.Application.Json };
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+// Authentication
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
+
+// Rate limit
+builder.Services.AddRateLimiter(_ =>
+{
+});
 
 // Health
 builder.Services.AddHealthChecks();
+
+// Develop
+if (!builder.Environment.IsProduction())
+{
+    // Profiler
+    builder.Services.AddMiniProfiler(options =>
+    {
+        options.RouteBasePath = "/profiler";
+    });
+
+    // Swagger
+    builder.Services.AddSwaggerGen();
+}
 
 // *
 builder.Services.AddMiddlewareAnalysis();
@@ -70,21 +111,27 @@ if (app.Environment.IsDevelopment())
 }
 
 // HTTP log
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsProduction())
 {
+    // Profiler
+    app.UseMiniProfiler();
+
 //    app.UseWhen(
 //        c => c.Request.Path.StartsWithSegments("/api"),
 //        b => b.UseHttpLogging());
     app.UseHttpLogging();
 }
 
-// TODO
+// Forwarded headers
+app.UseForwardedHeaders();
+
 //if (!app.Environment.IsDevelopment())
 {
     //app.UseExceptionHandler("/Home/Error");
     //app.UseExceptionHandler();
-    app.MapWhen(c => c.Request.Path.StartsWithSegments("/api"), b => b.UseExceptionHandler());
-    app.UseExceptionHandler("/Home/Error");
+    // TODO
+    app.UseWhen(c => c.Request.Path.StartsWithSegments("/api"), b => b.UseExceptionHandler());
+    app.UseWhen(c => !c.Request.Path.StartsWithSegments("/api"), b => b.UseExceptionHandler("/Home/Error"));
     app.UseHsts();
 }
 
@@ -92,23 +139,36 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 // app.UseCookiePolicy();
 
-// Swagger
+app.UseRouting();
+app.UseRateLimiter();
+// app.UseRequestLocalization();
+
+// app.UseCors();
+
 if (app.Environment.IsDevelopment())
 {
+    // Profiler
+    app.UseMiniProfiler();
+
+    // Swagger
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseRouting();
-// app.UseRateLimiter();
-// app.UseRequestLocalization();
-// app.UseCors();
+// Health
+app.UseHealthChecks("/health");
 
-//app.UseAuthentication();
+// Metrics
+app.UseHttpMetrics();
+
+// Authentication/Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 // app.UseSession();
-// app.UseResponseCompression();
+// TODO + mapwhen
+app.UseResponseCompression();
+app.UseRequestDecompression();
 // app.UseResponseCaching();
 
 //----------------------------------------
@@ -118,6 +178,12 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// SignalR
+
+// Health
 app.MapHealthChecks("/health");
+
+// Metrics
+app.MapMetrics();
 
 app.Run();
