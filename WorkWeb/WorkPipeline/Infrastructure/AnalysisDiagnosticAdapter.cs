@@ -15,18 +15,33 @@ public class AnalysisDiagnosticAdapter
     [DiagnosticName("Microsoft.AspNetCore.MiddlewareAnalysis.MiddlewareStarting")]
     public void OnMiddlewareStarting(HttpContext httpContext, string name, Guid instance, long timestamp)
     {
-        logger.LogInformation($"Starting: '{name}' : Path=[{httpContext.Request.Path}]");
+        if (name == "Microsoft.AspNetCore.MiddlewareAnalysis.AnalysisMiddleware")
+        {
+            return;
+        }
+
+        logger.LogInformation($"Starting: {name} : Path=[{httpContext.Request.Path}]");
     }
 
     [DiagnosticName("Microsoft.AspNetCore.MiddlewareAnalysis.MiddlewareFinished")]
     public void OnMiddlewareFinished(HttpContext httpContext, string name, Guid instance, long timestamp, long duration)
     {
+        if (name == "Microsoft.AspNetCore.MiddlewareAnalysis.AnalysisMiddleware")
+        {
+            return;
+        }
+
         logger.LogInformation($"MiddlewareFinished: {name} : Status=[{httpContext.Response.StatusCode}]");
     }
 
     [DiagnosticName("Microsoft.AspNetCore.MiddlewareAnalysis.MiddlewareException")]
     public void OnMiddlewareException(Exception exception, HttpContext httpContext, string name, Guid instance, long timestamp, long duration)
     {
+        if (name == "Microsoft.AspNetCore.MiddlewareAnalysis.AnalysisMiddleware")
+        {
+            return;
+        }
+
         logger.LogInformation($"MiddlewareException: {name} : {exception.Message}");
     }
 }
