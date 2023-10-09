@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.MiddlewareAnalysis;
 
 using Serilog;
@@ -14,12 +15,27 @@ builder.Services.AddSerilog(option =>
 {
     option.ReadFrom.Configuration(builder.Configuration);
 });
+builder.Services.AddHttpLogging(options =>
+{
+    //options.LoggingFields = HttpLoggingFields.All;
+    options.LoggingFields = HttpLoggingFields.RequestPropertiesAndHeaders |
+                            HttpLoggingFields.RequestQuery |
+                            HttpLoggingFields.ResponsePropertiesAndHeaders;
+});
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
 // API
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.Add("nodeId", Environment.MachineName);
+    };
+});
 
 // Swagger
 builder.Services.AddSwaggerGen();
@@ -53,8 +69,21 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-if (!app.Environment.IsDevelopment())
+// HTTP log
+if (app.Environment.IsDevelopment())
 {
+//    app.UseWhen(
+//        c => c.Request.Path.StartsWithSegments("/api"),
+//        b => b.UseHttpLogging());
+    app.UseHttpLogging();
+}
+
+// TODO
+//if (!app.Environment.IsDevelopment())
+{
+    //app.UseExceptionHandler("/Home/Error");
+    //app.UseExceptionHandler();
+    app.MapWhen(c => c.Request.Path.StartsWithSegments("/api"), b => b.UseExceptionHandler());
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
