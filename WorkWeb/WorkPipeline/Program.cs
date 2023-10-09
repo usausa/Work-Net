@@ -42,6 +42,12 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
+// Swagger
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSwaggerGen();
+}
+
 // SignalR
 builder.Services.AddSignalR();
 
@@ -71,17 +77,13 @@ builder.Services.AddRateLimiter(_ =>
 // Health
 builder.Services.AddHealthChecks();
 
-// Develop
-if (!builder.Environment.IsProduction())
+// Profiler
+if (builder.Environment.IsDevelopment())
 {
-    // Profiler
     builder.Services.AddMiniProfiler(options =>
     {
         options.RouteBasePath = "/profiler";
     });
-
-    // Swagger
-    builder.Services.AddSwaggerGen();
 }
 
 // *
@@ -113,9 +115,6 @@ if (app.Environment.IsDevelopment())
 // HTTP log
 if (!app.Environment.IsProduction())
 {
-    // Profiler
-    app.UseMiniProfiler();
-
 //    app.UseWhen(
 //        c => c.Request.Path.StartsWithSegments("/api"),
 //        b => b.UseHttpLogging());
