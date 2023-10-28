@@ -35,15 +35,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLogHttp", "WorkLogHttp\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLogException", "WorkLogException\WorkLogException.csproj", "{0D60876A-F93A-479E-9932-28EACC9A6196}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLobDataSource", "WorkLobDataSource\WorkLobDataSource.csproj", "{F24063F6-B245-4B9E-A00D-0A291B9DEC12}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLobDataSource", "WorkLobDataSource\WorkLobDataSource.csproj", "{F24063F6-B245-4B9E-A00D-0A291B9DEC12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLogHttpClient", "WorkLogHttpClient\WorkLogHttpClient.csproj", "{0F75AA04-1DC4-4504-8CC6-44923A0460C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLogHttpClient", "WorkLogHttpClient\WorkLogHttpClient.csproj", "{0F75AA04-1DC4-4504-8CC6-44923A0460C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStartup", "WorkStartup\WorkStartup.csproj", "{D6F9B94F-C497-4450-B750-4906CA1A5C1F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkStartup", "WorkStartup\WorkStartup.csproj", "{D6F9B94F-C497-4450-B750-4906CA1A5C1F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkVersion", "WorkVersion\WorkVersion.csproj", "{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkVersion", "WorkVersion\WorkVersion.csproj", "{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCompress", "WorkCompress\WorkCompress.csproj", "{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkCompress", "WorkCompress\WorkCompress.csproj", "{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protocol", "Protocol", "{9DF99BF9-405C-4E34-80B9-136514D7ECA0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkWebSocket", "WorkWebSocket\WorkWebSocket.csproj", "{072013F3-D9CB-422F-8259-00929AB3DB4D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,6 +112,10 @@ Global
 		{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{072013F3-D9CB-422F-8259-00929AB3DB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{072013F3-D9CB-422F-8259-00929AB3DB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{072013F3-D9CB-422F-8259-00929AB3DB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{072013F3-D9CB-422F-8259-00929AB3DB4D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -128,6 +136,7 @@ Global
 		{D6F9B94F-C497-4450-B750-4906CA1A5C1F} = {4DE42162-FD7B-4D27-8B1A-22640E414531}
 		{FFF8CA0D-303A-4CD6-9859-D7A193BF63F2} = {4DE42162-FD7B-4D27-8B1A-22640E414531}
 		{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C} = {4DE42162-FD7B-4D27-8B1A-22640E414531}
+		{072013F3-D9CB-422F-8259-00929AB3DB4D} = {9DF99BF9-405C-4E34-80B9-136514D7ECA0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2FEB124-FCB5-4BB5-8B29-6C5BE60194E7}
