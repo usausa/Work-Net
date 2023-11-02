@@ -53,6 +53,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCron", "WorkCron\WorkCr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Service", "Service", "{2E144EA4-4E1C-4904-9F3B-66D860F7D2D1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkWithConnection", "WorkWithConnection\WorkWithConnection.csproj", "{7B78847C-A4CC-49AB-AF05-473501A9D910}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -124,6 +126,10 @@ Global
 		{3AEFABB2-6C7C-418A-A846-EE7E0567C387}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3AEFABB2-6C7C-418A-A846-EE7E0567C387}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3AEFABB2-6C7C-418A-A846-EE7E0567C387}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B78847C-A4CC-49AB-AF05-473501A9D910}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B78847C-A4CC-49AB-AF05-473501A9D910}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B78847C-A4CC-49AB-AF05-473501A9D910}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B78847C-A4CC-49AB-AF05-473501A9D910}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -146,6 +152,7 @@ Global
 		{B3F56DD7-59F2-49CA-9760-FB5FEEF8F45C} = {4DE42162-FD7B-4D27-8B1A-22640E414531}
 		{072013F3-D9CB-422F-8259-00929AB3DB4D} = {9DF99BF9-405C-4E34-80B9-136514D7ECA0}
 		{3AEFABB2-6C7C-418A-A846-EE7E0567C387} = {2E144EA4-4E1C-4904-9F3B-66D860F7D2D1}
+		{7B78847C-A4CC-49AB-AF05-473501A9D910} = {2E144EA4-4E1C-4904-9F3B-66D860F7D2D1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2FEB124-FCB5-4BB5-8B29-6C5BE60194E7}
