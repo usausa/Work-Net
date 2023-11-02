@@ -2,7 +2,6 @@ namespace WorkCron;
 
 using Cronos;
 
-// TODO
 public abstract class SchedulerService : BackgroundService
 {
     private readonly CronExpression expression;
