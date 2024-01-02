@@ -79,7 +79,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pipe", "Pipe", "{6F53A4FE-B
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkPipe1", "WorkPipe1\WorkPipe1.csproj", "{10AC97CE-F897-4DCC-AEE0-9EA5A9F2DEA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSemaphore", "WorkSemaphore\WorkSemaphore.csproj", "{2CA334E2-DC73-4785-97EE-9E0999B4F182}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkSemaphore", "WorkSemaphore\WorkSemaphore.csproj", "{2CA334E2-DC73-4785-97EE-9E0999B4F182}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkInterpolated", "WorkInterpolated\WorkInterpolated.csproj", "{6EA2DBC7-2A51-4B00-988E-5131DAEFF2B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -157,6 +159,10 @@ Global
 		{2CA334E2-DC73-4785-97EE-9E0999B4F182}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2CA334E2-DC73-4785-97EE-9E0999B4F182}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2CA334E2-DC73-4785-97EE-9E0999B4F182}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6EA2DBC7-2A51-4B00-988E-5131DAEFF2B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6EA2DBC7-2A51-4B00-988E-5131DAEFF2B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6EA2DBC7-2A51-4B00-988E-5131DAEFF2B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6EA2DBC7-2A51-4B00-988E-5131DAEFF2B7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
