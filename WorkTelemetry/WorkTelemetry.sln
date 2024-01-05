@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMonitorService", "WorkM
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Basic", "Basic", "{919AA593-73F0-4891-A0EC-28F095C33C29}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPrometheusNet", "WorkPrometheusNet\WorkPrometheusNet.csproj", "{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{A424ABED-DB1D-4CDA-8EB1-7D7D7C81A8A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A424ABED-DB1D-4CDA-8EB1-7D7D7C81A8A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A424ABED-DB1D-4CDA-8EB1-7D7D7C81A8A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -36,6 +42,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{E262B29C-4F6A-4C8C-B56D-62FB48C58473} = {919AA593-73F0-4891-A0EC-28F095C33C29}
 		{CAB949D6-7CC6-4CBC-B3D5-1630DD5883C8} = {919AA593-73F0-4891-A0EC-28F095C33C29}
+		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944} = {919AA593-73F0-4891-A0EC-28F095C33C29}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {26F6E538-718D-4779-8A8B-B50A9C793BAD}
