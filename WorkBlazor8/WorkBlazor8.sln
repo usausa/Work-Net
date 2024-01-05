@@ -63,11 +63,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoPageAuth", "4AppAutoPer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoPageAuth.Client", "4AppAutoPerPageAuth.Client\AutoPageAuth.Client.csproj", "{D11A067D-8638-45E3-B94E-678ACAB1B0BA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBlazor.Shared", "6BlazorWasmHosted.Shared\WorkBlazor.Shared.csproj", "{621804D8-D850-4871-84A0-1924D77BB7E4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorWasmHosted.Shared", "6BlazorWasmHosted.Shared\BlazorWasmHosted.Shared.csproj", "{621804D8-D850-4871-84A0-1924D77BB7E4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBlazor.Client", "6BlazorWasmHosted.Client\WorkBlazor.Client.csproj", "{D4B50605-4F62-40D8-8986-EB5CA49E1F0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorWasmHosted.Client", "6BlazorWasmHosted.Client\BlazorWasmHosted.Client.csproj", "{D4B50605-4F62-40D8-8986-EB5CA49E1F0D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBlazor.Server", "6BlazorWasmHosted.Server\WorkBlazor.Server.csproj", "{7599DFD8-B2A7-4AFA-B999-597D84868991}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorWasmHosted.Server", "6BlazorWasmHosted.Server\BlazorWasmHosted.Server.csproj", "{7599DFD8-B2A7-4AFA-B999-597D84868991}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
