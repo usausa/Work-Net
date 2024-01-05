@@ -4,6 +4,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WorkBlazor.Server</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Client\WorkBlazor.Client.csproj" />
-    <ProjectReference Include="..\Shared\WorkBlazor.Shared.csproj" />
+    <ProjectReference Include="..\6BlazorWasmHosted.Client\WorkBlazor.Client.csproj" />
+    <ProjectReference Include="..\6BlazorWasmHosted.Shared\WorkBlazor.Shared.csproj" />
   </ItemGroup>
 
 </Project>
