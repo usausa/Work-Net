@@ -1,4 +1,7 @@
 namespace BlazorApp.Server.Controllers;
+
+using BlazorApp.Shared;
+
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]

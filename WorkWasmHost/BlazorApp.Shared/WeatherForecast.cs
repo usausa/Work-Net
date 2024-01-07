@@ -1,4 +1,4 @@
-namespace BlazorApp.Server;
+namespace BlazorApp.Shared;
 
 public class WeatherForecast
 {
