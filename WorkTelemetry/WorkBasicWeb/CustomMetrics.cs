@@ -21,7 +21,7 @@ internal static class MeterProviderBuilderExtensions
 
 public sealed class ApiMetrics
 {
-    internal static readonly string MeterName = "API";
+    internal const string MeterName = "API";
 
     private readonly Counter<long> testExecuteCounter;
 
