@@ -1,4 +1,4 @@
-﻿@page "/counter"
+@page "/counter"
 
 <PageTitle>Counter</PageTitle>
 
@@ -7,6 +7,10 @@
 <p role="status">Current count: @currentCount</p>
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+<SectionContent SectionName="CustomMenu">
+    <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">Counter menu</a>
+</SectionContent>
 
 @code {
     private int currentCount = 0;
