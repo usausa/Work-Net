@@ -41,7 +41,7 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation();
     });
-builder.Services.AddApiMetrics();
+builder.Services.AddApiInstrument();
 
 var app = builder.Build();
 

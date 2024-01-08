@@ -8,19 +8,19 @@ public class TestController : ControllerBase
 {
     private readonly ILogger<TestController> log;
 
-    private readonly ApiMetrics metrics;
+    private readonly ApiInstrument instrument;
 
-    public TestController(ILogger<TestController> log, ApiMetrics metrics)
+    public TestController(ILogger<TestController> log, ApiInstrument instrument)
     {
         this.log = log;
-        this.metrics = metrics;
+        this.instrument = instrument;
     }
 
     [HttpGet]
     public IActionResult Execute()
     {
         log.LogInformation("test execute.");
-        metrics.IncrementTestExecute();
+        instrument.IncrementTestExecute();
 
         return Ok("success");
     }

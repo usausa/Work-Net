@@ -8,26 +8,26 @@ internal static class MeterProviderBuilderExtensions
 {
     public static MeterProviderBuilder AddApiInstrumentation(this MeterProviderBuilder builder)
     {
-        builder.AddMeter(ApiMetrics.MeterName);
+        builder.AddMeter(ApiInstrument.MeterName);
         return builder;
     }
 
-    public static IServiceCollection AddApiMetrics(this IServiceCollection services)
+    public static IServiceCollection AddApiInstrument(this IServiceCollection services)
     {
-        services.AddSingleton<ApiMetrics>();
+        services.AddSingleton<ApiInstrument>();
         return services;
     }
 }
 
-public sealed class ApiMetrics
+public sealed class ApiInstrument
 {
     internal const string MeterName = "API";
 
     private readonly Counter<long> testExecuteCounter;
 
-    public ApiMetrics(IMeterFactory meterFactory)
+    public ApiInstrument(IMeterFactory meterFactory)
     {
-        var meter = meterFactory.Create(MeterName, typeof(ApiMetrics).Assembly.GetName().Version!.ToString());
+        var meter = meterFactory.Create(MeterName, typeof(ApiInstrument).Assembly.GetName().Version!.ToString());
 
         testExecuteCounter = meter.CreateCounter<long>("api.test.execute", description: "Count of api call");
     }
