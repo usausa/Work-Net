@@ -3,15 +3,21 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBasicConsole", "WorkBasicConsole\WorkBasicConsole.csproj", "{E262B29C-4F6A-4C8C-B56D-62FB48C58473}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBasicConsole", "WorkBasicConsole\WorkBasicConsole.csproj", "{E262B29C-4F6A-4C8C-B56D-62FB48C58473}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBasicWeb", "WorkBasicWeb\WorkBasicWeb.csproj", "{CAB949D6-7CC6-4CBC-B3D5-1630DD5883C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBasicWeb", "WorkBasicWeb\WorkBasicWeb.csproj", "{CAB949D6-7CC6-4CBC-B3D5-1630DD5883C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMonitorService", "WorkMonitorService\WorkMonitorService.csproj", "{A424ABED-DB1D-4CDA-8EB1-7D7D7C81A8A1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkMonitorService", "WorkMonitorService\WorkMonitorService.csproj", "{A424ABED-DB1D-4CDA-8EB1-7D7D7C81A8A1}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Basic", "Basic", "{919AA593-73F0-4891-A0EC-28F095C33C29}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Prometheus", "Prometheus", "{919AA593-73F0-4891-A0EC-28F095C33C29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPrometheusNet", "WorkPrometheusNet\WorkPrometheusNet.csproj", "{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkPrometheusNet", "WorkPrometheusNet\WorkPrometheusNet.csproj", "{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Loki", "Loki", "{DE1288A2-2192-4D3C-8098-9802A073E636}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLokiSerilog", "WorkLokiSerilog\WorkLokiSerilog.csproj", "{D607DC30-E872-400E-A8B5-AB646DEED9BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLokiWeb", "WorkLokiWeb\WorkLokiWeb.csproj", "{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +41,14 @@ Global
 		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D607DC30-E872-400E-A8B5-AB646DEED9BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D607DC30-E872-400E-A8B5-AB646DEED9BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D607DC30-E872-400E-A8B5-AB646DEED9BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D607DC30-E872-400E-A8B5-AB646DEED9BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -43,6 +57,8 @@ Global
 		{E262B29C-4F6A-4C8C-B56D-62FB48C58473} = {919AA593-73F0-4891-A0EC-28F095C33C29}
 		{CAB949D6-7CC6-4CBC-B3D5-1630DD5883C8} = {919AA593-73F0-4891-A0EC-28F095C33C29}
 		{3FCE9DC5-8F5A-4218-90DD-0D64C4B39944} = {919AA593-73F0-4891-A0EC-28F095C33C29}
+		{D607DC30-E872-400E-A8B5-AB646DEED9BD} = {DE1288A2-2192-4D3C-8098-9802A073E636}
+		{4BCEDA90-A8D5-4675-B6D2-80F31CAB9519} = {DE1288A2-2192-4D3C-8098-9802A073E636}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {26F6E538-718D-4779-8A8B-B50A9C793BAD}
