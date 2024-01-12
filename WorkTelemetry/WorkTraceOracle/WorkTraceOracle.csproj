@@ -14,7 +14,11 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.7.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.3.1-dev" />
+    <PackageReference Include="Oracle.ManagedDataAccess.OpenTelemetry" Version="23.3.0-dev" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Usa.Smart.Data.Mapper" Version="2.4.0" />
   </ItemGroup>
+
 
 </Project>

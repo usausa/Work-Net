@@ -38,7 +38,7 @@ while (true)
 }
 
 
-Log.CloseAndFlush();
+//Log.CloseAndFlush();
 
 // Data
 internal record Person(string Name, int Age);
