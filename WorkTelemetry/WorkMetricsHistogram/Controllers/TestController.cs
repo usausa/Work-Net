@@ -1,7 +1,6 @@
-namespace WorkMetricsTag.Controllers;
+namespace WorkMetricsHistogram.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
-
 
 [ApiController]
 [Route("[controller]/[action]")]
@@ -17,8 +16,8 @@ public class TestController : ControllerBase
     [HttpGet]
     public IActionResult Execute()
     {
-        var value = Random.Shared.Next(6);
-        instrument.IncrementTest(((char)('C' + value)).ToString());
+        var value = Random.Shared.NextDouble();
+        instrument.RecordTest(value * 40);
 
         return Ok("success");
     }
