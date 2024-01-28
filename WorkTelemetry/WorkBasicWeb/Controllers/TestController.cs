@@ -24,13 +24,4 @@ public class TestController : ControllerBase
 
         return Ok("success");
     }
-
-
-    [HttpGet]
-    public IActionResult Collect()
-    {
-        System.GC.Collect();
-
-        return Ok("success");
-    }
 }
