@@ -27,9 +27,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkTraceOracle", "WorkTrac
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Metrics", "Metrics", "{156CA9D3-180A-42A4-B85F-AFF8AB089953}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMetricsTag", "WorkMetricsTag\WorkMetricsTag.csproj", "{E0689220-5CC6-45CA-94B0-83DECD3C976C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkMetricsTag", "WorkMetricsTag\WorkMetricsTag.csproj", "{E0689220-5CC6-45CA-94B0-83DECD3C976C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMetricsHistogram", "WorkMetricsHistogram\WorkMetricsHistogram.csproj", "{7EDDC0FB-C5CE-4EB1-A207-9B9F9F9DBCD6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkMetricsHistogram", "WorkMetricsHistogram\WorkMetricsHistogram.csproj", "{7EDDC0FB-C5CE-4EB1-A207-9B9F9F9DBCD6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCustomInstrument", "WorkCustomInstrument\WorkCustomInstrument.csproj", "{442FE10D-9C45-4658-BAE6-B6D99D95A332}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +79,10 @@ Global
 		{7EDDC0FB-C5CE-4EB1-A207-9B9F9F9DBCD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EDDC0FB-C5CE-4EB1-A207-9B9F9F9DBCD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EDDC0FB-C5CE-4EB1-A207-9B9F9F9DBCD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{442FE10D-9C45-4658-BAE6-B6D99D95A332}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{442FE10D-9C45-4658-BAE6-B6D99D95A332}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{442FE10D-9C45-4658-BAE6-B6D99D95A332}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{442FE10D-9C45-4658-BAE6-B6D99D95A332}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
