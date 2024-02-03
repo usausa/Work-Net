@@ -21,7 +21,6 @@ builder.Services.AddOpenTelemetry()
 
         metrics.AddPrometheusExporter();
     });
-builder.Services.AddApiInstrument();
 
 var app = builder.Build();
 

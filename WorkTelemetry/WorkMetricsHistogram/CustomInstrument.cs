@@ -8,6 +8,7 @@ internal static class MeterProviderBuilderExtensions
 {
     public static MeterProviderBuilder AddApiInstrumentation(this MeterProviderBuilder builder)
     {
+        builder.AddInstrumentation<ApiInstrument>();
         builder.AddMeter(ApiInstrument.MeterName);
         builder.AddView(
             "api.test",
@@ -15,12 +16,6 @@ internal static class MeterProviderBuilderExtensions
 
 
         return builder;
-    }
-
-    public static IServiceCollection AddApiInstrument(this IServiceCollection services)
-    {
-        services.AddSingleton<ApiInstrument>();
-        return services;
     }
 }
 
