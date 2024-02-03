@@ -30,6 +30,8 @@ builder.Services.AddOpenTelemetry()
             .AddRuntimeInstrumentation()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
+            .AddProcessInstrumentation()
+            .AddEventCountersInstrumentation()
             .AddApiInstrumentation(); // Custom
 
         metrics.AddPrometheusExporter();
