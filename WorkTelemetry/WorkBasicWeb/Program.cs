@@ -31,7 +31,10 @@ builder.Services.AddOpenTelemetry()
             .AddHttpClientInstrumentation()
             .AddAspNetCoreInstrumentation()
             .AddProcessInstrumentation()
-            .AddEventCountersInstrumentation()
+            .AddEventCountersInstrumentation(c =>
+            {
+                c.AddEventSources("Microsoft.AspNetCore.Hosting");
+            })
             .AddApiInstrumentation(); // Custom
 
         metrics.AddPrometheusExporter();
