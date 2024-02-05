@@ -43,7 +43,11 @@ builder.Services.AddOpenTelemetry()
     {
         // TODO
         tracing
-            .AddAspNetCoreInstrumentation()
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.Filter = req => !req.Request.Path.ToUriComponent().Contains("index.html", StringComparison.OrdinalIgnoreCase) &&
+                                        !req.Request.Path.ToUriComponent().Contains("swagger", StringComparison.OrdinalIgnoreCase);
+            })
             .AddHttpClientInstrumentation();
     });
 builder.Services.AddApiInstrument();
