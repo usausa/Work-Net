@@ -29,8 +29,8 @@ for (var gen = 0; gen <= GC.MaxGeneration; gen++)
 // ...
 
 // [Environment]
-Debug.WriteLine($"Version: {Environment.Version}"); // *
-Debug.WriteLine($"Current Directory: {Environment.CurrentDirectory}"); // *
+Debug.WriteLine($"Version: {Environment.Version}"); // x
+Debug.WriteLine($"Current Directory: {Environment.CurrentDirectory}"); // x
 
 Debug.WriteLine($"Processor Count: {Environment.ProcessorCount}"); // process.cpu.count
 

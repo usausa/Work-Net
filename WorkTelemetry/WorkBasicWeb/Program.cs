@@ -45,8 +45,7 @@ builder.Services.AddOpenTelemetry()
         tracing
             .AddAspNetCoreInstrumentation(options =>
             {
-                options.Filter = req => !req.Request.Path.ToUriComponent().Contains("index.html", StringComparison.OrdinalIgnoreCase) &&
-                                        !req.Request.Path.ToUriComponent().Contains("swagger", StringComparison.OrdinalIgnoreCase);
+                options.Filter = req => !req.Request.Path.ToUriComponent().StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
             })
             .AddHttpClientInstrumentation();
     });
