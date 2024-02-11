@@ -10,36 +10,40 @@ internal static class Program
     {
         var computer = new Computer
         {
+            IsBatteryEnabled = true,
+            IsControllerEnabled = true,
             IsCpuEnabled = true,
             IsGpuEnabled = true,
             IsMemoryEnabled = true,
             IsMotherboardEnabled = true,
-            IsControllerEnabled = true,
             IsNetworkEnabled = true,
+            IsPsuEnabled = true,
             IsStorageEnabled = true
         };
         computer.Open();
 
         computer.Accept(new UpdateVisitor());
 
+
         foreach (var hardware in computer.Hardware)
         {
-            Debug.WriteLine("Hardware: {0}", hardware.Name);
+            ShowHardware(hardware, 0);
+            //Console.WriteLine($"{hardware.HardwareType}: {hardware.Name}");
 
-            foreach (var subHardware in hardware.SubHardware)
-            {
-                Debug.WriteLine("\tSubHardware: {0}", subHardware.Name);
+            //foreach (var subHardware in hardware.SubHardware)
+            //{
+            //    Console.WriteLine($"\t{subHardware.HardwareType}: {subHardware.Name}");
 
-                foreach (var sensor in subHardware.Sensors)
-                {
-                    Debug.WriteLine("\t\tSensor: {0}, value: {1}", sensor.Name, sensor.Value);
-                }
-            }
+            //    foreach (var sensor in subHardware.Sensors)
+            //    {
+            //        Console.WriteLine($"\t\t{sensor.SensorType}: {sensor.Name}, value: {sensor.Value}");
+            //    }
+            //}
 
-            foreach (var sensor in hardware.Sensors)
-            {
-                Debug.WriteLine("\tSensor: {0}, value: {1}", sensor.Name, sensor.Value);
-            }
+            //foreach (var sensor in hardware.Sensors)
+            //{
+            //    Console.WriteLine($"\t{sensor.SensorType}: {sensor.Name}, value: {sensor.Value}");
+            //}
         }
 
         computer.Close();
@@ -57,12 +61,38 @@ internal static class Program
 
         //foreach (var hardware in computer.Hardware)
         //{
-        //    Debug.WriteLine($"{hardware.HardwareType}");
+        //    Console.WriteLine($"{hardware.HardwareType}");
         //    foreach (var sensor in EnumerableSensor(hardware))
         //    {
-        //        Debug.WriteLine($"{sensor.Hardware.HardwareType} : {sensor.SensorType} : {sensor.Hardware.Name} : {sensor.Name} : {sensor.Identifier} : {sensor.Value}");
+        //        Console.WriteLine($"{sensor.Hardware.HardwareType} : {sensor.SensorType} : {sensor.Hardware.Name} : {sensor.Name} : {sensor.Identifier} : {sensor.Value}");
         //    }
     }
+
+    private static void ShowHardware(IHardware hardware, int indent)
+    {
+        WriteIndent(indent);
+        Console.WriteLine($"{hardware.HardwareType}: {hardware.Name} : {hardware.Identifier}");
+
+        foreach (var subHardware in hardware.SubHardware)
+        {
+            ShowHardware(subHardware, indent + 1);
+        }
+
+        foreach (var sensor in hardware.Sensors)
+        {
+            WriteIndent(indent + 1);
+            Console.WriteLine($"{sensor.SensorType}: {sensor.Name} : {sensor.Identifier} : {sensor.Value}");
+        }
+    }
+
+    private static void WriteIndent(int indent)
+    {
+        for (var i = 0; i < indent; i++)
+        {
+            Console.Write("  ");
+        }
+    }
+
 
     //private static void Update(IHardware hardware)
     //{
