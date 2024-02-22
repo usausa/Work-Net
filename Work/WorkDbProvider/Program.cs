@@ -1,2 +1,8 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+using System.Data.Common;
+using Microsoft.Data.SqlClient;
+
+DbProviderFactories.RegisterFactory("Microsoft.Data.SqlClient", SqlClientFactory.Instance);
+
+var factory = DbProviderFactories.GetFactory("Microsoft.Data.SqlClient");
+using var con = factory.CreateConnection();
+
