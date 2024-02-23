@@ -11,10 +11,13 @@ builder.Services
     {
         metrics.AddApplicationInstrumentation();
 
-        // TODO name確認
-        metrics.AddConsoleExporter("Console", config =>
+        metrics.AddConsoleExporter("Console1", config =>
         {
-            config.Targets = ConsoleExporterOutputTargets.Console | ConsoleExporterOutputTargets.Debug;
+            config.Targets = ConsoleExporterOutputTargets.Console;
+        });
+        metrics.AddConsoleExporter("Console2", config =>
+        {
+            config.Targets = ConsoleExporterOutputTargets.Debug;
         });
 
         //metrics.AddInMemoryExporter()
