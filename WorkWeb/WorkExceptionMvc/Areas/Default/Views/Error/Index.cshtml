@@ -1,0 +1,32 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1 class="text-danger">Error.</h1>
+
+@switch (Model.StatusCode)
+{
+    case 400:
+        <p>不正なリクエストです</p>
+        break;
+    case 403:
+        <p>許可されていません</p>
+        break;
+    case 404:
+        <p>対象が存在しません</p>
+        break;
+    case 500:
+        <p>要求の処理中に予期せぬ例外が発生しました</p>
+        break;
+    default:
+        <p>要求の処理中に予期せぬ例外が発生しました(@Model.StatusCode)</p>
+        break;
+}
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    </p>
+}
