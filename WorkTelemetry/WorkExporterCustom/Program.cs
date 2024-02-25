@@ -3,10 +3,13 @@ using System.Text;
 using OpenTelemetry.Metrics;
 using OpenTelemetry;
 
+using WorkExporterCustom;
 using WorkExporterCustom.Metrics;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.Services
+    .AddApplicationInstrumentation();
 builder.Services
     .AddOpenTelemetry()
     .WithMetrics(metrics =>
@@ -14,7 +17,10 @@ builder.Services
         metrics.AddApplicationInstrumentation();
 
         metrics.AddMyExporter(5000);
+        //metrics.AddMyExporter();
     });
+
+builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
 host.Run();
@@ -38,51 +44,37 @@ internal static class MyExporterExtensions
 
 internal class MyExporter : BaseExporter<Metric>
 {
-    private readonly string name;
-
-    public MyExporter(string name = "MyExporter")
-    {
-        this.name = name;
-    }
-
     public override ExportResult Export(in Batch<Metric> batch)
     {
-        // SuppressInstrumentationScope should be used to prevent exporter
-        // code from generating telemetry and causing live-loop.
         using var scope = SuppressInstrumentationScope.Begin();
 
-        var sb = new StringBuilder();
         foreach (var metric in batch)
         {
-            if (sb.Length > 0)
-            {
-                sb.Append(", ");
-            }
-
-            sb.Append($"{metric.Name}");
-
             foreach (ref readonly var metricPoint in metric.GetMetricPoints())
             {
+                var sb = new StringBuilder();
+                sb.Append($"{metric.Name} ");
                 sb.Append($"{metricPoint.StartTime}");
                 foreach (var metricPointTag in metricPoint.Tags)
                 {
-                    sb.Append($"{metricPointTag.Key} {metricPointTag.Value}");
+                    sb.Append($" {metricPointTag.Key} {metricPointTag.Value}");
                 }
+
+                Console.WriteLine(sb);
             }
         }
 
-        Console.WriteLine($"{name}.Export([{sb}])");
         return ExportResult.Success;
     }
 
     protected override bool OnShutdown(int timeoutMilliseconds)
     {
-        Console.WriteLine($"{name}.OnShutdown(timeoutMilliseconds={timeoutMilliseconds})");
+        Console.WriteLine($"OnShutdown(timeoutMilliseconds={timeoutMilliseconds})");
         return true;
     }
 
     protected override void Dispose(bool disposing)
     {
-        Console.WriteLine($"{name}.Dispose({disposing})");
+        Console.WriteLine($"Dispose({disposing})");
     }
 }

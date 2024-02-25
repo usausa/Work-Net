@@ -5,7 +5,7 @@ using System.Diagnostics.Metrics;
 using System.Diagnostics;
 using System.Reflection;
 
-internal sealed class ApplicationMetrics
+public sealed class ApplicationMetrics
 {
     public const string InstrumentName = "Application";
 
@@ -14,11 +14,17 @@ internal sealed class ApplicationMetrics
 
     private static readonly Meter MeterInstance = new(MeterName, AssemblyName.Version!.ToString());
 
+    private readonly Counter<long> counter;
+
     public ApplicationMetrics()
     {
         MeterInstance.CreateObservableCounter("application.uptime", ObserveApplicationUptime);
+
+        counter = MeterInstance.CreateCounter<long>("application.counter");
     }
 
     private static long ObserveApplicationUptime() =>
         (long)(DateTime.Now - Process.GetCurrentProcess().StartTime).TotalSeconds;
+
+    public void IncrementCounter(string name) => counter.Add(1, new KeyValuePair<string, object?>[] { new("name", name) });
 }
