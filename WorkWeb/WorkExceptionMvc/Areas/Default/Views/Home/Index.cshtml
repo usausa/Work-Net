@@ -3,6 +3,11 @@
 }
 
 <ul>
-    <li>MVC Exception</li>
-    <li>API Exception</li>
+    <li><a asp-area="default" asp-controller="Home" asp-action="Exception">MVC Exception</a></li>
+    <li><a asp-area="api" asp-controller="Test" asp-action="Exception">API Exception</a></li>
+</ul>
+
+<ul>
+    <li><a asp-area="default" asp-controller="Home" asp-action="Nothing">MVC 404</a></li>
+    <li><a asp-area="api" asp-controller="Test" asp-action="Nothing">API 404</a></li>
 </ul>

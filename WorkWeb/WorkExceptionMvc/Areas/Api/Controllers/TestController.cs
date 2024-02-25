@@ -12,4 +12,7 @@ public sealed class TestController : BaseApiController
 
     [HttpGet]
     public IActionResult Exception() => throw new InvalidOperationException("Cause exception.");
+
+    [HttpGet]
+    public IActionResult Nothing() => NotFound();
 }

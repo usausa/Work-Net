@@ -13,4 +13,7 @@ public class HomeController : BaseDefaultController
 
     [HttpGet]
     public IActionResult Exception() => throw new InvalidOperationException("Cause exception.");
+
+    [HttpGet]
+    public IActionResult Nothing() => NotFound();
 }
