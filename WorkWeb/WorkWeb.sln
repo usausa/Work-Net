@@ -47,7 +47,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkCron", "WorkCron\WorkCr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Service", "Service", "{2E144EA4-4E1C-4904-9F3B-66D860F7D2D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkExceptionMvc", "WorkExceptionMvc\WorkExceptionMvc.csproj", "{52D03B9F-025D-4D53-81EE-D0FFAC74816B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkExceptionMvc", "WorkExceptionMvc\WorkExceptionMvc.csproj", "{52D03B9F-025D-4D53-81EE-D0FFAC74816B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkCustomConfig", "WorkCustomConfig\WorkCustomConfig.csproj", "{478A9A86-A37E-4067-9894-A32A8757027F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -120,6 +122,10 @@ Global
 		{52D03B9F-025D-4D53-81EE-D0FFAC74816B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{52D03B9F-025D-4D53-81EE-D0FFAC74816B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{52D03B9F-025D-4D53-81EE-D0FFAC74816B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{478A9A86-A37E-4067-9894-A32A8757027F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{478A9A86-A37E-4067-9894-A32A8757027F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{478A9A86-A37E-4067-9894-A32A8757027F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{478A9A86-A37E-4067-9894-A32A8757027F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
