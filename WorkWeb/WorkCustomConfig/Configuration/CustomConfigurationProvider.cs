@@ -15,6 +15,7 @@ internal sealed class CustomConfigurationProvider : ConfigurationProvider, IConf
 
     public override void Load()
     {
+        // TODO sync ?
         var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         data["Test"] = "1";
         data["Sub:Key1"] = "abc";

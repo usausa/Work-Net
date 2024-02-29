@@ -1,3 +1,4 @@
+using Microsoft.FeatureManagement;
 using WorkCustomConfig;
 using WorkCustomConfig.Configuration;
 
@@ -12,6 +13,8 @@ builder.Services.AddCustomConfigurationOperator();
 //var setting = builder.Configuration.GetSection("Sub").Get<SubSetting>()!;
 
 builder.Services.Configure<SubSetting>(builder.Configuration.GetSection("Sub"));
+
+builder.Services.AddFeatureManagement();
 
 // Add services to the container.
 
