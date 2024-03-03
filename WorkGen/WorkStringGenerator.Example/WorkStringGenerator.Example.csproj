@@ -8,6 +8,11 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- for debug -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
   <!--
   <PropertyGroup>
     <TemplateSourceGenerator></TemplateSourceGenerator>
@@ -17,6 +22,7 @@
   <Import Project="..\WorkStringGenerator\build\WorkStringGenerator.props" />
 
   <ItemGroup>
+    <ProjectReference Include="..\WorkStringGenerator.Attributes\WorkStringGenerator.Attributes.csproj" />
     <ProjectReference Include="..\WorkStringGenerator\WorkStringGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
