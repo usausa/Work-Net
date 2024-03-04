@@ -5,6 +5,7 @@ using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 [Generator]
@@ -16,17 +17,21 @@ public sealed class Generator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        var compilationProvider = context.CompilationProvider;
         var classes = context.SyntaxProvider
             .CreateSyntaxProvider(
                 static (node, _) => IsTargetSyntax(node),
                 static (context, _) => GetTargetSyntax(context))
-            .SelectMany(static (x, _) => x is not null ? ImmutableArray.Create(x) : ImmutableArray<ClassDeclarationSyntax>.Empty);
-        IncrementalValueProvider<(Compilation, ImmutableArray<ClassDeclarationSyntax>)> compilationAndClasses =
-            context.CompilationProvider.Combine(classes.Collect());
+            .SelectMany(static (x, _) => x is not null ? ImmutableArray.Create(x) : ImmutableArray<ClassDeclarationSyntax>.Empty)
+            .Collect();
+        var settingProvider = context.AnalyzerConfigOptionsProvider
+            .Select(static (provider, _) => GetSettings(provider));
+
+        var providers = compilationProvider.Combine(classes).Combine(settingProvider);
 
         context.RegisterImplementationSourceOutput(
-            compilationAndClasses,
-            static (spc, source) => Execute(spc, source.Item1, source.Item2));
+            providers,
+            static (spc, source) => Execute(spc, source.Left.Left, source.Left.Right, source.Right));
     }
 
     private static bool IsTargetSyntax(SyntaxNode node) =>
@@ -51,11 +56,26 @@ public sealed class Generator : IIncrementalGenerator
         return classDeclarationSyntax;
     }
 
+    private static Dictionary<string, string> GetSettings(AnalyzerConfigOptionsProvider provider)
+    {
+        var settings = new Dictionary<string, string>();
+        AddSettings(settings, provider.GlobalOptions, "Mode");
+        return settings;
+    }
+
+    private static void AddSettings(Dictionary<string, string> settings, AnalyzerConfigOptions options, string key)
+    {
+        if (options.TryGetValue($"build_property.WorkStringGenerator_{key}", out var value))
+        {
+            settings[key] = value;
+        }
+    }
+
     // ------------------------------------------------------------
     // Builder
     // ------------------------------------------------------------
 
-    private static void Execute(SourceProductionContext context, Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes)
+    private static void Execute(SourceProductionContext context, Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes, Dictionary<string, string> settings)
     {
         var enumerableSymbol = compilation.GetTypeByMetadataName("System.Collections.IEnumerable");
 
