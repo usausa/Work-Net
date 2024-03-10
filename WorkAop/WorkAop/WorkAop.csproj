@@ -5,8 +5,19 @@
     <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- for debug -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <Import Project="..\WorkAop.Generator\build\WorkAop.Generator.props" />
+
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkAop.Generator\WorkAop.Generator.csproj" OutputItemType="analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

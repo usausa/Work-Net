@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34616.47
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAop", "WorkAop\WorkAop.csproj", "{3D64B763-1740-445B-A157-D805C7D3DF96}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAop", "WorkAop\WorkAop.csproj", "{3D64B763-1740-445B-A157-D805C7D3DF96}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAop.Generator", "WorkAop.Generator\WorkAop.Generator.csproj", "{0E12755A-CE8D-4C21-9AD5-FC01B9C5823D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{3D64B763-1740-445B-A157-D805C7D3DF96}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D64B763-1740-445B-A157-D805C7D3DF96}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D64B763-1740-445B-A157-D805C7D3DF96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E12755A-CE8D-4C21-9AD5-FC01B9C5823D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E12755A-CE8D-4C21-9AD5-FC01B9C5823D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E12755A-CE8D-4C21-9AD5-FC01B9C5823D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E12755A-CE8D-4C21-9AD5-FC01B9C5823D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

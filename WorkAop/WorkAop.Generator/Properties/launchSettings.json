@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkAop.Generator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\WorkAop\\WorkAop.csproj"
+    }
+  }
+}
