@@ -1,4 +1,4 @@
-﻿namespace WorkAop.Services;
+namespace WorkAop.Services;
 
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class ServiceAttribute : Attribute
@@ -19,6 +19,8 @@ public static class ServiceExtensions
 }
 
 // TODO
+#pragma warning disable CA1727
+#pragma warning disable CA1848
 public sealed class TestServiceProxy : ITestService
 {
     private readonly ILogger<TestService> log;
