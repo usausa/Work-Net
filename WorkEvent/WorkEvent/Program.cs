@@ -26,12 +26,20 @@ internal class Program
     }
 }
 
+
+public static class Extensions
+{
+    public static IObservable<T> AsObservable<T>(this Func<Action<T>, IDisposable> func) =>
+        Observable.Create<T>(observer => func(observer.OnNext));
+}
+
 public static class EventComponentExtensions
 {
-    public static IObservable<int> OnEventAsObservable(this EventComponent component)
-    {
-        return Observable.Create<int>(observer => component.OnEvent(observer.OnNext));
-    }
+    public static IObservable<int> OnEventAsObservable(this EventComponent component) =>
+        ((Func<Action<int>, IDisposable>)component.OnEvent).AsObservable();
+
+    //    public static IObservable<int> OnEventAsObservable(this EventComponent component) =>
+//        Observable.Create<int>(observer => component.OnEvent(observer.OnNext));
 }
 
 public class EventComponent
