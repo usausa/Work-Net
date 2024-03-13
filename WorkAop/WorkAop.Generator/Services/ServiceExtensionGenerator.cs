@@ -1,12 +1,365 @@
 namespace WorkAop.Services;
 
+using System;
+using System.Collections.Immutable;
+using System.Text;
+
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 [Generator]
 public sealed class ServiceExtensionGenerator : IIncrementalGenerator
 {
+    private const string ServiceCollectionType = "Microsoft.Extensions.DependencyInjection.IServiceCollection";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // TODO
+        var compilationProvider = context.CompilationProvider;
+        var serviceProvider = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => IsServiceTargetSyntax(node),
+                static (context, _) => GetServiceClassSyntax(context))
+            .Where(static x => x is not null)
+            .Collect();
+        var registryProvider = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => IsRegistryTargetSyntax(node),
+                static (context, _) => GetRegistryMethodSyntax(context))
+            .Where(static x => x is not null)
+            .Collect();
+
+        var providers = compilationProvider.Combine(serviceProvider.Combine(registryProvider));
+
+        context.RegisterImplementationSourceOutput(
+            providers,
+            static (context, source) => Execute(context, source.Left, source.Right.Left!, source.Right.Right!));
     }
+
+    private static bool IsServiceTargetSyntax(SyntaxNode node) =>
+        node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
+
+    private static ClassDeclarationSyntax? GetServiceClassSyntax(GeneratorSyntaxContext context)
+    {
+        var classDeclarationSyntax = (ClassDeclarationSyntax)context.Node;
+        if (context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax) is not ITypeSymbol typeSymbol)
+        {
+            return null;
+        }
+
+        var hasAttribute = typeSymbol.GetAttributes().Any(IsServiceAttribute());
+        if (!hasAttribute)
+        {
+            return null;
+        }
+
+        return classDeclarationSyntax;
+    }
+
+    private static Func<AttributeData, bool> IsServiceAttribute() =>
+        static x => x.AttributeClass!.ToDisplayString() == "WorkAop.Services.ServiceAttribute" &&
+                    x.ConstructorArguments.Length == 1;
+
+    private static bool IsRegistryTargetSyntax(SyntaxNode node) =>
+        node is MethodDeclarationSyntax { AttributeLists.Count: > 0 };
+
+    private static MethodDeclarationSyntax? GetRegistryMethodSyntax(GeneratorSyntaxContext context)
+    {
+        var methodDeclarationSyntax = (MethodDeclarationSyntax)context.Node;
+        if (methodDeclarationSyntax.ParameterList.Parameters.Count != 1)
+        {
+            return null;
+        }
+
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
+        if ((methodSymbol is null) || !methodSymbol.IsPartialDefinition || !methodSymbol.IsStatic)
+        {
+            return null;
+        }
+
+        var hasAttribute = methodSymbol.GetAttributes()
+            .Any(static x => x.AttributeClass!.ToDisplayString() == "WorkAop.Services.ServiceRegistryAttribute");
+        if (!hasAttribute)
+        {
+            return null;
+        }
+
+        if (methodSymbol.Parameters[0].Type.ToDisplayString() != ServiceCollectionType)
+        {
+            return null;
+        }
+
+        if ((methodSymbol.ReturnType is not INamedTypeSymbol returnTypeSymbol) ||
+            (returnTypeSymbol.ConstructedFrom.ToDisplayString() != ServiceCollectionType))
+        {
+            return null;
+        }
+
+        return methodDeclarationSyntax;
+    }
+
+    private static void Execute(SourceProductionContext context, Compilation compilation, ImmutableArray<ClassDeclarationSyntax> services, ImmutableArray<MethodDeclarationSyntax> registry)
+    {
+        if (registry.Length != 1)
+        {
+            // TODO
+            return;
+        }
+
+        var serviceModels = CreateServiceModels(compilation, services);
+        var registryModel = CreateRegistryModel(compilation, registry[0]);
+        var filename = new StringBuilder();
+        var source = new StringBuilder();
+
+        foreach (var serviceModel in serviceModels)
+        {
+            // Check cancel
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            WriteServiceSource(context, filename, source, serviceModel);
+        }
+
+        // Check cancel
+        context.CancellationToken.ThrowIfCancellationRequested();
+
+        WriteRegistrySource(context, filename, source, registryModel, serviceModels);
+    }
+
+    private static void WriteServiceSource(SourceProductionContext context, StringBuilder filename, StringBuilder source, ServiceModel service)
+    {
+        var className = service.ClassName + "Proxy";
+
+        source.AppendLine("// <auto-generated />");
+        source.AppendLine("#nullable disable");
+
+        // namespace
+        if (!String.IsNullOrEmpty(service.Namespace))
+        {
+            source.Append("namespace ").Append(service.Namespace).AppendLine();
+        }
+
+        source.AppendLine("{");
+
+        // class
+        source.Append("    internal sealed class ").Append(className).Append(" : ").Append(service.InterfaceFullName).AppendLine();
+        source.AppendLine("    {");
+
+        // field
+        // TODO member+ log,aop
+        source.Append("        private readonly ").Append(service.ClassFullName).Append(" _service;").AppendLine();
+        source.AppendLine();
+
+        // constructor
+        // TODO argument+ log,aop
+        source.Append("        public ").Append(className).Append('(').Append(service.ClassFullName).Append(" service").Append(')').AppendLine();
+        source.AppendLine("        {");
+        source.AppendLine("            _service = service;");
+        source.AppendLine("        }");
+
+        foreach (var method in service.Methods)
+        {
+            source.AppendLine();
+
+            // TODO async
+            source.Append("        public ").Append(method.ReturnType).Append(' ').Append(method.MethodName).Append('(');
+            source.Append(String.Join(", ", method.Parameters.Select(x => $"{x.ParameterType} {x.ParameterName}")));
+            source.Append(')').AppendLine();
+
+            source.AppendLine("        {");
+            // TODO void, async
+            source.Append("            return _service.").Append(method.MethodName).Append('(');
+            source.Append(String.Join(", ", method.Parameters.Select(x => x.ParameterName)));
+            source.Append(");").AppendLine();
+            source.AppendLine("        }");
+        }
+
+        source.AppendLine("    }");
+        source.AppendLine("}");
+
+        // Write
+        context.AddSource(
+            MakeRegistryFilename(filename, service.Namespace, service.ClassName, "Proxy"),
+            SourceText.From(source.ToString(), Encoding.UTF8));
+
+        filename.Clear();
+        source.Clear();
+    }
+
+    private static void WriteRegistrySource(SourceProductionContext context, StringBuilder filename, StringBuilder source, RegistryModel registry, List<ServiceModel> services)
+    {
+        source.AppendLine("// <auto-generated />");
+        source.AppendLine("#nullable disable");
+
+        // namespace
+        if (!String.IsNullOrEmpty(registry.Namespace))
+        {
+            source.Append("namespace ").Append(registry.Namespace).AppendLine();
+        }
+
+        source.AppendLine("{");
+
+        // class
+        source.Append("    static partial ").Append(registry.IsValueType ? "struct " : "class ").Append(registry.ClassName).AppendLine();
+        source.AppendLine("    {");
+
+        // method
+        source.Append("        ");
+        source.Append(registry.Accessibility);
+        source.Append(" static partial ");
+        source.Append(ServiceCollectionType);
+        source.Append(' ');
+        source.Append(registry.MethodName);
+        source.Append("(this ");
+        source.Append(ServiceCollectionType);
+        source.Append(" services)");
+        source.AppendLine();
+
+        source.AppendLine("        {");
+
+        foreach (var service in services)
+        {
+            var proxyClassName = service.ClassFullName + "Proxy";
+            source.Append("            services.AddSingleton<").Append(service.ClassFullName).Append(">();").AppendLine();
+            source.Append("            services.AddSingleton<").Append(proxyClassName).Append(">();").AppendLine();
+            source.Append("            services.AddSingleton<").Append(service.InterfaceFullName).Append(">(static p => p.GetRequiredService<").Append(proxyClassName).Append(">());").AppendLine();
+        }
+
+        source.AppendLine("            return services;");
+        source.AppendLine("        }");
+
+        source.AppendLine("    }");
+        source.AppendLine("}");
+
+        // Write
+        context.AddSource(
+            MakeRegistryFilename(filename, registry.Namespace, registry.ClassName, "Registry"),
+            SourceText.From(source.ToString(), Encoding.UTF8));
+
+        filename.Clear();
+        source.Clear();
+    }
+
+    private static List<ServiceModel> CreateServiceModels(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> services)
+    {
+        var list = new List<ServiceModel>();
+
+        foreach (var classDeclarationSyntax in services)
+        {
+            var classSemantic = compilation.GetSemanticModel(classDeclarationSyntax.SyntaxTree);
+            var classSymbol = (ITypeSymbol)classSemantic.GetDeclaredSymbol(classDeclarationSyntax)!;
+
+            var attribute = classSymbol.GetAttributes().First(IsServiceAttribute());
+            var interfaceSymbol = (INamedTypeSymbol)attribute.ConstructorArguments[0].Value!;
+
+            var classNamespace = GetNameSpace(classSymbol);
+            var className = classDeclarationSyntax.Identifier.Text;
+            var classFullName = classSymbol.ToDisplayString();
+
+            var interfaceFullName = interfaceSymbol.ToDisplayString();
+
+            var methods = new List<MethodModel>();
+
+            foreach (var methodSymbol in interfaceSymbol.GetMembers().OfType<IMethodSymbol>())
+            {
+                var methodName = methodSymbol.Name;
+                var returnType = methodSymbol.ReturnType.ToDisplayString();
+
+                var parameters = new List<ParameterModel>();
+
+                foreach (var parameterSymbol in methodSymbol.Parameters)
+                {
+                    var parameterType = parameterSymbol.Type.ToDisplayString();
+                    var parameterName = parameterSymbol.Name;
+
+                    parameters.Add(new ParameterModel(parameterType, parameterName));
+                }
+
+                methods.Add(new MethodModel(methodName, returnType, parameters));
+            }
+
+            list.Add(new ServiceModel(classNamespace, className, classFullName, interfaceFullName, methods));
+        }
+
+        return list;
+    }
+
+    private static string GetNameSpace(ITypeSymbol classSymbol) =>
+        classSymbol.ContainingNamespace.IsGlobalNamespace
+            ? string.Empty
+            : classSymbol.ContainingNamespace.ToDisplayString();
+
+    private static RegistryModel CreateRegistryModel(Compilation compilation, MethodDeclarationSyntax methodDeclarationSyntax)
+    {
+        var methodSemantic = compilation.GetSemanticModel(methodDeclarationSyntax.SyntaxTree);
+        var methodSymbol = methodSemantic.GetDeclaredSymbol(methodDeclarationSyntax)!;
+
+        var containingType = methodSymbol.ContainingType;
+
+        var classNamespace = GetNameSpace(containingType);
+        var className = containingType.Name;
+        var isValueType = containingType.IsValueType;
+
+        var accessibility = ToAccessibilityText(methodSymbol.DeclaredAccessibility);
+        var methodName = methodSymbol.Name;
+
+        return new RegistryModel(
+            classNamespace,
+            className,
+            isValueType,
+            accessibility,
+            methodName);
+    }
+
+    private static string MakeRegistryFilename(StringBuilder buffer, string ns, string className, string suffix)
+    {
+        buffer.Clear();
+
+        if (!String.IsNullOrEmpty(ns))
+        {
+            buffer.Append(ns.Replace('.', '_'));
+            buffer.Append('_');
+        }
+
+        buffer.Append(className);
+        buffer.Append('_');
+        buffer.Append(suffix);
+        buffer.Append(".g.cs");
+
+        return buffer.ToString();
+    }
+
+    private static string ToAccessibilityText(Accessibility accessibility) => accessibility switch
+    {
+        Accessibility.Public => "public",
+        Accessibility.Protected => "protected",
+        Accessibility.Private => "private",
+        Accessibility.Internal => "internal",
+        Accessibility.ProtectedOrInternal => "protected internal",
+        Accessibility.ProtectedAndInternal => "private protected",
+        _ => throw new NotSupportedException()
+    };
+
+    internal sealed record ParameterModel(
+        string ParameterType,
+        string ParameterName);
+
+    internal sealed record MethodModel(
+        string MethodName,
+        string ReturnType,
+        List<ParameterModel> Parameters);
+
+    internal sealed record ServiceModel(
+        string Namespace,
+        string ClassName,
+        string ClassFullName,
+        string InterfaceFullName,
+        List<MethodModel> Methods);
+
+    internal sealed record RegistryModel(
+        string Namespace,
+        string ClassName,
+        bool IsValueType,
+        string Accessibility,
+        string MethodName);
 }
