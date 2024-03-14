@@ -11,6 +11,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddExtendedServices();
 
+builder.Services.AddSingleton(typeof(ServiceAspect<>));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

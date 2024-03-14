@@ -1,5 +1,8 @@
 namespace WorkAop.Services;
 
+using System.Diagnostics;
+using System.Xml.Linq;
+
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class ServiceAttribute : Attribute
 {
@@ -14,6 +17,75 @@ public sealed class ServiceAttribute : Attribute
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class ServiceRegistryAttribute : Attribute
 {
+}
+
+public sealed class Activity : IDisposable
+{
+    private readonly string name;
+
+    public Activity(string name)
+    {
+        this.name = name;
+    }
+
+    public void Dispose()
+    {
+        Debug.WriteLine($"**** Dispose {name}");
+    }
+}
+
+#pragma warning disable CA1815
+public readonly struct ServiceAspectToken
+{
+    public readonly long Start;
+
+    public readonly IDisposable? Activity;
+
+    public ServiceAspectToken(long start, IDisposable? activity)
+    {
+
+    }
+}
+#pragma warning restore CA1815
+
+public sealed class ServiceAspect<T>
+{
+    public void Start(string name)
+    {
+        Debug.WriteLine($"*Start {name}");
+    }
+
+    public void Start<T1>(string name, T1 p1)
+    {
+        Debug.WriteLine($"*Start {name} : {p1}");
+    }
+
+    public void Start<T1, T2>(string name, T1 p1, T2 p2)
+    {
+        Debug.WriteLine($"*Start {name} : {p1}, {p2}");
+    }
+
+    public void Start<T1, T2, T3>(string name, T1 p1, T2 p2, T3 p3)
+    {
+        Debug.WriteLine($"* Start{name} : {p1}, {p2}, {p3}");
+    }
+
+    // TODO ...
+
+    public void Finish()
+    {
+        Debug.WriteLine("*Finish");
+    }
+
+    public void Finish<TRet>(TRet result)
+    {
+        Debug.WriteLine($"*Finish : {result}");
+    }
+
+    public void Exception(Exception ex)
+    {
+        Debug.WriteLine($"*Finish : {ex}");
+    }
 }
 
 //public static class ServiceExtensions
