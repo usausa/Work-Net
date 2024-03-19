@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageReference Include="Usa.Smart.AspNetCore" Version="2.4.1" />
+    <PackageReference Include="Usa.Smart.AspNetCore" Version="2.4.2" />
     <PackageReference Include="Usa.Smart.Core" Version="2.3.3" />
   </ItemGroup>
 
