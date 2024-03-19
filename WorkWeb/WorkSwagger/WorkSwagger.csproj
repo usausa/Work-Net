@@ -11,4 +11,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Swagger\" />
+    <Folder Include="Areas\Report\" />
+    <Folder Include="Areas\Sample2\" />
+  </ItemGroup>
+
 </Project>
