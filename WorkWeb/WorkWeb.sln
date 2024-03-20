@@ -55,8 +55,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkDump", "WorkDump\WorkDu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkSwagger", "WorkSwagger\WorkSwagger.csproj", "{60BC092C-0F15-4B93-AACE-64F16EEB32AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkExcel", "WorkExcel\WorkExcel.csproj", "{C5EB8B5D-A818-40EA-8AA8-B059F5692A9E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -126,10 +124,6 @@ Global
 		{60BC092C-0F15-4B93-AACE-64F16EEB32AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60BC092C-0F15-4B93-AACE-64F16EEB32AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60BC092C-0F15-4B93-AACE-64F16EEB32AE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C5EB8B5D-A818-40EA-8AA8-B059F5692A9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C5EB8B5D-A818-40EA-8AA8-B059F5692A9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C5EB8B5D-A818-40EA-8AA8-B059F5692A9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C5EB8B5D-A818-40EA-8AA8-B059F5692A9E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
