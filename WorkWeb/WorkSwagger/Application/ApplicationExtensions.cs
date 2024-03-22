@@ -17,6 +17,7 @@ public static class ApplicationExtensions
         {
             options.SwaggerDoc("example", new OpenApiInfo { Title = "Example APIs", Version = "v1" });
 
+            // Tag by route base
             options.TagActionsBy(api =>
             {
                 if (!String.IsNullOrEmpty(api.GroupName))
@@ -38,12 +39,15 @@ public static class ApplicationExtensions
                 throw new InvalidOperationException("Unable to determine tag for endpoint.");
             });
 
+            // Change scheme name
             options.CustomSchemaIds(t => t.FullName?
-                .Replace("Example.Areas.", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace(".Models.", string.Empty, StringComparison.OrdinalIgnoreCase));
+                .Replace("WorkSwagger.Areas.", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace(".Controllers.", string.Empty, StringComparison.OrdinalIgnoreCase));
 
+            // Enable annotation base
             options.EnableAnnotations();
 
+            // Custom
             options.OperationFilter<CustomOperationFilter>();
             options.DocumentFilter<CustomDocumentFilter>();
         });
