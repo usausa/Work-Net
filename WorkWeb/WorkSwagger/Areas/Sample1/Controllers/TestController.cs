@@ -2,7 +2,6 @@
 namespace WorkSwagger.Areas.Sample1.Controllers;
 
 using System.ComponentModel.DataAnnotations;
-using System.Net.Mime;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,7 +45,7 @@ public class UpdateRequest
 
 public class TestController : BaseSample1Controller
 {
-    [SwaggerOperation(Summary = "ドキュメント一覧取得", Description = "サンプルです", OperationId = "SampleDocumentList")]
+    [SwaggerOperation(Summary = "ドキュメント一覧取得", Description = "サンプルです")]
     [SwaggerResponse(StatusCodes.Status200OK, "処理成功", typeof(ListResponse))]
     [SwaggerResponse(StatusCodes.Status404NotFound, "該当無し")]
     [HttpGet]
@@ -57,7 +56,7 @@ public class TestController : BaseSample1Controller
         return Ok(new ListResponse());
     }
 
-    [SwaggerOperation(Summary = "ドキュメント更新", Description = "サンプルです", OperationId = "SampleDocumentUpdate")]
+    [SwaggerOperation(Summary = "ドキュメント更新", Description = "サンプルです")]
     [SwaggerResponse(StatusCodes.Status200OK, "処理成功")]
     [HttpPost]
     public IActionResult Update(

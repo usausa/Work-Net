@@ -1,14 +1,14 @@
 namespace WorkSwagger.Application.Swagger;
 
-using Microsoft.AspNetCore.Mvc.Controllers;
+using System.Diagnostics;
+
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 
 using Smart.Collections.Generic;
+using Smart.Text;
 
 using Swashbuckle.AspNetCore.SwaggerGen;
-
-using System.Diagnostics;
 
 using WorkSwagger.Application.Authentication;
 
@@ -18,7 +18,9 @@ public sealed class CustomOperationFilter : IOperationFilter
     {
         Debug.WriteLine($"===== Operation {context.MethodInfo.DeclaringType?.FullName}.{context.MethodInfo.Name}");
 
-        // TODO OperationId採番
+        // OperationId
+        operation.OperationId = Inflector.Camelize(context.ApiDescription.RelativePath?.Replace("api/", "").Replace("/", "_"));
+
         // TODO TagsはここでController毎？
 
         // Common setting
@@ -39,4 +41,9 @@ public sealed class CustomOperationFilter : IOperationFilter
             operation.Responses.Add("401", new OpenApiResponse { Description = "認証失敗" });
         }
     }
+
+    //private static string ResolveMethodVerb()
+    //{
+
+    //}
 }
