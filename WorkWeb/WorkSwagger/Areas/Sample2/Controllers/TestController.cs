@@ -23,10 +23,7 @@ public class ListResponse
 
 public class TestController : BaseSample2Controller
 {
-    [SwaggerOperation(
-        Summary = "ドキュメント一覧取得",
-        Description = "サンプルです",
-        OperationId = "SampleDocumentList")]
+    [SwaggerOperation(Summary = "ドキュメント一覧取得", Description = "サンプルです")]
     [SwaggerResponse(StatusCodes.Status200OK, "処理成功", typeof(ListResponse), MediaTypeNames.Application.Json)]
     [SwaggerResponse(StatusCodes.Status404NotFound, "該当無し")]
     [HttpGet]

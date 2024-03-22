@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using WorkSwagger.Application.Swagger;
+using Swashbuckle.AspNetCore.Annotations;
 
 public static class ApplicationExtensions
 {
@@ -48,6 +49,9 @@ public static class ApplicationExtensions
             options.EnableAnnotations();
 
             // Custom
+            options.SchemaFilter<CustomSchemaFilter>();
+            options.ParameterFilter<CustomParameterFilter>();
+            options.RequestBodyFilter<CustomRequestBodyFilter>();
             options.OperationFilter<CustomOperationFilter>();
             options.DocumentFilter<CustomDocumentFilter>();
         });
