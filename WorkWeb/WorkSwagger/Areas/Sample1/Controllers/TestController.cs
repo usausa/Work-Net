@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 using Swashbuckle.AspNetCore.Annotations;
 
+using WorkSwagger.Application.Authentication;
+
 public class ListResponseEntry
 {
     public int Id { get; set; }
@@ -37,11 +39,7 @@ public class UpdateRequest
     public DateTime DateTime { get; set; }
 }
 
-[ApiController]
-[Consumes(MediaTypeNames.Application.Json)]
-[Produces(MediaTypeNames.Application.Json)]
-[Route("[controller]/[action]")]
-public class TestController : ControllerBase
+public class TestController : BaseSample1Controller
 {
     [SwaggerOperation(
         Summary = "ドキュメント一覧取得",
@@ -49,10 +47,9 @@ public class TestController : ControllerBase
         OperationId = "SampleDocumentList")]
     [SwaggerResponse(StatusCodes.Status200OK, "処理成功", typeof(ListResponse), MediaTypeNames.Application.Json)]
     [SwaggerResponse(StatusCodes.Status404NotFound, "該当無し")]
-    //[ProducesResponseType<ListResponse>(StatusCodes.Status200OK)]
-    //[ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpGet]
-    public IActionResult List()
+    public IActionResult List(
+        Credential credential)
     {
         return Ok(new ListResponse());
     }
@@ -64,6 +61,7 @@ public class TestController : ControllerBase
     [SwaggerResponse(200, "処理成功")]
     [HttpPost]
     public IActionResult Update(
+        Credential credential,
         [FromBody][SwaggerRequestBody("The product payload", Required = true)] UpdateRequest request)
     {
         return Ok();
