@@ -1,5 +1,6 @@
 namespace WorkSwagger.Application.Swagger;
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -32,6 +33,7 @@ public sealed class CustomSchemaFilter : ISchemaFilter
             Debug.WriteLine($"++++ {name} Type:{schema.Type} Format:{schema.Format} Pattern:{schema.Pattern} Required:{schema.Required.Count} Nullable:{schema.Nullable}");
         }
 
+        // Dictionary based
         var entry = SchemeDictionary.Lookup(name);
         if (entry is not null)
         {
@@ -46,6 +48,7 @@ public sealed class CustomSchemaFilter : ISchemaFilter
             }
         }
 
+        // Custom attribute
         var schemeAttribute = provider.GetCustomAttributes(true).OfType<SwaggerSchemeAttribute>().FirstOrDefault();
         if (schemeAttribute is not null)
         {
@@ -60,7 +63,25 @@ public sealed class CustomSchemaFilter : ISchemaFilter
             }
         }
 
-        // TODO Required, Nullable ...
+        // Validation
+        var rangeAttribute = provider.GetCustomAttributes(true).OfType<RangeAttribute>().FirstOrDefault();
+        if (rangeAttribute is not null)
+        {
+            schema.Minimum = Convert.ToDecimal(rangeAttribute.Minimum);
+            schema.Maximum = Convert.ToDecimal(rangeAttribute.Maximum);
+        }
+
+        var minLengthAttribute = provider.GetCustomAttributes(true).OfType<MinLengthAttribute>().FirstOrDefault();
+        if (minLengthAttribute is not null)
+        {
+            schema.MinLength = minLengthAttribute.Length;
+        }
+
+        var maxLengthAttribute = provider.GetCustomAttributes(true).OfType<MaxLengthAttribute>().FirstOrDefault();
+        if (maxLengthAttribute is not null)
+        {
+            schema.MaxLength = maxLengthAttribute.Length;
+        }
     }
 
     private static IOpenApiAny ToOpenApiValue(object value)

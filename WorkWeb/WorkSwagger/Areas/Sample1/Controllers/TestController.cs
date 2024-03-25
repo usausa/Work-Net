@@ -27,9 +27,12 @@ public class ListResponse
 
 public class UpdateRequest
 {
+    [Range(1, 99999)]
     public int ItemCode { get; set; }
 
     [Required]
+    [MinLength(5)]
+    [MaxLength(10)]
     public string Description { get; set; } = default!;
 
     [SwaggerScheme(example: "2000-12-31")]
