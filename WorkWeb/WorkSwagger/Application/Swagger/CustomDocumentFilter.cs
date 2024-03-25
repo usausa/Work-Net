@@ -3,12 +3,12 @@ namespace WorkSwagger.Application.Swagger;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+
 using Microsoft.OpenApi.Models;
 
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 using WorkSwagger.Application.Authentication;
-using WorkSwagger.Areas;
 
 public sealed class CustomDocumentFilter<TTag> : IDocumentFilter
     where TTag : struct, Enum
@@ -59,17 +59,6 @@ public sealed class CustomDocumentFilter<TTag> : IDocumentFilter
                 Description = attribute?.Description
             });
         }
-
-        //swaggerDoc.Tags.Add(new OpenApiTag
-        //{
-        //    Name = Tags.Data2.ToString().ToLowerInvariant(),
-        //    Description = "Data2業務"
-        //    //ExternalDocs = new OpenApiExternalDocs
-        //    //{
-        //    //    Description = "Data2業務の詳細情報",
-        //    //    Url = new Uri("http://example/docs")
-        //    //}
-        //});
 
         // SecurityRequirements
         // TODO ?

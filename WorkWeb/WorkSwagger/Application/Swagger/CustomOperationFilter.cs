@@ -20,7 +20,7 @@ public sealed class CustomOperationFilter : IOperationFilter
         Debug.WriteLine($"===== Operation {context.MethodInfo.DeclaringType?.FullName}.{context.MethodInfo.Name}");
 
         // Summary/Description
-        var operationAttribute = context.MethodInfo.GetCustomAttribute<MySwaggerOperationAttribute>();
+        var operationAttribute = context.MethodInfo.GetCustomAttribute<SwaggerOperationAttribute>();
         if (operationAttribute is not null)
         {
             operation.Summary = operationAttribute.Summary;
@@ -31,7 +31,7 @@ public sealed class CustomOperationFilter : IOperationFilter
         operation.OperationId = Inflector.Camelize(context.ApiDescription.RelativePath?.Replace("api/", "").Replace("/", "_"));
 
         // Tags
-        var tagAttribute = context.MethodInfo.DeclaringType?.GetCustomAttribute<MySwaggerTagAttribute>();
+        var tagAttribute = context.MethodInfo.DeclaringType?.GetCustomAttribute<SwaggerTagAttribute>();
         if (tagAttribute is not null)
         {
             operation.Tags.Clear();
@@ -39,7 +39,7 @@ public sealed class CustomOperationFilter : IOperationFilter
         }
 
         // Response
-        foreach (var responseAttribute in context.MethodInfo.GetCustomAttributes<MySwaggerResponse>())
+        foreach (var responseAttribute in context.MethodInfo.GetCustomAttributes<SwaggerResponseAttribute>())
         {
             var statusCode = responseAttribute.StatusCode.ToString();
             if (!operation.Responses.TryGetValue(statusCode, out var response))

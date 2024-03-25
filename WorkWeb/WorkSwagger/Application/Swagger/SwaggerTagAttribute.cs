@@ -1,11 +1,11 @@
 namespace WorkSwagger.Application.Swagger;
 
 [AttributeUsage(AttributeTargets.Class)]
-public sealed class MySwaggerTagAttribute : Attribute
+public sealed class SwaggerTagAttribute : Attribute
 {
     public object Value { get; }
 
-    public MySwaggerTagAttribute(object value)
+    public SwaggerTagAttribute(object value)
     {
         Value = value;
     }

@@ -1,9 +1,10 @@
 namespace WorkSwagger.Application.Swagger;
 
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
-
 using System.Diagnostics;
+
+using Microsoft.OpenApi.Models;
+
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 public sealed class CustomRequestBodyFilter : IRequestBodyFilter
 {

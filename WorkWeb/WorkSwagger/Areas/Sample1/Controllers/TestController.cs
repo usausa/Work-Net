@@ -25,29 +25,25 @@ public class ListResponse
     public ListResponseEntry[] Entry { get; set; } = default!;
 }
 
-//[SwaggerSchema(Required = ["Description"])]
-//[SwaggerSchema]
 public class UpdateRequest
 {
-    //[SwaggerSchema("The product identifier", ReadOnly = true)]
-    [Required]
-    public int Id { get; set; }
+    public int ItemCode { get; set; }
 
-    //[SwaggerSchema("The product description")]
     [Required]
     public string Description { get; set; } = default!;
 
-    //[SwaggerSchema("The date it was created", Format = "date")]
-    [Required]
+    [SwaggerScheme(example: "2000-12-31")]
+    public DateOnly Date { get; set; }
+
     public DateTime DateTime { get; set; }
 }
 
-[MySwaggerTag(Tags.Data1)]
+[SwaggerTag(Tags.Data1)]
 public class TestController : BaseSample1Controller
 {
-    [MySwaggerOperation("ドキュメント一覧取得", "サンプルです")]
-    [MySwaggerResponse(StatusCodes.Status200OK, typeof(ListResponse))]
-    [MySwaggerResponse(StatusCodes.Status404NotFound)]
+    [SwaggerOperation("ドキュメント一覧取得", "ドキュメント一覧取得の詳細")]
+    [SwaggerResponse(StatusCodes.Status200OK, typeof(ListResponse))]
+    [SwaggerResponse(StatusCodes.Status404NotFound)]
     [HttpGet]
     public IActionResult List(
         Credential credential,
@@ -56,8 +52,8 @@ public class TestController : BaseSample1Controller
         return Ok(new ListResponse());
     }
 
-    [MySwaggerOperation("ドキュメント更新", "サンプルです")]
-    [MySwaggerResponse(StatusCodes.Status200OK)]
+    [SwaggerOperation("ドキュメント更新", "ドキュメント更新の詳細")]
+    [SwaggerResponse(StatusCodes.Status200OK)]
     [HttpPost]
     public IActionResult Update(
         Credential credential,

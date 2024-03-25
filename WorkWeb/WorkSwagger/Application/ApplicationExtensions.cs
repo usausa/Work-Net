@@ -1,8 +1,7 @@
 namespace WorkSwagger.Application;
 
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+
 using WorkSwagger.Application.Swagger;
 using WorkSwagger.Areas;
 
@@ -18,43 +17,25 @@ public static class ApplicationExtensions
         {
             options.SwaggerDoc("example", new OpenApiInfo { Title = "Example APIs", Version = "v1" });
 
-            // TODO
-            // Tag by route base
-            //options.TagActionsBy(api =>
-            //{
-            //    if (!String.IsNullOrEmpty(api.GroupName))
-            //    {
-            //        return new[] { api.GroupName };
-            //    }
-
-            //    if (api.ActionDescriptor is ControllerActionDescriptor descriptor)
-            //    {
-            //        var area = descriptor.EndpointMetadata.OfType<AreaAttribute>().FirstOrDefault();
-            //        if (area is not null)
-            //        {
-            //            return new[] { $"{area.RouteValue} {descriptor.ControllerName}" };
-            //        }
-
-            //        return new[] { descriptor.ControllerName };
-            //    }
-
-            //    throw new InvalidOperationException("Unable to determine tag for endpoint.");
-            //});
-
-            // Change scheme name
-            options.CustomSchemaIds(t => t.FullName?
-                .Replace("WorkSwagger.Areas.", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace(".Controllers.", string.Empty, StringComparison.OrdinalIgnoreCase));
-
-            // Enable annotation base
-            //options.EnableAnnotations();
-
             // Custom
             options.SchemaFilter<CustomSchemaFilter>();
             options.ParameterFilter<CustomParameterFilter>();
             options.RequestBodyFilter<CustomRequestBodyFilter>();
             options.OperationFilter<CustomOperationFilter>();
             options.DocumentFilter<CustomDocumentFilter<Tags>>();
+
+            // Change scheme name
+            options.CustomSchemaIds(t => t.FullName?
+                .Replace("WorkSwagger.Areas.", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace(".Controllers.", string.Empty, StringComparison.OrdinalIgnoreCase));
+
+            // Order
+            options.OrderActionsBy(api =>
+            {
+                var area = api.ActionDescriptor.RouteValues["area"];
+                var controller = api.ActionDescriptor.RouteValues["controller"];
+                return $"{area}_{controller}";
+            });
         });
 
         return builder;

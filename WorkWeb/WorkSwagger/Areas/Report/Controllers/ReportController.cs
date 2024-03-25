@@ -9,11 +9,11 @@ using WorkSwagger.Application.Authentication;
 using WorkSwagger.Application.Swagger;
 using WorkSwagger.Areas.Report;
 
-[MySwaggerTag(Tags.Report)]
+[SwaggerTag(Tags.Report)]
 public class ReportController : BaseReportController
 {
     [HttpGet]
-    [MySwaggerResponse(StatusCodes.Status200OK, MediaTypeNames.Application.Pdf)]
+    [SwaggerResponse(StatusCodes.Status200OK, MediaTypeNames.Application.Pdf)]
     public IActionResult Data(
         Credential credential)
     {

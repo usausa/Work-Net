@@ -1,11 +1,12 @@
 namespace WorkSwagger.Application.Swagger;
 
+using System.Diagnostics;
+using System.Reflection;
+
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 
 using Swashbuckle.AspNetCore.SwaggerGen;
-
-using System.Diagnostics;
-using System.Reflection;
 
 public sealed class CustomSchemaFilter : ISchemaFilter
 {
@@ -15,23 +16,80 @@ public sealed class CustomSchemaFilter : ISchemaFilter
 
         if (context.MemberInfo is not null)
         {
-            ApplySchema(schema, context.MemberInfo, context.MemberInfo.Name, context.MemberInfo.DeclaringType);
+            ApplySchema(schema, context.MemberInfo.Name, context.MemberInfo);
         }
         else if (context.ParameterInfo is not null)
         {
-            ApplySchema(schema, context.ParameterInfo, context.ParameterInfo.Name, context.ParameterInfo.ParameterType);
+            ApplySchema(schema, context.ParameterInfo.Name!, context.ParameterInfo);
         }
     }
 
-    private static void ApplySchema(OpenApiSchema schema, ICustomAttributeProvider provider, string? name, Type? type)
+    private static void ApplySchema(OpenApiSchema schema, string name, ICustomAttributeProvider provider)
     {
-        if (name?.EndsWith("Param") ?? false)
+        // Debug
+        if (name.EndsWith("Param"))
         {
             Debug.WriteLine($"++++ {name} Type:{schema.Type} Format:{schema.Format} Pattern:{schema.Pattern} Required:{schema.Required.Count} Nullable:{schema.Nullable}");
         }
 
-        // TODO 辞書ベース Description
+        var entry = SchemeDictionary.Lookup(name);
+        if (entry is not null)
+        {
+            schema.Description = entry.Description;
+            if (entry.Example is not null)
+            {
+                schema.Example = ToOpenApiValue(entry.Example);
+            }
+            if (entry.Format is not null)
+            {
+                schema.Format = entry.Format;
+            }
+        }
 
-        // TODO 属性ベース Required, Nullable ...
+        var schemeAttribute = provider.GetCustomAttributes(true).OfType<SwaggerSchemeAttribute>().FirstOrDefault();
+        if (schemeAttribute is not null)
+        {
+            schema.Description = schemeAttribute.Description;
+            if (schemeAttribute.Example is not null)
+            {
+                schema.Example = ToOpenApiValue(schemeAttribute.Example);
+            }
+            if (schemeAttribute.Format is not null)
+            {
+                schema.Format = schemeAttribute.Format;
+            }
+        }
+
+        // TODO Required, Nullable ...
+    }
+
+    private static IOpenApiAny ToOpenApiValue(object value)
+    {
+        if (value is string stringValue)
+        {
+            return new OpenApiString(stringValue);
+        }
+        if (value is bool boolValue)
+        {
+            return new OpenApiBoolean(boolValue);
+        }
+        if (value is int intValue)
+        {
+            return new OpenApiInteger(intValue);
+        }
+        if (value is long longValue)
+        {
+            return new OpenApiLong(longValue);
+        }
+        if (value is float floatValue)
+        {
+            return new OpenApiFloat(floatValue);
+        }
+        if (value is double doubleValue)
+        {
+            return new OpenApiDouble(doubleValue);
+        }
+
+        throw new ArgumentException($"Unsupported value type. type=[{value.GetType()}], value=[{value}]");
     }
 }

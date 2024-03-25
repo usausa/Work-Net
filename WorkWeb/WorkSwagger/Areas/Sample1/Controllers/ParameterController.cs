@@ -36,11 +36,11 @@ public class ParameterUpdateRequest
     public string RequiredStringParam { get; set; } = default!;
 }
 
-[MySwaggerTag(Tags.Misc)]
+[SwaggerTag(Tags.Misc)]
 public class ParameterController : BaseSample1Controller
 {
     [HttpPost]
-    [MySwaggerResponse(StatusCodes.Status200OK)]
+    [SwaggerResponse(StatusCodes.Status200OK)]
     public IActionResult Update(
         Credential credential,
         [FromBody] ParameterUpdateRequest request)
