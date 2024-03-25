@@ -25,6 +25,13 @@ public class ListResponse
     public ListResponseEntry[] Entry { get; set; } = default!;
 }
 
+public enum UpdateType
+{
+    Zero,
+    One,
+    Two
+}
+
 public class UpdateRequest
 {
     [Range(1, 99999)]
@@ -39,6 +46,8 @@ public class UpdateRequest
     public DateOnly Date { get; set; }
 
     public DateTime DateTime { get; set; }
+
+    public UpdateType Type { get; set; }
 }
 
 [SwaggerTag(Tags.Data1)]
