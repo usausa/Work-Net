@@ -1,6 +1,7 @@
 namespace WorkSwagger.Application.Swagger;
 
 using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
@@ -18,10 +19,54 @@ public sealed class CustomOperationFilter : IOperationFilter
     {
         Debug.WriteLine($"===== Operation {context.MethodInfo.DeclaringType?.FullName}.{context.MethodInfo.Name}");
 
+        // Summary/Description
+        var operationAttribute = context.MethodInfo.GetCustomAttribute<MySwaggerOperationAttribute>();
+        if (operationAttribute is not null)
+        {
+            operation.Summary = operationAttribute.Summary;
+            operation.Description = operationAttribute.Description;
+        }
+
         // OperationId
         operation.OperationId = Inflector.Camelize(context.ApiDescription.RelativePath?.Replace("api/", "").Replace("/", "_"));
 
-        // TODO TagsはここでController毎？
+        // Tags
+        var tagAttribute = context.MethodInfo.DeclaringType?.GetCustomAttribute<MySwaggerTagAttribute>();
+        if (tagAttribute is not null)
+        {
+            operation.Tags.Clear();
+            operation.Tags.Add(new OpenApiTag { Name = tagAttribute.Value.ToString()?.ToLowerInvariant() });
+        }
+
+        // Response
+        foreach (var responseAttribute in context.MethodInfo.GetCustomAttributes<MySwaggerResponse>())
+        {
+            var statusCode = responseAttribute.StatusCode.ToString();
+            if (!operation.Responses.TryGetValue(statusCode, out var response))
+            {
+                response = new OpenApiResponse();
+                operation.Responses[statusCode] = response;
+            }
+
+            response.Description = responseAttribute.StatusCode switch
+            {
+                StatusCodes.Status200OK => "処理成功",
+                StatusCodes.Status404NotFound => "該当なし",
+                _ => response.Description
+            };
+
+            if (responseAttribute.ContentTypes.Length > 0)
+            {
+                response.Content.Clear();
+                foreach (var contentType in responseAttribute.ContentTypes)
+                {
+                    var schema = ((responseAttribute.Type != null) && (responseAttribute.Type != typeof(void)))
+                        ? context.SchemaGenerator.GenerateSchema(responseAttribute.Type, context.SchemaRepository)
+                        : null;
+                    response.Content.Add(contentType, new OpenApiMediaType { Schema = schema });
+                }
+            }
+        }
 
         // Common setting
         operation.Responses.Add("400", new OpenApiResponse { Description = "不正要求" });

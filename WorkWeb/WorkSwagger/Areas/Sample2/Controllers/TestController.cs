@@ -5,9 +5,8 @@ using System.Net.Mime;
 
 using Microsoft.AspNetCore.Mvc;
 
-using Swashbuckle.AspNetCore.Annotations;
-
 using WorkSwagger.Application.Authentication;
+using WorkSwagger.Application.Swagger;
 
 public class ListResponseEntry
 {
@@ -21,11 +20,12 @@ public class ListResponse
     public ListResponseEntry[] Entry { get; set; } = default!;
 }
 
+[MySwaggerTag(Tags.Data1)]
 public class TestController : BaseSample2Controller
 {
-    [SwaggerOperation(Summary = "ドキュメント一覧取得", Description = "サンプルです")]
-    [SwaggerResponse(StatusCodes.Status200OK, "処理成功", typeof(ListResponse), MediaTypeNames.Application.Json)]
-    [SwaggerResponse(StatusCodes.Status404NotFound, "該当無し")]
+    [MySwaggerOperation("ドキュメント一覧取得", "サンプルです")]
+    [MySwaggerResponse(StatusCodes.Status200OK, typeof(ListResponse))]
+    [MySwaggerResponse(StatusCodes.Status404NotFound)]
     [HttpGet]
     public IActionResult List(
         Credential credential)

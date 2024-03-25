@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using WorkSwagger.Application.Swagger;
-using Swashbuckle.AspNetCore.Annotations;
+using WorkSwagger.Areas;
 
 public static class ApplicationExtensions
 {
@@ -18,27 +18,28 @@ public static class ApplicationExtensions
         {
             options.SwaggerDoc("example", new OpenApiInfo { Title = "Example APIs", Version = "v1" });
 
+            // TODO
             // Tag by route base
-            options.TagActionsBy(api =>
-            {
-                if (!String.IsNullOrEmpty(api.GroupName))
-                {
-                    return new[] { api.GroupName };
-                }
+            //options.TagActionsBy(api =>
+            //{
+            //    if (!String.IsNullOrEmpty(api.GroupName))
+            //    {
+            //        return new[] { api.GroupName };
+            //    }
 
-                if (api.ActionDescriptor is ControllerActionDescriptor descriptor)
-                {
-                    var area = descriptor.EndpointMetadata.OfType<AreaAttribute>().FirstOrDefault();
-                    if (area is not null)
-                    {
-                        return new[] { $"{area.RouteValue} {descriptor.ControllerName}" };
-                    }
+            //    if (api.ActionDescriptor is ControllerActionDescriptor descriptor)
+            //    {
+            //        var area = descriptor.EndpointMetadata.OfType<AreaAttribute>().FirstOrDefault();
+            //        if (area is not null)
+            //        {
+            //            return new[] { $"{area.RouteValue} {descriptor.ControllerName}" };
+            //        }
 
-                    return new[] { descriptor.ControllerName };
-                }
+            //        return new[] { descriptor.ControllerName };
+            //    }
 
-                throw new InvalidOperationException("Unable to determine tag for endpoint.");
-            });
+            //    throw new InvalidOperationException("Unable to determine tag for endpoint.");
+            //});
 
             // Change scheme name
             options.CustomSchemaIds(t => t.FullName?
@@ -46,14 +47,14 @@ public static class ApplicationExtensions
                 .Replace(".Controllers.", string.Empty, StringComparison.OrdinalIgnoreCase));
 
             // Enable annotation base
-            options.EnableAnnotations();
+            //options.EnableAnnotations();
 
             // Custom
             options.SchemaFilter<CustomSchemaFilter>();
             options.ParameterFilter<CustomParameterFilter>();
             options.RequestBodyFilter<CustomRequestBodyFilter>();
             options.OperationFilter<CustomOperationFilter>();
-            options.DocumentFilter<CustomDocumentFilter>();
+            options.DocumentFilter<CustomDocumentFilter<Tags>>();
         });
 
         return builder;

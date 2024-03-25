@@ -5,9 +5,8 @@ using System.ComponentModel.DataAnnotations;
 
 using Microsoft.AspNetCore.Mvc;
 
-using Swashbuckle.AspNetCore.Annotations;
-
 using WorkSwagger.Application.Authentication;
+using WorkSwagger.Application.Swagger;
 
 public class ListRequest
 {
@@ -27,27 +26,28 @@ public class ListResponse
 }
 
 //[SwaggerSchema(Required = ["Description"])]
-[SwaggerSchema]
+//[SwaggerSchema]
 public class UpdateRequest
 {
-    [SwaggerSchema("The product identifier", ReadOnly = true)]
+    //[SwaggerSchema("The product identifier", ReadOnly = true)]
     [Required]
     public int Id { get; set; }
 
-    [SwaggerSchema("The product description")]
+    //[SwaggerSchema("The product description")]
     [Required]
     public string Description { get; set; } = default!;
 
-    [SwaggerSchema("The date it was created", Format = "date")]
+    //[SwaggerSchema("The date it was created", Format = "date")]
     [Required]
     public DateTime DateTime { get; set; }
 }
 
+[MySwaggerTag(Tags.Data1)]
 public class TestController : BaseSample1Controller
 {
-    [SwaggerOperation(Summary = "ドキュメント一覧取得", Description = "サンプルです")]
-    [SwaggerResponse(StatusCodes.Status200OK, "処理成功", typeof(ListResponse))]
-    [SwaggerResponse(StatusCodes.Status404NotFound, "該当無し")]
+    [MySwaggerOperation("ドキュメント一覧取得", "サンプルです")]
+    [MySwaggerResponse(StatusCodes.Status200OK, typeof(ListResponse))]
+    [MySwaggerResponse(StatusCodes.Status404NotFound)]
     [HttpGet]
     public IActionResult List(
         Credential credential,
@@ -56,8 +56,8 @@ public class TestController : BaseSample1Controller
         return Ok(new ListResponse());
     }
 
-    [SwaggerOperation(Summary = "ドキュメント更新", Description = "サンプルです")]
-    [SwaggerResponse(StatusCodes.Status200OK, "処理成功")]
+    [MySwaggerOperation("ドキュメント更新", "サンプルです")]
+    [MySwaggerResponse(StatusCodes.Status200OK)]
     [HttpPost]
     public IActionResult Update(
         Credential credential,
