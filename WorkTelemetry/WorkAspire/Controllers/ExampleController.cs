@@ -8,10 +8,13 @@ public class TestController : ControllerBase
 {
     private static readonly HttpClient HttpClient = new();
 
+    private readonly ILogger<TestController> log;
+
     private readonly ApiInstrument instrument;
 
-    public TestController(ApiInstrument instrument)
+    public TestController(ILogger<TestController> log, ApiInstrument instrument)
     {
+        this.log = log;
         this.instrument = instrument;
     }
 
@@ -19,6 +22,8 @@ public class TestController : ControllerBase
     public async ValueTask<IActionResult> Execute()
     {
         using var activity = instrument.ActivitySource.StartActivity("Test");
+
+        log.LogInformation("Execute.");
 
         try
         {

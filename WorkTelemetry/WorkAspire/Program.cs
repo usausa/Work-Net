@@ -1,3 +1,4 @@
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -12,7 +13,22 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Metrics
+// Logging
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+});
+builder.Services.Configure<OpenTelemetryLoggerOptions>(logging =>
+{
+    logging.AddOtlpExporter(config =>
+    {
+        // gRPC
+        config.Endpoint = new Uri("http://aspire:18889");
+    });
+});
+
+// Metrics & Trace
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(config =>
     {
@@ -40,6 +56,8 @@ builder.Services.AddOpenTelemetry()
             .AddHttpClientInstrumentation()
             .AddApiInstrumentation();
 
+        tracing.SetSampler(new AlwaysOnSampler());
+
         tracing.AddOtlpExporter(config =>
         {
             // gRPC
@@ -58,6 +76,7 @@ builder.Services.AddOpenTelemetry()
             });
     });
 builder.Services.AddApiInstrument();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
