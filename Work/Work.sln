@@ -116,11 +116,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Services", "_Services", "{
 		Service.md = Service.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkClientInflux", "WorkClientInflux\WorkClientInflux.csproj", "{48A7E8A0-C627-4232-B58B-E0505B93A475}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkClientInflux", "WorkClientInflux\WorkClientInflux.csproj", "{48A7E8A0-C627-4232-B58B-E0505B93A475}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkClientMqtt", "WorkClientMqtt\WorkClientMqtt.csproj", "{6539C80B-18EA-4A29-BABE-1D5501803A5F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkClientMqtt", "WorkClientMqtt\WorkClientMqtt.csproj", "{6539C80B-18EA-4A29-BABE-1D5501803A5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkClientMail", "WorkClientMail\WorkClientMail.csproj", "{03CF99FE-00C7-4229-85DD-930C63996B32}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkClientMail", "WorkClientMail\WorkClientMail.csproj", "{03CF99FE-00C7-4229-85DD-930C63996B32}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkKeyed", "WorkKeyed\WorkKeyed.csproj", "{976B40D0-926A-4384-9FBF-CF55365861EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -246,6 +248,10 @@ Global
 		{03CF99FE-00C7-4229-85DD-930C63996B32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03CF99FE-00C7-4229-85DD-930C63996B32}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03CF99FE-00C7-4229-85DD-930C63996B32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{976B40D0-926A-4384-9FBF-CF55365861EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{976B40D0-926A-4384-9FBF-CF55365861EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{976B40D0-926A-4384-9FBF-CF55365861EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{976B40D0-926A-4384-9FBF-CF55365861EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -288,6 +294,7 @@ Global
 		{48A7E8A0-C627-4232-B58B-E0505B93A475} = {26959CBD-A1A3-48A0-891C-84290355E37A}
 		{6539C80B-18EA-4A29-BABE-1D5501803A5F} = {26959CBD-A1A3-48A0-891C-84290355E37A}
 		{03CF99FE-00C7-4229-85DD-930C63996B32} = {26959CBD-A1A3-48A0-891C-84290355E37A}
+		{976B40D0-926A-4384-9FBF-CF55365861EC} = {D477BFBD-A7CC-443E-A805-338BBC312DAF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
