@@ -1,0 +1,6 @@
+@WorkAspire.ApiService_HostAddress = http://localhost:5157
+
+GET {{WorkAspire.ApiService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
