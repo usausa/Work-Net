@@ -41,18 +41,18 @@ public static class Extensions
     {
         builder.ConfigureOpenTelemetry();
 
-        builder.AddDefaultHealthChecks();
+        //builder.AddDefaultHealthChecks();
 
-        builder.Services.AddServiceDiscovery();
+        //builder.Services.AddServiceDiscovery();
 
-        builder.Services.ConfigureHttpClientDefaults(http =>
-        {
-            // Turn on resilience by default
-            http.AddStandardResilienceHandler();
+        //builder.Services.ConfigureHttpClientDefaults(http =>
+        //{
+        //    // Turn on resilience by default
+        //    http.AddStandardResilienceHandler();
 
-            // Turn on service discovery by default
-            http.AddServiceDiscovery();
-        });
+        //    // Turn on service discovery by default
+        //    http.AddServiceDiscovery();
+        //});
 
         return builder;
     }
@@ -91,7 +91,7 @@ public static class Extensions
 
     public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddHealthChecks();
+        //builder.Services.AddHealthChecks();
 
         return builder;
     }
@@ -100,11 +100,11 @@ public static class Extensions
     {
         // Adding health checks endpoints to applications in non-development environments has security implications.
         // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
-        }
+        //if (app.Environment.IsDevelopment())
+        //{
+        //    // All health checks must pass for app to be considered ready to accept traffic after starting
+        //    app.MapHealthChecks("/health");
+        //}
 
         return app;
     }
