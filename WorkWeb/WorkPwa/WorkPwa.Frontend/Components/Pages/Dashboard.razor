@@ -2,4 +2,14 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<h1>Dashboard</h1>
+<h1>Camera</h1>
+
+<input type="file" capture="environment" @onchange="OnInputFileChange" />
+
+@code {
+    // ReSharper disable once MemberCanBeMadeStatic.Local
+    private void OnInputFileChange(ChangeEventArgs args)
+    {
+    }
+}
+
