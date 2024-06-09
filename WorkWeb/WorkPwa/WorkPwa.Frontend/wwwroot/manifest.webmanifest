@@ -1,6 +1,7 @@
 {
   "name": "WorkPwa",
   "short_name": "WorkPwa",
+  "id": "./",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
