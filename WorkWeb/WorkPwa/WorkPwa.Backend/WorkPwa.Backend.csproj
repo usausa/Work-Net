@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Client\WorkPwa.Client.csproj" />
-    <ProjectReference Include="..\Shared\WorkPwa.Shared.csproj" />
+    <ProjectReference Include="..\WorkPwa.Frontend\WorkPwa.Frontend.csproj" />
+    <ProjectReference Include="..\WorkPwa.Shared\WorkPwa.Shared.csproj" />
   </ItemGroup>
 
 

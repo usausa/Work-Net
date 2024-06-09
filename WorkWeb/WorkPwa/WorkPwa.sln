@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.34928.147
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPwa.Server", "WorkPwa\Server\WorkPwa.Server.csproj", "{F60E6A95-71E3-4B70-8E86-D3AA434EC59D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkPwa.Shared", "WorkPwa.Shared\WorkPwa.Shared.csproj", "{FC4D7B28-97CE-4DF3-869D-C55979A64640}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPwa.Client", "WorkPwa\Client\WorkPwa.Client.csproj", "{1E6716AC-E5B0-4E82-8CC3-B5FF6AB81802}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkPwa.Frontend", "WorkPwa.Frontend\WorkPwa.Frontend.csproj", "{0DB0A422-3FAC-47A0-9133-919EA0F3B3B5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPwa.Shared", "WorkPwa\Shared\WorkPwa.Shared.csproj", "{BAE477A9-A1B5-4B41-BA69-7DB7DE2EBDE3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkPwa.Backend", "WorkPwa.Backend\WorkPwa.Backend.csproj", "{ECDB3273-E2B0-419E-AB6B-B5FE3756A86D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,18 +15,18 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{F60E6A95-71E3-4B70-8E86-D3AA434EC59D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F60E6A95-71E3-4B70-8E86-D3AA434EC59D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F60E6A95-71E3-4B70-8E86-D3AA434EC59D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F60E6A95-71E3-4B70-8E86-D3AA434EC59D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1E6716AC-E5B0-4E82-8CC3-B5FF6AB81802}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1E6716AC-E5B0-4E82-8CC3-B5FF6AB81802}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1E6716AC-E5B0-4E82-8CC3-B5FF6AB81802}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1E6716AC-E5B0-4E82-8CC3-B5FF6AB81802}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BAE477A9-A1B5-4B41-BA69-7DB7DE2EBDE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BAE477A9-A1B5-4B41-BA69-7DB7DE2EBDE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BAE477A9-A1B5-4B41-BA69-7DB7DE2EBDE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BAE477A9-A1B5-4B41-BA69-7DB7DE2EBDE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC4D7B28-97CE-4DF3-869D-C55979A64640}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC4D7B28-97CE-4DF3-869D-C55979A64640}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC4D7B28-97CE-4DF3-869D-C55979A64640}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC4D7B28-97CE-4DF3-869D-C55979A64640}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DB0A422-3FAC-47A0-9133-919EA0F3B3B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DB0A422-3FAC-47A0-9133-919EA0F3B3B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DB0A422-3FAC-47A0-9133-919EA0F3B3B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DB0A422-3FAC-47A0-9133-919EA0F3B3B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECDB3273-E2B0-419E-AB6B-B5FE3756A86D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECDB3273-E2B0-419E-AB6B-B5FE3756A86D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECDB3273-E2B0-419E-AB6B-B5FE3756A86D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECDB3273-E2B0-419E-AB6B-B5FE3756A86D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

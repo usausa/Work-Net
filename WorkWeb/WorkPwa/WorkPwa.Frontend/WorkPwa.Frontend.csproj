@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Shared\WorkPwa.Shared.csproj" />
+    <ProjectReference Include="..\WorkPwa.Shared\WorkPwa.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

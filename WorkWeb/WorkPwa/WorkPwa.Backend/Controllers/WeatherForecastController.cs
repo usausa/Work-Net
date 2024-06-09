@@ -1,4 +1,5 @@
-namespace WorkPwa.Server.Controllers;
+namespace WorkPwa.Backend.Controllers;
+
 using Microsoft.AspNetCore.Mvc;
 
 using WorkPwa.Shared;
@@ -7,17 +8,10 @@ using WorkPwa.Shared;
 [Route("[controller]")]
 public class WeatherForecastController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
+    private static readonly string[] Summaries =
+    [
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
-    private readonly ILogger<WeatherForecastController> _logger;
-
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
-    {
-        _logger = logger;
-    }
+    ];
 
     [HttpGet]
     public IEnumerable<WeatherForecast> Get()
