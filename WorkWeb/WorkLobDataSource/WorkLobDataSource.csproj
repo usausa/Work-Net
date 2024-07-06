@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="8.0.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageReference Include="Usa.Smart.Data" Version="2.4.0" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Usa.Smart.Data" Version="2.4.3" />
     <PackageReference Include="Usa.Smart.Data.Mapper" Version="2.4.0" />
   </ItemGroup>
 
