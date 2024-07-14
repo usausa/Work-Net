@@ -19,16 +19,21 @@ public class Response
 [Route("[controller]/[action]")]
 public class TestController : ControllerBase
 {
+    private ILogger<TestController> log;
+
     private readonly Settings settings;
 
-    public TestController(IOptions<Settings> settings)
+    public TestController(ILogger<TestController> log, IOptions<Settings> settings)
     {
+        this.log = log;
         this.settings = settings.Value;
     }
 
     [HttpPost]
     public IActionResult Execute([FromBody] Request request)
     {
+        log.LogInformation("**** Test ****");
+
         return Ok(new Response { Value = request.Value, Counter = settings.Counter });
     }
 }
