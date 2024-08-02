@@ -5,7 +5,9 @@ VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAotActivator", "WorkAotActivator\WorkAotActivator.csproj", "{D7E5876C-FDEC-4DB2-A703-9B0D33C737C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAotAccessor", "WorkAotAccessor\WorkAotAccessor.csproj", "{A5B38FF1-4F9A-444F-8A61-3C813329D840}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAotAccessor", "WorkAotAccessor\WorkAotAccessor.csproj", "{A5B38FF1-4F9A-444F-8A61-3C813329D840}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAotZip", "WorkAotZip\WorkAotZip.csproj", "{DDD6E71E-F796-4740-B852-56A3600D259A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{A5B38FF1-4F9A-444F-8A61-3C813329D840}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5B38FF1-4F9A-444F-8A61-3C813329D840}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5B38FF1-4F9A-444F-8A61-3C813329D840}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDD6E71E-F796-4740-B852-56A3600D259A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDD6E71E-F796-4740-B852-56A3600D259A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDD6E71E-F796-4740-B852-56A3600D259A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDD6E71E-F796-4740-B852-56A3600D259A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

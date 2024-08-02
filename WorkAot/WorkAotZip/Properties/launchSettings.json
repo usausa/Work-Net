@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkAotZip": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\machi\\Desktop\\BlazorSortable-main\\Item.cs C:\\Users\\machi\\Desktop\\BlazorSortable-main\\wwwroot"
+    }
+  }
+}
