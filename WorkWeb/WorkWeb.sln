@@ -59,9 +59,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Swagger", "Swagger", "{A183
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{96FEA13C-0827-4262-B19A-E4616C55F90C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkIntegrationTest.Web", "WorkIntegrationTest.Web\WorkIntegrationTest.Web.csproj", "{889161A1-F8BF-498F-998D-39D3B38FD3DD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkIntegrationTest.Web", "WorkIntegrationTest.Web\WorkIntegrationTest.Web.csproj", "{889161A1-F8BF-498F-998D-39D3B38FD3DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkIntegrationTest.Tests", "WorkIntegrationTest.Tests\WorkIntegrationTest.Tests.csproj", "{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkIntegrationTest.Tests", "WorkIntegrationTest.Tests\WorkIntegrationTest.Tests.csproj", "{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Health", "Health", "{5DE97062-CDF9-4B68-A4A2-C511AD08B485}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkHealthResource", "WorkHealthResource\WorkHealthResource.csproj", "{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -140,6 +144,10 @@ Global
 		{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -167,6 +175,7 @@ Global
 		{60BC092C-0F15-4B93-AACE-64F16EEB32AE} = {A1836218-BA30-47BB-944C-8D0730E9DF24}
 		{889161A1-F8BF-498F-998D-39D3B38FD3DD} = {96FEA13C-0827-4262-B19A-E4616C55F90C}
 		{EFD4F7F5-5249-4F2E-9CDD-5035AFB39969} = {96FEA13C-0827-4262-B19A-E4616C55F90C}
+		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1} = {5DE97062-CDF9-4B68-A4A2-C511AD08B485}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2FEB124-FCB5-4BB5-8B29-6C5BE60194E7}
