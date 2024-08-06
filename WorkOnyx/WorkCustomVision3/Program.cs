@@ -3,51 +3,56 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 using SkiaSharp;
 
-var ctx = new MLContext();
 var labels = File.ReadAllLines("labels.txt");
 
+var ctx = new MLContext();
 var pipeline =
     ctx.Transforms.LoadImages(outputColumnName: "Image", null, inputColumnName: "ImagePath")
         .Append(ctx.Transforms.ResizeImages(outputColumnName: "ResizedImage", imageWidth: 320, imageHeight: 320, inputColumnName: "Image", resizing: Microsoft.ML.Transforms.Image.ImageResizingEstimator.ResizingKind.Fill))
         .Append(ctx.Transforms.ExtractPixels(outputColumnName: "Pixels", inputColumnName: "ResizedImage", offsetImage: 255, scaleImage: 1))
         .Append(ctx.Transforms.CopyColumns(outputColumnName: "image_tensor", "Pixels"))
         .Append(ctx.Transforms.ApplyOnnxModel(modelFile: "model.onnx"));
-
 var emptyDv = ctx.Data.LoadFromEnumerable(new ModelInput[] { });
-
 var model = pipeline.Fit(emptyDv);
-
-var input = new ModelInput { ImagePath = "image.jpg" };
 var predictionEngine = ctx.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
-var prediction = predictionEngine.Predict(input);
 
-var boundingBoxes = prediction.ToBoundingBoxes(labels, MLImage.CreateFromFile(input.ImagePath));
-var topBoundingBoxes =
-    boundingBoxes
-        //.Where(x => x.Probability > confidence)
-        .OrderByDescending(x => x.Probability)
-        .ToArray();
-
-using var skBitmap = SKBitmap.Decode("image.jpg");
-using var skCanvas = new SKCanvas(skBitmap);
-var paint = new SKPaint
+for (var i = 0; i < 10; i++)
 {
-    Color = SKColors.Red,
-    StrokeWidth = 1,
-    IsStroke = true
-};
-
-foreach (var b in topBoundingBoxes.Take(10))
-{
-    Debug.WriteLine(b);
-    if (b.Probability > 0.5)
-    {
-        skCanvas.DrawRect(new SKRect(b.TopLeft.X, b.TopLeft.Y, b.BottomRight.X, b.BottomRight.Y), paint);
-    }
+    Process(predictionEngine, labels, $"image{i:D3}.jpg", $"output{i:D3}.jpg");
 }
 
-using var outputStream = File.OpenWrite("output.jpg");
-skBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 100);
+static void Process(PredictionEngine<ModelInput, ModelOutput> engine, string[] labels, string image, string output)
+{
+    var input = new ModelInput { ImagePath = image };
+    var prediction = engine.Predict(input);
+
+    var boundingBoxes = prediction.ToBoundingBoxes(labels, MLImage.CreateFromFile(input.ImagePath));
+    var topBoundingBoxes =
+        boundingBoxes
+            .OrderByDescending(x => x.Probability)
+            .ToArray();
+
+    using var skBitmap = SKBitmap.Decode(image);
+    using var skCanvas = new SKCanvas(skBitmap);
+    var paint = new SKPaint
+    {
+        Color = SKColors.Red,
+        StrokeWidth = 1,
+        IsStroke = true
+    };
+
+    foreach (var b in topBoundingBoxes)
+    {
+        Debug.WriteLine(b);
+        if (b.Probability > 0.5)
+        {
+            skCanvas.DrawRect(new SKRect(b.TopLeft.X, b.TopLeft.Y, b.BottomRight.X, b.BottomRight.Y), paint);
+        }
+    }
+
+    using var outputStream = File.OpenWrite(output);
+    skBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 100);
+}
 
 public class ModelInput
 {
@@ -56,7 +61,6 @@ public class ModelInput
 
 public class ModelOutput
 {
-
     [ColumnName("detected_boxes")]
     [VectorType]
     public float[]? Boxes { get; set; }
@@ -72,7 +76,7 @@ public class ModelOutput
     public BoundingBox[] ToBoundingBoxes(string[] labels, MLImage originalImage)
     {
         var bboxCoordinates =
-            this.Boxes!
+            Boxes!
                 .Chunk(4)
                 .ToArray();
 
@@ -83,8 +87,8 @@ public class ModelOutput
                     {
                         TopLeft = (X: coordinates[0] * originalImage.Width, Y: coordinates[1] * originalImage.Height),
                         BottomRight = (X: coordinates[2] * originalImage.Width, Y: coordinates[3] * originalImage.Height),
-                        PredictedClass = labels[this.Classes![idx]],
-                        Probability = this.Scores![idx]
+                        PredictedClass = labels[Classes![idx]],
+                        Probability = Scores![idx]
                     })
                 .ToArray();
 
