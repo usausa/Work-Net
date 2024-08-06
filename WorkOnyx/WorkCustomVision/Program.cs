@@ -5,7 +5,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 
 using SkiaSharp;
 
-// TODO もっとシンプルなモデルで
+// TODO もっとシンプルなモデルで再確認
 using var session = new InferenceSession("model.onnx");
 var metadata = session.InputMetadata.First();
 var dimensions = metadata.Value.Dimensions;
