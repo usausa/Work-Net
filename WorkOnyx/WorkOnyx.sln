@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkCustomVision2", "WorkCu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCustomVision3", "WorkCustomVision3\WorkCustomVision3.csproj", "{6A2747B3-E559-48E8-8F78-3D84009890B1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerateData", "GenerateData\GenerateData.csproj", "{C4CC2F94-149F-4342-BA04-FB3C4C5AB7A6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{6A2747B3-E559-48E8-8F78-3D84009890B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A2747B3-E559-48E8-8F78-3D84009890B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A2747B3-E559-48E8-8F78-3D84009890B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4CC2F94-149F-4342-BA04-FB3C4C5AB7A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4CC2F94-149F-4342-BA04-FB3C4C5AB7A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4CC2F94-149F-4342-BA04-FB3C4C5AB7A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4CC2F94-149F-4342-BA04-FB3C4C5AB7A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
