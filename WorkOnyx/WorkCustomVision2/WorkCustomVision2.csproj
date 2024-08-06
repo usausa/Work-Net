@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AI.MachineLearning" Version="1.18.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.18.1" />
-    <PackageReference Include="SkiaSharp" Version="2.88.7" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
   </ItemGroup>
 
   <ItemGroup>

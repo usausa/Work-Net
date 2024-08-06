@@ -24,27 +24,18 @@ var paint = new SKPaint
     IsStroke = true
 };
 
-foreach (var result in results)
+var boxes = results.First(x => x.Name == "detected_boxes").AsTensor<float>();
+//var classes = results.First(x => x.Name == "detected_classes").AsTensor<float>();
+var scores = results.First(x => x.Name == "detected_scores").AsTensor<float>();
+for (var i = 0; i < Math.Min(scores.Length, 10); i++)
 {
-    Debug.WriteLine("-----");
-    Debug.WriteLine($"Output Name: {result.Name}");
-    var tensor = result.AsTensor<float>();
-    if (tensor is not null)
-    {
-        Debug.WriteLine($"Tensor length: {tensor.Length}");
-        if (result.Name == "detected_boxes")
-        {
-            for (var i = 0; i < tensor.Dimensions[1]; i++)
-            {
-                var xmin = tensor[0, i, 0] * skBitmap.Width;
-                var ymin = tensor[0, i, 1] * skBitmap.Height;
-                var xmax = tensor[0, i, 2] * skBitmap.Width;
-                var ymax = tensor[0, i, 3] * skBitmap.Height;
-                Debug.WriteLine($"{xmin} {ymin} {xmax} {ymax}");
-                skCanvas.DrawRect(new SKRect(xmin, ymin, xmax, ymax), paint);
-            }
-        }
-    }
+    var xmin = boxes[0, i, 0] * skBitmap.Width;
+    var ymin = boxes[0, i, 1] * skBitmap.Height;
+    var xmax = boxes[0, i, 2] * skBitmap.Width;
+    var ymax = boxes[0, i, 3] * skBitmap.Height;
+    var score = scores[0, i];
+    Debug.WriteLine($"{score} : {xmin} {ymin} {xmax} {ymax}");
+    skCanvas.DrawRect(new SKRect(xmin, ymin, xmax, ymax), paint);
 }
 
 using var outputStream = File.OpenWrite("output.jpg");
