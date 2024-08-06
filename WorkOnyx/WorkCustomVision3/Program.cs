@@ -17,8 +17,6 @@ var emptyDv = ctx.Data.LoadFromEnumerable(new ModelInput[] { });
 
 var model = pipeline.Fit(emptyDv);
 
-//ctx.Model.Save(model, emptyDv.Schema, "model.mlnet");
-
 var input = new ModelInput { ImagePath = "image.jpg" };
 var predictionEngine = ctx.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
 var prediction = predictionEngine.Predict(input);
@@ -42,7 +40,10 @@ var paint = new SKPaint
 foreach (var b in topBoundingBoxes.Take(10))
 {
     Debug.WriteLine(b);
-    skCanvas.DrawRect(new SKRect(b.TopLeft.X, b.TopLeft.Y, b.BottomRight.X, b.BottomRight.Y), paint);
+    if (b.Probability > 0.5)
+    {
+        skCanvas.DrawRect(new SKRect(b.TopLeft.X, b.TopLeft.Y, b.BottomRight.X, b.BottomRight.Y), paint);
+    }
 }
 
 using var outputStream = File.OpenWrite("output.jpg");
