@@ -5,7 +5,6 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 
 using SkiaSharp;
 
-// TODO もっとシンプルなモデルで再確認
 using var session = new InferenceSession("model.onnx");
 var metadata = session.InputMetadata.First();
 var dimensions = metadata.Value.Dimensions;
@@ -14,6 +13,8 @@ var inputTensor = LoadImageFile("image.jpg", dimensions);
 
 var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(metadata.Key, inputTensor) };
 using var results = session.Run(inputs);
+
+var labels = File.ReadAllLines("labels.txt");
 
 using var skBitmap = SKBitmap.Decode("image.jpg");
 using var skCanvas = new SKCanvas(skBitmap);
@@ -25,7 +26,7 @@ var paint = new SKPaint
 };
 
 var boxes = results.First(x => x.Name == "detected_boxes").AsTensor<float>();
-//var classes = results.First(x => x.Name == "detected_classes").AsTensor<float>();
+var classes = results.First(x => x.Name == "detected_classes").AsTensor<long>();
 var scores = results.First(x => x.Name == "detected_scores").AsTensor<float>();
 for (var i = 0; i < Math.Min(scores.Length, 10); i++)
 {
@@ -33,9 +34,13 @@ for (var i = 0; i < Math.Min(scores.Length, 10); i++)
     var ymin = boxes[0, i, 1] * skBitmap.Height;
     var xmax = boxes[0, i, 2] * skBitmap.Width;
     var ymax = boxes[0, i, 3] * skBitmap.Height;
+    var classIndex = classes[0, i];
     var score = scores[0, i];
-    Debug.WriteLine($"{score} : {xmin} {ymin} {xmax} {ymax}");
-    skCanvas.DrawRect(new SKRect(xmin, ymin, xmax, ymax), paint);
+    Debug.WriteLine($"{score} : {labels[classIndex]} : {xmin} {ymin} {xmax} {ymax}");
+    if (score > 0.5)
+    {
+        skCanvas.DrawRect(new SKRect(xmin, ymin, xmax, ymax), paint);
+    }
 }
 
 using var outputStream = File.OpenWrite("output.jpg");
@@ -45,8 +50,7 @@ static DenseTensor<float> LoadImageFile(string imagePath, int[] dimensions)
 {
     using var inputStream = File.OpenRead(imagePath);
     using var skBitmap = SKBitmap.Decode(inputStream);
-    //var resizedBitmap = skBitmap.Resize(new SKImageInfo(dimensions[2], dimensions[3]), SKFilterQuality.High);
-    var resizedBitmap = skBitmap;
+    var resizedBitmap = skBitmap.Resize(new SKImageInfo(dimensions[2], dimensions[3]), SKFilterQuality.High);
 
     var input = new DenseTensor<float>([1, 3, dimensions[2], dimensions[3]]);
     for (var y = 0; y < resizedBitmap.Height; y++)
@@ -54,9 +58,9 @@ static DenseTensor<float> LoadImageFile(string imagePath, int[] dimensions)
         for (var x = 0; x < resizedBitmap.Width; x++)
         {
             var color = resizedBitmap.GetPixel(x, y);
-            input[0, 0, y, x] = color.Red / 255.0f;
-            input[0, 1, y, x] = color.Green / 255.0f;
-            input[0, 2, y, x] = color.Blue / 255.0f;
+            input[0, 0, y, x] = color.Red - 255.0f;
+            input[0, 1, y, x] = color.Green - 255.0f;
+            input[0, 2, y, x] = color.Blue - 255.0f;
         }
     }
 
