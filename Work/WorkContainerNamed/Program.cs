@@ -20,8 +20,14 @@ public static class Program
         service1.Execute();
         service2.Execute();
 
-        // IKeyedServiceProviderを実装しているか
-        // public sealed class ServiceProvider : IServiceProvider, IKeyedServiceProvider, IDisposable, IAsyncDisposable
+        Debug.WriteLine("----");
+
+        // Keyなし解決 -> Invalid
+        //var service = provider.GetRequiredService<IService>();
+        //service.Execute();
+
+        // Keyなし解決 -> 0件
+        //var service = provider.GetRequiredService<IEnumerable<IService>>();
     }
 }
 
