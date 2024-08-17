@@ -40,12 +40,14 @@ public class Benchmark
 
     private Func<IResolver, object> singleton1 = default!;
     private Func<IResolver, object> singleton2 = default!;
+    private IFactory singleton3 = default!;
 
     [GlobalSetup]
     public void Setup()
     {
         singleton1 = new SingletonScope().Create(() => new object());
         singleton2 = new SingletonScope2().Create(() => new object());
+        singleton3 = new SingletonScope3().Create(() => new object());
     }
 
     [Benchmark]
@@ -65,36 +67,16 @@ public class Benchmark
             singleton2(null!);
         }
     }
-}
 
-public sealed class SingletonScope2 : IScope
-{
-    private Func<IResolver, object>? objectFactory;
-
-    public Func<IResolver, object> Create(Func<object> factory)
+    [Benchmark]
+    public void Scope3()
     {
-        if (objectFactory is null)
+        for (var i = 0; i < N; i++)
         {
-            var holder = new SingletonHolder(factory);
-            objectFactory = holder.Resolve;
+            singleton3.Resolve(null!);
         }
-
-        return objectFactory;
     }
 }
-
-public sealed class SingletonHolder
-{
-    private readonly object value;
-
-    public SingletonHolder(object value)
-    {
-        this.value = value;
-    }
-
-    public object Resolve(IResolver resolver) => value;
-}
-
 
 public sealed class SingletonScope : IScope
 {
@@ -114,12 +96,72 @@ public sealed class SingletonScope : IScope
     }
 }
 
+public sealed class SingletonScope2 : IScope
+{
+    private Func<IResolver, object>? objectFactory;
+
+    public Func<IResolver, object> Create(Func<object> factory)
+    {
+        if (objectFactory is null)
+        {
+            var holder = new SingletonHolder(factory());
+            objectFactory = holder.Resolve;
+        }
+
+        return objectFactory;
+    }
+
+    public sealed class SingletonHolder
+    {
+        private readonly object value;
+
+        public SingletonHolder(object value)
+        {
+            this.value = value;
+        }
+
+        public object Resolve(IResolver resolver) => value;
+    }
+}
+
+public sealed class SingletonScope3 : IScope2
+{
+    private IFactory? objectFactory;
+
+    public IFactory Create(Func<object> factory)
+    {
+        return objectFactory ??= new SingletonFactory(factory());
+    }
+
+    public sealed class SingletonFactory : IFactory
+    {
+        private readonly object value;
+
+        public SingletonFactory(object value)
+        {
+            this.value = value;
+        }
+
+        public object Resolve(IResolver resolver) => value;
+    }
+}
+
 public interface IScope
 {
     Func<IResolver, object> Create(Func<object> factory);
 }
 
+public interface IScope2
+{
+    IFactory Create(Func<object> factory);
+}
+
 public interface IResolver
 {
     object Resolve(Type type);
+}
+
+public interface IFactory
+{
+    object Resolve(IResolver resolver);
 }
