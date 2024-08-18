@@ -6,49 +6,82 @@ using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 
 [Generator]
 public sealed class Generator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        context.RegisterPostInitializationOutput(AddAttribute);
+
         var compilationProvider = context.CompilationProvider;
-        var classSymbolsProvider = compilationProvider.Select((compilation, cancellationToken) =>
-        {
-            // TODO Addの属性を取得して、アセンブリ名が一致したらそこ、指定がなかったら自信の
-            var list = new List<INamedTypeSymbol>();
+        var sourceMethods = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => IsTargetSyntax(node),
+                static (context, _) => GetTargetSyntax(context))
+            .SelectMany(static (x, _) => x is not null ? ImmutableArray.Create(x) : [])
+            .Collect();
 
-            foreach (var reference in compilation.References)
-            {
-                if ((compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assemblySymbol) &&
-                    assemblySymbol.Name.StartsWith("Work", StringComparison.InvariantCulture))
-                {
-                    foreach (var namespaceSymbol in assemblySymbol.GlobalNamespace.GetNamespaceMembers())
-                    {
-                        AddTypeSymbol(namespaceSymbol, list);
-                    }
-                }
-            }
-
-            foreach (var symbol in list)
-            {
-                Debug.WriteLine(symbol.Name);
-            }
-
-            return list;
-        });
+        var providers = compilationProvider.Combine(sourceMethods);
 
         context.RegisterImplementationSourceOutput(
-            classSymbolsProvider,
-            static (context, provider) => Execute(context, provider));
+            providers,
+            static (context, provider) => Execute(context, provider.Left, provider.Right));
+    }
+
+    private static bool IsTargetSyntax(SyntaxNode node) =>
+        node is MethodDeclarationSyntax { AttributeLists.Count: > 0 };
+
+    private static MethodDeclarationSyntax? GetTargetSyntax(GeneratorSyntaxContext context)
+    {
+        var methodDeclarationSyntax = (MethodDeclarationSyntax)context.Node;
+        if (methodDeclarationSyntax.ParameterList.Parameters.Count != 0)
+        {
+            return null;
+        }
+
+        var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
+        if ((methodSymbol is null) || !methodSymbol.IsStatic)
+        {
+            return null;
+        }
+
+        var attribute = methodSymbol.GetAttributes()
+            .FirstOrDefault(static x => x.AttributeClass!.ToDisplayString() == "WorkGeneratorClassList.WorkSource");
+        if (attribute is null)
+        {
+            return null;
+        }
+
+        return methodDeclarationSyntax;
+    }
+
+    private static void Execute(SourceProductionContext context, Compilation compilation, ImmutableArray<MethodDeclarationSyntax> sourceMethods)
+    {
+        var list = new List<INamedTypeSymbol>();
+
+        foreach (var namespaceSymbol in compilation.GlobalNamespace.GetNamespaceMembers())
+        {
+            if (namespaceSymbol.Name.StartsWith("WorkGeneratorClassList", StringComparison.OrdinalIgnoreCase))
+            {
+                AddTypeSymbol(namespaceSymbol, list);
+            }
+        }
+
+        var sb = new StringBuilder();
+        foreach (var symbol in list)
+        {
+            Debug.WriteLine(symbol.Name);
+            sb.Append("// ").AppendLine(symbol.Name);
+        }
+
+        context.AddSource("Test.g.cs", sb.ToString());
     }
 
     private static void AddTypeSymbol(INamespaceSymbol namespaceSymbol, List<INamedTypeSymbol> symbols)
     {
-        foreach (var typeSymbol in namespaceSymbol.GetTypeMembers().Where(x => x.TypeKind == TypeKind.Class))
-        {
-            symbols.Add(typeSymbol);
-        }
+        symbols.AddRange(namespaceSymbol.GetTypeMembers().Where(x => x.TypeKind == TypeKind.Class));
 
         foreach (var childNamespaceSymbol in namespaceSymbol.GetNamespaceMembers())
         {
@@ -56,15 +89,43 @@ public sealed class Generator : IIncrementalGenerator
         }
     }
 
-    private static void Execute(SourceProductionContext context, List<INamedTypeSymbol> symbols)
+    //private static string MakeFilename(StringBuilder buffer, string ns, string className)
+    //{
+    //    buffer.Clear();
+
+    //    if (!String.IsNullOrEmpty(ns))
+    //    {
+    //        buffer.Append(ns.Replace('.', '_'));
+    //        buffer.Append('_');
+    //    }
+
+    //    buffer.Append(className);
+    //    buffer.Append(".g.cs");
+
+    //    return buffer.ToString();
+    //}
+
+    // ------------------------------------------------------------
+    // Attribute
+    // ------------------------------------------------------------
+
+    // TODO Assembly, Namespace, Suffix, Attribute?
+
+    private const string AttributeSource = @"// <auto-generated />
+using System;
+
+namespace WorkGeneratorClassList
+{
+    [System.Diagnostics.Conditional(""COMPILE_TIME_ONLY"")]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public sealed class WorkSource : Attribute
     {
-        var sb = new StringBuilder();
+    }
+}
+";
 
-        foreach (var symbol in symbols)
-        {
-            sb.AppendLine("//" + symbol.ToDisplayString());
-        }
-
-        context.AddSource("Test.g.cs", sb.ToString());
+    private static void AddAttribute(IncrementalGeneratorPostInitializationContext context)
+    {
+        context.AddSource("WorkSource", SourceText.From(AttributeSource, Encoding.UTF8));
     }
 }

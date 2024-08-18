@@ -12,19 +12,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.0.1</Version>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <Authors>machi_pon</Authors>
-    <Copyright>Copyright (c) 2024 machi_pon</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/usausa/template-source-generator</PackageProjectUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <AnalysisMode>All</AnalysisMode>
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>

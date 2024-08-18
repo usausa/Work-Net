@@ -1,8 +1,11 @@
 namespace WorkGeneratorClassList.Example;
 
-public static class Program
+public static partial class Program
 {
     public static void Main()
     {
     }
+
+    [WorkSource]
+    public static partial void AddComponents();
 }
