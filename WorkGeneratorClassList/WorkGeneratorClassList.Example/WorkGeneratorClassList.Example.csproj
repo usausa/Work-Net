@@ -8,11 +8,9 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
-  <!--
   <PropertyGroup>
-    <TemplateSourceGenerator></TemplateSourceGenerator>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
-  -->
 
   <Import Project="..\WorkGeneratorClassList\build\WorkGeneratorClassList.props" />
 
