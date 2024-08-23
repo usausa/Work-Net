@@ -1,9 +1,29 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 var builder = new HostBuilder()
+    .ConfigureAppConfiguration((hostingContext, config) =>
+    {
+        config.AddJsonFile("appsettings.json", optional: true);
+        config.AddEnvironmentVariables();
+        config.AddCommandLine(args);
+    })
+    .ConfigureLogging((hostingContext, logging) =>
+    {
+        logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+        logging.AddSimpleConsole(options =>
+        {
+            options.SingleLine = true;
+        });
+    })
     .ConfigureServices((hostContext, services) =>
     {
+        services.AddOptions();
+        services.Configure<AppSettings>(hostContext.Configuration.GetSection("App"));
+
         services.Configure<HostOptions>(options =>
         {
             //options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
@@ -14,18 +34,32 @@ var builder = new HostBuilder()
     });
 await builder.RunConsoleAsync();
 
+public class AppSettings
+{
+    public string Message { get; set; } = default!;
+}
+
 public class Worker : IHostedService
 {
+    private readonly ILogger<Worker> log;
+
     private readonly IHostApplicationLifetime appLifetime;
 
-    public Worker(IHostApplicationLifetime appLifetime)
+    private readonly AppSettings settings;
+
+    public Worker(
+        ILogger<Worker> log,
+        IHostApplicationLifetime appLifetime,
+        IOptions<AppSettings> settings)
     {
+        this.log = log;
         this.appLifetime = appLifetime;
+        this.settings = settings.Value;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("StartAsync");
+        log.LogInformation("StartAsync. {Message}", settings.Message);
 
         appLifetime.ApplicationStarted.Register(OnStarted);
         appLifetime.ApplicationStopping.Register(OnStopping);
@@ -36,22 +70,22 @@ public class Worker : IHostedService
 
     public void OnStarted()
     {
-        Console.WriteLine("OnStarted");
+        log.LogInformation("OnStarted.");
     }
 
     public void OnStopping()
     {
-        Console.WriteLine("OnStopping");
+        log.LogInformation("OnStopping.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("StopAsync");
+        log.LogInformation("StopAsync.");
         return Task.CompletedTask;
     }
 
     public void OnStopped()
     {
-        Console.WriteLine("OnStopped");
+        log.LogInformation("OnStopped.");
     }
 }
