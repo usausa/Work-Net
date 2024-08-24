@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+
 using Vortice.XInput;
 
 if (XInput.GetCapabilities(0, DeviceQueryType.Gamepad, out var capabilities))

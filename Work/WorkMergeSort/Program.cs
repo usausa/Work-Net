@@ -6,9 +6,7 @@ var source = new int[1024];
 var rand = new Random();
 for (var i = 0; i < source.Length; i++)
 {
-#pragma warning disable CA5394
     source[i] = rand.Next();
-#pragma warning restore CA5394
 }
 
 source.AsSpan().MergeSort();

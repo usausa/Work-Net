@@ -1,4 +1,5 @@
 using System.Data.Common;
+
 using Microsoft.Data.SqlClient;
 
 DbProviderFactories.RegisterFactory("Microsoft.Data.SqlClient", SqlClientFactory.Instance);

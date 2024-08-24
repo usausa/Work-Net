@@ -120,7 +120,9 @@ public sealed class SingletonScope2 : IScope
             this.value = value;
         }
 
+#pragma warning disable IDE0060
         public object Resolve(IResolver resolver) => value;
+#pragma warning restore IDE0060
     }
 }
 
