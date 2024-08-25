@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>WorkGeneratorDynamic.Attributes</PackageId>
+    <Title>WorkGeneratorDynamic.Attributes</Title>
+    <Description>Template source generator attributes.</Description>
+    <PackageTags>sourcegenerator</PackageTags>
+  </PropertyGroup>
+
+</Project>

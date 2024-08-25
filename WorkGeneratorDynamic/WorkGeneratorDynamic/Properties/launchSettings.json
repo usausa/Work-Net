@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkGeneratorDynamic": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\WorkGeneratorDynamic.Example\\WorkGeneratorDynamic.Example.csproj"
+    }
+  }
+}
