@@ -133,6 +133,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkGraphConsole1", "WorkGr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMvvmCanvas", "WorkMvvmCanvas\WorkMvvmCanvas.csproj", "{704F2A77-49F7-4764-80B8-5B8C03D40A0D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HW", "HW", "{A1514A70-949F-4149-992D-9655D7CF7547}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkHardwareInfo", "WorkHardwareInfo\WorkHardwareInfo.csproj", "{2E8BF760-64CF-480B-A7F8-D3CAF49A7845}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -268,6 +272,10 @@ Global
 		{704F2A77-49F7-4764-80B8-5B8C03D40A0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{704F2A77-49F7-4764-80B8-5B8C03D40A0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{704F2A77-49F7-4764-80B8-5B8C03D40A0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E8BF760-64CF-480B-A7F8-D3CAF49A7845}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E8BF760-64CF-480B-A7F8-D3CAF49A7845}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E8BF760-64CF-480B-A7F8-D3CAF49A7845}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E8BF760-64CF-480B-A7F8-D3CAF49A7845}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -316,6 +324,7 @@ Global
 		{53E3ABA9-839D-493B-AD29-D93692E6B27D} = {F83C00F2-4581-416D-9909-84679D2AB75C}
 		{49D7FF1D-D31B-400D-B50D-DE069FB76C65} = {A2E48C32-7255-4658-9057-8CBD86C32A3F}
 		{704F2A77-49F7-4764-80B8-5B8C03D40A0D} = {15697EA9-B509-434F-82FC-E865D6038A90}
+		{2E8BF760-64CF-480B-A7F8-D3CAF49A7845} = {A1514A70-949F-4149-992D-9655D7CF7547}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}

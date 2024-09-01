@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkHardwareInfo": {
+      "commandName": "Project",
+      "hotReloadEnabled": true
+    }
+  }
+}
