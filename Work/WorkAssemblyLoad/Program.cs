@@ -15,17 +15,17 @@ context.Resolving += (ctx, name) =>
 {
     if (references.TryGetValue(name.Name!, out var reference))
     {
-        Debug.WriteLine($"Resolve OK: {name.Name}");
-        return ctx.LoadFromAssemblyName(reference);
+        Console.WriteLine($"Resolve OK: {name.Name}");
+        return Assembly.Load(reference);
     }
 
-    Debug.WriteLine($"Resolve NG: {name.Name}");
+    Console.WriteLine($"Resolve NG: {name.Name}");
     return null;
 };
 
 // Main
-Debug.WriteLine("----");
 var assembly = context.LoadFromAssemblyPath(target);
+Debug.WriteLine("----");
 foreach (var type in assembly.GetExportedTypes())
 {
     Debug.WriteLine($"Target: {type}");
