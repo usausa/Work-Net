@@ -12,11 +12,6 @@ Process(references, file, [], 0);
 
 context.Resolving += (ctx, name) =>
 {
-    if (name.Name!.StartsWith("System") || name.Name!.StartsWith("WindowsBase"))
-    {
-        return AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(name.Name));
-    }
-
     if (references.TryGetValue(name.Name!, out var reference))
     {
         Debug.WriteLine($"Resolve OK: {name.Name}");
