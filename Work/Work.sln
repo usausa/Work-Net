@@ -151,7 +151,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkWpfDragList", "WorkWpfD
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkMockHttp2", "WorkMockHttp2\WorkMockHttp2.csproj", "{E15B5C5E-1877-40F2-A2FB-188753DE42EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAssemblyReference", "WorkAssemblyReference\WorkAssemblyReference.csproj", "{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAssemblyReference", "WorkAssemblyReference\WorkAssemblyReference.csproj", "{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAssemblyLoad", "WorkAssemblyLoad\WorkAssemblyLoad.csproj", "{1B7C6482-2649-466D-B321-08DB2DC2940F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -312,6 +314,10 @@ Global
 		{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B7C6482-2649-466D-B321-08DB2DC2940F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B7C6482-2649-466D-B321-08DB2DC2940F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B7C6482-2649-466D-B321-08DB2DC2940F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B7C6482-2649-466D-B321-08DB2DC2940F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -368,6 +374,7 @@ Global
 		{96B5BD0F-201C-4E95-9A57-99F370846994} = {5F3BD4A0-D008-43BE-8BD3-2B8B087134BB}
 		{E15B5C5E-1877-40F2-A2FB-188753DE42EC} = {10BA2708-0175-41C6-8F24-D3AF83CA9EAC}
 		{0ADFD1C3-A42E-425E-BD46-8AB6CFFB7A0B} = {F83C00F2-4581-416D-9909-84679D2AB75C}
+		{1B7C6482-2649-466D-B321-08DB2DC2940F} = {F83C00F2-4581-416D-9909-84679D2AB75C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
