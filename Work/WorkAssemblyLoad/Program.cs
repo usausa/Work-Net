@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
 
+// TODO Not working
 var target = Path.GetFullPath(args[0]);
 var file = new FileInfo(target);
 var targetAssembly = Assembly.LoadFile(file.FullName);
