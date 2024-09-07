@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkAssemblyReference": {
+      "commandName": "Project",
+      "commandLineArgs": "..\\..\\..\\..\\WorkWpfDragList\\bin\\Debug\\net8.0-windows\\WorkWpfDragList.dll"
+    }
+  }
+}
