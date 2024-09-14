@@ -3,9 +3,29 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Work", "Work", "{5C189937-0B56-4FEE-BBA4-C2F9A5482B82}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DI", "DI", "{0F01E4FD-8DFC-478F-9A95-6527BCABFA83}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkJab", "WorkJab\WorkJab.csproj", "{65217162-22F9-47A6-818D-E361BC21547E}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{65217162-22F9-47A6-818D-E361BC21547E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65217162-22F9-47A6-818D-E361BC21547E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65217162-22F9-47A6-818D-E361BC21547E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65217162-22F9-47A6-818D-E361BC21547E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0F01E4FD-8DFC-478F-9A95-6527BCABFA83} = {5C189937-0B56-4FEE-BBA4-C2F9A5482B82}
+		{65217162-22F9-47A6-818D-E361BC21547E} = {0F01E4FD-8DFC-478F-9A95-6527BCABFA83}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2566BD9-BE57-4BED-9528-32E29D8D29C7}
