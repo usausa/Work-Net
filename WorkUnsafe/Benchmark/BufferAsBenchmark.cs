@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
 
 [Config(typeof(BenchmarkConfig))]
-public unsafe class AsBenchmark
+public unsafe class BufferAsBenchmark
 {
     private readonly byte[] buffer = new byte[16];
 
