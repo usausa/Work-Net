@@ -245,8 +245,6 @@ GetArrayDataReference<T>(T[])	array のゼロ番目の要素への参照を返�
 
 
 ========================================================================================================
-🟩struct / readonly struct
-========================================================================================================
 D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopReader.cs(14):     public ref struct BebopReader
 D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopWriter.cs(14):     public ref struct BebopWriter
 
@@ -278,53 +276,3 @@ DevSourceGen\■Roslyn\Hagar-master\src\Hagar\Buffers\Writer.cs(9):     public r
 
 Reference\AspNetCore\src\Shared\ServerInfrastructure\BufferWriter.cs(12):     internal ref struct BufferWriter<T> where T : IBufferWriter<byte>
 Reference\Runtime\src\libraries\System.Memory\ref\System.Memory.cs(150):         public ref struct TryWriteInterpolatedStringHandler
-
-DevSmart\WorkEvent\Mediator-main\src\Mediator\Messages\Unit.cs(6):     public readonly struct Unit : IEquatable<Unit>, IComparable<Unit>, IComparable
-
-DevSmart\WorkMapper\FlatSharp-4.1.0\FlatSharp-4.1.0\src\FlatSharp.Runtime\IO\ArrayInputBuffer.cs(134):         private readonly struct Wrapper : IInputBuffer
-...
-DevSmart\WorkMvvm\Redux\ReduxSharp-master\examples\HelloWorld\Program.cs(41):     public readonly struct Increment { }
-...
-DevSmart\WorkMvvm\WindowsCommunityToolkit-master\Microsoft.Toolkit.HighPerformance\_\ParallelHelper.For.IAction.cs(196):         private readonly struct ActionInvoker<TAction>
-...
-DevSmart\WorkSerializer\Serializer-bebop-master\Core\Lexer\Tokenization\Models\Span.cs(15):     public readonly struct Span : IEquatable<Span>, IComparable<Span>
-...
-DevSmart\WorkSerializer\Serializer-SpanJson-master\SpanJson\Formatters\Dynamic\SpanJsonDynamicArray.cs(98):         private readonly struct Enumerable<TOutput> : IReadOnlyCollection<TOutput>, ICountableEnumerable
-...
-
-------
-GitHub\Work-Net\Converter\Gen3Converter\Smart\Converter\Converters\EnumerableConverterFactory.Common.cs(45):         private readonly struct ArrayConvertList<TSource, TDestination> : IList<TDestination>
-..
-GitHub\Work-Net\Work\WorkBenchmarkMatchLoop\Program.cs(155):     private readonly StructEntry[] structEntries;
-GitHub\Work-Net\WorkLinq\WorkLinq\Linq\Enumerable.Indexed.cs(40):         private readonly struct IndexedEnumerable<T> : IEnumerable<Indexed<T>>
-GitHub\Work-Net\WorkLinq\WorkLinq\Linq\Indexed.cs(4):     public readonly struct Indexed<T>
-GitHub\Work-Net-Data\Sandbox\ReaderBenchmark\TupleTest\ColumnInfo.cs(6):     public readonly struct ColumnInfo
-GitHub\Work-Net-Data\Sandbox\WorkResultMapper\Smart.Data.Accessor\Data\Accessor\Engine\ColumnInfo.cs(6):     public readonly struct ColumnInfo
-GitHub\Work-Net-Mapper\WorkEnumerableConverter\WorkEnumerableConverter.Tests\Data.cs(35):     public readonly struct MyListStruct<T> : IList<T>
-GitHub\Work-Net-Mapper\WorkEnumerableConverter\WorkEnumerableConverter.Tests\Data.cs(77):     public readonly struct MyEnumerableStruct<T> : IEnumerable<T>
-GitHub\Work-Net-Mapper\WorkMapper\Example\WorkContainerConvert\Program.cs(1643):     public readonly struct MyEnumerable<T> : IEnumerable<T>
-GitHub\Work-Net-Mapper\WorkMapper\Example\WorkContainerConvert\StructConvert.cs(83):     public readonly struct EnumerableList : IList<int>
-GitHubTemplate\template-blazor-server\Template.Server\Shared\Progress\ProgressStateScope.cs(4): public readonly struct ProgressStateScope : IDisposable
-GitHubTemplate\template-wpf\Template.WindowsApp\Helpers\ExecuteScope.cs(4): public readonly struct ExecuteScope : IDisposable
-
-----
-Work\Extensions\Microsoft.Extensions.DependencyInjection\src\ServiceLookup\CallSiteChain.cs(76):         private readonly struct ChainItemInfo
-Work\Extensions\Microsoft.Extensions.DependencyInjection\src\ServiceLookup\ServiceCacheKey.cs(9):     internal readonly struct ServiceCacheKey : IEquatable<ServiceCacheKey>
-Work\Extensions\Microsoft.Extensions.DependencyInjection.Abstractions\src\AsyncServiceScope.cs(12):     public readonly struct AsyncServiceScope : IServiceScope, IAsyncDisposable
-Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(8):     internal readonly struct MessageLogger
-Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(45):     internal readonly struct ScopeLogger
-Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(67):     internal readonly struct LoggerInformation
-Work\Extensions\Microsoft.Extensions.Logging.Abstractions\gen\LoggerMessageGenerator.Emitter.cs(141):         {nestedIndentation}private readonly struct __{lm.UniqueName}Struct : global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.KeyValuePair<string, object?>>
-Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\EventId.cs(12):     public readonly struct EventId : IEquatable<EventId>
-Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\FormattedLogValues.cs(16):     internal readonly struct FormattedLogValues : IReadOnlyList<KeyValuePair<string, object?>>
-Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\LogEntry.cs(11):     public readonly struct LogEntry<TState>
-Work\Extensions\Microsoft.Extensions.Primitives\src\StringSegment.cs(14):     public readonly struct StringSegment : IEquatable<StringSegment>, IEquatable<string?>
-Work\Extensions\Microsoft.Extensions.Primitives\src\StringTokenizer.cs(13):     public readonly struct StringTokenizer :  IEnumerable<StringSegment>
-Work\Extensions\Microsoft.Extensions.Primitives\src\StringValues.cs(17):     public readonly struct StringValues : IList<string?>, IReadOnlyList<string?>, IEquatable<StringValues>, IEquatable<string?>, IEquatable<string?[]?>
-
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\ArrayBufferWriterOwner.cs(15): internal readonly struct ArrayBufferWriterOwner : IBufferWriter<byte>
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\ArrayOwner.cs(16): internal readonly struct ArrayOwner : ISpanOwner
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\IBufferWriterOwner.cs(15): internal readonly struct IBufferWriterOwner : IBufferWriter<byte>
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\MemoryManagerOwner.cs(14): internal readonly struct MemoryManagerOwner : ISpanOwner
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(813):     private readonly struct Recipient : IEquatable<Recipient>
-Work\_Ref1\Gen-ComToolkit\CommunityToolkit.Mvvm\Messaging\Internals\Unit.cs(13): internal readonly struct Unit : IEquatable<Unit>
