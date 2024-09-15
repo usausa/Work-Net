@@ -1,7 +1,7 @@
 namespace Benchmark;
 
 using System.Reflection;
-
+using System.Runtime.InteropServices;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;

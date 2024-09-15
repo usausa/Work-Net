@@ -1,525 +1,330 @@
-https://sharplab.io/
-
---------------
 ■Unsafe
-	Add<T>(T, Int32)	指定されたマネージド ポインターにオフセットを追加します。
-	Add<T>(T, IntPtr)	指定されたマネージド ポインターに要素オフセットを追加します。
-	Add<T>(T, UIntPtr)	指定されたマネージド ポインターに要素オフセットを追加します。
-	Add<T>(Void*, Int32)	指定されたアンマネージ ポインターに要素オフセットを追加します。
-AddByteOffset<T>(T, IntPtr)	指定されたマネージド ポインターにバイト オフセットを追加します。
-AddByteOffset<T>(T, UIntPtr)	指定されたマネージド ポインターにバイト オフセットを追加します。
-AreSame<T>(T, T)	指定したマネージド ポインターが同じ場所を指しているかどうかを判断します。
+
+// AsPointer
+AsPointer<T>(T)	マネージド ポインターをアンマネージド ポインターに変換します。
+    // ldarg.0
+    // conv.u
+    // ret
+
+// SizeOf
+SizeOf<T>()	指定した型パラメーターの値のサイズを返します。
+    return sizeof(T);
+
+// As
 As<T>(Object)	指定したオブジェクトを指定した型にキャストします。
 As<TFrom,TTo>(TFrom)	指定したマネージド ポインターを、 型の値への新しいマネージド ポインターとして再解釈します TTo。
-AsPointer<T>(T)	マネージド ポインターをアンマネージド ポインターに変換します。
-AsRef<T>(T)	指定された読み取り専用参照を変更可能な参照として再解釈します。
-AsRef<T>(Void*)	アンマネージ ポインターを 型の値にマネージド ポインターに変換します T。
+    // ldarg.0
+    // ret
+
+// Add
+Add<T>(T, Int32)	指定されたマネージド ポインターにオフセットを追加します。
+    return ref AddByteOffset(ref source, (IntPtr)((nint)elementOffset * (nint)sizeof(T)));
+Add<T>(T, IntPtr)	指定されたマネージド ポインターに要素オフセットを追加します。
+    return (byte*)source + (elementOffset * (nint)sizeof(T));
+Add<T>(T, UIntPtr)	指定されたマネージド ポインターに要素オフセットを追加します。
+    return ref AddByteOffset(ref source, (nuint)(elementOffset * (nuint)sizeof(T)));
+Add<T>(Void*, Int32)	指定されたアンマネージ ポインターに要素オフセットを追加します。
+    return ref AddByteOffset(ref source, (IntPtr)((nint)elementOffset * (nint)sizeof(T)));
+
+// AddByteOffset
+AddByteOffset<T>(T, IntPtr)	指定されたマネージド ポインターにバイト オフセットを追加します。
+AddByteOffset<T>(T, UIntPtr)	指定されたマネージド ポインターにバイト オフセットを追加します。
+    // ldarg .0
+    // ldarg .1
+    // add
+    // ret
+
+// AreSame
+AreSame<T>(T, T)	指定したマネージド ポインターが同じ場所を指しているかどうかを判断します。
+
+    // ldarg.0
+    // ldarg.1
+    // ceq
+    // ret
+
+// BitCast
 BitCast<TFrom,TTo>(TFrom)	型の指定された値を 型 TFrom の値として再解釈します TTo。
-ByteOffset<T>(T, T)	指定されたマネージド ポインターから配信元からターゲットへのバイト オフセットを決定します。
+    return ReadUnaligned<TTo>(ref As<TFrom, byte>(ref source));
+
+// Copy
 Copy<T>(T, Void*)	指定した場所に T 型の値をコピーします。
 Copy<T>(Void*, T)	指定した場所に T 型の値をコピーします。
+    // ldarg .0
+    // ldarg .1
+    // ldobj !!T
+    // stobj !!T
+    // ret
+
+
+// CopyBlock
 CopyBlock(Byte, Byte, UInt32)	コピー元のアドレスからコピー先のアドレスにバイトをコピーします。
 CopyBlock(Void*, Void*, UInt32)	コピー元のアドレスからコピー先のアドレスにバイトをコピーします。
+    // ldarg .0
+    // ldarg .1
+    // ldarg .2
+    // cpblk
 CopyBlockUnaligned(Byte, Byte, UInt32)	アーキテクチャに依存するアドレスの配置を考慮せずに、コピー元アドレスからコピー先アドレスにバイトをコピーします。
 CopyBlockUnaligned(Void*, Void*, UInt32)	アーキテクチャに依存するアドレスの配置を考慮せずに、コピー元アドレスからコピー先アドレスにバイトをコピーします。
+    // ret
+    // ldarg .0
+    // ldarg .1
+    // ldarg .2
+    // unaligned. 0x1
+    // cpblk
+    // ret
+
+// IsAddress
+IsAddressGreaterThan<T>(T, T)	指定したマネージド ポインターが、指定した別のマネージド ポインターより大きいかどうかを示す値を返します。
+    // ldarg.0
+    // ldarg.1
+    // cgt.un
+    // ret
+IsAddressLessThan<T>(T, T)	指定したマネージド ポインターが、指定した別のマネージド ポインターより小さいかどうかを示す値を返します。
+    // ldarg.0
+    // ldarg.1
+    // clt.un
+    // ret
+
+// InitBlock
 InitBlock(Byte, Byte, UInt32)	指定した場所のメモリ ブロックを指定した初期値で初期化します。
 InitBlock(Void*, Byte, UInt32)	指定した場所のメモリ ブロックを指定した初期値で初期化します。
+    // ldarg .0
+    // ldarg .1
+    // ldarg .2
+    // initblk
+    // ret
 InitBlockUnaligned(Byte, Byte, UInt32)	アーキテクチャに依存するアドレスの配置を考慮せずに、指定した場所のメモリ ブロックを指定した初期値で初期化します。
 InitBlockUnaligned(Void*, Byte, UInt32)	アーキテクチャに依存するアドレスの配置を考慮せずに、指定した場所のメモリ ブロックを指定した初期値で初期化します。
-	IsAddressGreaterThan<T>(T, T)	指定したマネージド ポインターが、指定した別のマネージド ポインターより大きいかどうかを示す値を返します。
-	IsAddressLessThan<T>(T, T)	指定したマネージド ポインターが、指定した別のマネージド ポインターより小さいかどうかを示す値を返します。
-IsNullRef<T>(T)	型 T の値への特定のマネージド ポインターが null 参照であるかどうかを判断します。
-NullRef<T>()	型の値への null マネージド ポインターを返します T。
+    // ldarg .0
+    // ldarg .1
+    // ldarg .2
+    // unaligned. 0x1
+    // initblk
+    // ret
+
+// Read
 Read<T>(Void*)	指定した場所から T 型の値を読み取ります。
+    return *(T*)source;
 ReadUnaligned<T>(Byte)	ソース アドレスのアーキテクチャに依存する配置を想定せずに、指定されたアドレスから型 T の値を読み取ります。
 ReadUnaligned<T>(Void*)	ソース アドレスのアーキテクチャに依存する配置を想定せずに、指定された場所から型 T の値を読み取ります。
-SizeOf<T>()	指定した型パラメーターの値のサイズを返します。
-SkipInit<T>(T)	指定された参照の明確な割り当てルールをバイパスします。
-Subtract<T>(T, Int32)	指定されたマネージド ポインターからオフセットを減算します。
-Subtract<T>(T, IntPtr)	指定されたマネージド ポインターから要素オフセットを減算します。
-Subtract<T>(T, UIntPtr)	指定されたマネージド ポインターから要素オフセットを減算します。
-Subtract<T>(Void*, Int32)	指定されたアンマネージ ポインターから要素オフセットを減算します。
-SubtractByteOffset<T>(T, IntPtr)	指定されたマネージド ポインターからバイト オフセットを減算します。
-SubtractByteOffset<T>(T, UIntPtr)	指定されたマネージド ポインターからバイト オフセットを減算します。
-Unbox<T>(Object)	ボックス化された値に mutable ref を返します。
+    return As<byte, T>(ref Unsafe.AsRef(in source));
+
+// Write
 Write<T>(Void*, T)	指定した場所に T 型の値を書き込みます。
+    *(T*)destination = value;
 WriteUnaligned<T>(Byte, T)	宛先アドレスのアーキテクチャに依存する配置を想定せずに、指定された場所に型 T の値を書き込みます。
 WriteUnaligned<T>(Void*, T)	宛先アドレスのアーキテクチャに依存する配置を想定せずに、指定された場所に型 T の値を書き込みます。
+    As<byte, T>(ref destination) = value;
 
---------------
+// AsRef
+AsRef<T>(T)	指定された読み取り専用参照を変更可能な参照として再解釈します。
+    return ref *(T*)source;
+AsRef<T>(Void*)	アンマネージ ポインターを 型の値にマネージド ポインターに変換します T。
+    //ldarg .0
+    //ret
+
+// ByteOffset
+ByteOffset<T>([AllowNull] ref readonly T origin, [AllowNull] ref readonly T target)
+    // ldarg .1
+    // ldarg .0
+    // sub
+    // ret
+
+// NullRef
+NullRef<T>()	型の値への null マネージド ポインターを返します T。
+    return ref AsRef<T>(null);
+    // ldc.i4.0
+    // conv.u
+    // ret
+
+// IsNullRef
+IsNullRef<T>(T)	型 T の値への特定のマネージド ポインターが null 参照であるかどうかを判断します。
+    return AsPointer(ref Unsafe.AsRef(in source)) == null;
+    // ldarg.0
+    // ldc.i4.0
+    // conv.u
+    // ceq
+    // ret
+
+// SkipInit
+SkipInit<T>(T)	指定された参照の明確な割り当てルールをバイパスします。
+    // ret
+
+// Subtract
+Subtract<T>(T, Int32)	指定されたマネージド ポインターからオフセットを減算します。
+    return ref SubtractByteOffset(ref source, (IntPtr)(elementOffset * (nint)sizeof(T)));
+Subtract<T>(T, IntPtr)	指定されたマネージド ポインターから要素オフセットを減算します。
+    return (byte*)source - (elementOffset * (nint)sizeof(T));
+Subtract<T>(T, UIntPtr)	指定されたマネージド ポインターから要素オフセットを減算します。
+    return ref SubtractByteOffset(ref source, (IntPtr)((nint)elementOffset * (nint)sizeof(T)));
+Subtract<T>(Void*, Int32)	指定されたアンマネージ ポインターから要素オフセットを減算します。
+    return ref SubtractByteOffset(ref source, (nuint)(elementOffset * (nuint)sizeof(T)));
+SubtractByteOffset<T>(T, IntPtr)	指定されたマネージド ポインターからバイト オフセットを減算します。
+    // ldarg .0
+    // ldarg .1
+    // sizeof !!T
+    // mul
+    // sub
+    // ret
+SubtractByteOffset<T>(T, UIntPtr)	指定されたマネージド ポインターからバイト オフセットを減算します。
+    // ldarg .0
+    // ldarg .1
+    // sub
+    // ret
+
+// Unbox
+Unbox<T>(Object)	ボックス化された値に mutable ref を返します。
+    // ldarg .0
+    // unbox !!T
+    // ret
+
 ■MemoryMarshal
+
+- AsBytes
 AsBytes<T>(ReadOnlySpan<T>)	1 つのプリミティブ型 (T) の ReadOnlySpan<T> を、ReadOnlySpan<Byte> にキャストします。
 AsBytes<T>(Span<T>)	1 つのプリミティブ型 (T) の Span<T> を、Span<Byte> にキャストします。
 AsMemory<T>(ReadOnlyMemory<T>)	ReadOnlyMemory<T> から Memory<T> インスタンスを作成します。
-AsRef<T>(ReadOnlySpan<Byte>)	読み取り専用スパンのバイトを、T 型の構造体への読み取り専用参照として再解釈します。
-AsRef<T>(Span<Byte>)	スパンのバイトを、T 型の構造体への参照として再解釈します。
+    return new Span<byte>(ref Unsafe.As<T, byte>(ref GetReference(span)), checked(span.Length * sizeof(T)));
+
+- GetReference
+GetReference<T>(Span<T>)	インデックス 0 にあるスパンの要素の参照を返します。
+GetReference<T>(ReadOnlySpan<T>)	インデックス 0 にある読み取り専用スパンの要素の参照を返します。
+    ref span._reference;
+
+- Cast
 Cast<TFrom,TTo>(ReadOnlySpan<TFrom>)	1 つのプリミティブ型の読み取り専用スパンを、別のプリミティブ型の読み取り専用スパンにキャストします。
 Cast<TFrom,TTo>(Span<TFrom>)	1 つのプリミティブ型のスパンを、別のプリミティブ型のスパンにキャストします。
-CreateFromPinnedArray<T>(T[], Int32, Int32)	start インデックスで始まり length 個の項目で構成される、事前にピン留めされたターゲット配列の一部に対する、新しいメモリ バッファーを作成します。
+    ...
+    return new Span<TTo>(ref Unsafe.As<TFrom, TTo>(ref span._reference), toLength);
+
+- CreateSpan
+CreateSpan<T>(T, Int32)	定期的なマネージド オブジェクトの一部に対する新しいスパンを作成します。
 CreateReadOnlySpan<T>(T, Int32)	定期的なマネージド オブジェクトの一部に対する新しい読み取り専用スパンを作成します。
+    new Span<T>(ref Unsafe.AsRef(in reference), length)
 CreateReadOnlySpanFromNullTerminated(Byte*)	null で終わるバイト シーケンスの新しい読み取り専用スパンを作成します。
 CreateReadOnlySpanFromNullTerminated(Char*)	null で終わる文字列の新しい読み取り専用スパンを作成します。
-CreateSpan<T>(T, Int32)	定期的なマネージド オブジェクトの一部に対する新しいスパンを作成します。
-GetArrayDataReference(Array)	array のゼロ番目の要素への参照を返します。 配列が空の場合、ゼロ番目の要素が格納される場所への参照を返します。 そのような参照はピン留めに使用できますが、逆参照が禁止されます。
-GetArrayDataReference<T>(T[])	array のゼロ番目の要素への参照を返します。 配列が空の場合、ゼロ番目の要素が格納される場所への参照を返します。 そのような参照はピン留めに使用できますが、逆参照が禁止されます。
-GetReference<T>(ReadOnlySpan<T>)	インデックス 0 にある読み取り専用スパンの要素の参照を返します。
-GetReference<T>(Span<T>)	インデックス 0 にあるスパンの要素の参照を返します。
-Read<T>(ReadOnlySpan<Byte>)	バイトの読み取り専用スパンから型 T の構造体を読み取ります。
-ToEnumerable<T>(ReadOnlyMemory<T>)	指定した読み取り専用メモリ バッファーの IEnumerable<T> ビューを作成します。
+
+- TryGetArray
 TryGetArray<T>(ReadOnlyMemory<T>, ArraySegment<T>)	基になるメモリ バッファーから配列セグメントの取得を試みます。 戻り値は、操作の成功を示します。
+
+- TryGetMemoryManager
 TryGetMemoryManager<T,TManager>(ReadOnlyMemory<T>, TManager)	基になる読み取り専用メモリ バッファーから MemoryManager<T> の取得を試みます。
 TryGetMemoryManager<T,TManager>(ReadOnlyMemory<T>, TManager, Int32, Int32)	基になる読み取り専用メモリ バッファーから、MemoryManager<T>、開始インデックス、長さの取得を試みます。
+
+- ToEnumerable
+ToEnumerable<T>(ReadOnlyMemory<T>)	指定した読み取り専用メモリ バッファーの IEnumerable<T> ビューを作成します。
+    yieldしていく
+
+- TryGetString
 TryGetString(ReadOnlyMemory<Char>, String, Int32, Int32)	System.ReadOnlyMemory<Char> から基になる文字列の取得を試みます。
+
+- Read
+Read<T>(ReadOnlySpan<Byte>)	バイトの読み取り専用スパンから型 T の構造体を読み取ります。
 TryRead<T>(ReadOnlySpan<Byte>, T)	バイト型の読み取り専用スパンから T 型の構造体の読み取りを試みます。
-TryWrite<T>(Span<Byte>, T)	バイト型のスパンに T 型の構造体の書き込みを試みます。
+    return Unsafe.ReadUnaligned<T>(ref GetReference(source));
+
+- Write
 Write<T>(Span<Byte>, T)	バイト型のスパンに T 型の構造体を書き込みます。
+TryWrite<T>(Span<Byte>, T)	バイト型のスパンに T 型の構造体の書き込みを試みます。
+    Unsafe.WriteUnaligned(ref GetReference(destination), value);
+
+- AsRef
+AsRef<T>(ReadOnlySpan<Byte>)	読み取り専用スパンのバイトを、T 型の構造体への読み取り専用参照として再解釈します。
+AsRef<T>(Span<Byte>)	スパンのバイトを、T 型の構造体への参照として再解釈します。
+    return ref Unsafe.As<byte, T>(ref GetReference(span));
+
+- CreateFromPinnedArray
+CreateFromPinnedArray<T>(T[], Int32, Int32)	start インデックスで始まり length 個の項目で構成される、事前にピン留めされたターゲット配列の一部に対する、新しいメモリ バッファーを作成します。
+
+- GetArrayDataReference
+GetArrayDataReference(Array)	array のゼロ番目の要素への参照を返します。 配列が空の場合、ゼロ番目の要素が格納される場所への参照を返します。 そのような参照はピン留めに使用できますが、逆参照が禁止されます。
+GetArrayDataReference<T>(T[])	array のゼロ番目の要素への参照を返します。 配列が空の場合、ゼロ番目の要素が格納される場所への参照を返します。 そのような参照はピン留めに使用できますが、逆参照が禁止されます。
+    return ref Unsafe.AddByteOffset(ref Unsafe.As<RawData>(array).Data, (nuint)RuntimeHelpers.GetMethodTable(array)->BaseSize - (nuint)(2 * sizeof(IntPtr)));
+
+
 
 
 ========================================================================================================
+🟩struct / readonly struct
+========================================================================================================
+D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopReader.cs(14):     public ref struct BebopReader
+D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopWriter.cs(14):     public ref struct BebopWriter
 
-Unsafe.As<bool, byte>
+Work\_Ref1\Get-LangExt\LanguageExt.Core\Immutable Collections\Seq\SeqLoan.cs(334):         public ref struct Enumerator
+Work\_RefHW\BedrockFramework-main\src\Bedrock.Framework\Infrastructure2\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
+Work\_RefHW\BedrockFramework-main\src\Bedrock.Framework.Experimental\Infrastructure2\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
+
+DevSmart\WorkMvvm\WindowsCommunityToolkit-master\Microsoft.Toolkit.HighPerformance\_\Array2DColumnEnumerable{T}.cs(19):     public readonly ref struct Array2DColumnEnumerable<T>
+...
+
+DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\RefLocalsAndReturns.cs(53): 		public ref struct RefStruct
+DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\RefLocalsAndReturns.cs(58): 		public readonly ref struct ReadOnlyRefStruct
+DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\Using.cs(44): 		public ref struct UsingRefStruct
+
+DevSmart\_Reference\BedrockFramework-master\src\Bedrock.Framework.Experimental\Infrastructure\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
+
+DevSmart\_Reference\DevRoslyn\2Build\Hagar-master\src\Hagar\Buffers\Reader.cs(8):     public ref struct Reader
+DevSmart\_Reference\DevRoslyn\2Build\Hagar-master\src\Hagar\Buffers\Writer.cs(8):     public ref struct Writer<TBufferWriter> where TBufferWriter : IBufferWriter<byte>
+
+DevSmart\_Reference\NetFabric.Hyperlinq-main\NetFabric.Hyperlinq\Filtering\Where\Where.ReadOnlyMemory.cs(46):             public ref struct Enumerator
+...
+
+DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(39):         public ref struct LineSplitEnumerator
+DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(85):         public readonly ref struct LineSplitEntry
+DevSourceGen\FixMeziantou.Analyzer\tests\Meziantou.Analyzer.Test\Rules\MakeStructMemberReadOnlyAnalyzerTests.cs(580): internal ref struct PathReader
+
+DevSourceGen\■Roslyn\Hagar-master\src\Hagar\Buffers\Reader.cs(9):     public ref struct Reader
+DevSourceGen\■Roslyn\Hagar-master\src\Hagar\Buffers\Writer.cs(9):     public ref struct Writer<TBufferWriter> where TBufferWriter : IBufferWriter<byte>
+
+Reference\AspNetCore\src\Shared\ServerInfrastructure\BufferWriter.cs(12):     internal ref struct BufferWriter<T> where T : IBufferWriter<byte>
+Reference\Runtime\src\libraries\System.Memory\ref\System.Memory.cs(150):         public ref struct TryWriteInterpolatedStringHandler
+
+DevSmart\WorkEvent\Mediator-main\src\Mediator\Messages\Unit.cs(6):     public readonly struct Unit : IEquatable<Unit>, IComparable<Unit>, IComparable
+
+DevSmart\WorkMapper\FlatSharp-4.1.0\FlatSharp-4.1.0\src\FlatSharp.Runtime\IO\ArrayInputBuffer.cs(134):         private readonly struct Wrapper : IInputBuffer
+...
+DevSmart\WorkMvvm\Redux\ReduxSharp-master\examples\HelloWorld\Program.cs(41):     public readonly struct Increment { }
+...
+DevSmart\WorkMvvm\WindowsCommunityToolkit-master\Microsoft.Toolkit.HighPerformance\_\ParallelHelper.For.IAction.cs(196):         private readonly struct ActionInvoker<TAction>
+...
+DevSmart\WorkSerializer\Serializer-bebop-master\Core\Lexer\Tokenization\Models\Span.cs(15):     public readonly struct Span : IEquatable<Span>, IComparable<Span>
+...
+DevSmart\WorkSerializer\Serializer-SpanJson-master\SpanJson\Formatters\Dynamic\SpanJsonDynamicArray.cs(98):         private readonly struct Enumerable<TOutput> : IReadOnlyCollection<TOutput>, ICountableEnumerable
+...
+
+------
+GitHub\Work-Net\Converter\Gen3Converter\Smart\Converter\Converters\EnumerableConverterFactory.Common.cs(45):         private readonly struct ArrayConvertList<TSource, TDestination> : IList<TDestination>
 ..
-Unsafe.As<Box<T>> As<RawArrayData> As<RawObjectData> As<RawStringData> As<T, byte> As<T, int>
+GitHub\Work-Net\Work\WorkBenchmarkMatchLoop\Program.cs(155):     private readonly StructEntry[] structEntries;
+GitHub\Work-Net\WorkLinq\WorkLinq\Linq\Enumerable.Indexed.cs(40):         private readonly struct IndexedEnumerable<T> : IEnumerable<Indexed<T>>
+GitHub\Work-Net\WorkLinq\WorkLinq\Linq\Indexed.cs(4):     public readonly struct Indexed<T>
+GitHub\Work-Net-Data\Sandbox\ReaderBenchmark\TupleTest\ColumnInfo.cs(6):     public readonly struct ColumnInfo
+GitHub\Work-Net-Data\Sandbox\WorkResultMapper\Smart.Data.Accessor\Data\Accessor\Engine\ColumnInfo.cs(6):     public readonly struct ColumnInfo
+GitHub\Work-Net-Mapper\WorkEnumerableConverter\WorkEnumerableConverter.Tests\Data.cs(35):     public readonly struct MyListStruct<T> : IList<T>
+GitHub\Work-Net-Mapper\WorkEnumerableConverter\WorkEnumerableConverter.Tests\Data.cs(77):     public readonly struct MyEnumerableStruct<T> : IEnumerable<T>
+GitHub\Work-Net-Mapper\WorkMapper\Example\WorkContainerConvert\Program.cs(1643):     public readonly struct MyEnumerable<T> : IEnumerable<T>
+GitHub\Work-Net-Mapper\WorkMapper\Example\WorkContainerConvert\StructConvert.cs(83):     public readonly struct EnumerableList : IList<int>
+GitHubTemplate\template-blazor-server\Template.Server\Shared\Progress\ProgressStateScope.cs(4): public readonly struct ProgressStateScope : IDisposable
+GitHubTemplate\template-wpf\Template.WindowsApp\Helpers\ExecuteScope.cs(4): public readonly struct ExecuteScope : IDisposable
 
-Unsafe.ReadUnaligned<T> ReadUnaligned<ushort> ReadUnaligned<Vector<int>>
+----
+Work\Extensions\Microsoft.Extensions.DependencyInjection\src\ServiceLookup\CallSiteChain.cs(76):         private readonly struct ChainItemInfo
+Work\Extensions\Microsoft.Extensions.DependencyInjection\src\ServiceLookup\ServiceCacheKey.cs(9):     internal readonly struct ServiceCacheKey : IEquatable<ServiceCacheKey>
+Work\Extensions\Microsoft.Extensions.DependencyInjection.Abstractions\src\AsyncServiceScope.cs(12):     public readonly struct AsyncServiceScope : IServiceScope, IAsyncDisposable
+Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(8):     internal readonly struct MessageLogger
+Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(45):     internal readonly struct ScopeLogger
+Work\Extensions\Microsoft.Extensions.Logging\src\LoggerInformation.cs(67):     internal readonly struct LoggerInformation
+Work\Extensions\Microsoft.Extensions.Logging.Abstractions\gen\LoggerMessageGenerator.Emitter.cs(141):         {nestedIndentation}private readonly struct __{lm.UniqueName}Struct : global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.KeyValuePair<string, object?>>
+Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\EventId.cs(12):     public readonly struct EventId : IEquatable<EventId>
+Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\FormattedLogValues.cs(16):     internal readonly struct FormattedLogValues : IReadOnlyList<KeyValuePair<string, object?>>
+Work\Extensions\Microsoft.Extensions.Logging.Abstractions\src\LogEntry.cs(11):     public readonly struct LogEntry<TState>
+Work\Extensions\Microsoft.Extensions.Primitives\src\StringSegment.cs(14):     public readonly struct StringSegment : IEquatable<StringSegment>, IEquatable<string?>
+Work\Extensions\Microsoft.Extensions.Primitives\src\StringTokenizer.cs(13):     public readonly struct StringTokenizer :  IEnumerable<StringSegment>
+Work\Extensions\Microsoft.Extensions.Primitives\src\StringValues.cs(17):     public readonly struct StringValues : IList<string?>, IReadOnlyList<string?>, IEquatable<StringValues>, IEquatable<string?>, IEquatable<string?[]?>
 
-----------
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(112):             byte valueByte = Unsafe.As<T, byte>(ref value);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(113):             byte targetByte = Unsafe.As<T, byte>(ref target);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(124):             ushort valueUShort = Unsafe.As<T, ushort>(ref value);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(125):             ushort targetUShort = Unsafe.As<T, ushort>(ref target);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(136):             uint valueUInt = Unsafe.As<T, uint>(ref value);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(137):             uint targetUInt = Unsafe.As<T, uint>(ref target);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(148):             ulong valueULong = Unsafe.As<T, ulong>(ref value);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(149):             ulong targetULong = Unsafe.As<T, ulong>(ref target);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(160):             ulong valueULong0 = Unsafe.As<T, ulong>(ref value);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(161):             ulong targetULong0 = Unsafe.As<T, ulong>(ref target);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(165):                 ulong valueULong1 = Unsafe.Add(ref Unsafe.As<T, ulong>(ref value), 1);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(166):                 ulong targetULong1 = Unsafe.Add(ref Unsafe.As<T, ulong>(ref target), 1);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(178):             Span<byte> valueBytes = new(Unsafe.AsPointer(ref value), sizeof(T));
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(179):             Span<byte> targetBytes = new(Unsafe.AsPointer(ref target), sizeof(T));
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(197):             ref int r0 = ref Unsafe.As<ulong, int>(ref left);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(198):             ref int r1 = ref Unsafe.As<ulong, int>(ref right);
-CommunityToolkit.Diagnostics\Guard.Comparable.Generic.cs(201):                    Unsafe.Add(ref r0, 1) == Unsafe.Add(ref r1, 1);
-CommunityToolkit.Diagnostics\Extensions\ValueTypeExtensions.cs(62):             p[j + 1] = (char)Unsafe.Add(ref rh, low);
-CommunityToolkit.Diagnostics\Extensions\ValueTypeExtensions.cs(63):             p[j] = (char)Unsafe.Add(ref rh, high);
-CommunityToolkit.HighPerformance\Box{T}.cs(45):     //                 |               \-- Unsafe.Unbox<T>(Box<T>)
-CommunityToolkit.HighPerformance\Box{T}.cs(79):         return Unsafe.As<Box<T>>(obj)!;
-CommunityToolkit.HighPerformance\Box{T}.cs(94):         return Unsafe.As<Box<T>>(obj)!;
-CommunityToolkit.HighPerformance\Box{T}.cs(108):             box = Unsafe.As<Box<T>>(obj)!;
-CommunityToolkit.HighPerformance\Box{T}.cs(145):         return Unsafe.As<Box<T>>(value)!;
-CommunityToolkit.HighPerformance\Box{T}.cs(211):         // exactly the same anyway. Here we just call the Unsafe.Unbox<T>(object)
-CommunityToolkit.HighPerformance\Box{T}.cs(219):         return ref Unsafe.Unbox<T>(box);
-CommunityToolkit.HighPerformance\NullableReadOnlyRef{T}.cs(48):         get => !Unsafe.IsNullRef(ref Unsafe.AsRef(in this.value));
-CommunityToolkit.HighPerformance\NullableRef{T}.cs(48):         get => !Unsafe.IsNullRef(ref this.value);
-CommunityToolkit.HighPerformance\ReadOnlyRef{T}.cs(38):         : this(in Unsafe.AsRef<T>(pointer))
-CommunityToolkit.HighPerformance\Ref{T}.cs(38):         : this(ref Unsafe.AsRef<T>(pointer))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(395):             if (Unsafe.IsNullRef(ref target))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(416):             if (!Unsafe.IsNullRef(ref result))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(437):             if (!Unsafe.IsNullRef(ref result))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(461):             if (!Unsafe.IsNullRef(ref result))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(504):                 entry = ref Unsafe.Add(ref mapEntriesRef, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(539):                 ref MapEntry removedEntry = ref Unsafe.Add(ref mapEntriesRef, (nint)(uint)entryIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(556):             ref int targetBucket = ref Unsafe.Add(ref bucketsRef, (nint)(uint)bucketIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(557):             ref MapEntry targetMapEntry = ref Unsafe.Add(ref mapEntriesRef, (nint)(uint)entryIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(558):             ref HeapEntry targetHeapEntry = ref Unsafe.Add(ref heapEntriesRef, (nint)(uint)heapIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(595):                 ref MapEntry candidate = ref Unsafe.Add(ref mapEntriesRef, (nint)(uint)entryIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(603):                         ref MapEntry lastEntry = ref Unsafe.Add(ref mapEntriesRef, (nint)(uint)lastIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(635):             ref HeapEntry root = ref Unsafe.Add(ref heapEntriesRef, (nint)(uint)currentIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(686):                     ref HeapEntry child = ref Unsafe.Add(ref heapEntriesRef, (nint)(uint)left);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(698):                     ref HeapEntry child = ref Unsafe.Add(ref heapEntriesRef, (nint)(uint)right);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(709):                 if (Unsafe.AreSame(ref root, ref minimum))
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(717):                 Unsafe.Add(ref mapEntriesRef, (nint)(uint)root.MapIndex).HeapIndex = targetIndex;
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(718):                 Unsafe.Add(ref mapEntriesRef, (nint)(uint)minimum.MapIndex).HeapIndex = currentIndex;
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(729):                 root = ref Unsafe.Add(ref heapEntriesRef, (nint)(uint)currentIndex);
-CommunityToolkit.HighPerformance\Buffers\StringPool.cs(759):                 Unsafe.Add(ref heapEntriesRef, (nint)(uint)i).Timestamp = (uint)i;
-CommunityToolkit.HighPerformance\Buffers\Internals\ArrayMemoryManager{TFrom,TTo}.cs(56):         ref TTo r1 = ref Unsafe.As<TFrom, TTo>(ref r0);
-CommunityToolkit.HighPerformance\Buffers\Internals\ArrayMemoryManager{TFrom,TTo}.cs(85):         ref byte r1 = ref Unsafe.As<TFrom, byte>(ref r0);
-CommunityToolkit.HighPerformance\Buffers\Internals\ArrayMemoryManager{TFrom,TTo}.cs(86):         ref byte r2 = ref Unsafe.AddByteOffset(ref r1, byteOffset);
-CommunityToolkit.HighPerformance\Buffers\Internals\ArrayMemoryManager{TFrom,TTo}.cs(87):         void* pi = Unsafe.AsPointer(ref r2);
-CommunityToolkit.HighPerformance\Buffers\Internals\RawObjectMemoryManager{T}.cs(72):         ref T r1 = ref Unsafe.Add(ref r0, (nint)(uint)elementIndex);
-CommunityToolkit.HighPerformance\Buffers\Internals\RawObjectMemoryManager{T}.cs(73):         void* p = Unsafe.AsPointer(ref r1);
-CommunityToolkit.HighPerformance\Buffers\Internals\StringMemoryManager{TTo}.cs(54):         ref TTo r1 = ref Unsafe.As<char, TTo>(ref r0);
-CommunityToolkit.HighPerformance\Buffers\Internals\StringMemoryManager{TTo}.cs(81):         ref byte r1 = ref Unsafe.As<char, byte>(ref r0);
-CommunityToolkit.HighPerformance\Buffers\Internals\StringMemoryManager{TTo}.cs(82):         ref byte r2 = ref Unsafe.AddByteOffset(ref r1, byteOffset);
-CommunityToolkit.HighPerformance\Buffers\Internals\StringMemoryManager{TTo}.cs(83):         void* pi = Unsafe.AsPointer(ref r2);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(97):         this.span = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(reference), length);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(178):             ref T r0 = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(185):             ref T ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(232):             destination.CopyFrom(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in this.reference), this.length));
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(244):         ref T sourceRef = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(322):             MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(in this.reference), this.length).CopyTo(destination);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(327):         ref T sourceRef = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(518):                 ref T r0 = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlyRefEnumerable{T}.cs(525):                 ref T ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlySpanEnumerable{T}.cs(68):             ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)this.index);
-CommunityToolkit.HighPerformance\Enumerables\ReadOnlySpanEnumerable{T}.cs(150):                 ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)this.index);
-CommunityToolkit.HighPerformance\Enumerables\RefEnumerable{T}.cs(161):             ref T ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Enumerables\RefEnumerable{T}.cs(636):                 ref T ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Enumerables\SpanEnumerable{T}.cs(68):             ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)this.index);
-CommunityToolkit.HighPerformance\Enumerables\SpanEnumerable{T}.cs(155):                 ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)this.index);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.1D.cs(56):         ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.1D.cs(62):         ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.2D.cs(32):         return ref Unsafe.As<byte, T>(ref MemoryMarshal.GetArrayDataReference(array));
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.2D.cs(60):         ref T r0 = ref Unsafe.As<byte, T>(ref MemoryMarshal.GetArrayDataReference(array));
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.2D.cs(61):         ref T ri = ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.2D.cs(69):         ref T ri = ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.3D.cs(31):         return ref Unsafe.As<byte, T>(ref MemoryMarshal.GetArrayDataReference(array));
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.3D.cs(63):         ref T r0 = ref Unsafe.As<byte, T>(ref MemoryMarshal.GetArrayDataReference(array));
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.3D.cs(64):         ref T ri = ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Extensions\ArrayExtensions.3D.cs(75):         ref T ri = ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Extensions\BoolExtensions.cs(44):     /// or by using <see cref="Unsafe.As{T}"/> or other unsafe APIs to directly manipulate the underlying
-CommunityToolkit.HighPerformance\Extensions\IBufferWriterExtensions.cs(33):             ArrayPoolBufferWriter<byte>? internalWriter = Unsafe.As<ArrayPoolBufferWriter<byte>>(writer)!;
-CommunityToolkit.HighPerformance\Extensions\IBufferWriterExtensions.cs(60):         Unsafe.WriteUnaligned(ref r0, value);
-CommunityToolkit.HighPerformance\Extensions\NullableExtensions.cs(39):         return ref Unsafe.AsRef(in Nullable.GetValueRefOrDefaultRef(in value));
-CommunityToolkit.HighPerformance\Extensions\NullableExtensions.cs(41):         return ref Unsafe.As<T?, RawNullableData<T>>(ref value).Value;
-CommunityToolkit.HighPerformance\Extensions\NullableExtensions.cs(51):     /// <remarks>The returned reference can be tested for <see langword="null"/> using <see cref="Unsafe.IsNullRef"/>.</remarks>
-CommunityToolkit.HighPerformance\Extensions\NullableExtensions.cs(73):             resultRef = ref Unsafe.AsRef(in Nullable.GetValueRefOrDefaultRef(in value));
-CommunityToolkit.HighPerformance\Extensions\NullableExtensions.cs(80):             return ref Unsafe.As<T?, RawNullableData<T>>(ref value).Value;
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(44):         // On .NET Core 3.1, if we only use Unsafe.Add(ref r0, i), we get the following:
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(73):         ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(90):         ref T ri = ref Unsafe.Add(ref r0, i);
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(156):         ref T r1 = ref Unsafe.Add(ref r0, (nint)offset);
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(216):         ref T r1 = ref Unsafe.AsRef(in value);
-CommunityToolkit.HighPerformance\Extensions\ReadOnlySpanExtensions.cs(217):         IntPtr byteOffset = Unsafe.ByteOffset(ref r0, ref r1);
-CommunityToolkit.HighPerformance\Extensions\SpanExtensions.cs(43):         ref T ri = ref Unsafe.Add(ref r0, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Extensions\SpanExtensions.cs(60):         ref T ri = ref Unsafe.Add(ref r0, i);
-CommunityToolkit.HighPerformance\Extensions\SpanExtensions.cs(154):         IntPtr byteOffset = Unsafe.ByteOffset(ref r0, ref value);
-CommunityToolkit.HighPerformance\Extensions\StreamExtensions.cs(256):             return Unsafe.ReadUnaligned<T>(ref buffer[0]);
-CommunityToolkit.HighPerformance\Extensions\StreamExtensions.cs(278):         ref T r0 = ref Unsafe.AsRef(in value);
-CommunityToolkit.HighPerformance\Extensions\StreamExtensions.cs(279):         ref byte r1 = ref Unsafe.As<T, byte>(ref r0);
-CommunityToolkit.HighPerformance\Extensions\StreamExtensions.cs(291):             Unsafe.WriteUnaligned(ref buffer[0], value);
-CommunityToolkit.HighPerformance\Extensions\StringExtensions.cs(30):         return ref Unsafe.AsRef(in text.GetPinnableReference());
-CommunityToolkit.HighPerformance\Extensions\StringExtensions.cs(47):         ref char r0 = ref Unsafe.AsRef(in text.GetPinnableReference());
-CommunityToolkit.HighPerformance\Extensions\StringExtensions.cs(51):         ref char ri = ref Unsafe.Add(ref r0, (nint)(uint)i);
-CommunityToolkit.HighPerformance\Helpers\HashCode{T}.cs(72):         ref byte rb = ref Unsafe.As<T, byte>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(32):         RawObjectData? rawObj = Unsafe.As<RawObjectData>(obj)!;
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(34):         ref byte r1 = ref Unsafe.As<T, byte>(ref data);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(36):         return Unsafe.ByteOffset(ref r0, ref r1);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(55):         RawObjectData? rawObj = Unsafe.As<RawObjectData>(obj)!;
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(57):         ref byte r1 = ref Unsafe.AddByteOffset(ref r0, offset);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(58):         ref T r2 = ref Unsafe.As<byte, T>(ref r1);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(68):     //                 |               \-- ref Unsafe.As<RawObjectData>(owner).Data
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(118):             value = Unsafe.Unbox<T>(obj);
-CommunityToolkit.HighPerformance\Helpers\ObjectMarshal.cs(139):         return ref Unsafe.Unbox<T>(obj);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.For.IAction.cs(175):                 Unsafe.AsRef(in action).Invoke(i);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.For.IAction.cs(228):                 Unsafe.AsRef(in this.action).Invoke(j);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.For.IAction2D.cs(260):                     Unsafe.AsRef(in action).Invoke(y, x);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.For.IAction2D.cs(322):                     Unsafe.AsRef(in this.action).Invoke(y, x);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(94):                 Unsafe.AsRef(in action).Invoke(item);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(142):             ref TItem rStart = ref Unsafe.Add(ref r0, low);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(143):             ref TItem rEnd = ref Unsafe.Add(ref r0, end);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(145):             while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(147):                 Unsafe.AsRef(in this.action).Invoke(in rStart);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction.cs(149):                 rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction2D.cs(143):                 ref TItem rEnd = ref Unsafe.Add(ref rStart, width);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction2D.cs(145):                 while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction2D.cs(147):                     Unsafe.AsRef(in this.action).Invoke(in rStart);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IInAction2D.cs(149):                     rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(94):                 Unsafe.AsRef(in action).Invoke(ref item);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(142):             ref TItem rStart = ref Unsafe.Add(ref r0, low);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(143):             ref TItem rEnd = ref Unsafe.Add(ref r0, end);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(145):             while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(147):                 Unsafe.AsRef(in this.action).Invoke(ref rStart);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction.cs(149):                 rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction2D.cs(150):                 ref TItem rEnd = ref Unsafe.Add(ref rStart, width);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction2D.cs(152):                 while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction2D.cs(154):                     Unsafe.AsRef(in this.action).Invoke(ref rStart);
-CommunityToolkit.HighPerformance\Helpers\ParallelHelper.ForEach.IRefAction2D.cs(156):                     rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(28):             Unsafe.Add(ref r0, offset) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(29):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(30):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(31):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(32):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(33):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(34):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(35):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(43):             Unsafe.Add(ref r0, offset) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(44):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(45):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(46):             Unsafe.Add(ref r0, offset += step) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(55):             Unsafe.Add(ref r0, offset) = default!;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(77):             Unsafe.Add(ref destinationRef, destinationOffset + 0) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(78):             Unsafe.Add(ref destinationRef, destinationOffset + 1) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(79):             Unsafe.Add(ref destinationRef, destinationOffset + 2) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(80):             Unsafe.Add(ref destinationRef, destinationOffset + 3) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(81):             Unsafe.Add(ref destinationRef, destinationOffset + 4) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(82):             Unsafe.Add(ref destinationRef, destinationOffset + 5) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(83):             Unsafe.Add(ref destinationRef, destinationOffset + 6) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(84):             Unsafe.Add(ref destinationRef, destinationOffset + 7) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(93):             Unsafe.Add(ref destinationRef, destinationOffset + 0) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(94):             Unsafe.Add(ref destinationRef, destinationOffset + 1) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(95):             Unsafe.Add(ref destinationRef, destinationOffset + 2) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(96):             Unsafe.Add(ref destinationRef, destinationOffset + 3) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(105):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(129):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(130):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(131):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(132):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(133):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(134):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(135):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(136):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(145):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(146):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(147):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(148):             Unsafe.Add(ref destinationRef, destinationOffset += destinationStep) = Unsafe.Add(ref sourceRef, sourceOffset += sourceStep);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(157):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(181):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(182):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 1);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(183):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 2);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(184):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 3);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(185):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 4);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(186):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 5);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(187):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 6);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(188):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 7);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(197):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(198):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 1);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(199):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 2);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(200):             Unsafe.Add(ref destinationRef, destinationOffset += sourceStep) = Unsafe.Add(ref sourceRef, sourceOffset + 3);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(209):             Unsafe.Add(ref destinationRef, destinationOffset) = Unsafe.Add(ref sourceRef, sourceOffset);
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(231):             Unsafe.Add(ref r0, offset) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(232):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(233):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(234):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(235):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(236):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(237):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(238):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(246):             Unsafe.Add(ref r0, offset) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(247):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(248):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(249):             Unsafe.Add(ref r0, offset += step) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RefEnumerableHelper.cs(257):             Unsafe.Add(ref r0, offset) = value;
-CommunityToolkit.HighPerformance\Helpers\Internals\RuntimeHelpers.cs(132):             return (IntPtr)Unsafe.AsPointer(ref data);
-CommunityToolkit.HighPerformance\Helpers\Internals\RuntimeHelpers.cs(153):             return ref Unsafe.AsRef<T>((void*)offset);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(38):             ref sbyte r1 = ref Unsafe.As<T, sbyte>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(39):             sbyte target = Unsafe.As<T, sbyte>(ref value);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(48):             ref short r1 = ref Unsafe.As<T, short>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(49):             short target = Unsafe.As<T, short>(ref value);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(57):             ref int r1 = ref Unsafe.As<T, int>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(58):             int target = Unsafe.As<T, int>(ref value);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(66):             ref long r1 = ref Unsafe.As<T, long>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(67):             long target = Unsafe.As<T, long>(ref value);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(76):             ref nint r1 = ref Unsafe.As<T, nint>(ref r0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(77):             nint target = Unsafe.As<T, nint>(ref value);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(98):             result += Unsafe.Add(ref r0, offset + 0).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(99):             result += Unsafe.Add(ref r0, offset + 1).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(100):             result += Unsafe.Add(ref r0, offset + 2).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(101):             result += Unsafe.Add(ref r0, offset + 3).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(102):             result += Unsafe.Add(ref r0, offset + 4).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(103):             result += Unsafe.Add(ref r0, offset + 5).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(104):             result += Unsafe.Add(ref r0, offset + 6).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(105):             result += Unsafe.Add(ref r0, offset + 7).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(113):             result += Unsafe.Add(ref r0, offset + 0).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(114):             result += Unsafe.Add(ref r0, offset + 1).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(115):             result += Unsafe.Add(ref r0, offset + 2).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(116):             result += Unsafe.Add(ref r0, offset + 3).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(125):             result += Unsafe.Add(ref r0, offset).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(169):                         ref T ri0 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 0));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(170):                         Vector<T> vi0 = Unsafe.As<T, Vector<T>>(ref ri0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(175):                         ref T ri1 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 1));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(176):                         Vector<T> vi1 = Unsafe.As<T, Vector<T>>(ref ri1);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(181):                         ref T ri2 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 2));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(182):                         Vector<T> vi2 = Unsafe.As<T, Vector<T>>(ref ri2);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(187):                         ref T ri3 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 3));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(188):                         Vector<T> vi3 = Unsafe.As<T, Vector<T>>(ref ri3);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(193):                         ref T ri4 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 4));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(194):                         Vector<T> vi4 = Unsafe.As<T, Vector<T>>(ref ri4);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(199):                         ref T ri5 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 5));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(200):                         Vector<T> vi5 = Unsafe.As<T, Vector<T>>(ref ri5);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(205):                         ref T ri6 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 6));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(206):                         Vector<T> vi6 = Unsafe.As<T, Vector<T>>(ref ri6);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(211):                         ref T ri7 = ref Unsafe.Add(ref r0, offset + (Vector<T>.Count * 7));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(212):                         Vector<T> vi7 = Unsafe.As<T, Vector<T>>(ref ri7);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(224):                     ref T ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(234):                     Vector<T> vi = Unsafe.As<T, Vector<T>>(ref ri);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(259):             result += Unsafe.Add(ref r0, offset + 0).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(260):             result += Unsafe.Add(ref r0, offset + 1).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(261):             result += Unsafe.Add(ref r0, offset + 2).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(262):             result += Unsafe.Add(ref r0, offset + 3).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(263):             result += Unsafe.Add(ref r0, offset + 4).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(264):             result += Unsafe.Add(ref r0, offset + 5).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(265):             result += Unsafe.Add(ref r0, offset + 6).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(266):             result += Unsafe.Add(ref r0, offset + 7).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(276):             result += Unsafe.Add(ref r0, offset + 0).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(277):             result += Unsafe.Add(ref r0, offset + 1).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(278):             result += Unsafe.Add(ref r0, offset + 2).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(279):             result += Unsafe.Add(ref r0, offset + 3).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Count.cs(288):             result += Unsafe.Add(ref r0, offset).Equals(value).ToByte();
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(33):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 0).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(34):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 1).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(35):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 2).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(36):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 3).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(37):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 4).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(38):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 5).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(39):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 6).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(40):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 7).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(48):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 0).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(49):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 1).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(50):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 2).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(51):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 3).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(59):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset).GetHashCode());
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(106):                 ref byte ri0 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 0));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(107):                 Vector<int> vi0 = Unsafe.ReadUnaligned<Vector<int>>(ref ri0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(111):                 ref byte ri1 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 1));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(112):                 Vector<int> vi1 = Unsafe.ReadUnaligned<Vector<int>>(ref ri1);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(116):                 ref byte ri2 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 2));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(117):                 Vector<int> vi2 = Unsafe.ReadUnaligned<Vector<int>>(ref ri2);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(121):                 ref byte ri3 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 3));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(122):                 Vector<int> vi3 = Unsafe.ReadUnaligned<Vector<int>>(ref ri3);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(126):                 ref byte ri4 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 4));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(127):                 Vector<int> vi4 = Unsafe.ReadUnaligned<Vector<int>>(ref ri4);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(131):                 ref byte ri5 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 5));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(132):                 Vector<int> vi5 = Unsafe.ReadUnaligned<Vector<int>>(ref ri5);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(136):                 ref byte ri6 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 6));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(137):                 Vector<int> vi6 = Unsafe.ReadUnaligned<Vector<int>>(ref ri6);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(141):                 ref byte ri7 = ref Unsafe.Add(ref r0, offset + (Vector<byte>.Count * 7));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(142):                 Vector<int> vi7 = Unsafe.ReadUnaligned<Vector<int>>(ref ri7);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(154):                 ref byte ri = ref Unsafe.Add(ref r0, offset);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(155):                 Vector<int> vi = Unsafe.ReadUnaligned<Vector<int>>(ref ri);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(179):                     ref byte ri0 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 0));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(180):                     ulong value0 = Unsafe.ReadUnaligned<ulong>(ref ri0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(183):                     ref byte ri1 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 1));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(184):                     ulong value1 = Unsafe.ReadUnaligned<ulong>(ref ri1);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(187):                     ref byte ri2 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 2));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(188):                     ulong value2 = Unsafe.ReadUnaligned<ulong>(ref ri2);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(191):                     ref byte ri3 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 3));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(192):                     ulong value3 = Unsafe.ReadUnaligned<ulong>(ref ri3);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(195):                     ref byte ri4 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 4));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(196):                     ulong value4 = Unsafe.ReadUnaligned<ulong>(ref ri4);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(199):                     ref byte ri5 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 5));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(200):                     ulong value5 = Unsafe.ReadUnaligned<ulong>(ref ri5);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(203):                     ref byte ri6 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 6));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(204):                     ulong value6 = Unsafe.ReadUnaligned<ulong>(ref ri6);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(207):                     ref byte ri7 = ref Unsafe.Add(ref r0, offset + (sizeof(ulong) * 7));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(208):                     ulong value7 = Unsafe.ReadUnaligned<ulong>(ref ri7);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(219):                 ref byte ri0 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 0));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(220):                 uint value0 = Unsafe.ReadUnaligned<uint>(ref ri0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(223):                 ref byte ri1 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 1));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(224):                 uint value1 = Unsafe.ReadUnaligned<uint>(ref ri1);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(227):                 ref byte ri2 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 2));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(228):                 uint value2 = Unsafe.ReadUnaligned<uint>(ref ri2);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(231):                 ref byte ri3 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 3));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(232):                 uint value3 = Unsafe.ReadUnaligned<uint>(ref ri3);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(235):                 ref byte ri4 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 4));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(236):                 uint value4 = Unsafe.ReadUnaligned<uint>(ref ri4);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(239):                 ref byte ri5 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 5));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(240):                 uint value5 = Unsafe.ReadUnaligned<uint>(ref ri5);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(243):                 ref byte ri6 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 6));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(244):                 uint value6 = Unsafe.ReadUnaligned<uint>(ref ri6);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(247):                 ref byte ri7 = ref Unsafe.Add(ref r0, offset + (sizeof(uint) * 7));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(248):                 uint value7 = Unsafe.ReadUnaligned<uint>(ref ri7);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(262):             ref byte ri0 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 0));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(263):             ushort value0 = Unsafe.ReadUnaligned<ushort>(ref ri0);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(266):             ref byte ri1 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 1));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(267):             ushort value1 = Unsafe.ReadUnaligned<ushort>(ref ri1);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(270):             ref byte ri2 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 2));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(271):             ushort value2 = Unsafe.ReadUnaligned<ushort>(ref ri2);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(274):             ref byte ri3 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 3));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(275):             ushort value3 = Unsafe.ReadUnaligned<ushort>(ref ri3);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(278):             ref byte ri4 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 4));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(279):             ushort value4 = Unsafe.ReadUnaligned<ushort>(ref ri4);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(282):             ref byte ri5 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 5));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(283):             ushort value5 = Unsafe.ReadUnaligned<ushort>(ref ri5);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(286):             ref byte ri6 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 6));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(287):             ushort value6 = Unsafe.ReadUnaligned<ushort>(ref ri6);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(290):             ref byte ri7 = ref Unsafe.Add(ref r0, offset + (sizeof(ushort) * 7));
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(291):             ushort value7 = Unsafe.ReadUnaligned<ushort>(ref ri7);
-CommunityToolkit.HighPerformance\Helpers\Internals\SpanHelper.Hash.cs(301):             hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset));
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(458):             MemoryMarshal.TryGetString(Unsafe.As<Memory<T>, Memory<char>>(ref memory), out string? text, out int textStart, out _))
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(606):                     ref T r1 = ref Unsafe.AddByteOffset(ref r0, this.offset);
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(745):             void* pointer = Unsafe.AsPointer(ref ObjectMarshal.DangerousGetObjectDataReferenceAt<T>(this.instance, this.offset));
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(770):                 string text = Unsafe.As<string>(this.instance)!;
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(780):                 memory = MemoryMarshal.AsMemory<T>(Unsafe.As<ReadOnlyMemory<char>, Memory<T>>(ref temp));
-CommunityToolkit.HighPerformance\Memory\Memory2D{T}.cs(790):                 T[] array = Unsafe.As<T[]>(this.instance)!;
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(475):             MemoryMarshal.TryGetString(Unsafe.As<ReadOnlyMemory<T>, ReadOnlyMemory<char>>(ref memory), out string? text, out int textStart, out _))
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(618):                     ref T r1 = ref Unsafe.AddByteOffset(ref r0, this.offset);
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(758):             void* pointer = Unsafe.AsPointer(ref ObjectMarshal.DangerousGetObjectDataReferenceAt<T>(this.instance, this.offset));
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(790):                 string text = Unsafe.As<string>(this.instance)!;
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(794):                 memory = Unsafe.As<ReadOnlyMemory<char>, ReadOnlyMemory<T>>(ref temp);
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(804):                 T[] array = Unsafe.As<T[]>(this.instance)!;
-CommunityToolkit.HighPerformance\Memory\ReadOnlyMemory2D{T}.cs(898):     public static implicit operator ReadOnlyMemory2D<T>(Memory2D<T> memory) => Unsafe.As<Memory2D<T>, ReadOnlyMemory2D<T>>(ref memory);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(88):         this.span = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(value), height);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(128):         this.reference = ref Unsafe.AsRef<T>(pointer);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(671):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(673):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(677):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(678):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(725):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(728):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(732):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(733):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(785):         ref readonly T r0 = ref Unsafe.AsRef<T>(null);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(809):         return ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(827):         ref T r0 = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(835):         return ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(877):         ref T r0 = ref Unsafe.Add(ref Unsafe.AsRef(in this.reference), shift);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(923):             span = MemoryMarshal.CreateSpan(ref Unsafe.AsRef(in this.reference), (int)Length);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(953):                 T[] array = Unsafe.As<T[]>(this.instance)!;
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(990):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(992):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(996):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(997):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.cs(1038):             Unsafe.AreSame(ref Unsafe.AsRef(in left.reference), ref Unsafe.AsRef(in right.reference)) &&
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.Enumerator.cs(38):         ref T r1 = ref Unsafe.Add(ref r0, startIndex);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.Enumerator.cs(64):         ref T r1 = ref Unsafe.Add(ref r0, (nint)(uint)column);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.Enumerator.cs(203):                 ref T r0 = ref Unsafe.AsRef(in this.reference);
-CommunityToolkit.HighPerformance\Memory\ReadOnlySpan2D{T}.Enumerator.cs(211):                 return ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(164):         this.reference = ref Unsafe.AsRef<T>(pointer);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(732):                 ref T rEnd = ref Unsafe.Add(ref rStart, width);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(734):                 while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(738):                     rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(785):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(787):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(791):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(792):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(839):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(842):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(846):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(847):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(919):                 ref T rEnd = ref Unsafe.Add(ref rStart, width);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(921):                 while (Unsafe.IsAddressLessThan(ref rStart, ref rEnd))
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(925):                     rStart = ref Unsafe.Add(ref rStart, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(942):         ref T r0 = ref Unsafe.AsRef<T>(null);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(992):         return ref Unsafe.Add(ref r0, index);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1056):         ref T r0 = ref Unsafe.Add(ref this.reference, shift);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1132):                 T[] array = Unsafe.As<T[]>(this.Instance)!;
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1169):                 ref T sourceEnd = ref Unsafe.Add(ref sourceStart, width);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1171):                 while (Unsafe.IsAddressLessThan(ref sourceStart, ref sourceEnd))
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1175):                     sourceStart = ref Unsafe.Add(ref sourceStart, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1176):                     destinationRef = ref Unsafe.Add(ref destinationRef, 1);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.cs(1217):             Unsafe.AreSame(ref left.reference, ref right.reference) &&
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.Enumerator.cs(38):         ref T r1 = ref Unsafe.Add(ref r0, startIndex);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.Enumerator.cs(64):         ref T r1 = ref Unsafe.Add(ref r0, (nint)(uint)column);
-CommunityToolkit.HighPerformance\Memory\Span2D{T}.Enumerator.cs(211):                 return ref Unsafe.Add(ref r0, index);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(311):             // stored in the buffer with the type we know it will have, we use Unsafe.As<T> to avoid the
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(333):                 IDictionary2<Recipient, IDictionary2<TToken>>? handlersMap = Unsafe.As<IDictionary2<Recipient, IDictionary2<TToken>>>(obj);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(348):                     IMapping mapping = Unsafe.As<IMapping>(handlersMap);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(646):             mapping = Unsafe.As<Mapping>(target);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(673):             mapping = Unsafe.As<Mapping<TToken>>(target);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(698):         return Unsafe.As<Mapping>(target);
-CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(718):         return Unsafe.As<Mapping<TToken>>(target);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(121):                 Unsafe.As<Dictionary2<TToken, object?>>(mapping!).ContainsKey(token);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(191):                 Dictionary2<TToken, object?>? map = Unsafe.As<Dictionary2<TToken, object?>>(mapping.GetValue(recipient, static _ => new Dictionary2<TToken, object?>())!);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(253):                         _ = Unsafe.As<Dictionary2<TToken, object?>>(mapping!).TryRemove(token);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(282):                     _ = Unsafe.As<Dictionary2<TToken, object?>>(mapping!).TryRemove(token);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(329):                     Dictionary2<TToken, object?>? map = Unsafe.As<Dictionary2<TToken, object?>>(enumerator.GetValue()!);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(381):         ref object? sliceEnd = ref Unsafe.Add(ref sliceStart, slice.Length);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(383):         while (Unsafe.IsAddressLessThan(ref sliceStart, ref sliceEnd))
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(386):             object recipient = Unsafe.Add(ref sliceStart, 1)!;
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(411):                 Unsafe.As<IRecipient<TMessage>>(recipient).Receive(message);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(415):                 Unsafe.As<MessageHandlerDispatcher>(handler).Invoke(recipient, message);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(418):             sliceStart = ref Unsafe.Add(ref sliceStart, 2);
-CommunityToolkit.Mvvm\Messaging\WeakReferenceMessenger.cs(509):                         if (Unsafe.As<IDictionary2>(recipientsEnumerator.GetValue()!).Count == 0)
-CommunityToolkit.Mvvm\Messaging\Internals\MessageHandlerDispatcher.cs(13): /// This type is used to avoid type aliasing with <see cref="Unsafe.As{T}(object)"/> when the generic
-CommunityToolkit.Mvvm\Messaging\Internals\MessageHandlerDispatcher.cs(53):             this.handler(Unsafe.As<TRecipient>(recipient), Unsafe.As<TMessage>(message));
-CommunityToolkit.Mvvm\Messaging\Internals\System\Collections.Generic\Dictionary2.cs(78):             if (!Unsafe.IsNullRef(ref value))
-CommunityToolkit.Mvvm\Messaging\Internals\System\Collections.Generic\Dictionary2.cs(117):         return !Unsafe.IsNullRef(ref FindValue(key));
-CommunityToolkit.Mvvm\Messaging\Internals\System\Collections.Generic\Dictionary2.cs(130):         if (!Unsafe.IsNullRef(ref valRef))
-CommunityToolkit.Mvvm\Messaging\Internals\System\Runtime.CompilerServices\ConditionalWeakTable2{TKey,TValue}.ZeroAlloc.cs(427):             value = Unsafe.As<TValue>(secondary);
-CommunityToolkit.Mvvm\Messaging\Internals\System\Runtime.CompilerServices\ConditionalWeakTable2{TKey,TValue}.ZeroAlloc.cs(482):                     key = Unsafe.As<TKey>(oKey);
-CommunityToolkit.Mvvm\Messaging\Internals\System\Runtime.CompilerServices\ConditionalWeakTable2{TKey,TValue}.ZeroAlloc.cs(483):                     value = Unsafe.As<TValue>(oValue)!;
-CommunityToolkit.Mvvm.SourceGenerators\Helpers\EquatableArray{T}.cs(51):         this.array = Unsafe.As<ImmutableArray<T>, T[]?>(ref array);
-CommunityToolkit.Mvvm.SourceGenerators\Helpers\EquatableArray{T}.cs(111):         return Unsafe.As<T[]?, ImmutableArray<T>>(ref Unsafe.AsRef(in this.array));
-CommunityToolkit.Mvvm.SourceGenerators\Helpers\ImmutableArrayBuilder{T}.cs(84):         return Unsafe.As<T[], ImmutableArray<T>>(ref array);
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\ArrayBufferWriterOwner.cs(15): internal readonly struct ArrayBufferWriterOwner : IBufferWriter<byte>
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\ArrayOwner.cs(16): internal readonly struct ArrayOwner : ISpanOwner
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\IBufferWriterOwner.cs(15): internal readonly struct IBufferWriterOwner : IBufferWriter<byte>
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.HighPerformance\Streams\Sources\MemoryManagerOwner.cs(14): internal readonly struct MemoryManagerOwner : ISpanOwner
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.Mvvm\Messaging\StrongReferenceMessenger.cs(813):     private readonly struct Recipient : IEquatable<Recipient>
+Work\_Ref1\Gen-ComToolkit\CommunityToolkit.Mvvm\Messaging\Internals\Unit.cs(13): internal readonly struct Unit : IEquatable<Unit>
