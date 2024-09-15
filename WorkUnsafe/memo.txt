@@ -245,34 +245,47 @@ GetArrayDataReference<T>(T[])	array のゼロ番目の要素への参照を返�
 
 
 ========================================================================================================
+■Reader/Writer
 D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopReader.cs(14):     public ref struct BebopReader
 D:\DevSmart\WorkSerializer\Serializer-bebop-master\Runtime\C#\Runtime\BebopWriter.cs(14):     public ref struct BebopWriter
 
-Work\_Ref1\Get-LangExt\LanguageExt.Core\Immutable Collections\Seq\SeqLoan.cs(334):         public ref struct Enumerator
+
+■Reader/Writer
 Work\_RefHW\BedrockFramework-main\src\Bedrock.Framework\Infrastructure2\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
 Work\_RefHW\BedrockFramework-main\src\Bedrock.Framework.Experimental\Infrastructure2\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
 
-DevSmart\WorkMvvm\WindowsCommunityToolkit-master\Microsoft.Toolkit.HighPerformance\_\Array2DColumnEnumerable{T}.cs(19):     public readonly ref struct Array2DColumnEnumerable<T>
-...
 
-DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\RefLocalsAndReturns.cs(53): 		public ref struct RefStruct
-DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\RefLocalsAndReturns.cs(58): 		public readonly ref struct ReadOnlyRefStruct
-DevSmart\_Reference\9.ILSpy\ICSharpCode.Decompiler.Tests\TestCases\Pretty\Using.cs(44): 		public ref struct UsingRefStruct
-
-DevSmart\_Reference\BedrockFramework-master\src\Bedrock.Framework.Experimental\Infrastructure\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
-
+■Reader/Writer
 DevSmart\_Reference\DevRoslyn\2Build\Hagar-master\src\Hagar\Buffers\Reader.cs(8):     public ref struct Reader
 DevSmart\_Reference\DevRoslyn\2Build\Hagar-master\src\Hagar\Buffers\Writer.cs(8):     public ref struct Writer<TBufferWriter> where TBufferWriter : IBufferWriter<byte>
 
-DevSmart\_Reference\NetFabric.Hyperlinq-main\NetFabric.Hyperlinq\Filtering\Where\Where.ReadOnlyMemory.cs(46):             public ref struct Enumerator
-...
 
-DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(39):         public ref struct LineSplitEnumerator
-DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(85):         public readonly ref struct LineSplitEntry
-DevSourceGen\FixMeziantou.Analyzer\tests\Meziantou.Analyzer.Test\Rules\MakeStructMemberReadOnlyAnalyzerTests.cs(580): internal ref struct PathReader
-
+■Reader/Writer
 DevSourceGen\■Roslyn\Hagar-master\src\Hagar\Buffers\Reader.cs(9):     public ref struct Reader
 DevSourceGen\■Roslyn\Hagar-master\src\Hagar\Buffers\Writer.cs(9):     public ref struct Writer<TBufferWriter> where TBufferWriter : IBufferWriter<byte>
 
+
+■Reader/Writer
 Reference\AspNetCore\src\Shared\ServerInfrastructure\BufferWriter.cs(12):     internal ref struct BufferWriter<T> where T : IBufferWriter<byte>
 Reference\Runtime\src\libraries\System.Memory\ref\System.Memory.cs(150):         public ref struct TryWriteInterpolatedStringHandler
+
+
+■Reader
+DevSourceGen\FixMeziantou.Analyzer\tests\Meziantou.Analyzer.Test\Rules\MakeStructMemberReadOnlyAnalyzerTests.cs(580): internal ref struct PathReader
+
+
+■Writer
+DevSmart\_Reference\BedrockFramework-master\src\Bedrock.Framework.Experimental\Infrastructure\BufferWriter.cs(10):     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
+
+
+■Enumerator
+Work\_Ref1\Get-LangExt\LanguageExt.Core\Immutable Collections\Seq\SeqLoan.cs(334):         public ref struct Enumerator
+
+
+■Enumerator
+DevSmart\_Reference\NetFabric.Hyperlinq-main\NetFabric.Hyperlinq\Filtering\Where\Where.ReadOnlyMemory.cs(46):             public ref struct Enumerator
+
+
+■Enumerator
+DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(39):         public ref struct LineSplitEnumerator
+DevSourceGen\FixMeziantou.Analyzer\src\Meziantou.Analyzer\Internals\StringExtensions.cs(85):         public readonly ref struct LineSplitEntry
