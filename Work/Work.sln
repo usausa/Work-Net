@@ -157,9 +157,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAssemblyLoad", "WorkAss
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linq", "Linq", "{AEBE710D-B05A-4C81-B180-C883FC570F0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLinqIntersperse", "WorkLinqIntersperse\WorkLinqIntersperse.csproj", "{7D027228-ACBA-46BE-BE32-988BC70B45FA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLinqIntersperse", "WorkLinqIntersperse\WorkLinqIntersperse.csproj", "{7D027228-ACBA-46BE-BE32-988BC70B45FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLinqPairwise", "WorkLinqPairwise\WorkLinqPairwise.csproj", "{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLinqPairwise", "WorkLinqPairwise\WorkLinqPairwise.csproj", "{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleCrossBasic", "WorkBleCrossBasic\WorkBleCrossBasic.csproj", "{80DB9BB4-D845-4178-837C-595325127A75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleWindowsBasic", "WorkBleWindowsBasic\WorkBleWindowsBasic.csproj", "{AECE1B18-79A6-4FEF-9AEF-589262C66F85}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -332,6 +336,14 @@ Global
 		{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80DB9BB4-D845-4178-837C-595325127A75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80DB9BB4-D845-4178-837C-595325127A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80DB9BB4-D845-4178-837C-595325127A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80DB9BB4-D845-4178-837C-595325127A75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AECE1B18-79A6-4FEF-9AEF-589262C66F85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AECE1B18-79A6-4FEF-9AEF-589262C66F85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AECE1B18-79A6-4FEF-9AEF-589262C66F85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AECE1B18-79A6-4FEF-9AEF-589262C66F85}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -391,6 +403,8 @@ Global
 		{1B7C6482-2649-466D-B321-08DB2DC2940F} = {F83C00F2-4581-416D-9909-84679D2AB75C}
 		{7D027228-ACBA-46BE-BE32-988BC70B45FA} = {AEBE710D-B05A-4C81-B180-C883FC570F0F}
 		{7AFF92F4-7A2B-41FD-A8CF-FC4013940651} = {AEBE710D-B05A-4C81-B180-C883FC570F0F}
+		{80DB9BB4-D845-4178-837C-595325127A75} = {A1514A70-949F-4149-992D-9655D7CF7547}
+		{AECE1B18-79A6-4FEF-9AEF-589262C66F85} = {A1514A70-949F-4149-992D-9655D7CF7547}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
