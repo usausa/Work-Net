@@ -167,6 +167,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleWindowsBasic", "Work
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleSwitchbot", "WorkBleSwitchbot\WorkBleSwitchbot.csproj", "{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStructReaderWriter", "WorkStructReaderWriter\WorkStructReaderWriter.csproj", "{DD8370F0-5D7A-44D1-A463-96C8DAF90626}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -350,6 +352,10 @@ Global
 		{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD8370F0-5D7A-44D1-A463-96C8DAF90626}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD8370F0-5D7A-44D1-A463-96C8DAF90626}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD8370F0-5D7A-44D1-A463-96C8DAF90626}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD8370F0-5D7A-44D1-A463-96C8DAF90626}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -412,6 +418,7 @@ Global
 		{80DB9BB4-D845-4178-837C-595325127A75} = {A1514A70-949F-4149-992D-9655D7CF7547}
 		{AECE1B18-79A6-4FEF-9AEF-589262C66F85} = {A1514A70-949F-4149-992D-9655D7CF7547}
 		{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC} = {A1514A70-949F-4149-992D-9655D7CF7547}
+		{DD8370F0-5D7A-44D1-A463-96C8DAF90626} = {2E463B15-8374-4DB5-91C4-687AD871C15A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
