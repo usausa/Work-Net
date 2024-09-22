@@ -5,7 +5,8 @@ using System.Text.RegularExpressions;
 
 internal partial class Program
 {
-    [GeneratedRegex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)(\s+(\d+))?$")]
+    //[GeneratedRegex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)(\s+(\d+))?$")]
+    [GeneratedRegex(@"^(\w+)(\{([^}]+)\})?\s+(\d+(\.\d+)?|NaN)(\s+(\d+))?$")]
     private static partial Regex MetricsRegex();
 
     [GeneratedRegex(@"(\w+)=""([^""]+)""")]
@@ -25,7 +26,7 @@ internal partial class Program
 
             var key = match.Groups[1].Value;
             var tags = match.Groups[2].Value;
-            var value = Double.Parse(match.Groups[3].Value);
+            var value = Double.TryParse(match.Groups[3].Value, out var result) ? result : (double?)null;
             var timestamp = match.Groups[6].Success ? long.Parse(match.Groups[6].Value) : (long?)null;
 
             Debug.WriteLine($"{key} {value} {timestamp}");
