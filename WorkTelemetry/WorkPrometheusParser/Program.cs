@@ -3,18 +3,21 @@ namespace WorkPrometheusParser;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-internal class Program
+internal partial class Program
 {
+    [GeneratedRegex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)(\s+(\d+))?$")]
+    private static partial Regex MetricsRegex();
+
+    [GeneratedRegex(@"(\w+)=""([^""]+)""")]
+    private static partial Regex TagRegex();
+
     public static void Main()
     {
         var lines = File.ReadAllLines("result.txt");
 
-        //var regex = new Regex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)\s+(\d+)?$");
-        //var regex = new Regex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)$");
-        var regex = new Regex(@"^(\w+)(\{[^}]+\})?\s+(\d+(\.\d+)?)(\s+(\d+))?$");
         foreach (var line in lines)
         {
-            var match = regex.Match(line);
+            var match = MetricsRegex().Match(line);
             if (!match.Success)
             {
                 continue;
@@ -22,7 +25,7 @@ internal class Program
 
             var key = match.Groups[1].Value;
             var tags = match.Groups[2].Value;
-            var value = double.Parse(match.Groups[3].Value);
+            var value = Double.Parse(match.Groups[3].Value);
             var timestamp = match.Groups[6].Success ? long.Parse(match.Groups[6].Value) : (long?)null;
 
             Debug.WriteLine($"{key} {value} {timestamp}");
@@ -36,21 +39,19 @@ internal class Program
                 }
             }
         }
+    }
 
-        static Dictionary<string, string> ParseTags(string tags)
+    private static Dictionary<string, string> ParseTags(string tags)
+    {
+        var dictionary = new Dictionary<string, string>();
+
+        foreach (Match match in TagRegex().Matches(tags))
         {
-            var tagDict = new Dictionary<string, string>();
-            var regex = new Regex(@"(\w+)=""([^""]+)""");
-            var matches = regex.Matches(tags);
-
-            foreach (Match match in matches)
-            {
-                var key = match.Groups[1].Value;
-                var value = match.Groups[2].Value;
-                tagDict[key] = value;
-            }
-
-            return tagDict;
+            var key = match.Groups[1].Value;
+            var value = match.Groups[2].Value;
+            dictionary[key] = value;
         }
+
+        return dictionary;
     }
 }
