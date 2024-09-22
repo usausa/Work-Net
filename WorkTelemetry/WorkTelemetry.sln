@@ -55,7 +55,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Aspire", "Aspire", "{C36200
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkAspire", "WorkAspire\WorkAspire.csproj", "{04795CF6-83A1-4C75-84D1-F3D1F4FF3A1B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkTraceZipkin", "WorkTraceZipkin\WorkTraceZipkin.csproj", "{83A29821-4767-43D0-AAF7-FE87A96E6D4E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkTraceZipkin", "WorkTraceZipkin\WorkTraceZipkin.csproj", "{83A29821-4767-43D0-AAF7-FE87A96E6D4E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPrometheusParser", "WorkPrometheusParser\WorkPrometheusParser.csproj", "{0CE229C0-8FA6-4162-B7E9-854D5B7A1C9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -143,6 +145,10 @@ Global
 		{83A29821-4767-43D0-AAF7-FE87A96E6D4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83A29821-4767-43D0-AAF7-FE87A96E6D4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83A29821-4767-43D0-AAF7-FE87A96E6D4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CE229C0-8FA6-4162-B7E9-854D5B7A1C9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CE229C0-8FA6-4162-B7E9-854D5B7A1C9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CE229C0-8FA6-4162-B7E9-854D5B7A1C9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CE229C0-8FA6-4162-B7E9-854D5B7A1C9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
