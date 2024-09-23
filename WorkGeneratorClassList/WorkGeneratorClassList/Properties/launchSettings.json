@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "EmbeddedBuildProperty": {
-      "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\WorkGeneratorClassList.Example\\WorkGeneratorClassList.Example.csproj"
-    }
-  }
-}
