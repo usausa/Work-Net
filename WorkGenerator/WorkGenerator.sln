@@ -23,7 +23,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorClassList.Exam
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OtherLib", "OtherLib", "{3E3E5E7C-1E82-4428-9CAC-A72161082FC5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dynamic", "Dynamic", "{F7586501-3D0B-403E-B8FE-2DEA535C5484}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Dynamic", "_Dynamic", "{F7586501-3D0B-403E-B8FE-2DEA535C5484}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_String", "_String", "{170FDBC3-E7B8-44D4-AC59-079DB79BE530}"
 EndProject
@@ -40,6 +40,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorDynamic.Library", "WorkDynamic\WorkGeneratorDynamic.Library\WorkGeneratorDynamic.Library.csproj", "{30EEB59E-0FA1-45CD-89B5-6AD183BBEC4C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorDynamic.Example", "WorkDynamic\WorkGeneratorDynamic.Example\WorkGeneratorDynamic.Example.csproj", "{5914A276-5F50-4EB8-9BB8-0765593A436A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorOtherLib.Attributes", "WorkGeneratorOtherLib\WorkGeneratorOtherLib.Attributes\WorkGeneratorOtherLib.Attributes.csproj", "{4027374D-367E-4374-BCBD-3D4FB7E00EB2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorOtherLib", "WorkGeneratorOtherLib\WorkGeneratorOtherLib\WorkGeneratorOtherLib.csproj", "{2E081B7C-6D90-4D08-B36E-2018599432FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkGeneratorOtherLib.Example", "WorkGeneratorOtherLib\WorkGeneratorOtherLib.Example\WorkGeneratorOtherLib.Example.csproj", "{69764CBB-D196-4D57-B54D-8193C298B027}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,6 +94,18 @@ Global
 		{5914A276-5F50-4EB8-9BB8-0765593A436A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5914A276-5F50-4EB8-9BB8-0765593A436A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5914A276-5F50-4EB8-9BB8-0765593A436A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4027374D-367E-4374-BCBD-3D4FB7E00EB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4027374D-367E-4374-BCBD-3D4FB7E00EB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4027374D-367E-4374-BCBD-3D4FB7E00EB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4027374D-367E-4374-BCBD-3D4FB7E00EB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E081B7C-6D90-4D08-B36E-2018599432FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E081B7C-6D90-4D08-B36E-2018599432FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E081B7C-6D90-4D08-B36E-2018599432FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E081B7C-6D90-4D08-B36E-2018599432FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69764CBB-D196-4D57-B54D-8193C298B027}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69764CBB-D196-4D57-B54D-8193C298B027}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69764CBB-D196-4D57-B54D-8193C298B027}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69764CBB-D196-4D57-B54D-8193C298B027}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -110,6 +128,9 @@ Global
 		{0678DD14-5C8A-4210-A3C1-6576F9F70733} = {F7586501-3D0B-403E-B8FE-2DEA535C5484}
 		{30EEB59E-0FA1-45CD-89B5-6AD183BBEC4C} = {F7586501-3D0B-403E-B8FE-2DEA535C5484}
 		{5914A276-5F50-4EB8-9BB8-0765593A436A} = {F7586501-3D0B-403E-B8FE-2DEA535C5484}
+		{4027374D-367E-4374-BCBD-3D4FB7E00EB2} = {3E3E5E7C-1E82-4428-9CAC-A72161082FC5}
+		{2E081B7C-6D90-4D08-B36E-2018599432FC} = {3E3E5E7C-1E82-4428-9CAC-A72161082FC5}
+		{69764CBB-D196-4D57-B54D-8193C298B027} = {3E3E5E7C-1E82-4428-9CAC-A72161082FC5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2566BD9-BE57-4BED-9528-32E29D8D29C7}
