@@ -161,15 +161,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLinqIntersperse", "Work
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkLinqPairwise", "WorkLinqPairwise\WorkLinqPairwise.csproj", "{7AFF92F4-7A2B-41FD-A8CF-FC4013940651}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleCrossBasic", "WorkBleCrossBasic\WorkBleCrossBasic.csproj", "{80DB9BB4-D845-4178-837C-595325127A75}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBleCrossBasic", "WorkBleCrossBasic\WorkBleCrossBasic.csproj", "{80DB9BB4-D845-4178-837C-595325127A75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleWindowsBasic", "WorkBleWindowsBasic\WorkBleWindowsBasic.csproj", "{AECE1B18-79A6-4FEF-9AEF-589262C66F85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBleWindowsBasic", "WorkBleWindowsBasic\WorkBleWindowsBasic.csproj", "{AECE1B18-79A6-4FEF-9AEF-589262C66F85}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleSwitchbot", "WorkBleSwitchbot\WorkBleSwitchbot.csproj", "{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkBleSwitchbot", "WorkBleSwitchbot\WorkBleSwitchbot.csproj", "{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStructReaderWriter", "WorkStructReaderWriter\WorkStructReaderWriter.csproj", "{DD8370F0-5D7A-44D1-A463-96C8DAF90626}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkStructReaderWriter", "WorkStructReaderWriter\WorkStructReaderWriter.csproj", "{DD8370F0-5D7A-44D1-A463-96C8DAF90626}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStructEnumerator", "WorkStructEnumerator\WorkStructEnumerator.csproj", "{3829A895-B2E3-40E3-902C-F95765B31F60}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkStructEnumerator", "WorkStructEnumerator\WorkStructEnumerator.csproj", "{3829A895-B2E3-40E3-902C-F95765B31F60}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{A899F53D-25EE-4FB5-B638-602FD6F76DFD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPasswordHash", "WorkPasswordHash\WorkPasswordHash.csproj", "{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -362,6 +366,10 @@ Global
 		{3829A895-B2E3-40E3-902C-F95765B31F60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3829A895-B2E3-40E3-902C-F95765B31F60}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3829A895-B2E3-40E3-902C-F95765B31F60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -426,6 +434,7 @@ Global
 		{D4DBAFC0-E325-410F-8C38-0CA50BDEBEBC} = {A1514A70-949F-4149-992D-9655D7CF7547}
 		{DD8370F0-5D7A-44D1-A463-96C8DAF90626} = {2E463B15-8374-4DB5-91C4-687AD871C15A}
 		{3829A895-B2E3-40E3-902C-F95765B31F60} = {2E463B15-8374-4DB5-91C4-687AD871C15A}
+		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B} = {A899F53D-25EE-4FB5-B638-602FD6F76DFD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
