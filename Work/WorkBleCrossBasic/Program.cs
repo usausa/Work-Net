@@ -28,7 +28,15 @@ internal class Program
                 }
             }
         };
-        var scan = await Bluetooth.RequestLEScanAsync();
+
+        try
+        {
+            var scan = await Bluetooth.RequestLEScanAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
 
         Console.ReadLine();
     }
