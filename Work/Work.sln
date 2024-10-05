@@ -179,6 +179,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkWatTest", "WorkWatTest\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleDbus", "WorkBleDbus\WorkBleDbus.csproj", "{8C71062E-CD67-4472-BA50-59B5C4C3BF71}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBleDbus2", "WorkBleDbus2\WorkBleDbus2.csproj", "{953DC787-1706-4412-9FC8-10877BB24E70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -382,6 +384,10 @@ Global
 		{8C71062E-CD67-4472-BA50-59B5C4C3BF71}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C71062E-CD67-4472-BA50-59B5C4C3BF71}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C71062E-CD67-4472-BA50-59B5C4C3BF71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{953DC787-1706-4412-9FC8-10877BB24E70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{953DC787-1706-4412-9FC8-10877BB24E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{953DC787-1706-4412-9FC8-10877BB24E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{953DC787-1706-4412-9FC8-10877BB24E70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -449,6 +455,7 @@ Global
 		{1AB1A909-C8E9-4B96-919E-40EA14FE7E1B} = {A899F53D-25EE-4FB5-B638-602FD6F76DFD}
 		{66BDF4C5-7CB5-481D-AEF3-3EF750F1BBB7} = {A1514A70-949F-4149-992D-9655D7CF7547}
 		{8C71062E-CD67-4472-BA50-59B5C4C3BF71} = {A1514A70-949F-4149-992D-9655D7CF7547}
+		{953DC787-1706-4412-9FC8-10877BB24E70} = {A1514A70-949F-4149-992D-9655D7CF7547}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
