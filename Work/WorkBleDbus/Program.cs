@@ -3,16 +3,23 @@ using HashtagChris.DotNetBlueZ.Extensions;
 
 while (true)
 {
-    IAdapter1 adapter = await BlueZManager.GetAdapterAsync(adapterName: "hci0");
+    var adapter = await BlueZManager.GetAdapterAsync(adapterName: "hci0");
+
+    // TODO retry
     IReadOnlyList<Device> devices = await adapter.GetDevicesAsync();
     foreach (var device in devices)
     {
         var prop = await device.GetAllAsync();
         Console.WriteLine($"{prop.Address} {prop.Name} {prop.RSSI}");
+        if (!prop.Name.StartsWith("BTWATTCH2"))
+        {
+            continue;
+        }
 
-        await device.ConnectAsync();
         try
         {
+            await device.ConnectAsync();
+
             //var paired = await device.GetPairedAsync();
             //var rssi = await device.GetRSSIAsync();
             //Console.WriteLine($"{paired} {rssi}");
@@ -42,8 +49,6 @@ while (true)
 
                 Thread.Sleep(5000);
             }
-
-            // TODO error & retry
 
             //await rx.StopNotifyAsync();
         }
