@@ -5,6 +5,7 @@ using var adapter = await BlueZManager.GetAdapterAsync(adapterName: "hci0");
 
 await adapter.StartDiscoveryAsync();
 
+// NG
 while (true)
 {
 
