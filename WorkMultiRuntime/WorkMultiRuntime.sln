@@ -3,7 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMultiRuntime", "WorkMultiRuntime\WorkMultiRuntime.csproj", "{0994ADDB-F2CF-4E73-BA50-831464E7D1CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WorkMultiRuntime", "WorkMultiRuntime\WorkMultiRuntime.csproj", "{0994ADDB-F2CF-4E73-BA50-831464E7D1CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMultiRuntime.Service", "WorkMultiRuntime.Service\WorkMultiRuntime.Service.csproj", "{4DE48308-F364-4ADA-B884-FFC929A4B40F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMultiRuntime.Plugin1", "WorkMultiRuntime.Plugin1\WorkMultiRuntime.Plugin1.csproj", "{99D989EA-3BC0-439B-B250-9AA12784FE0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMultiRuntime.Plugin2", "WorkMultiRuntime.Plugin2\WorkMultiRuntime.Plugin2.csproj", "{77F999E0-B9CA-47DA-88CE-9EF9EE8B284E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMultiRuntime.Plugin3", "WorkMultiRuntime.Plugin3\WorkMultiRuntime.Plugin3.csproj", "{3B762682-7F0F-4804-859D-34BFEFF63C51}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +23,22 @@ Global
 		{0994ADDB-F2CF-4E73-BA50-831464E7D1CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0994ADDB-F2CF-4E73-BA50-831464E7D1CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0994ADDB-F2CF-4E73-BA50-831464E7D1CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DE48308-F364-4ADA-B884-FFC929A4B40F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DE48308-F364-4ADA-B884-FFC929A4B40F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DE48308-F364-4ADA-B884-FFC929A4B40F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DE48308-F364-4ADA-B884-FFC929A4B40F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99D989EA-3BC0-439B-B250-9AA12784FE0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99D989EA-3BC0-439B-B250-9AA12784FE0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99D989EA-3BC0-439B-B250-9AA12784FE0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99D989EA-3BC0-439B-B250-9AA12784FE0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77F999E0-B9CA-47DA-88CE-9EF9EE8B284E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77F999E0-B9CA-47DA-88CE-9EF9EE8B284E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77F999E0-B9CA-47DA-88CE-9EF9EE8B284E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77F999E0-B9CA-47DA-88CE-9EF9EE8B284E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B762682-7F0F-4804-859D-34BFEFF63C51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B762682-7F0F-4804-859D-34BFEFF63C51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B762682-7F0F-4804-859D-34BFEFF63C51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B762682-7F0F-4804-859D-34BFEFF63C51}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
