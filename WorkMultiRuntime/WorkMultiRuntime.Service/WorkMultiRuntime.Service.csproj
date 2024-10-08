@@ -1,19 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-WorkMultiRuntime.Service-8e831130-1d27-4af4-a27f-497da1b9d8d1</UserSecretsId>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(RuntimeIdentifier)'=='win-x64'">
-    <DefineConstants>WIN</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(RuntimeIdentifier)'=='linux-x64'">
-    <DefineConstants>LINUX</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
