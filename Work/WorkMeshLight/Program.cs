@@ -8,33 +8,8 @@ using Windows.Storage.Streams;
 var meshService = new Guid("72c90001-57a9-4d40-b746-534e22ec9f9e");
 var writeCharacteristic = new Guid("72c90002-57a9-4d40-b746-534e22ec9f9e");
 
-var tcs = new TaskCompletionSource<BluetoothLEDevice?>();
-
-// Watcher
-var watcher = new BluetoothLEAdvertisementWatcher
-{
-    ScanningMode = BluetoothLEScanningMode.Active
-};
-
-watcher.Received += ReceivedHandler;
-
-watcher.Start();
-
-async void ReceivedHandler(BluetoothLEAdvertisementWatcher source, BluetoothLEAdvertisementReceivedEventArgs eventArgs)
-{
-    var device = await BluetoothLEDevice.FromBluetoothAddressAsync(eventArgs.BluetoothAddress);
-    if ((device is not null) && (device.Name.Contains("MESH-100LE")))
-    {
-        tcs.TrySetResult(device);
-    }
-}
-
-// Discover
-var device = await tcs.Task;
-
-watcher.Stop();
-watcher.Received -= ReceivedHandler;
-
+//var device = await BluetoothLEDevice.FromIdAsync("BluetoothLE#BluetoothLE00:a7:45:06:04:94-ed:73:2c:64:2c:75");
+var device = await DiscoverDevice();
 if (device is null)
 {
     return;
@@ -71,36 +46,79 @@ if (characteristic is null)
 }
 
 var writer = new DataWriter();
-writer.WriteBytes(new byte[]
+
+var command = new byte[]
 {
     0x00, // ID
     0x02, //
     0x01, // Enable
-    0x03 // チェックサム
-});
-var buffer1 = writer.DetachBuffer();
+    0x00  // チェックサム
+};
+command[^1] = CalcCrc(command.AsSpan(0, command.Length - 1));
+writer.WriteBytes(command);
 
-var writeResult = await characteristic.WriteValueWithResultAsync(buffer1);
+var writeResult = await characteristic.WriteValueWithResultAsync(writer.DetachBuffer());
 Debug.WriteLine(writeResult);
 
-writer.WriteBytes(new byte[]
+command = new byte[]
 {
     0x01, // ID
     0x00, // LED店頭
-    0x0F, // R
+    0x00, // R
     0x00,
-    0x3F, // G
+    0xFF, // G
     0x00,
     0x00, // B
-    0xFF, 0xFF, // 点灯時間
-    0x88, 0x13, // 点灯サイクル(5000ms)
+    0x88, 0x13, // 点灯時間
+    0x64, 0x00, // 点灯サイクル(100ms)
     0x64, 0x00, // 消灯サイクル(100ms)
     0x01, // 点灯パターン
     0x4D // チェックサム
-});
-buffer1 = writer.DetachBuffer();
+};
+command[^1] = CalcCrc(command.AsSpan(0, command.Length - 1));
+writer.WriteBytes(command);
 
-writeResult = await characteristic.WriteValueWithResultAsync(buffer1);
+writeResult = await characteristic.WriteValueWithResultAsync(writer.DetachBuffer());
 Debug.WriteLine(writeResult);
 
-Console.ReadLine();
+static async ValueTask<BluetoothLEDevice?> DiscoverDevice()
+{
+    var tcs = new TaskCompletionSource<BluetoothLEDevice?>();
+
+    // Watcher
+    var watcher = new BluetoothLEAdvertisementWatcher
+    {
+        ScanningMode = BluetoothLEScanningMode.Active
+    };
+
+    watcher.Received += ReceivedHandler;
+
+    watcher.Start();
+
+    async void ReceivedHandler(BluetoothLEAdvertisementWatcher source, BluetoothLEAdvertisementReceivedEventArgs eventArgs)
+    {
+        var device = await BluetoothLEDevice.FromBluetoothAddressAsync(eventArgs.BluetoothAddress);
+        if ((device is not null) && (device.Name.Contains("MESH-100LE")))
+        {
+            tcs.TrySetResult(device);
+        }
+    }
+
+    // Discover
+    var device = await tcs.Task;
+
+    watcher.Stop();
+    watcher.Received -= ReceivedHandler;
+
+    return device;
+}
+
+static byte CalcCrc(ReadOnlySpan<byte> span)
+{
+    var total = 0;
+    foreach (var b in span)
+    {
+        total += b;
+    }
+    return (byte)(total & 0xFF);
+}
