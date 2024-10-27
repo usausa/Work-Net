@@ -23,7 +23,7 @@ watcher.Received += (_, eventArgs) =>
         {
             var temperature = ((float)(buffer[8] & 0x0f) / 10 + (buffer[9] & 0x7f)) * ((buffer[9] & 0x80) > 0 ? 1 : -1);
             var humidity = buffer[10] & 0x7f;
-            Debug.WriteLine($"{eventArgs.Timestamp:HH:mm:ss.fff} {eventArgs.RawSignalStrengthInDBm} {Convert.ToHexString(buffer.AsSpan(0, 6))} Temp={temperature:F1}C, Hum={humidity}% {Convert.ToHexString(buffer)}");
+            Console.WriteLine($"{eventArgs.Timestamp:HH:mm:ss.fff} {eventArgs.RawSignalStrengthInDBm} {Convert.ToHexString(buffer.AsSpan(0, 6))} Temp={temperature:F1}C, Hum={humidity}% {Convert.ToHexString(buffer)}");
         }
     }
 };
