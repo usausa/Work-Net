@@ -1,7 +1,6 @@
 using PdfSharp.Drawing;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
-using PdfSharp.Quality;
 
 GlobalFontSettings.FontResolver = new FontResolver(Path.GetFullPath("ipaexg.ttf"));
 
