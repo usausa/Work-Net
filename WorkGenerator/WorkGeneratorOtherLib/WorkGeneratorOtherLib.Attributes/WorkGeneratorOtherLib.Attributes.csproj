@@ -13,4 +13,11 @@
     <PackageTags>sourcegenerator</PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Usa.Smart.Analyzers.JapaneseComment" Version="1.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>
