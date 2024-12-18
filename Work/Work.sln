@@ -199,6 +199,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPdfSharp", "WorkPdfShar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSearchValue", "WorkSearchValue\WorkSearchValue.csproj", "{2B6A44C7-2255-459D-8213-5279B9C7B083}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSerialProxy", "WorkSerialProxy\WorkSerialProxy.csproj", "{95176F57-6050-4000-B517-5B066E5124DE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -442,6 +444,10 @@ Global
 		{2B6A44C7-2255-459D-8213-5279B9C7B083}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B6A44C7-2255-459D-8213-5279B9C7B083}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B6A44C7-2255-459D-8213-5279B9C7B083}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95176F57-6050-4000-B517-5B066E5124DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95176F57-6050-4000-B517-5B066E5124DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95176F57-6050-4000-B517-5B066E5124DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95176F57-6050-4000-B517-5B066E5124DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
