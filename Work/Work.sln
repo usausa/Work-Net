@@ -201,6 +201,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSearchValue", "WorkSear
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSerialProxy", "WorkSerialProxy\WorkSerialProxy.csproj", "{95176F57-6050-4000-B517-5B066E5124DE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkFastFill", "WorkFastFill\WorkFastFill.csproj", "{C5392954-4355-428F-8067-7A57E1D8B58F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSerialList", "WorkSerialList\WorkSerialList.csproj", "{C6158833-70BE-49A1-9D4E-39CC1620DDC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -448,6 +452,14 @@ Global
 		{95176F57-6050-4000-B517-5B066E5124DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95176F57-6050-4000-B517-5B066E5124DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95176F57-6050-4000-B517-5B066E5124DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5392954-4355-428F-8067-7A57E1D8B58F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5392954-4355-428F-8067-7A57E1D8B58F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5392954-4355-428F-8067-7A57E1D8B58F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5392954-4355-428F-8067-7A57E1D8B58F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6158833-70BE-49A1-9D4E-39CC1620DDC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6158833-70BE-49A1-9D4E-39CC1620DDC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6158833-70BE-49A1-9D4E-39CC1620DDC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6158833-70BE-49A1-9D4E-39CC1620DDC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
