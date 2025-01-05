@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkScan.SourceGenerator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\WorkScan.SourceGenerator.Example\\WorkScan.SourceGenerator.Example.csproj"
+    }
+  }
+}
