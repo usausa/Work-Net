@@ -11,4 +11,8 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Jab" Version="0.10.2" />
+  </ItemGroup>
+
 </Project>
