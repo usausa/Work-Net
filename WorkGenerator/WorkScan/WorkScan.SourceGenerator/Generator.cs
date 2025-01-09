@@ -28,9 +28,17 @@ public sealed class Generator : IIncrementalGenerator
 
             var classes = new StringBuilder();
 
+            var classSymbols0 = new List<INamedTypeSymbol>();
+            CollectClasses(compilation.Assembly.GlobalNamespace, classSymbols0);
+            foreach (var classSymbol in classSymbols0)
+            {
+                var className = classSymbol.ToDisplayString();
+                classes.AppendLine($"// {className}");
+            }
+
             foreach (var referencedAssembly in compilation.References)
             {
-                if (!referencedAssembly.Display?.Contains("WorkScan") ?? false)
+                if (!referencedAssembly.Display?.Contains("Library") ?? false)
                 {
                     continue;
                 }
