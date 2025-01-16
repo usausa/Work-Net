@@ -75,6 +75,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Binding", "Binding", "{A957
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBindingQuery", "WorkBindingQuery\WorkBindingQuery.csproj", "{9E8B7F0F-81BE-4F34-BEEB-6221FD5D8194}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkOpenApi", "WorkOpenApi\WorkOpenApi.csproj", "{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -164,6 +166,10 @@ Global
 		{9E8B7F0F-81BE-4F34-BEEB-6221FD5D8194}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E8B7F0F-81BE-4F34-BEEB-6221FD5D8194}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E8B7F0F-81BE-4F34-BEEB-6221FD5D8194}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -194,6 +200,7 @@ Global
 		{94368EDA-69DE-4BB2-97BC-D1F6CFDC7EA1} = {5DE97062-CDF9-4B68-A4A2-C511AD08B485}
 		{BC5BEBC4-AA8D-472F-9919-889C20F03B96} = {A782FEF3-7F30-42F2-820A-BEC5A806DC22}
 		{9E8B7F0F-81BE-4F34-BEEB-6221FD5D8194} = {A95793CF-7DC4-4C6F-990F-FD297A456006}
+		{9F196BC6-5C8A-405B-B29D-E9DF5EAD2483} = {A1836218-BA30-47BB-944C-8D0730E9DF24}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2FEB124-FCB5-4BB5-8B29-6C5BE60194E7}
