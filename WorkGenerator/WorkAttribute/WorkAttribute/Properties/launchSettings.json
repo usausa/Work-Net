@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkAttribute": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\WorkAttribute.Example\\WorkAttribute.Example.csproj"
+    }
+  }
+}

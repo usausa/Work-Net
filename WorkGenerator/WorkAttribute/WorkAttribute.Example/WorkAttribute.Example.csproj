@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!--
+  <PropertyGroup>
+    <TemplateSourceGenerator></TemplateSourceGenerator>
+  </PropertyGroup>
+  -->
+
+  <Import Project="..\WorkAttribute\build\WorkAttribute.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkAttribute.Attributes\WorkAttribute.Attributes.csproj" />
+    <ProjectReference Include="..\WorkAttribute\WorkAttribute.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
