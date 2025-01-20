@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Develop": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\WorkMisc.Example\\WorkMisc.Example.csproj"
+    }
+  }
+}

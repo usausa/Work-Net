@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>WorkMisc</PackageId>
+    <Title>WorkMisc</Title>
+    <Description>Template source generator.</Description>
+    <PackageTags>sourcegenerator</PackageTags>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkMisc.Generator\WorkMisc.Generator.csproj" />
+  </ItemGroup>
+
+</Project>
