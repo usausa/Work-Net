@@ -8,5 +8,6 @@ while (true)
 {
     var endPoint = new IPEndPoint(IPAddress.Any, 0);
     var data = client.Receive(ref endPoint);
-    Console.WriteLine(Encoding.UTF8.GetString(data));
+    var now = DateTime.Now;
+    Console.WriteLine($"{now:HH:mm:ss} : {Encoding.UTF8.GetString(data)}");
 }
