@@ -17,6 +17,10 @@
   <Import Project="..\WorkAttribute\build\WorkAttribute.props" />
 
   <ItemGroup>
+    <PackageReference Include="StronglyTypedId" Version="1.0.0-beta08" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\WorkAttribute.Attributes\WorkAttribute.Attributes.csproj" />
     <ProjectReference Include="..\WorkAttribute\WorkAttribute.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <TargetFramework>netstandard2.0</TargetFramework>
     <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <PropertyGroup>
