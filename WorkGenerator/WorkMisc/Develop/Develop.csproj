@@ -17,7 +17,7 @@
   <Import Project="..\WorkMisc.Generator\build\WorkMisc.Generator.props" />
 
   <ItemGroup>
-    <ProjectReference Include="..\WorkMisc.Generator\WorkMisc.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\WorkMisc.Generator\WorkMisc.Generator.csproj" OutputItemType="analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\WorkMisc\WorkMisc.csproj" />
   </ItemGroup>
 
