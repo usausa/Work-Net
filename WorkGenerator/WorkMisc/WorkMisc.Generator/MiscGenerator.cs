@@ -5,6 +5,7 @@ using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 [Generator]
@@ -20,6 +21,9 @@ public sealed class MiscGenerator : IIncrementalGenerator
         // Executeには渡さないようにする
         //context.CompilationProvider;
 
+        var propertyProvider = context.AnalyzerConfigOptionsProvider
+            .Select(SelectBuildProperty);
+
         var classProvider = context.SyntaxProvider
             .ForAttributeWithMetadataName("WorkMisc.CustomClassAttribute", ClassPredicate, ClassTransform)
             .Collect();
@@ -28,8 +32,15 @@ public sealed class MiscGenerator : IIncrementalGenerator
             .Collect();
 
         context.RegisterImplementationSourceOutput(
-            classProvider.Combine(methodProvider),
-            static (context, provider) => Execute(context, provider.Left, provider.Right));
+            propertyProvider.Combine(classProvider.Combine(methodProvider)),
+            static (context, provider) => Execute(context, provider.Left, provider.Right.Left, provider.Right.Right));
+    }
+
+    private static BuildPropertyModel SelectBuildProperty(AnalyzerConfigOptionsProvider provider, CancellationToken token)
+    {
+        DebugLog.Log("SelectBuildProperty");
+        var value = provider.GlobalOptions.TryGetValue("build_property.WorkMiscValue", out var ret) ? ret : string.Empty;
+        return new BuildPropertyModel(value);
     }
 
     private static bool ClassPredicate(SyntaxNode syntax, CancellationToken token)
@@ -56,9 +67,10 @@ public sealed class MiscGenerator : IIncrementalGenerator
         return new MethodModel(context.TargetSymbol.Name);
     }
 
-    private static void Execute(SourceProductionContext context, ImmutableArray<ClassModel> classes, ImmutableArray<MethodModel> methods)
+    private static void Execute(SourceProductionContext context, BuildPropertyModel buildProperty, ImmutableArray<ClassModel> classes, ImmutableArray<MethodModel> methods)
     {
         var sb = new StringBuilder();
+        sb.AppendLine($"// Property: {buildProperty.Value}");
         foreach (var @class in classes)
         {
             sb.AppendLine($"// Class: {@class.Namespace}.{@class.Name}");
@@ -76,6 +88,8 @@ public sealed class MiscGenerator : IIncrementalGenerator
     private record ClassModel(string Name, string Namespace);
 
     private record MethodModel(string Name);
+
+    private record BuildPropertyModel(string Value);
 
     private static string GetNamespace(BaseTypeDeclarationSyntax syntax)
     {

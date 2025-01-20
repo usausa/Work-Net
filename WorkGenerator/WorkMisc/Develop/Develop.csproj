@@ -12,11 +12,9 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
-  <!--
   <PropertyGroup>
-    <TemplateSourceGenerator></TemplateSourceGenerator>
+    <WorkMiscValue>test</WorkMiscValue>
   </PropertyGroup>
-  -->
 
   <Import Project="..\WorkMisc.Generator\build\WorkMisc.Generator.props" />
 

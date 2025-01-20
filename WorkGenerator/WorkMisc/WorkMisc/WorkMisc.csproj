@@ -6,15 +6,26 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBuildOutputs</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="PackBuildOutputs" DependsOnTargets="SatelliteDllsProjectOutputGroup;DebugSymbolsProjectOutputGroup">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="..\WorkMisc.Generator\build\**" PackagePath="build" />
+      <TfmSpecificPackageFile Include="$(OutputPath)\WorkMisc.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+  <PropertyGroup>
     <PackageId>WorkMisc</PackageId>
     <Title>WorkMisc</Title>
     <Description>Template source generator.</Description>
     <PackageTags>sourcegenerator</PackageTags>
   </PropertyGroup>
 
-
   <ItemGroup>
-    <ProjectReference Include="..\WorkMisc.Generator\WorkMisc.Generator.csproj" />
+    <ProjectReference Include="..\WorkMisc.Generator\WorkMisc.Generator.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
