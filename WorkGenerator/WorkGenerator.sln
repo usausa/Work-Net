@@ -93,6 +93,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMisc.Generator", "WorkM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMisc", "WorkMisc\WorkMisc\WorkMisc.csproj", "{45480FEF-A593-4C19-ADCC-2A8330BF016C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkJson", "WorkJson\WorkJson.csproj", "{5288D175-5CBB-43AA-9E5C-1BD140663A32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -208,6 +210,10 @@ Global
 		{45480FEF-A593-4C19-ADCC-2A8330BF016C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45480FEF-A593-4C19-ADCC-2A8330BF016C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45480FEF-A593-4C19-ADCC-2A8330BF016C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5288D175-5CBB-43AA-9E5C-1BD140663A32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5288D175-5CBB-43AA-9E5C-1BD140663A32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5288D175-5CBB-43AA-9E5C-1BD140663A32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5288D175-5CBB-43AA-9E5C-1BD140663A32}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
