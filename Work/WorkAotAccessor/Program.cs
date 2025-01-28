@@ -1,7 +1,5 @@
 using BunnyTail.MemberAccessor;
 
-using System.Diagnostics.CodeAnalysis;
-
 namespace WorkAotAccessor;
 
 internal class Program
@@ -22,14 +20,14 @@ internal class Program
         // TODO
         // Generic
 
-        //var accessorFactory2 = AccessorRegistry.FindFactory<GenericData<int>>()!;
-        //var getter2 = accessorFactory2.CreateGetter<int>(nameof(GenericData<int>.Value))!;
-        //var setter2 = accessorFactory2.CreateSetter<int>(nameof(GenericData<int>.Value))!;
+        var accessorFactory2 = AccessorRegistry.FindFactory<GenericData<int>>()!;
+        var getter2 = accessorFactory2.CreateGetter<int>(nameof(GenericData<int>.Value))!;
+        var setter2 = accessorFactory2.CreateSetter<int>(nameof(GenericData<int>.Value))!;
 
-        //var data2 = new GenericData<int>();
-        //setter2(data2, 123);
-        //var value = getter2(data2);
-        //Console.WriteLine(value);
+        var data2 = new GenericData<int>();
+        setter2(data2, 123);
+        var value = getter2(data2);
+        Console.WriteLine(value);
     }
 }
 
