@@ -1,18 +1,15 @@
 using BunnyTail.MemberAccessor;
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace WorkAotAccessor;
 
 internal class Program
 {
+    // - Required RdXmlFile
+    // TODO suppress warning
     static void Main(string[] args)
     {
-        // Required
-        // rd.xml
-
-        // TODO
-        // Generic
-        // NoWarn IL
-
         var accessorFactory1 = AccessorRegistry.FindFactory<Data>()!;
         var getter1 = accessorFactory1.CreateGetter<int>(nameof(Data.Id))!;
         var setter1 = accessorFactory1.CreateSetter<int>(nameof(Data.Id))!;
@@ -21,6 +18,9 @@ internal class Program
         setter1(data1, 123);
         var id = getter1(data1);
         Console.WriteLine(id);
+
+        // TODO
+        // Generic
 
         //var accessorFactory2 = AccessorRegistry.FindFactory<GenericData<int>>()!;
         //var getter2 = accessorFactory2.CreateGetter<int>(nameof(GenericData<int>.Value))!;
