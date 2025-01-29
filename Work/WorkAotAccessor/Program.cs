@@ -40,6 +40,7 @@ public partial class Data
 }
 
 [GenerateAccessor]
+[TypedAccessor(typeof(GenericData<int>))]
 public class GenericData<T>
 {
     public T Value { get; set; } = default!;
