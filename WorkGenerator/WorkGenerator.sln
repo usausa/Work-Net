@@ -103,6 +103,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Lang", "Lang", "{E8CA0951-3
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkLombok", "WorkLombok\WorkLombok.csproj", "{EFC39CAB-B811-44E6-8466-F8205008AEFF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkEquatable", "WorkEquatable\WorkEquatable.csproj", "{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -230,6 +232,10 @@ Global
 		{EFC39CAB-B811-44E6-8466-F8205008AEFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EFC39CAB-B811-44E6-8466-F8205008AEFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EFC39CAB-B811-44E6-8466-F8205008AEFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -280,6 +286,7 @@ Global
 		{1874DE48-1ED6-4450-8C16-650A60244F26} = {2AB32967-1440-40FC-949A-EB7D63DD599D}
 		{E8CA0951-3DBE-405C-8B31-958EF20629C5} = {DC046D07-C68C-4AC7-AA82-1B8D312C6719}
 		{EFC39CAB-B811-44E6-8466-F8205008AEFF} = {E8CA0951-3DBE-405C-8B31-958EF20629C5}
+		{EE0B8FDC-1B5E-4CDC-8734-C8A273A98A89} = {E8CA0951-3DBE-405C-8B31-958EF20629C5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D2566BD9-BE57-4BED-9528-32E29D8D29C7}
