@@ -1,4 +1,4 @@
-namespace WorkHost;
+namespace WorkHost2;
 
 using System.Windows;
 
