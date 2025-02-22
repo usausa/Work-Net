@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,12 +7,8 @@ using WorkHost;
 Thread.CurrentThread.SetApartmentState(ApartmentState.Unknown);
 Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
 
-// TODO Folder
-
 var builder = Host.CreateApplicationBuilder(args);
 
-
-// TODO Log, Config, ...
 #if DEBUG
 builder.Logging.AddDebug();
 #endif
@@ -25,9 +20,9 @@ builder.Services.AddSingleton<MainWindow>();
 
 var host = builder.Build();
 
+var log = host.Services.GetRequiredService<ILogger<Program>>();
 var environment = host.Services.GetRequiredService<IHostEnvironment>();
-Debug.WriteLine(environment.EnvironmentName);
+log.LogInformation($"Environment. application=[{environment.ApplicationName}], environment=[{environment.EnvironmentName}], rootPath=[{environment.ContentRootPath}]");
 
 var app = host.Services.GetRequiredService<App>();
-
 app.Run();
