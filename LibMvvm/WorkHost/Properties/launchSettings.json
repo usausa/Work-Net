@@ -2,7 +2,10 @@
   "profiles": {
     "WorkHost": {
       "commandName": "Project",
-      "commandLineArgs": "--Settings:Value うさうさ"
+      "commandLineArgs": "--Settings:Name うさうさ",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }

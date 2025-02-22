@@ -18,7 +18,7 @@ public partial class App : Application
 
         this.window = window;
 
-        log.LogInformation($"App construct. value={settings.Value.Value}");
+        log.LogInformation($"App construct. value={settings.Value.Name}, address={settings.Value.Address}");
     }
 
     protected override void OnStartup(StartupEventArgs e)

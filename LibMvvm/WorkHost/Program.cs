@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,5 +25,9 @@ builder.Services.AddSingleton<MainWindow>();
 
 var host = builder.Build();
 
+var environment = host.Services.GetRequiredService<IHostEnvironment>();
+Debug.WriteLine(environment.EnvironmentName);
+
 var app = host.Services.GetRequiredService<App>();
+
 app.Run();
