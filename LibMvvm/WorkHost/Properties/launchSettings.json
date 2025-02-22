@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkHost": {
+      "commandName": "Project",
+      "commandLineArgs": "--Settings:Value うさうさ"
+    }
+  }
+}
