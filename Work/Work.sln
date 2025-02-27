@@ -221,6 +221,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Aot", "Aot", "{77B77BB1-212
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkAotAccessor", "WorkAotAccessor\WorkAotAccessor.csproj", "{78A7BCF5-F72B-43A1-9B62-404F6908CE7E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkBtWatch", "WorkBtWatch\WorkBtWatch.csproj", "{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -496,6 +498,10 @@ Global
 		{78A7BCF5-F72B-43A1-9B62-404F6908CE7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78A7BCF5-F72B-43A1-9B62-404F6908CE7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78A7BCF5-F72B-43A1-9B62-404F6908CE7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -583,6 +589,7 @@ Global
 		{BC7E4950-765F-4D7D-8A6B-69ED1F38F5D5} = {F2D7AE7D-2D4E-4611-9C08-B318D9BAE45A}
 		{296F5E8F-C442-425A-BD9D-002416447664} = {77B77BB1-2127-47A6-A0E6-6B31D9B73FB5}
 		{78A7BCF5-F72B-43A1-9B62-404F6908CE7E} = {77B77BB1-2127-47A6-A0E6-6B31D9B73FB5}
+		{11F9C54C-0001-AB61-41FC-DFF0E9E5FFF2} = {A1514A70-949F-4149-992D-9655D7CF7547}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49A52A04-55C9-4774-BD53-41032DFB3552}
