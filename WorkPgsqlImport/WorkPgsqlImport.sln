@@ -4,6 +4,8 @@ VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImportRaw", "ImportRaw\ImportRaw.csproj", "{71549FC9-AB4C-4363-966A-0BDD41E754FF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImportAuto", "ImportAuto\ImportAuto.csproj", "{AE6FCD35-3517-4CCB-9E21-19C509179F32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +16,10 @@ Global
 		{71549FC9-AB4C-4363-966A-0BDD41E754FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{71549FC9-AB4C-4363-966A-0BDD41E754FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{71549FC9-AB4C-4363-966A-0BDD41E754FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE6FCD35-3517-4CCB-9E21-19C509179F32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE6FCD35-3517-4CCB-9E21-19C509179F32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE6FCD35-3517-4CCB-9E21-19C509179F32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE6FCD35-3517-4CCB-9E21-19C509179F32}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
