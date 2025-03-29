@@ -1,9 +1,11 @@
-﻿namespace WorkGrpcChatClient;
+using Grpc.Net.Client;
 
-internal class Program
-{
-    static void Main(string[] args)
-    {
-        Console.WriteLine("Hello, World!");
-    }
-}
+using ProtoBuf.Grpc.Client;
+
+using WorkGrpcChatContract;
+
+var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+var client = channel.CreateGrpcService<IHelloService>();
+var reply = await client.HelloAsync(new HelloRequest { Name = "うさうさ" }).ConfigureAwait(false);
+Console.WriteLine(reply.Message);
