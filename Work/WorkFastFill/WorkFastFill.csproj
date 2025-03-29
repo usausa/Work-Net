@@ -7,8 +7,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\WorkSearchValue\WorkSearchValue.csproj" />
-  </ItemGroup>
-
 </Project>
