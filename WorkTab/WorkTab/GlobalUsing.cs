@@ -23,10 +23,3 @@ global using System.Windows;
 global using System.Windows.Data;
 global using System.Windows.Input;
 global using System.Windows.Media;
-
-global using Smart;
-global using Smart.Collections.Generic;
-global using Smart.ComponentModel;
-global using Smart.Text;
-global using Smart.Windows.Messaging;
-global using Smart.Windows.ViewModels;

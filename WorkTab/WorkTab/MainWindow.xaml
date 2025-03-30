@@ -2,11 +2,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:app="clr-namespace:WorkTab"
         mc:Ignorable="d"
         x:Class="WorkTab.MainWindow"
         Title="DiskInfo"
         Width="640"
         Height="720"
         ResizeMode="CanMinimize">
-    <Grid />
+
+    <Window.DataContext>
+        <app:MainWindowViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Label Content="{Binding Title}" />
+    </Grid>
+
 </Window>
