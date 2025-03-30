@@ -21,6 +21,7 @@
     "xmlns:sm",
     "xmlns:sn",
     "xmlns:sr",
+    "xmlns:app",
     "xmlns:local",
     "xmlns:dialog",
     "xmlns:shell",

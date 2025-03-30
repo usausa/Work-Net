@@ -1,9 +1,18 @@
 namespace WorkTab;
 
-using CommunityToolkit.Mvvm.ComponentModel;
+using HardwareInfo.Disk;
 
-public partial class MainWindowViewModel : ObservableObject
+using WorkTab.Models;
+
+public sealed class MainWindowViewModel
 {
-    [ObservableProperty]
-    public partial string Title { get; set; } = "Hello World!";
+    public ObservableCollection<DiskInfoModel> Disks { get; } = new();
+
+    public MainWindowViewModel()
+    {
+        foreach (var disk in DiskInfo.GetInformation())
+        {
+            Disks.Add(new DiskInfoModel(disk));
+        }
+    }
 }
