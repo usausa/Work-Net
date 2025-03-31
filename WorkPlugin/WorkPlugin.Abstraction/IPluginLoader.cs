@@ -1,6 +1,8 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace WorkPlugin.Abstraction;
 
 public interface IPluginLoader
 {
-    // TODO
+    void Configure(IServiceCollection services);
 }

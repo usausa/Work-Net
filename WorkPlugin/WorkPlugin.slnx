@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="WorkPlugin.Abstraction/WorkPlugin.Abstraction.csproj" />
+  <Project Path="WorkPlugin.Plugin1/WorkPlugin.Plugin1.csproj" />
+  <Project Path="WorkPlugin.Plugin2/WorkPlugin.Plugin2.csproj" />
+  <Project Path="WorkPlugin.Server/WorkPlugin.Server.csproj">
+    <BuildDependency Project="WorkPlugin.Plugin1/WorkPlugin.Plugin1.csproj" />
+    <BuildDependency Project="WorkPlugin.Plugin2/WorkPlugin.Plugin2.csproj" />
+  </Project>
+</Solution>
