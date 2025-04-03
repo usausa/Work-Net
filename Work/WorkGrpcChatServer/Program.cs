@@ -7,9 +7,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddCodeFirstGrpc();
+builder.Services.AddCodeFirstGrpcReflection();
 builder.Services.AddSingleton<IHelloService, HelloService>();
 
+// [MEMO]
+// https://learn.microsoft.com/ja-jp/aspnet/core/grpc/test-tools?view=aspnetcore-9.0
+// grpcui -plaintext -port 5001 localhost:5000
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapCodeFirstGrpcReflectionService();
+}
 
 // Configure the HTTP request pipeline.
 app.MapGrpcService<IHelloService>();

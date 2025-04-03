@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
     <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
+    <PackageReference Include="protobuf-net.Grpc.AspNetCore.Reflection" Version="1.2.2" />
   </ItemGroup>
 
   <ItemGroup>
