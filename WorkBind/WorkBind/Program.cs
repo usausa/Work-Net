@@ -5,7 +5,7 @@ internal static class Program
     static void Main()
     {
         //var str = "Param1 = aaa Param2 = \"b\\\"bb\" Param3 = ccc";
-        var str = "Value=123 Value2= Flag=true Name=\"aaa bbb\" Point=1,2";
+        var str = "Value=123 Value2= Value3=222 Flag=true Name=\"aaa bbb\" Point=1,2";
 
         var param = new Parameter();
 
@@ -32,21 +32,26 @@ public static class ParameterBinder
             var converter = pi.GetCustomAttributes(true)
                 .OfType<ConverterAttribute>()
                 .FirstOrDefault();
-            if (converter is not null)
-            {
-                var value = converter.FromString(enumerator.Value);
-                pi.SetValue(target, value);
-            }
-            else
-            {
-                // TODO Custom & Attribute
-                var valueString = enumerator.Value.ToString();
-                var value = valueString.AsSpan().IsEmpty
-                    ? Activator.CreateInstance(pi.PropertyType)
-                    : Convert.ChangeType(valueString, Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType);
-                pi.SetValue(target, value);
-            }
+            var value = converter is not null
+                ? converter.FromString(enumerator.Value)
+                : FromString(enumerator.Value, pi.PropertyType);
+            pi.SetValue(target, value);
         }
+    }
+
+    private static object FromString(ReadOnlySpan<char> value, Type type)
+    {
+        if (value.IsEmpty)
+        {
+            return Activator.CreateInstance(type)!;
+        }
+
+        if (type == typeof(string))
+        {
+            return value.ToString();
+        }
+
+        return Convert.ChangeType(value.ToString(), Nullable.GetUnderlyingType(type) ?? type);
     }
 }
 
@@ -152,6 +157,8 @@ public class Parameter
     public int Value { get; set; }
 
     public int? Value2 { get; set; }
+
+    public int? Value3 { get; set; }
 
     public bool Flag { get; set; }
 
