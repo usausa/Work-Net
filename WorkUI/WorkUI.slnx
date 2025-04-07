@@ -1,4 +1,13 @@
 <Solution>
+  <Folder Name="/Application/" Id="ddb4ef12-cc4e-5e88-e6fc-71a802f4de97">
+    <Project Path="CarApp/CarApp.csproj" />
+    <Project Path="ChatApp/ChatApp.csproj" />
+    <Project Path="PosApp/PosApp.csproj" />
+    <Project Path="WorkApp/WorkApp.csproj" />
+  </Folder>
+  <Folder Name="/Library/" Id="443713fa-de95-42f9-9201-ce83e94e4a34">
+    <Project Path="SharedHelper/SharedHelper.csproj" Id="0f2516b1-d440-49bd-a36c-ee6df36d0a1c" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
@@ -11,5 +20,4 @@
     <File Path="Settings.XamlStyler" />
     <File Path="WorkUI.sln.DotSettings" />
   </Folder>
-  <Project Path="ChatApp/ChatApp.csproj" Id="a680795a-819b-4f6d-ac85-06965e98abec" />
 </Solution>
