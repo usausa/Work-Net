@@ -35,6 +35,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SamplePropertyPropertyChang
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SamplePropertyReactiveGenerator", "SamplePropertyReactiveGenerator\SamplePropertyReactiveGenerator.csproj", "{AF5D5D61-24D8-5EAA-CDED-0F83A52CA01D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Validation", "Validation", "{0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkValidation", "WorkValidation\WorkValidation.csproj", "{54113A22-A69E-4F6A-815E-E5E838F420B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -80,6 +84,10 @@ Global
 		{AF5D5D61-24D8-5EAA-CDED-0F83A52CA01D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF5D5D61-24D8-5EAA-CDED-0F83A52CA01D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF5D5D61-24D8-5EAA-CDED-0F83A52CA01D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54113A22-A69E-4F6A-815E-E5E838F420B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54113A22-A69E-4F6A-815E-E5E838F420B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54113A22-A69E-4F6A-815E-E5E838F420B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54113A22-A69E-4F6A-815E-E5E838F420B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,6 +103,7 @@ Global
 		{0C8EC2A6-ABE3-7851-BE51-76C9C8E51194} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
 		{A42C4306-2A63-B485-0C67-E4E643FB3168} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
 		{AF5D5D61-24D8-5EAA-CDED-0F83A52CA01D} = {DDB4EF12-CC4E-5E88-E6FC-71A802F4DE97}
+		{54113A22-A69E-4F6A-815E-E5E838F420B6} = {0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FD15DAB0-6982-4CD6-A6AF-9833AB22BF3D}
