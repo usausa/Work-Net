@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-
 namespace WorkHostMaui;
+
+using Microsoft.Extensions.Logging;
 
 public static class MauiProgram
 {

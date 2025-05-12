@@ -50,13 +50,13 @@
             Grid.Row="2"
             Grid.Column="0"
             Grid.ColumnSpan="2"
-            Content="{Binding Path=(Validation.Errors)[Name], Mode=OneWay}"
+            Content="{Binding Errors[Name], Mode=OneWay}"
             FontSize="14" />
         <Label
             Grid.Row="2"
             Grid.Column="0"
             Grid.ColumnSpan="2"
-            Content="{Binding Path=(Validation.Errors)[Age], Mode=OneWay}"
+            Content="{Binding Errors[Age], Mode=OneWay}"
             FontSize="14" />
     </Grid>
 

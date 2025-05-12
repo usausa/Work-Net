@@ -1,44 +1,40 @@
-using System.Collections;
-using Smart.Mvvm;
-
 namespace WorkValidation;
 
+using System.Collections;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
-internal partial class MainWindowViewModel : ObservableObject, INotifyDataErrorInfo
+using Smart.Mvvm;
+
+internal class MainWindowViewModel : ObservableObject, INotifyDataErrorInfo, IDataErrorInfo
 {
-    private string name;
-
-    private int age;
-
-    private readonly Dictionary<string, List<string>> errors = new();
+    public ErrorState Errors { get; } = new();
 
     [Required(ErrorMessage = "名前は必須です。")]
     [StringLength(50, ErrorMessage = "名前は50文字以内で入力してください。")]
     public string Name
     {
-        get => name;
+        get => field;
         set
         {
-            if (name != value)
+            if (field != value)
             {
-                name = value;
+                field = value;
                 RaisePropertyChanged(nameof(Name));
                 ValidateProperty(nameof(Name), value);
             }
         }
-    }
+    } = default!;
 
     [Range(0, 120, ErrorMessage = "年齢は0以上120以下である必要があります。")]
     public int Age
     {
-        get => age;
+        get => field;
         set
         {
-            if (age != value)
+            if (field != value)
             {
-                age = value;
+                field = value;
                 RaisePropertyChanged(nameof(Age));
                 ValidateProperty(nameof(Age), value);
             }
@@ -52,21 +48,28 @@ internal partial class MainWindowViewModel : ObservableObject, INotifyDataErrorI
 
         if (!Validator.TryValidateProperty(value, validationContext, validationResults))
         {
-            errors[propertyName] = validationResults.Select(vr => vr.ErrorMessage!).ToList();
+            Errors.UpdateErrors(propertyName, validationResults.Select(vr => vr.ErrorMessage!));
         }
         else
         {
-            errors.Remove(propertyName);
+            Errors.ClearError(propertyName);
         }
 
         ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
     }
 
+    // INotifyDataErrorInfo
+
     public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 
-    public bool HasErrors =>
-        errors.Any();
+    public bool HasErrors => Errors.HasError;
 
     public IEnumerable GetErrors(string? propertyName) =>
-        !System.String.IsNullOrEmpty(propertyName) && errors.TryGetValue(propertyName, out var values) ? values : [];
+        !System.String.IsNullOrEmpty(propertyName) ? Errors.GetValues(propertyName) : [];
+
+    // IDataErrorInfo
+
+    public string this[string columnName] => Errors[columnName] ?? string.Empty;
+
+    public string Error => String.Join(Environment.NewLine, Errors.GetAllErrors());
 }

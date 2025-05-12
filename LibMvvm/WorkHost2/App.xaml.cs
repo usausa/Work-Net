@@ -1,8 +1,6 @@
-using System.Configuration;
-using System.Data;
-using System.Windows;
-
 namespace WorkHost2;
+
+using System.Windows;
 
 /// <summary>
 /// Interaction logic for App.xaml

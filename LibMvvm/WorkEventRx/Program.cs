@@ -26,7 +26,6 @@ internal class Program
     }
 }
 
-
 public static class Extensions
 {
     public static IObservable<T> AsObservable<T>(this Func<Action<T>, IDisposable> func) =>

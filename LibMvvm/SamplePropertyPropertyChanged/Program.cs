@@ -12,7 +12,7 @@ internal class Program
 
 public partial class MyViewModel
 {
-    [Notify] private string _firstName;
-    [Notify] private string _lastName;
+    [Notify] private string firstName = default!;
+    [Notify] private string lastName = default!;
     public string FullName => $"{FirstName} {LastName}";
 }
