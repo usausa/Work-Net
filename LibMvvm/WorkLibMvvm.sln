@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkPooledList", "WorkPoole
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkModel", "WorkModel\WorkModel.csproj", "{A94C90BB-EBEF-44B7-ADF8-FA75E41E4085}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkValidationMaui", "WorkValidationMaui\WorkValidationMaui.csproj", "{265E9F6C-CDF9-4EB6-B378-03E9901A356C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +98,10 @@ Global
 		{A94C90BB-EBEF-44B7-ADF8-FA75E41E4085}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A94C90BB-EBEF-44B7-ADF8-FA75E41E4085}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A94C90BB-EBEF-44B7-ADF8-FA75E41E4085}.Release|Any CPU.Build.0 = Release|Any CPU
+		{265E9F6C-CDF9-4EB6-B378-03E9901A356C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{265E9F6C-CDF9-4EB6-B378-03E9901A356C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{265E9F6C-CDF9-4EB6-B378-03E9901A356C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{265E9F6C-CDF9-4EB6-B378-03E9901A356C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -115,6 +121,7 @@ Global
 		{3B923844-8BFB-411C-8381-E84DEB0C7516} = {0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}
 		{B21EE841-6945-4665-AB72-3A597F5B05E2} = {0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}
 		{A94C90BB-EBEF-44B7-ADF8-FA75E41E4085} = {0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}
+		{265E9F6C-CDF9-4EB6-B378-03E9901A356C} = {0D6C2F40-FF20-49D9-8F9F-16D84E316EF0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FD15DAB0-6982-4CD6-A6AF-9833AB22BF3D}
