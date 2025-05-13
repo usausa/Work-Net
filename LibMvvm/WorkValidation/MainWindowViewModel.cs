@@ -52,7 +52,7 @@ internal class MainWindowViewModel : ObservableObject, INotifyDataErrorInfo, IDa
         }
         else
         {
-            Errors.ClearError(propertyName);
+            Errors.ClearErrors(propertyName);
         }
 
         ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
