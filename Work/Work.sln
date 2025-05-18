@@ -235,6 +235,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkGrpcChatContract", "Wor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMidi", "WorkMidi\WorkMidi.csproj", "{E22DBBDD-09B5-45BC-8FA4-FFBDFE3838C2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkUnsafeReadWrite", "WorkUnsafeReadWrite\WorkUnsafeReadWrite.csproj", "{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -538,6 +540,10 @@ Global
 		{E22DBBDD-09B5-45BC-8FA4-FFBDFE3838C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E22DBBDD-09B5-45BC-8FA4-FFBDFE3838C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E22DBBDD-09B5-45BC-8FA4-FFBDFE3838C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
