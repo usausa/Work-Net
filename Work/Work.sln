@@ -239,6 +239,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkUnsafeReadWrite", "Work
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkGenericDefault", "WorkGenericStaticLike\WorkGenericDefault.csproj", "{E5105EEC-5E4E-524C-C601-4C918AC2C37A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkStringLang", "WorkStringLang\WorkStringLang.csproj", "{22821891-6282-4703-AAD7-910D8437565B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -550,6 +552,10 @@ Global
 		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22821891-6282-4703-AAD7-910D8437565B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22821891-6282-4703-AAD7-910D8437565B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22821891-6282-4703-AAD7-910D8437565B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22821891-6282-4703-AAD7-910D8437565B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
