@@ -237,6 +237,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMidi", "WorkMidi\WorkMi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkUnsafeReadWrite", "WorkUnsafeReadWrite\WorkUnsafeReadWrite.csproj", "{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkGenericDefault", "WorkGenericStaticLike\WorkGenericDefault.csproj", "{E5105EEC-5E4E-524C-C601-4C918AC2C37A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -544,6 +546,10 @@ Global
 		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E83F970D-15FE-4E15-AC31-EC470ADE7AE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5105EEC-5E4E-524C-C601-4C918AC2C37A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
