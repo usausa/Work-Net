@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace WorkCache.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
@@ -53,5 +55,32 @@ public class CacheController : ControllerBase
         await cache.RemoveAsync($"data:{id}");
 
         return Ok();
+    }
+
+    [HttpPost]
+    public async ValueTask<IActionResult> Benchmark1()
+    {
+        var watch = Stopwatch.StartNew();
+
+        for (var i = 0; i < 10000; i++)
+        {
+            await cache.GetStringAsync($"bench:{i:D8}");
+            await cache.SetStringAsync($"bench:{i:D8}", "data");
+        }
+
+        return Ok(watch.ElapsedMilliseconds);
+    }
+
+    [HttpPost]
+    public async ValueTask<IActionResult> Benchmark2()
+    {
+        var watch = Stopwatch.StartNew();
+
+        for (var i = 0; i < 10000; i++)
+        {
+            await cache.GetStringAsync($"bench:{i:D8}");
+        }
+
+        return Ok(watch.ElapsedMilliseconds);
     }
 }
