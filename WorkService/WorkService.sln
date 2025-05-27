@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSqliteInsertBench", "Wo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkSqliteMultiThread", "WorkSqliteMultiThread\WorkSqliteMultiThread.csproj", "{B5B61ECA-F437-46FF-AF31-67FD0E5AAC09}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Net", "Net", "{9BD00AEE-B457-8A53-4987-79B2CE11DF4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkTcpServer", "WorkTcpServer\WorkTcpServer.csproj", "{4E834E0D-9A3B-4228-B878-16D3941C914F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +35,10 @@ Global
 		{B5B61ECA-F437-46FF-AF31-67FD0E5AAC09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5B61ECA-F437-46FF-AF31-67FD0E5AAC09}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5B61ECA-F437-46FF-AF31-67FD0E5AAC09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E834E0D-9A3B-4228-B878-16D3941C914F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E834E0D-9A3B-4228-B878-16D3941C914F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E834E0D-9A3B-4228-B878-16D3941C914F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E834E0D-9A3B-4228-B878-16D3941C914F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -39,6 +47,7 @@ Global
 		{17ECC725-A6B5-4679-B29F-0FB07C6ACFD2} = {DAD03CFC-D5FA-AC94-41C7-9ABAB326F09E}
 		{324896A4-5E04-454E-9B9F-96277C075290} = {015FE221-96B2-289B-A0E8-6E7354784A75}
 		{B5B61ECA-F437-46FF-AF31-67FD0E5AAC09} = {015FE221-96B2-289B-A0E8-6E7354784A75}
+		{4E834E0D-9A3B-4228-B878-16D3941C914F} = {9BD00AEE-B457-8A53-4987-79B2CE11DF4C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5FA74914-2539-47AC-8C35-40F54BD5B9F3}
