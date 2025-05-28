@@ -58,29 +58,53 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost]
-    public async ValueTask<IActionResult> Benchmark1()
+    public IActionResult Benchmark1()
     {
         var watch = Stopwatch.StartNew();
 
-        for (var i = 0; i < 10000; i++)
+        const int n = 10000;
+        var tasks = new Task[10];
+        for (var no = 0; no < tasks.Length; no++)
         {
-            await cache.GetStringAsync($"bench:{i:D8}");
-            await cache.SetStringAsync($"bench:{i:D8}", "data");
+            var start = no * n;
+            // ReSharper disable once AsyncVoidLambda
+            tasks[no] = Task.Run(async () =>
+            {
+                for (var i = start; i < start + n; i++)
+                {
+                    await cache.GetStringAsync($"bench:{i:D8}");
+                    await cache.SetStringAsync($"bench:{i:D8}", "data");
+                }
+            });
         }
 
-        return Ok(watch.ElapsedMilliseconds);
+        Task.WaitAll(tasks);
+
+        return Ok((double)n * tasks.Length / watch.ElapsedMilliseconds * 1000);
     }
 
     [HttpPost]
-    public async ValueTask<IActionResult> Benchmark2()
+    public IActionResult Benchmark2()
     {
         var watch = Stopwatch.StartNew();
 
-        for (var i = 0; i < 10000; i++)
+        const int n = 10000;
+        var tasks = new Task[10];
+        for (var no = 0; no < tasks.Length; no++)
         {
-            await cache.GetStringAsync($"bench:{i:D8}");
+            var start = no * n;
+            // ReSharper disable once AsyncVoidLambda
+            tasks[no] = Task.Run(async () =>
+            {
+                for (var i = start; i < start + n; i++)
+                {
+                    await cache.GetStringAsync($"bench:{i:D8}");
+                }
+            });
         }
 
-        return Ok(watch.ElapsedMilliseconds);
+        Task.WaitAll(tasks);
+
+        return Ok((double)n * tasks.Length / watch.ElapsedMilliseconds * 1000);
     }
 }
