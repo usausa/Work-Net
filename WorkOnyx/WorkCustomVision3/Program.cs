@@ -9,7 +9,7 @@ var ctx = new MLContext();
 var pipeline =
     ctx.Transforms.LoadImages(outputColumnName: "Image", null, inputColumnName: "ImagePath")
         .Append(ctx.Transforms.ResizeImages(outputColumnName: "ResizedImage", imageWidth: 320, imageHeight: 320, inputColumnName: "Image", resizing: Microsoft.ML.Transforms.Image.ImageResizingEstimator.ResizingKind.Fill))
-        .Append(ctx.Transforms.ExtractPixels(outputColumnName: "Pixels", inputColumnName: "ResizedImage", offsetImage: 255, scaleImage: 1))
+        .Append(ctx.Transforms.ExtractPixels(outputColumnName: "Pixels", inputColumnName: "ResizedImage"))
         .Append(ctx.Transforms.CopyColumns(outputColumnName: "image_tensor", "Pixels"))
         .Append(ctx.Transforms.ApplyOnnxModel(modelFile: "model.onnx"));
 var emptyDv = ctx.Data.LoadFromEnumerable(new ModelInput[] { });

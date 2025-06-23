@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerateData", "GenerateDat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkMaui", "WorkMaui\WorkMaui.csproj", "{900855E5-FA7B-4276-88CB-D08AA1B02821}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCustomVision4", "WorkCustomVision4\WorkCustomVision4.csproj", "{AA5FE6BD-AB30-49FE-BB8F-FE54AA9BA4E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCustomVision5", "WorkCustomVision5\WorkCustomVision5.csproj", "{3027668D-5EA9-442D-9C2D-9629E5B66B2A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +45,14 @@ Global
 		{900855E5-FA7B-4276-88CB-D08AA1B02821}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{900855E5-FA7B-4276-88CB-D08AA1B02821}.Release|Any CPU.Build.0 = Release|Any CPU
 		{900855E5-FA7B-4276-88CB-D08AA1B02821}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{AA5FE6BD-AB30-49FE-BB8F-FE54AA9BA4E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA5FE6BD-AB30-49FE-BB8F-FE54AA9BA4E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA5FE6BD-AB30-49FE-BB8F-FE54AA9BA4E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA5FE6BD-AB30-49FE-BB8F-FE54AA9BA4E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3027668D-5EA9-442D-9C2D-9629E5B66B2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3027668D-5EA9-442D-9C2D-9629E5B66B2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3027668D-5EA9-442D-9C2D-9629E5B66B2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3027668D-5EA9-442D-9C2D-9629E5B66B2A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
