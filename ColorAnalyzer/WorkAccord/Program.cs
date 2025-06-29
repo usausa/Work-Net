@@ -30,63 +30,52 @@ namespace ColorClusteringSample
         public static List<ColorCount> ClusterColors(
             SKBitmap bitmap,
             int maxClusters,
-            int sampleStep,
             int maxIterations,
             double tolerance)
         {
-            if (bitmap is null)
-                throw new ArgumentNullException(nameof(bitmap));
-            if (maxClusters < 1)
-                throw new ArgumentOutOfRangeException(nameof(maxClusters));
-            if (sampleStep < 1)
-                throw new ArgumentOutOfRangeException(nameof(sampleStep));
+            var width = bitmap.Width;
+            var height = bitmap.Height;
 
-            int width = bitmap.Width;
-            int height = bitmap.Height;
-
-            // サンプリングしてピクセルデータを収集（シーケンシャル）
-            var pixels = new List<double[]>(width * height / (sampleStep * sampleStep) + 1);
-            for (int y = 0; y < height; y += sampleStep)
+            var observations = new double[width * height][];
+            for (var y = 0; y < height; y++)
             {
-                for (int x = 0; x < width; x += sampleStep)
+                for (var x = 0; x < width; x++)
                 {
                     var c = bitmap.GetPixel(x, y);
-                    pixels.Add(new[] { (double)c.Red, c.Green, c.Blue });
+                    observations[(y * width) + x] = [c.Red, c.Green, c.Blue];
                 }
             }
 
-            var observations = pixels.ToArray();
-            int actualClusters = Math.Min(maxClusters, observations.Length);
-            if (actualClusters < 1)
-                return new List<ColorCount>();
+            var actualClusters = Math.Min(maxClusters, observations.Length);
 
-            // KMeans を実行
+            // KMeans
             var kmeans = new KMeans(actualClusters)
             {
                 MaxIterations = maxIterations,
                 Tolerance = tolerance
             };
             var clusters = kmeans.Learn(observations);
-            int[] labels = clusters.Decide(observations);
+            var labels = clusters.Decide(observations);
 
-            // クラスタごとに画素数を集計
+            // Count by cluster
             var counts = new int[actualClusters];
-            foreach (var lbl in labels)
-                counts[lbl]++;
+            foreach (var label in labels)
+            {
+                counts[label]++;
+            }
 
-            // 結果を ColorCount レコードに変換
             var result = new List<ColorCount>(actualClusters);
-            for (int i = 0; i < actualClusters; i++)
+            for (var i = 0; i < actualClusters; i++)
             {
                 var centroid = clusters.Centroids[i];
-                byte r = (byte)Math.Clamp((int)Math.Round(centroid[0]), 0, 255);
-                byte g = (byte)Math.Clamp((int)Math.Round(centroid[1]), 0, 255);
-                byte b = (byte)Math.Clamp((int)Math.Round(centroid[2]), 0, 255);
+                var r = (byte)Math.Clamp((int)Math.Round(centroid[0]), 0, 255);
+                var g = (byte)Math.Clamp((int)Math.Round(centroid[1]), 0, 255);
+                var b = (byte)Math.Clamp((int)Math.Round(centroid[2]), 0, 255);
                 result.Add(new ColorCount(r, g, b, counts[i]));
             }
 
-            // 画素数が多い順にソートして返す
-            return result.OrderByDescending(cc => cc.Count).ToList();
+            result.Sort(static (x, y) => y.Count - x.Count);
+            return result;
         }
     }
 
@@ -99,10 +88,9 @@ namespace ColorClusteringSample
             //using var bitmap = SKBitmap.Decode("rgb.png");
             var clusters = ColorClusteringService.ClusterColors(
                 bitmap,
-                maxClusters: 20,
-                sampleStep: 1,
-                maxIterations: 50,
-                tolerance: 1e-3
+                maxClusters: 25,
+                maxIterations: 100,
+                tolerance: 1e-5
             );
 
             var totalCount = clusters.Sum(cc => cc.Count);
