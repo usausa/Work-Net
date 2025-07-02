@@ -4,15 +4,16 @@ using Microsoft.ML.Trainers;
 
 using SkiaSharp;
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
 
-namespace ImageKMeansClustering
+namespace WorkCluster3
 {
+    public record ColorCount(
+        byte R,
+        byte G,
+        byte B,
+        int Count);
+
     public class RgbData
     {
         public float R;
@@ -94,39 +95,31 @@ namespace ImageKMeansClustering
             var transformed = model.Transform(dataView);
             Debug.WriteLine($"* Transform : {watch.ElapsedMilliseconds}");
 
-            watch.Restart();
-            var predictions = mlContext.Data.CreateEnumerable<ClusterPrediction>(transformed, reuseRowObject: false)
-                .Select(p => p.ClusterId)
-                .ToArray();
-            Debug.WriteLine($"* CreateEnumerable : {watch.ElapsedMilliseconds}");
+            // センター取得
+            var centroids = default(VBuffer<float>[]);
+            model.LastTransformer.Model.GetClusterCentroids(ref centroids, out _);
 
-            // クラスタごとの件数・インデックスをグループ化
-            var clusterGroups = predictions
-                .Select((clusterId, i) => new { clusterId, i })
-                .GroupBy(x => x.clusterId)
-                .Select(g => new
-                {
-                    ClusterId = g.Key,
-                    Count = g.Count(),
-                    Indices = g.Select(x => x.i).ToArray()
-                })
-                .OrderByDescending(g => g.Count)
-                .ToArray();
-
-            // モデルからクラスタ中心色(センター)を取得
-            var kmeansModel = model.LastTransformer.Model;
-            VBuffer<float>[] centroids = default;
-            kmeansModel.GetClusterCentroids(ref centroids, out int k);
-
-            Debug.WriteLine($"クラスタ数: {maxClusters}");
-            foreach (var cluster in clusterGroups)
+            var counts = new int[centroids.Length];
+            foreach (var prediction in mlContext.Data.CreateEnumerable<ClusterPrediction>(transformed, reuseRowObject: false))
             {
-                // クラスタ中心のRGB値を取得
-                var centroid = centroids[(int)cluster.ClusterId - 1].DenseValues().ToArray();
-                int r = (int)Math.Round(centroid[0]);
-                int g = (int)Math.Round(centroid[1]);
-                int b = (int)Math.Round(centroid[2]);
-                Debug.WriteLine($"クラスタ {cluster.ClusterId}: {cluster.Count} ピクセル, 中心RGB=({r},{g},{b})");
+                counts[prediction.ClusterId - 1]++;
+            }
+
+            var list = new List<ColorCount>(counts.Length);
+            for (var i = 0; i < counts.Length; i++)
+            {
+                var centroid = centroids[i].DenseValues().ToArray();
+                var r = (byte)Math.Round(centroid[0]);
+                var g = (byte)Math.Round(centroid[1]);
+                var b = (byte)Math.Round(centroid[2]);
+                list.Add(new ColorCount(r, g, b, counts[i]));
+            }
+
+            list.Sort(static (x, y) => y.Count - x.Count);
+
+            foreach (var count in list)
+            {
+                Debug.WriteLine($"{count.Count}\t{count.R}\t{count.G}\t{count.B}");
             }
         }
     }
