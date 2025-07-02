@@ -77,6 +77,57 @@ namespace ColorClusteringSample
             result.Sort(static (x, y) => y.Count - x.Count);
             return result;
         }
+
+        public static List<ColorCount> ClusterColors2(
+            SKBitmap bitmap,
+            int maxClusters,
+            int maxIterations,
+            double tolerance)
+        {
+            var width = bitmap.Width;
+            var height = bitmap.Height;
+
+            var observations = new double[width * height][];
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    var c = bitmap.GetPixel(x, y);
+                    observations[(y * width) + x] = [c.Red, c.Green, c.Blue];
+                }
+            }
+
+            var actualClusters = Math.Min(maxClusters, observations.Length);
+
+            // KMeans
+            var kmeans = new MiniBatchKMeans(actualClusters, 25)
+            {
+                //MaxIterations = maxIterations,
+                //Tolerance = tolerance
+            };
+            var clusters = kmeans.Learn(observations);
+            var labels = clusters.Decide(observations);
+
+            // Count by cluster
+            var counts = new int[actualClusters];
+            foreach (var label in labels)
+            {
+                counts[label]++;
+            }
+
+            var result = new List<ColorCount>(actualClusters);
+            for (var i = 0; i < actualClusters; i++)
+            {
+                var centroid = clusters.Centroids[i];
+                var r = (byte)Math.Clamp((int)Math.Round(centroid[0]), 0, 255);
+                var g = (byte)Math.Clamp((int)Math.Round(centroid[1]), 0, 255);
+                var b = (byte)Math.Clamp((int)Math.Round(centroid[2]), 0, 255);
+                result.Add(new ColorCount(r, g, b, counts[i]));
+            }
+
+            result.Sort(static (x, y) => y.Count - x.Count);
+            return result;
+        }
     }
 
     class Program
@@ -86,12 +137,19 @@ namespace ColorClusteringSample
             // サンプル実行
             using var bitmap = SKBitmap.Decode("image.jpg");
             //using var bitmap = SKBitmap.Decode("rgb.png");
-            var clusters = ColorClusteringService.ClusterColors(
+            //var clusters = ColorClusteringService.ClusterColors(
+            //    bitmap,
+            //    maxClusters: 25,
+            //    maxIterations: 100,
+            //    tolerance: 1e-5
+            //);
+            var clusters = ColorClusteringService.ClusterColors2(
                 bitmap,
                 maxClusters: 25,
                 maxIterations: 100,
                 tolerance: 1e-5
             );
+
 
             var totalCount = clusters.Sum(cc => cc.Count);
 
