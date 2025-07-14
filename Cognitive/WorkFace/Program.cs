@@ -5,6 +5,8 @@ namespace WorkFace;
 using Azure;
 using Azure.AI.Vision.Face;
 
+using SkiaSharp;
+
 internal class Program
 {
     static async Task Main(string[] args)
@@ -12,7 +14,8 @@ internal class Program
         Uri endpoint = new Uri(args[1]);
         var client = new FaceClient(endpoint, new AzureKeyCredential(args[0]));
 
-        await using var stream = new FileStream("D:\\face.jpg", FileMode.Open, FileAccess.Read);
+        var filename = "D:\\face.jpg";
+        await using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read);
 
         var detectResponse = await client.DetectAsync(
             await BinaryData.FromStreamAsync(stream),
@@ -64,5 +67,33 @@ internal class Program
             Debug.WriteLine($"    UnderLipTop: ({detectedFace.FaceLandmarks.UnderLipTop.X}, {detectedFace.FaceLandmarks.UnderLipTop.Y})");
             Debug.WriteLine($"    UnderLipBottom: ({detectedFace.FaceLandmarks.UnderLipBottom.X}, {detectedFace.FaceLandmarks.UnderLipBottom.Y})");
         }
+
+        await using var inputStream = File.OpenRead(filename);
+        using var original = SKBitmap.Decode(inputStream);
+
+        var image = new SKImageInfo(original.Width, original.Height);
+        using var surface = SKSurface.Create(image);
+        var canvas = surface.Canvas;
+
+        canvas.Clear(SKColors.White);
+        canvas.DrawBitmap(original, 0, 0);
+
+        var paint = new SKPaint
+        {
+            Color = SKColors.Red,
+            StrokeWidth = 1,
+            IsStroke = true,
+            Style = SKPaintStyle.Stroke
+        };
+
+        foreach (var detectedFace in detectedFaces)
+        {
+            canvas.DrawRect(detectedFace.FaceRectangle.Left, detectedFace.FaceRectangle.Top, detectedFace.FaceRectangle.Width, detectedFace.FaceRectangle.Height, paint);
+        }
+
+        using var outputImage = surface.Snapshot();
+        using var data = outputImage.Encode(SKEncodedImageFormat.Jpeg, 90); // 品質90でエンコード
+        await using var outputStream = File.OpenWrite("output.jpg");
+        data.SaveTo(outputStream);
     }
 }

@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkCognitive", "WorkCognit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkFace", "WorkFace\WorkFace.csproj", "{7DC91617-8299-4D57-A7BE-7D4B58AB3D92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkImage", "WorkImage\WorkImage.csproj", "{164C6B5B-DF09-4B56-BD3A-35AFD9765C6C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkIdentify", "WorkIdentify\WorkIdentify.csproj", "{97F0E390-DA0D-4CE6-94BA-61919212FCCF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{7DC91617-8299-4D57-A7BE-7D4B58AB3D92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7DC91617-8299-4D57-A7BE-7D4B58AB3D92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7DC91617-8299-4D57-A7BE-7D4B58AB3D92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{164C6B5B-DF09-4B56-BD3A-35AFD9765C6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{164C6B5B-DF09-4B56-BD3A-35AFD9765C6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{164C6B5B-DF09-4B56-BD3A-35AFD9765C6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{164C6B5B-DF09-4B56-BD3A-35AFD9765C6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97F0E390-DA0D-4CE6-94BA-61919212FCCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97F0E390-DA0D-4CE6-94BA-61919212FCCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97F0E390-DA0D-4CE6-94BA-61919212FCCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97F0E390-DA0D-4CE6-94BA-61919212FCCF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
