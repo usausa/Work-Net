@@ -228,9 +228,65 @@ public static class MiddlewareBuilderExtensions
 {
     public static MiddlewareBuilder CreatePipelineBuilder(this IServiceProvider provider)
         => new(provider);
+
+    public static MiddlewareBuilder2 CreatePipelineBuilder2(this IServiceProvider provider)
+        => new(provider);
 }
 
 //--------------------------------------------------------------------------------
+
+public sealed class MiddlewareBuilder2
+{
+    private readonly IList<Func<MiddlewareDelegate, MiddlewareDelegate>> _components =
+        new List<Func<MiddlewareDelegate, MiddlewareDelegate>>();
+    private readonly IServiceProvider _rootProvider;
+
+    public MiddlewareBuilder2(IServiceProvider rootProvider) => _rootProvider = rootProvider;
+
+    //public MiddlewareBuilder2 UseMiddleware<TMiddleware>() where TMiddleware : class, IMiddleware
+    //{
+    //    _components.Add(next => async context =>
+    //    {
+    //        var mw = context.RequestServices.GetRequiredService<TMiddleware>();
+    //        await mw.InvokeAsync(context, next);
+    //    });
+    //    return this;
+    //}
+
+    // 追加: 起動時(ビルド時) 1 回だけ解決
+    public MiddlewareBuilder2 UseSingletonMiddleware<TMiddleware>() where TMiddleware : class, IMiddleware
+    {
+        var mw = _rootProvider.GetRequiredService<TMiddleware>(); // root から解決
+        _components.Add(next => ctx => mw.InvokeAsync(ctx, next));
+        return this;
+    }
+
+    public MiddlewareBuilder2 Run(MiddlewareDelegate terminal)
+    {
+        _components.Add(_ => terminal);
+        return this;
+    }
+
+    public Func<PipelineContext, Task> Build()
+    {
+        var pipeline = BuildInternal(_ => Task.CompletedTask);
+        return async outerContext =>
+        {
+            using var scope = _rootProvider.CreateScope();
+            outerContext.RequestServices = scope.ServiceProvider;
+            await pipeline(outerContext);
+        };
+    }
+
+    private MiddlewareDelegate BuildInternal(MiddlewareDelegate terminal)
+    {
+        MiddlewareDelegate app = terminal;
+        for (int i = _components.Count - 1; i >= 0; i--)
+            app = _components[i](app);
+        return app;
+    }
+}
+
 public sealed class LoggingMiddleware : IMiddleware
 {
     private readonly ILogger<LoggingMiddleware> _logger;
@@ -338,3 +394,4 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
         }
     }
 }
+
