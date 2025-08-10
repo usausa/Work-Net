@@ -1,3 +1,5 @@
+// ReSharper disable UnusedTypeParameter
+
 namespace WorkMeditator;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +13,7 @@ using System.Threading;
 // TODO 内容確認
 internal class Program
 {
-    static async Task Main(string[] args)
+    static async Task Main()
     {
         var services = new ServiceCollection();
         services
@@ -34,8 +36,10 @@ internal class Program
         var dispatcher = provider.GetRequiredService<IMediator>();
 
         var response = await dispatcher.Send(new Ping(), default);
-
         Debug.WriteLine($"Response: {response}");
+
+        var response2 = await dispatcher.Send(new Ping2(), default);
+        Debug.WriteLine($"Response: {response2}");
     }
 }
 
@@ -43,9 +47,7 @@ internal class Program
 // Sample
 //--------------------------------------------------------------------------------
 
-public class Ping : IRequest<Ping, ValueTask<int>>
-{
-}
+public class Ping : IRequest<Ping, ValueTask<int>>;
 
 public class PingHandler : IRequestHandler<Ping, ValueTask<int>>
 {
@@ -55,6 +57,18 @@ public class PingHandler : IRequestHandler<Ping, ValueTask<int>>
         return ValueTask.FromResult(1);
     }
 }
+
+public class Ping2 : IRequest<Ping2, ValueTask<int>>;
+
+public class Ping2Handler : IRequestHandler<Ping2, ValueTask<int>>
+{
+    public ValueTask<int> Handle(Ping2 request, CancellationToken cancellationToken)
+    {
+        Debug.WriteLine("Received in request handler");
+        return ValueTask.FromResult(2);
+    }
+}
+
 
 public class GenericPipelineBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, ValueTask<TResponse>>
@@ -105,8 +119,8 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
     public TResponse Send<TRequest, TResponse>(IRequest<TRequest, TResponse> request,
         CancellationToken cancellationToken) where TRequest : class, IRequest
     {
-        return serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>()
-            .Handle(Unsafe.As<TRequest>(request), cancellationToken);
+        var handler = serviceProvider.GetRequiredService<IRequestHandler<TRequest, TResponse>>();
+        return handler.Handle(Unsafe.As<TRequest>(request), cancellationToken);
     }
 }
 
@@ -117,7 +131,6 @@ public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
 public class ConfigurationOptions
 {
     public bool RegisterPipelines { get; set; } = true;
-    public bool RegisterNotifications { get; set; } = true;
     public List<Assembly> Assemblies { get; } = new();
     public List<Type>? PipelineOrder { get; set; }
     /// <summary>
@@ -161,19 +174,6 @@ public static class ServiceCollectionExtensions
         return services.AddDispatchR(config);
     }
 
-    public static IServiceCollection AddDispatchR(this IServiceCollection services, Assembly assembly, bool withPipelines = true, bool withNotifications = true)
-    {
-        var config = new ConfigurationOptions
-        {
-            RegisterPipelines = withPipelines,
-            RegisterNotifications = withNotifications
-        };
-
-        config.Assemblies.Add(assembly);
-
-        return services.AddDispatchR(config);
-    }
-
     public static IServiceCollection AddDispatchR(this IServiceCollection services, ConfigurationOptions configurationOptions)
     {
         services.AddScoped<IMediator, Mediator>();
@@ -203,7 +203,6 @@ public static class ServiceCollectionExtensions
             })
             .Where(x => !x.IsInterface) // TODO
             .ToList();
-
 
         ServiceRegistrator.RegisterHandlers(services, allTypes, requestHandlerType, pipelineBehaviorType,
             configurationOptions.RegisterPipelines, configurationOptions.PipelineOrder);
@@ -371,7 +370,10 @@ internal static class ServiceRegistrator
 
 public interface IRequest;
 
-public interface IRequest<TRequest, TResponse> : IRequest where TRequest : class;
+public interface IRequest<TRequest, TResponse>
+    : IRequest where TRequest : class;
+
+// Request handler
 
 public interface IRequestHandler
 {
@@ -380,10 +382,13 @@ public interface IRequestHandler
     {
     }
 }
-public interface IRequestHandler<in TRequest, out TResponse> : IRequestHandler where TRequest : class, IRequest
+public interface IRequestHandler<in TRequest, out TResponse> : IRequestHandler
+    where TRequest : class, IRequest
 {
     TResponse Handle(TRequest request, CancellationToken cancellationToken);
 }
+
+// Request pipeline
 
 public interface IPipelineBehavior<TRequest, TResponse> : IRequestHandler<TRequest, TResponse>
     where TRequest : class, IRequest<TRequest, TResponse>
