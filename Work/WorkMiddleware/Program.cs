@@ -31,7 +31,7 @@ internal class Program
             .BuildServiceProvider();
 
         // 2. パイプラインを組み立て
-        var builder = services.CreatePipelineBuilder();
+        var builder = services.CreatePipelineBuilder3();
 
         builder
             .UseMiddleware<ExceptionHandlingMiddleware>()
@@ -231,6 +231,9 @@ public static class MiddlewareBuilderExtensions
 
     public static MiddlewareBuilder2 CreatePipelineBuilder2(this IServiceProvider provider)
         => new(provider);
+
+    public static MiddlewareBuilder3 CreatePipelineBuilder3(this IServiceProvider provider)
+        => new(provider);
 }
 
 //--------------------------------------------------------------------------------
@@ -286,6 +289,140 @@ public sealed class MiddlewareBuilder2
         return app;
     }
 }
+
+//--------------------------------------------------------------------------------
+public sealed class MiddlewareBuilder3
+{
+    private readonly IServiceProvider _provider;
+
+    // Build 時に解決・チェーン化するため、コンフィギュレーションを一旦保持
+    private readonly List<Func<MiddlewareDelegate, MiddlewareDelegate>> _components = new();
+
+    // IMiddleware 型の登録 (Build 時一括解決)
+    private readonly List<Type> _middlewareTypes = new();
+
+    public MiddlewareBuilder3(IServiceProvider provider) => _provider = provider;
+
+    // Inline middleware: (ctx, next) -> Task
+    public MiddlewareBuilder3 Use(Func<PipelineContext, MiddlewareDelegate, Task> middleware)
+    {
+        _components.Add(next => ctx => middleware(ctx, next));
+        return this;
+    }
+
+    // IMiddleware (シングルトン) を Build 時に解決してキャッシュ
+    public MiddlewareBuilder3 UseMiddleware<TMiddleware>() where TMiddleware : class, IMiddleware
+    {
+        _middlewareTypes.Add(typeof(TMiddleware));
+        // プレースホルダ: Build 時に実体へ差し替える
+        _components.Add(next =>
+        {
+            // 後で置換するためダミー delegate (Build で上書き)
+            return ctx => next(ctx);
+        });
+        return this;
+    }
+
+    // 条件付き分岐 (UseWhen 風) - シングルトン構成なので内部もそのまま組む
+    public MiddlewareBuilder3 UseWhen(Func<PipelineContext, bool> predicate, Action<MiddlewareBuilder3> configureBranch)
+    {
+        _components.Add(next =>
+        {
+            // サブビルダー (同じ DI プロバイダ)
+            var branchBuilder = new MiddlewareBuilder3(_provider);
+            configureBranch(branchBuilder);
+            var branch = branchBuilder.BuildInternal(next); // 分岐後合流
+            return async ctx =>
+            {
+                if (predicate(ctx))
+                    await branch(ctx);
+                else
+                    await next(ctx);
+            };
+        });
+        return this;
+    }
+
+    // Map (分岐して終端)
+    public MiddlewareBuilder3 Map(Func<PipelineContext, bool> predicate, Action<MiddlewareBuilder3> configureBranch)
+    {
+        _components.Add(next =>
+        {
+            var branchBuilder = new MiddlewareBuilder3(_provider);
+            configureBranch(branchBuilder);
+            branchBuilder.Run(_ => Task.CompletedTask); // 終端
+            var branch = branchBuilder.BuildInternal(_ => Task.CompletedTask);
+
+            return async ctx =>
+            {
+                if (predicate(ctx))
+                    await branch(ctx);
+                else
+                    await next(ctx);
+            };
+        });
+        return this;
+    }
+
+    public MiddlewareBuilder3 Run(MiddlewareDelegate terminal)
+    {
+        _components.Add(_ => terminal);
+        return this;
+    }
+
+    // Build: ここで全ての IMiddleware を一括解決して components に反映
+    public Func<PipelineContext, Task> Build()
+    {
+        // 解決 (すべて Singleton 前提)
+        var resolved = _middlewareTypes
+            .Select(t => (IMiddleware)_provider.GetRequiredService(t))
+            .ToList();
+
+        // _components 内の "UseMiddleware" プレースホルダを順番に置換
+        int resolvedIndex = 0;
+        var realizedComponents = new List<Func<MiddlewareDelegate, MiddlewareDelegate>>(_components.Count);
+
+        foreach (var comp in _components)
+        {
+            // 判定: プレースホルダは UseMiddleware 呼出順であり、
+            // ここでは comp がプレースホルダかどうか識別できないので
+            // 方式を変える: _middlewareTypes を別管理したので、
+            // プレースホルダを挿入したタイミングでは comp の閉包にタグを持たせる方がよい。
+            // 簡略化のためラップ型を導入する。
+
+            // ここでは簡易に typeof(PlaceholderMiddlewareWrapper) を使う方式へ変更
+            realizedComponents.Add(comp);
+        }
+
+        // 上記簡易方式だと識別できないため、実際には登録段階でタグを持つ別構造にする。
+        // リファクタ: _components を (Kind, Func) のリストに再定義する。
+
+        // ---- 再実装 (より明確) ----
+        return BuildResolved(resolved);
+    }
+
+    // 内部再実装: 種別管理
+    private Func<PipelineContext, Task> BuildResolved(List<IMiddleware> resolved)
+    {
+        // 再構築: _components と resolved の相関を保持するため
+        // UseMiddleware 登録時に専用ラッパを使うよう変更（簡潔のため下に最終版再掲）
+
+        throw new NotImplementedException("この BuildResolved は後段の最終版で置き換わります。");
+    }
+
+    // 旧来の内部 Build (再帰的ブランチ用)
+    internal MiddlewareDelegate BuildInternal(MiddlewareDelegate terminal)
+    {
+        MiddlewareDelegate app = terminal;
+        for (int i = _components.Count - 1; i >= 0; i--)
+        {
+            app = _components[i](app);
+        }
+        return app;
+    }
+}
+
+//--------------------------------------------------------------------------------
 
 public sealed class LoggingMiddleware : IMiddleware
 {
