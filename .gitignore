@@ -400,4 +400,4 @@ FodyWeavers.xsd
 # Customize
 desktop.ini
 __*
-/Cognitive/WorkCognitive/Properties/launchSettings.json
+/Cognitive/*/Properties/launchSettings.json
