@@ -1,16 +1,45 @@
 <Solution>
+  <Folder Name="/Constract/">
+    <Project Path="ContractClient/ContractClient.csproj" Id="e66aeff7-4900-47b8-be7e-bbc00dffede0" />
+    <Project Path="ContractServer/ContractServer.csproj" Id="1e735509-16ea-40b4-9fba-cff9df765f87" />
+    <Project Path="ContractShared/ContractShared.csproj" Id="c471c905-699c-4fa8-9e01-4723e579c077" />
+  </Folder>
   <Folder Name="/_/">
-    <Project Path="CodeGrpcClient/CodeGrpcClient.csproj" />
-    <Project Path="CodeGrpcContract/CodeGrpcContract.csproj" />
-    <Project Path="CodeGrpcServer/CodeGrpcServer.csproj" />
-    <Project Path="GrpcClient/GrpcClient.csproj" />
-    <Project Path="GrpcService1/GrpcService1/GrpcService1.csproj" />
-    <Project Path="GrpcService1/WebApplication1/WebApplication1.csproj" />
-    <Project Path="WorkGrpcChatClient/WorkGrpcChatClient.csproj" />
-    <Project Path="WorkGrpcChatContract/WorkGrpcChatContract.csproj" />
-    <Project Path="WorkGrpcChatServer/WorkGrpcChatServer.csproj" />
-    <Project Path="WorkGrpcClient/WorkGrpcClient.csproj" />
-    <Project Path="WorkGrpcService/WorkGrpcService.csproj" />
-    <Project Path="WpfWithGrpcService/WpfWithGrpcService.csproj" />
+    <Project Path="CodeGrpcClient/CodeGrpcClient.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="CodeGrpcContract/CodeGrpcContract.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="CodeGrpcServer/CodeGrpcServer.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="GrpcClient/GrpcClient.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="GrpcService1/GrpcService1/GrpcService1.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="GrpcService1/WebApplication1/WebApplication1.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WorkGrpcChatClient/WorkGrpcChatClient.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WorkGrpcChatContract/WorkGrpcChatContract.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WorkGrpcChatServer/WorkGrpcChatServer.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WorkGrpcClient/WorkGrpcClient.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WorkGrpcService/WorkGrpcService.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="WpfWithGrpcService/WpfWithGrpcService.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
   </Folder>
 </Solution>
