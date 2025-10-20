@@ -1,4 +1,4 @@
-namespace WorkGrpcChatContract;
+namespace ContractShared;
 
 using ProtoBuf.Grpc.Configuration;
 using ProtoBuf;

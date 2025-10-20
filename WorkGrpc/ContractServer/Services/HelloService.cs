@@ -1,6 +1,6 @@
-namespace WorkGrpcChatServer.Services;
+namespace ContractServer.Services;
 
-using WorkGrpcChatContract;
+using ContractShared;
 
 public class HelloService : IHelloService
 {

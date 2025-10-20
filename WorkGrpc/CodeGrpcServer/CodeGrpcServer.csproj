@@ -10,8 +10,4 @@
     <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.2.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CodeGrpcContract\CodeGrpcContract.csproj" />
-  </ItemGroup>
-
 </Project>
