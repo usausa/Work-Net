@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Constract/">
+    <Project Path="ContractBenchmark/ContractBenchmark.csproj" Id="cb659e37-9626-414b-bc6b-cff473c53084" />
     <Project Path="ContractClient/ContractClient.csproj" Id="e66aeff7-4900-47b8-be7e-bbc00dffede0" />
     <Project Path="ContractServer/ContractServer.csproj" Id="1e735509-16ea-40b4-9fba-cff9df765f87" />
     <Project Path="ContractShared/ContractShared.csproj" Id="c471c905-699c-4fa8-9e01-4723e579c077" />
