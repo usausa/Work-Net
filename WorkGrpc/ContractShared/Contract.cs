@@ -1,13 +1,20 @@
 namespace ContractShared;
 
-using ProtoBuf.Grpc.Configuration;
 using ProtoBuf;
+using ProtoBuf.Grpc;
+using ProtoBuf.Grpc.Configuration;
 
 [Service]
 public interface IHelloService
 {
     [Operation]
-    Task<HelloResponse> HelloAsync(HelloRequest request);
+    Task<HelloResponse> HelloAsync(HelloRequest request, CallContext context = default!);
+
+    [Operation]
+    Task<HelloResponse> RandomErrorAsync(HelloRequest request, CallContext context = default!);
+
+    [Operation]
+    Task<HelloResponse> ErrorAsync(HelloRequest request, CallContext context = default!);
 }
 
 [ProtoContract]
