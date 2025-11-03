@@ -1,4 +1,5 @@
 using ChatServer;
+
 using Grpc.Core;
 using Grpc.Net.Client;
 
@@ -24,7 +25,7 @@ var readerTask = Task.Run(async () =>
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"受信エラー: {ex.Message}");
+        Console.WriteLine($"Unknown exception: {ex.Message}");
     }
 });
 

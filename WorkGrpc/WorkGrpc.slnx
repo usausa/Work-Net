@@ -15,7 +15,10 @@
     <Project Path="DashboardContract/DashboardContract.csproj" Id="881d4512-fa39-42dd-acd2-c24262802d8c" />
     <Project Path="DashboardServer/DashboardServer.csproj" Id="d5890189-3345-4f48-8e1f-f660123fe0fa" />
   </Folder>
-  <Folder Name="/MultiCommand/" />
+  <Folder Name="/Multi/">
+    <Project Path="MultiClient/MultiClient.csproj" Id="655414e3-be24-4e46-a518-90f2055b4c18" />
+    <Project Path="MultiServer/MultiServer.csproj" Id="0a8d87ec-04c1-458e-932a-128fa066aa16" />
+  </Folder>
   <Folder Name="/_/">
     <Project Path="WorkGrpcClient/WorkGrpcClient.csproj">
       <Build Solution="Debug|*" Project="false" />

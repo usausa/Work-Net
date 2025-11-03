@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+option csharp_namespace = "MultiServer";
+
+package multi;
+
+service MultiApi {
+  rpc Execute (stream Request) returns (stream Response);
+}
+
+message Request {
+  oneof payload {
+    TransactionRequest transaction_request = 1;
+    CancelRequest cancel_request = 2;
+    DeviceResponse device_response = 3;
+  }
+}
+
+message Response {
+  oneof payload {
+    TransactionResponse transaction_response = 1;
+    DeviceRequest device_request = 3;
+  }
+}
+
+message TransactionRequest {
+  string content = 1;
+}
+
+message CancelRequest {
+}
+
+message DeviceRequest {
+  int32 id = 1;
+}
+
+message TransactionResponse {
+  string result = 1;
+}
+
+message DeviceResponse {
+  int32 result = 1;
+}
