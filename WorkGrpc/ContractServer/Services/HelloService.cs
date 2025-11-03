@@ -8,7 +8,7 @@ using ProtoBuf.Grpc;
 
 public class HelloService : IHelloService
 {
-    private readonly Random random = new Random();
+    private readonly Random random = new();
 
     public Task<HelloResponse> HelloAsync(HelloRequest request, CallContext context)
     {
