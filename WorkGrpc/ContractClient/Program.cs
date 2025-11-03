@@ -202,6 +202,55 @@ streamCommand.Handler = CommandHandler.Create(static async () =>
 });
 rootCommand.Add(streamCommand);
 
+//--------------------------------------------------------------------------------
+// timeout
+//--------------------------------------------------------------------------------
+var timeoutCommand = new Command("timeout");
+timeoutCommand.Handler = CommandHandler.Create(static async () =>
+{
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    using var cts = new CancellationTokenSource();
+
+    try
+    {
+        var call = client.TimeoutAsync(SendMessagesAsync(cts.Token), new CallContext(new CallOptions(cancellationToken: cts.Token)));
+
+        await foreach (var response in call.WithCancellation(cts.Token))
+        {
+            Console.WriteLine($"Received response. message=[{response.Message}]");
+        }
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);
+    }
+
+    static async IAsyncEnumerable<HelloRequest> SendMessagesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            // ユーザー入力を待つ
+            var input = await Task.Run(Console.ReadLine, cancellationToken);
+
+            if (String.IsNullOrEmpty(input) || (input.ToLower() == "quit"))
+            {
+                Console.WriteLine("Quit.");
+                break;
+            }
+
+            var request = new HelloRequest { Name = input };
+
+            Console.WriteLine($"Send request. name=[{input}]");
+
+            yield return request;
+        }
+    }
+});
+rootCommand.Add(timeoutCommand);
+
 await rootCommand.InvokeAsync(args).ConfigureAwait(false);
 #if DEBUG
 Console.ReadLine();
