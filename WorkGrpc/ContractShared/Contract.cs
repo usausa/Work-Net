@@ -15,6 +15,12 @@ public interface IHelloService
 
     [Operation]
     Task<HelloResponse> ErrorAsync(HelloRequest request, CallContext context = default!);
+
+    [Operation]
+    Task<HelloResponse> CancelAsync(HelloRequest request, CallContext context = default!);
+
+    [Operation]
+    Task<HelloResponse> Cancel2Async(HelloRequest request, CancellationToken cancel);
 }
 
 [ProtoContract]

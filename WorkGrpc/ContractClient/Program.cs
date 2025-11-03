@@ -5,25 +5,154 @@ using Grpc.Net.Client;
 using ProtoBuf.Grpc;
 using ProtoBuf.Grpc.Client;
 
-var channel = GrpcChannel.ForAddress("http://localhost:5000", new GrpcChannelOptions
+using System.CommandLine;
+using System.CommandLine.NamingConventionBinder;
+using Grpc.Core;
+
+// ReSharper disable UseObjectOrCollectionInitializer
+
+var rootCommand = new RootCommand("Client");
+
+//--------------------------------------------------------------------------------
+// hello
+//--------------------------------------------------------------------------------
+var helloCommand = new Command("hello");
+helloCommand.Handler = CommandHandler.Create(static async () =>
 {
-    HttpHandler = new SocketsHttpHandler
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    var reply = await client.HelloAsync(new HelloRequest { Name = "うさうさ" }).ConfigureAwait(false);
+
+    Console.WriteLine(reply.Message);
+});
+rootCommand.Add(helloCommand);
+
+//--------------------------------------------------------------------------------
+// detail
+//--------------------------------------------------------------------------------
+var detailCommand = new Command("detail");
+detailCommand.Handler = CommandHandler.Create(static async () =>
+{
+    var channel = GrpcChannel.ForAddress("http://localhost:5000", new GrpcChannelOptions
     {
-        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-        KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-        KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-        EnableMultipleHttp2Connections = true,
+        HttpHandler = new SocketsHttpHandler
+        {
+            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+            KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            EnableMultipleHttp2Connections = true,
+        }
+    });
+
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+
+    var context = new CallContext(flags: CallContextFlags.CaptureMetadata);
+    var reply = await client.HelloAsync(new HelloRequest { Name = "うさうさ" }, context).ConfigureAwait(false);
+
+    Console.WriteLine(reply.Message);
+    var headers = await context.ResponseHeadersAsync();
+    foreach (var entry in headers)
+    {
+        Console.WriteLine($"{entry.Key} : {entry.Value}");
     }
 });
+rootCommand.Add(detailCommand);
 
-var client = channel.CreateGrpcService<IHelloService>();
-
-var context = new CallContext(flags: CallContextFlags.CaptureMetadata);
-var reply = await client.HelloAsync(new HelloRequest { Name = "うさうさ" }, context).ConfigureAwait(false);
-
-Console.WriteLine(reply.Message);
-var headers = await context.ResponseHeadersAsync();
-foreach (var entry in headers)
+//--------------------------------------------------------------------------------
+// error
+//--------------------------------------------------------------------------------
+var errorCommand = new Command("error");
+errorCommand.Handler = CommandHandler.Create(static async () =>
 {
-    Console.WriteLine($"{entry.Key} : {entry.Value}");
-}
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    try
+    {
+        await client.ErrorAsync(new HelloRequest { Name = "うさうさ" }).ConfigureAwait(false);
+    }
+    catch (RpcException e)
+    {
+        Console.WriteLine(e);
+    }
+});
+rootCommand.Add(errorCommand);
+
+//--------------------------------------------------------------------------------
+// deadline
+//--------------------------------------------------------------------------------
+var deadlineCommand = new Command("deadline");
+deadlineCommand.Handler = CommandHandler.Create(static async () =>
+{
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    try
+    {
+        var context = new CallContext(new CallOptions(deadline: DateTime.UtcNow.AddSeconds(3)));
+        await client.CancelAsync(new HelloRequest { Name = "うさうさ" }, context).ConfigureAwait(false);
+    }
+    catch (RpcException e)
+    {
+        Console.WriteLine(e);
+    }
+});
+rootCommand.Add(deadlineCommand);
+//--------------------------------------------------------------------------------
+// cancel
+//--------------------------------------------------------------------------------
+var cancelCommand = new Command("cancel");
+cancelCommand.Handler = CommandHandler.Create(static async () =>
+{
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    try
+    {
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromSeconds(3));
+
+        var context = new CallContext(new CallOptions(cancellationToken: cts.Token));
+        await client.CancelAsync(new HelloRequest { Name = "うさうさ" }, context).ConfigureAwait(false);
+    }
+    catch (RpcException e)
+    {
+        Console.WriteLine(e);
+    }
+});
+rootCommand.Add(cancelCommand);
+
+//--------------------------------------------------------------------------------
+// cancel2
+//--------------------------------------------------------------------------------
+var cancel2Command = new Command("cancel2");
+cancel2Command.Handler = CommandHandler.Create(static async () =>
+{
+    var channel = GrpcChannel.ForAddress("http://localhost:5000");
+
+    var client = channel.CreateGrpcService<IHelloService>();
+
+    try
+    {
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromSeconds(3));
+        await client.Cancel2Async(new HelloRequest { Name = "うさうさ" }, cts.Token).ConfigureAwait(false);
+    }
+    catch (RpcException e)
+    {
+        Console.WriteLine(e);
+    }
+});
+rootCommand.Add(cancel2Command);
+
+await rootCommand.InvokeAsync(args).ConfigureAwait(false);
+#if DEBUG
+Console.ReadLine();
+#endif

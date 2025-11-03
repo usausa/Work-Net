@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ContractClient": {
+      "commandName": "Project",
+      "commandLineArgs": "deadline"
+    }
+  }
+}
