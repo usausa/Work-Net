@@ -1,7 +1,5 @@
 namespace ContractServer.Services;
 
-using System.Diagnostics;
-
 using ContractShared;
 
 using Grpc.Core;
@@ -67,5 +65,17 @@ public class HelloService : IHelloService
             throw;
         }
         return new HelloResponse { Message = $"Hello {request.Name}" };
+    }
+
+    public async IAsyncEnumerable<HelloResponse> StreamAsync(IAsyncEnumerable<HelloRequest> messages, CallContext context = default)
+    {
+        await foreach (var message in messages.WithCancellation(context.CancellationToken))
+        {
+            log.LogInformation($"Received: {message.Name}");
+
+            yield return new HelloResponse { Message = $"Hello {message.Name}" };
+        }
+
+        log.LogInformation("Client disconnected.");
     }
 }

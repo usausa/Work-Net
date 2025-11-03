@@ -21,6 +21,10 @@ public interface IHelloService
 
     [Operation]
     Task<HelloResponse> Cancel2Async(HelloRequest request, CancellationToken cancel);
+
+
+    [Operation]
+    IAsyncEnumerable<HelloResponse> StreamAsync(IAsyncEnumerable<HelloRequest> messages, CallContext context = default);
 }
 
 [ProtoContract]
