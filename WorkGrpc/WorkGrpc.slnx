@@ -1,5 +1,8 @@
 <Solution>
-  <Folder Name="/Chat/" />
+  <Folder Name="/Chat/">
+    <Project Path="ChatClient/ChatClient.csproj" Id="b6bb3bfc-fa5b-4071-9ef9-ade2a2704076" />
+    <Project Path="ChatServer/ChatServer.csproj" Id="f1b3371f-09e5-4146-ab4d-50f56bb4f6ba" />
+  </Folder>
   <Folder Name="/Chunk/" />
   <Folder Name="/Constract/">
     <Project Path="ContractBenchmark/ContractBenchmark.csproj" Id="cb659e37-9626-414b-bc6b-cff473c53084" />

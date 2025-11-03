@@ -81,8 +81,6 @@ public class HelloService : IHelloService
         log.LogInformation("Client disconnected.");
     }
 
-    // TODO IAsyncStreamReader ?
-
     public async IAsyncEnumerable<HelloResponse> TimeoutAsync(IAsyncEnumerable<HelloRequest> messages, CallContext context = default)
     {
         var en = messages.GetAsyncEnumerator();
