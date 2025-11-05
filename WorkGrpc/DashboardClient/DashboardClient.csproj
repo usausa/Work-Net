@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+    <PackageReference Include="Usa.Smart.Core" Version="2.4.6" />
   </ItemGroup>
 
   <ItemGroup>

@@ -14,7 +14,6 @@ public class MultiApi : MultiServer.MultiApi.MultiApiBase
     public override async Task Execute(IAsyncStreamReader<Request> requestStream,
         IServerStreamWriter<Response> responseStream, ServerCallContext context)
     {
-        // TODO timeout
         await foreach (var request in requestStream.ReadAllAsync())
         {
             switch (request.PayloadCase)

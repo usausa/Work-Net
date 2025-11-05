@@ -1,7 +1,8 @@
-using Grpc.Core;
 using Grpc.Net.Client;
 
 using MultiServer;
+
+using Smart.Threading;
 
 using var channel = GrpcChannel.ForAddress("http://localhost:5000");
 var client = new MultiApi.MultiApiClient(channel);
@@ -13,10 +14,15 @@ var readerTask = Task.Run<TransactionResponse?>(async () =>
 {
     try
     {
-        // TODO timeout
+        // TODO Timeout
+        var tcs = new ReusableCancellationTokenSource();
+        tcs.CancelAfter(5000);
+
         // ReSharper disable AccessToDisposedClosure
-        await foreach (var response in call.ResponseStream.ReadAllAsync())
+        while (await call.ResponseStream.MoveNext(tcs.Token))
         {
+            var response = call.ResponseStream.Current;
+
             switch (response.PayloadCase)
             {
                 case Response.PayloadOneofCase.TransactionResponse:
@@ -43,6 +49,8 @@ var readerTask = Task.Run<TransactionResponse?>(async () =>
                     Console.WriteLine($"Received unknown response. payload=[{response.PayloadCase}]");
                     break;
             }
+
+            tcs.Reset();
         }
         // ReSharper restore AccessToDisposedClosure
     }
