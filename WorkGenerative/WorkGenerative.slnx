@@ -1,1 +1,4 @@
-<Solution />
+<Solution>
+  <Folder Name="/Chat/" />
+  <Folder Name="/RAG/" />
+</Solution>

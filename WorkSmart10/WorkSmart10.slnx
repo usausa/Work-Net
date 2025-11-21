@@ -1,1 +1,5 @@
-<Solution />
+<Solution>
+  <Folder Name="/Holder/">
+    <Project Path="HolderBenchmark/HolderBenchmark.csproj" Id="09001974-cbed-462f-b0c1-dae06491b5b3" />
+  </Folder>
+</Solution>
