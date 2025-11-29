@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Chat/">
     <Project Path="WorkOllama/WorkOllama.csproj" Id="3cf302ba-e1f6-4554-9ed0-76f903ffb4cf" />
+    <Project Path="WorkOllamaAe/WorkOllamaAe.csproj" Id="020a15ec-9443-4485-ad5f-24f0df651ffa" />
   </Folder>
   <Folder Name="/RAG/" />
 </Solution>
