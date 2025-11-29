@@ -9,6 +9,7 @@ using OllamaSharp.Models;
 public class OllamaOptions
 {
     public const string SectionName = "Ollama";
+
     public string BaseUrl { get; set; } = default!;
 
     public string Model { get; set; } = default!;
