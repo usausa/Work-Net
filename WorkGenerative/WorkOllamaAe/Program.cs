@@ -14,6 +14,7 @@ while (true)
         break;
     }
 
+    // GetStreamingResponseAsync is namespace Microsoft.Extensions.AI
     await foreach (var update in chatClient.GetStreamingResponseAsync(prompt))
     {
         Console.Write(update.Text);
