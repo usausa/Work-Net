@@ -2,7 +2,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
 using OllamaSharp;
+
 using WorkAeOllama;
 
 var builder = Host.CreateApplicationBuilder();
