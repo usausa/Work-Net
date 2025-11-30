@@ -1,9 +1,13 @@
 <Solution>
+  <Folder Name="/Aspire/" />
+  <Folder Name="/Blazor/" />
   <Folder Name="/Chat/">
-    <Project Path="WorkAeOllama/WorkAeOllama.csproj" Id="e297b571-cb13-4188-aa07-e271a4ce7d55" />
     <Project Path="WorkAzureOpenApi/WorkAzureOpenApi.csproj" Id="ea93aeb6-35f4-4fd4-9b97-41b30e644f28" />
-    <Project Path="WorkOllama/WorkOllama.csproj" Id="3cf302ba-e1f6-4554-9ed0-76f903ffb4cf" />
-    <Project Path="WorkOllamaAe/WorkOllamaAe.csproj" Id="020a15ec-9443-4485-ad5f-24f0df651ffa" />
+    <Project Path="WorkOllamaSimple/WorkOllamaSimple.csproj" Id="85df36ee-e759-4e17-8f33-3765720feec1" />
   </Folder>
+  <Folder Name="/Chat/MEAI/">
+    <Project Path="WorkAeOllama/WorkAeOllama.csproj" Id="e297b571-cb13-4188-aa07-e271a4ce7d55" />
+  </Folder>
+  <Folder Name="/MCP/" />
   <Folder Name="/RAG/" />
 </Solution>
