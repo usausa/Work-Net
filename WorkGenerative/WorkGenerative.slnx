@@ -3,6 +3,7 @@
   <Folder Name="/Blazor/" />
   <Folder Name="/Chat/">
     <Project Path="WorkAzureOpenApi/WorkAzureOpenApi.csproj" Id="ea93aeb6-35f4-4fd4-9b97-41b30e644f28" />
+    <Project Path="WorkBedrock/WorkBedrock.csproj" Id="f4a27247-dcaa-43fe-89bc-b122b0a414d5" />
     <Project Path="WorkOllama/WorkOllama.csproj" />
   </Folder>
   <Folder Name="/Chat/MEAI/">
