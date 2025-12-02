@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/Aspire/" />
   <Folder Name="/Command/">
-    <Project Path="WorkCommand/WorkCommand.csproj" Id="c02bfba4-d520-441e-bc09-bcb730dfaa9c" />
+    <Project Path="WorkCommand/WorkCommand.csproj" />
   </Folder>
   <Folder Name="/Functions/" />
+  <Folder Name="/Smart/">
+    <Project Path="SmartHolderBehcnmark/SmartHolderBehcnmark.csproj" />
+  </Folder>
   <Folder Name="/Yarp/" />
 </Solution>
