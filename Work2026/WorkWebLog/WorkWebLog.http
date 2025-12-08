@@ -1,0 +1,6 @@
+@WorkWebLog_HostAddress = http://localhost:5142
+
+GET {{WorkWebLog_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

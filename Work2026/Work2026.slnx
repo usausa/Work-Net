@@ -8,6 +8,7 @@
     <Project Path="SmartHolderBehcnmark/SmartHolderBehcnmark.csproj" />
   </Folder>
   <Folder Name="/Web/">
+    <Project Path="WorkWebLog/WorkWebLog.csproj" Id="28b79e0c-6a23-4801-8ff9-8c74c75df982" />
     <Project Path="WorkWebOpenApi/WorkWebOpenApi.csproj" Id="a35f781d-34de-453d-94bb-776f8731e357" />
   </Folder>
   <Folder Name="/Yarp/" />
