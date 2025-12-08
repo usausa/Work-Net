@@ -1,0 +1,6 @@
+@WorkWebOpenApi_HostAddress = http://localhost:5098
+
+GET {{WorkWebOpenApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
