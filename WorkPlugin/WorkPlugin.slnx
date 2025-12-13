@@ -2,8 +2,7 @@
   <Project Path="WorkPlugin.Abstraction/WorkPlugin.Abstraction.csproj" />
   <Project Path="WorkPlugin.Plugin1/WorkPlugin.Plugin1.csproj" />
   <Project Path="WorkPlugin.Plugin2/WorkPlugin.Plugin2.csproj" />
-  <Project Path="WorkPlugin.Server/WorkPlugin.Server.csproj">
-    <BuildDependency Project="WorkPlugin.Plugin1/WorkPlugin.Plugin1.csproj" />
-    <BuildDependency Project="WorkPlugin.Plugin2/WorkPlugin.Plugin2.csproj" />
-  </Project>
+  <Project Path="WorkPlugin.Plugin3/WorkPlugin.Plugin3.csproj" Id="4bc60e9d-fcd2-415c-a268-938c447f00d0" />
+  <Project Path="WorkPlugin.Plugin4/WorkPlugin.Plugin4.csproj" Id="045370ed-bcaf-4f1e-abc1-195d7d4978b6" />
+  <Project Path="WorkPlugin.Service/WorkPlugin.Service.csproj" Id="9c0b4049-366e-4ea0-a900-5d84e180b0a1" />
 </Solution>

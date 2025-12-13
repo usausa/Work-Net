@@ -1,12 +1,12 @@
-namespace WorkPlugin.Plugin2;
+namespace WorkPlugin.Plugin4;
 
 using WorkPlugin.Abstraction;
 
-public class Plugin2 : IPlugin
+public class Plugin4 : IPlugin
 {
-    public string Name => "Plugin2";
+    public string Name => "Plugin4";
 
-    public string Platform => "Windows";
+    public string Platform => "Linux";
 
     public void Execute()
     {

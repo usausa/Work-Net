@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net10.0-windows;net10.0-macos;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsWindowsPlatform>false</IsWindowsPlatform>
+    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows'))">true</IsWindowsPlatform>
+
+    <IsMacOSPlatform>false</IsMacOSPlatform>
+    <IsMacOSPlatform Condition="$(TargetFramework.Contains('macos'))">true</IsMacOSPlatform>
+
+    <IsLinuxPlatform>false</IsLinuxPlatform>
+    <IsLinuxPlatform Condition="!$(TargetFramework.Contains('windows')) AND !$(TargetFramework.Contains('macos'))">true</IsLinuxPlatform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkPlugin.Abstraction\WorkPlugin.Abstraction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WorkPlugin.Plugin1\WorkPlugin.Plugin1.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsWindowsPlatform)' == 'true'">
+    <ProjectReference Include="..\WorkPlugin.Plugin2\WorkPlugin.Plugin2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsMacOSPlatform)' == 'true'">
+    <ProjectReference Include="..\WorkPlugin.Plugin3\WorkPlugin.Plugin3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsLinuxPlatform)' == 'true'">
+    <ProjectReference Include="..\WorkPlugin.Plugin4\WorkPlugin.Plugin4.csproj" />
+  </ItemGroup>
+
+</Project>
