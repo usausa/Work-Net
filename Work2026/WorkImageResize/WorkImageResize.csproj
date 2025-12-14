@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.1" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2-preview.1" />
   </ItemGroup>
 
 </Project>

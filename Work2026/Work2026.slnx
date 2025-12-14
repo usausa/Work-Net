@@ -3,6 +3,9 @@
   <Folder Name="/Command/">
     <Project Path="WorkCommand/WorkCommand.csproj" />
   </Folder>
+  <Folder Name="/Face/">
+    <Project Path="WorkImageResize/WorkImageResize.csproj" Id="9d51d088-7562-4df2-b294-d8f6008b74f9" />
+  </Folder>
   <Folder Name="/Functions/" />
   <Folder Name="/Smart/">
     <Project Path="SmartHolderBehcnmark/SmartHolderBehcnmark.csproj" />
