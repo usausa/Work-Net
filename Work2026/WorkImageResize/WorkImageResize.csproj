@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageReference Include="SkiaSharp" Version="3.119.2-preview.1" />
   </ItemGroup>
 
