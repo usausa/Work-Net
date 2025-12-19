@@ -11,6 +11,7 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 - ✅ **デフォルト値のサポート**
 - ✅ **自動ヘルプ生成**
 - ✅ **グループコマンドの自動ヘルプ表示**
+- ✅ **共通引数の柔軟な定義パターン**
 
 ## 基本的な使い方
 
@@ -109,6 +110,133 @@ public sealed class GreetCommand : ICommandDefinition
 }
 ```
 
+## 共通引数の定義パターン
+
+複数のコマンドで同じ引数を使用する場合、以下のパターンが利用できます。
+
+### パターン1: 抽象基底クラス（推奨）
+
+最もシンプルで型安全なアプローチ：
+
+```csharp
+/// <summary>
+/// Base class for user role commands with common username and role arguments.
+/// </summary>
+public abstract class UserRoleCommandBase : ICommandDefinition
+{
+    [CliArgument<string>(0, "username", Description = "Username")]
+    public string Username { get; set; } = default!;
+
+    [CliArgument<string>(1, "role", Description = "Role name")]
+    public string Role { get; set; } = default!;
+
+    public abstract ValueTask ExecuteAsync();
+}
+
+[CliCommand("assign", Description = "Assign role to user")]
+public sealed class UserRoleAssignCommand : UserRoleCommandBase
+{
+    private readonly ILogger<UserRoleAssignCommand> _logger;
+
+    public UserRoleAssignCommand(ILogger<UserRoleAssignCommand> logger)
+    {
+        _logger = logger;
+    }
+
+    public override ValueTask ExecuteAsync()
+    {
+        _logger.LogInformation("Assigning role '{Role}' to user '{Username}'", Role, Username);
+        Console.WriteLine($"Successfully assigned role '{Role}' to user '{Username}'");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+### パターン2: インターフェース（ミックスイン）
+
+複数の共通引数セットを組み合わせたい場合：
+
+**注意**: C#ではインターフェースの属性は実装クラスに継承されないため、実装クラスで明示的に属性を付ける必要があります。インターフェースは型の契約と共通プロパティ名を定義する役割を果たします。
+
+```csharp
+public interface IUserTargetArguments
+{
+    string Username { get; set; }
+}
+
+public interface IRoleArguments
+{
+    string Role { get; set; }
+}
+
+[CliCommand("grant", Description = "Grant permission to user")]
+public sealed class UserPermissionGrantCommand : ICommandDefinition, IUserTargetArguments, IRoleArguments
+{
+    // 属性を明示的に付ける
+    [CliArgument<string>(0, "username", Description = "Username")]
+    public string Username { get; set; } = default!;
+
+    [CliArgument<string>(1, "role", Description = "Role name")]
+    public string Role { get; set; } = default!;
+
+    [CliArgument<string>(2, "permission", Description = "Permission to grant")]
+    public string Permission { get; set; } = default!;
+
+    public ValueTask ExecuteAsync()
+    {
+        Console.WriteLine($"Granted '{Permission}' in role '{Role}' to user '{Username}'");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+### パターン3: ジェネリック基底クラス
+
+ロガーの型も含めて汎用化したい場合：
+
+```csharp
+public abstract class CommandWithUserAndRole<TLogger> : ICommandDefinition
+{
+    protected readonly ILogger<TLogger> Logger;
+
+    protected CommandWithUserAndRole(ILogger<TLogger> logger)
+    {
+        Logger = logger;
+    }
+
+    [CliArgument<string>(0, "username", Description = "Username")]
+    public string Username { get; set; } = default!;
+
+    [CliArgument<string>(1, "role", Description = "Role name")]
+    public string Role { get; set; } = default!;
+
+    public abstract ValueTask ExecuteAsync();
+}
+
+[CliCommand("verify", Description = "Verify user role")]
+public sealed class UserRoleVerifyCommand : CommandWithUserAndRole<UserRoleVerifyCommand>
+{
+    public UserRoleVerifyCommand(ILogger<UserRoleVerifyCommand> logger) : base(logger)
+    {
+    }
+
+    public override ValueTask ExecuteAsync()
+    {
+        Logger.LogInformation("Verifying role '{Role}' for user '{Username}'", Role, Username);
+        Console.WriteLine($"Verifying if user '{Username}' has role '{Role}'");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+### パターン比較
+
+| パターン | メリット | デメリット | 使用場面 |
+|---------|---------|-----------|----------|
+| 抽象基底クラス | シンプル、型安全、IntelliSense良好 | 単一継承のみ | 関連するコマンドグループ |
+| インターフェース | 複数の引数セットを組み合わせ可能 | プロパティ実装が必要 | 横断的な共通引数 |
+| ジェネリック基底 | ロガーも共通化、高い再利用性 | やや複雑 | 大規模プロジェクト |
+
 ## コマンドライン使用例
 
 ```bash
@@ -130,8 +258,9 @@ app user
 # サブコマンド
 app user list 5
 
-# サブサブコマンド
+# サブサブコマンド（共通引数を使用）
 app user role assign john admin
+app user role remove bob editor
 
 # ヘルプの表示
 app --help
@@ -190,3 +319,4 @@ public interface ICommandGroup
 3. **拡張性**: 無制限の階層深度に対応
 4. **型安全性**: ジェネリック属性による型チェック
 5. **保守性**: 明確な役割分担（ICommandDefinition vs ICommandGroup）
+6. **DRY原則**: 共通引数の再利用パターンが豊富

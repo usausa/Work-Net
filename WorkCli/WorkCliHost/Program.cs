@@ -12,7 +12,7 @@ builder.ConfigureServices(services =>
     // シンプルなコマンド
     services.AddCliCommand<MessageCommand>();
     services.AddCliCommand<GreetCommand>();
-
+    
     // 階層的なコマンド構造
     services.AddCliCommand<UserCommand>(user =>
     {
@@ -22,7 +22,9 @@ builder.ConfigureServices(services =>
         {
             role.AddSubCommand<UserRoleAssignCommand>();
             role.AddSubCommand<UserRoleRemoveCommand>();
+            role.AddSubCommand<UserRoleVerifyCommand>();
         });
+        user.AddSubCommand<UserPermissionGrantCommand>();
     });
 });
 

@@ -63,8 +63,22 @@ public sealed class UserRoleCommand : ICommandGroup
     // 実装不要 - サブコマンドのみのグループコマンド
 }
 
+/// <summary>
+/// Base class for user role commands with common username and role arguments.
+/// </summary>
+public abstract class UserRoleCommandBase : ICommandDefinition
+{
+    [CliArgument<string>(0, "username", Description = "Username")]
+    public string Username { get; set; } = default!;
+
+    [CliArgument<string>(1, "role", Description = "Role name")]
+    public string Role { get; set; } = default!;
+
+    public abstract ValueTask ExecuteAsync();
+}
+
 [CliCommand("assign", Description = "Assign role to user")]
-public sealed class UserRoleAssignCommand : ICommandDefinition
+public sealed class UserRoleAssignCommand : UserRoleCommandBase
 {
     private readonly ILogger<UserRoleAssignCommand> _logger;
 
@@ -73,13 +87,7 @@ public sealed class UserRoleAssignCommand : ICommandDefinition
         _logger = logger;
     }
 
-    [CliArgument<string>(0, "username", Description = "Username")]
-    public string Username { get; set; } = default!;
-
-    [CliArgument<string>(1, "role", Description = "Role name")]
-    public string Role { get; set; } = default!;
-
-    public ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync()
     {
         _logger.LogInformation("Assigning role '{Role}' to user '{Username}'", Role, Username);
         Console.WriteLine($"Successfully assigned role '{Role}' to user '{Username}'");
@@ -88,7 +96,7 @@ public sealed class UserRoleAssignCommand : ICommandDefinition
 }
 
 [CliCommand("remove", Description = "Remove role from user")]
-public sealed class UserRoleRemoveCommand : ICommandDefinition
+public sealed class UserRoleRemoveCommand : UserRoleCommandBase
 {
     private readonly ILogger<UserRoleRemoveCommand> _logger;
 
@@ -97,13 +105,7 @@ public sealed class UserRoleRemoveCommand : ICommandDefinition
         _logger = logger;
     }
 
-    [CliArgument<string>(0, "username", Description = "Username")]
-    public string Username { get; set; } = default!;
-
-    [CliArgument<string>(1, "role", Description = "Role name")]
-    public string Role { get; set; } = default!;
-
-    public ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync()
     {
         _logger.LogInformation("Removing role '{Role}' from user '{Username}'", Role, Username);
         Console.WriteLine($"Successfully removed role '{Role}' from user '{Username}'");
