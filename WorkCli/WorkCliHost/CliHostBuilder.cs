@@ -16,7 +16,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     public CliHostBuilder(string[] args)
     {
         _args = args;
-        
+
         _services.AddLogging(builder =>
         {
             builder.AddConsole();
@@ -44,21 +44,21 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     public ICliHost Build()
     {
         var serviceProvider = _services.BuildServiceProvider();
-        
+
         var rootCommand = _customRootCommand ?? new RootCommand();
-        
+
         foreach (var configure in _commandConfigurations)
         {
             configure(rootCommand);
         }
-        
+
         var commandRegistrations = serviceProvider.GetServices<CommandRegistration>();
         foreach (var registration in commandRegistrations)
         {
             var command = CreateCommand(registration.CommandType, serviceProvider);
             rootCommand.Subcommands.Add(command);
         }
-        
+
         return new CliHostImplementation(_args, rootCommand, serviceProvider);
     }
 
@@ -84,10 +84,10 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         {
             var argAttr = prop.Attribute!;
             var argumentType = typeof(Argument<>).MakeGenericType(prop.Property.PropertyType);
-            
+
             // Argument<T>のコンストラクタ: Argument(string name)
             var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
-            
+
             // Descriptionプロパティを設定
             var descriptionProperty = argumentType.GetProperty("Description");
             if (descriptionProperty != null && argAttr.Description != null)
@@ -105,11 +105,11 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                     // Func<ArgumentResult, T>のデリゲートを作成
                     var argumentResultType = typeof(ArgumentResult);
                     var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, prop.Property.PropertyType);
-                    
+
                     var capturedValue = defaultValue.Value;
                     var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
                         .MakeGenericMethod(prop.Property.PropertyType);
-                    
+
                     var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
                     defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
                 }
@@ -128,17 +128,17 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 // GetValueメソッドを呼び出す
                 var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
                     ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
-                
+
                 if (getValueMethod == null)
                 {
                     // 汎用的なGetValueメソッドを取得
                     var methods = typeof(ParseResult).GetMethods()
                         .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
-                    
+
                     foreach (var method in methods)
                     {
                         var parameters = method.GetParameters();
-                        if (parameters[0].ParameterType.IsGenericType && 
+                        if (parameters[0].ParameterType.IsGenericType &&
                             parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
                         {
                             getValueMethod = method.MakeGenericMethod(property.PropertyType);
@@ -146,7 +146,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                         }
                     }
                 }
-                
+
                 if (getValueMethod != null)
                 {
                     var value = getValueMethod.Invoke(parseResult, [argument]);
@@ -170,7 +170,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     {
         // ジェネリック版の属性を検索
         var genericAttr = property.GetCustomAttributes(true)
-            .FirstOrDefault(a => a.GetType().IsGenericType && 
+            .FirstOrDefault(a => a.GetType().IsGenericType &&
                                  a.GetType().GetGenericTypeDefinition() == typeof(CliArgumentAttribute<>));
 
         if (genericAttr != null)

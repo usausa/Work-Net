@@ -29,7 +29,7 @@ public sealed class GreetCommand : ICommandDefinition
             _logger.LogInformation("Greeting: {Message}", message);
             Console.WriteLine(message);
         }
-        
+
         return ValueTask.CompletedTask;
     }
 }
