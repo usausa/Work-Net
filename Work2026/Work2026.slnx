@@ -1,9 +1,5 @@
 <Solution>
   <Folder Name="/Aspire/" />
-  <Folder Name="/Command/">
-    <Project Path="WorkCommand/WorkCommand.csproj" />
-    <Project Path="WorkCommandBasic0/WorkCommandBasic0.csproj" Id="1fe4ee22-6900-4570-80be-eafd4007cadf" />
-  </Folder>
   <Folder Name="/Face/">
     <Project Path="WorkImageOnyx/WorkImageOnyx.csproj" Id="488405a7-6e6e-4588-be4b-69f664b05168" />
     <Project Path="WorkImageResize/WorkImageResize.csproj" Id="9d51d088-7562-4df2-b294-d8f6008b74f9" />
