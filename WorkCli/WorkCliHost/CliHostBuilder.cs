@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.CommandLine;
-using System.CommandLine.Invocation;
+using System.CommandLine.Parsing;
 using System.Reflection;
 
 namespace WorkCliHost;
@@ -16,7 +16,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     public CliHostBuilder(string[] args)
     {
         _args = args;
-
+        
         _services.AddLogging(builder =>
         {
             builder.AddConsole();
@@ -44,21 +44,21 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     public ICliHost Build()
     {
         var serviceProvider = _services.BuildServiceProvider();
-
+        
         var rootCommand = _customRootCommand ?? new RootCommand();
-
+        
         foreach (var configure in _commandConfigurations)
         {
             configure(rootCommand);
         }
-
+        
         var commandRegistrations = serviceProvider.GetServices<CommandRegistration>();
         foreach (var registration in commandRegistrations)
         {
             var command = CreateCommand(registration.CommandType, serviceProvider);
-            rootCommand.Add(command);
+            rootCommand.Subcommands.Add(command);
         }
-
+        
         return new CliHostImplementation(_args, rootCommand, serviceProvider);
     }
 
@@ -79,57 +79,91 @@ internal sealed class CliHostBuilder : ICliHostBuilder
             .OrderBy(x => x.Attribute!.Position)
             .ToList();
 
-        var arguments = new List<(Argument Argument, PropertyInfo Property)>();
+        var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
         foreach (var prop in properties)
         {
             var argAttr = prop.Attribute!;
             var argumentType = typeof(Argument<>).MakeGenericType(prop.Property.PropertyType);
-            var argument = (Argument)Activator.CreateInstance(
-                argumentType,
-                argAttr.Name,
-                argAttr.Description)!;
+            
+            // Argument<T>のコンストラクタ: Argument(string name)
+            var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
+            
+            // Descriptionプロパティを設定
+            var descriptionProperty = argumentType.GetProperty("Description");
+            if (descriptionProperty != null && argAttr.Description != null)
+            {
+                descriptionProperty.SetValue(argument, argAttr.Description);
+            }
 
             // デフォルト値を設定
             var defaultValue = GetDefaultValue(prop.Property, argAttr);
             if (defaultValue.HasValue)
             {
-                var setDefaultValueMethod = argument.GetType().GetMethod("SetDefaultValue");
-                setDefaultValueMethod?.Invoke(argument, [defaultValue.Value]);
-            }
-
-            // Arityを設定（オプション引数の場合）
-            if (!argAttr.IsRequired || defaultValue.HasValue)
-            {
-                var arityProperty = argument.GetType().GetProperty("Arity");
-                if (arityProperty != null)
+                var defaultValueFactoryProperty = argumentType.GetProperty("DefaultValueFactory");
+                if (defaultValueFactoryProperty != null)
                 {
-                    var arityType = arityProperty.PropertyType;
-                    var zeroOrOneField = arityType.GetProperty("ZeroOrOne", BindingFlags.Public | BindingFlags.Static);
-                    if (zeroOrOneField != null)
-                    {
-                        arityProperty.SetValue(argument, zeroOrOneField.GetValue(null));
-                    }
+                    // Func<ArgumentResult, T>のデリゲートを作成
+                    var argumentResultType = typeof(ArgumentResult);
+                    var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, prop.Property.PropertyType);
+                    
+                    var capturedValue = defaultValue.Value;
+                    var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
+                        .MakeGenericMethod(prop.Property.PropertyType);
+                    
+                    var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
+                    defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
                 }
             }
 
-            arguments.Add((argument, prop.Property));
-            command.Add(argument);
+            arguments.Add((argument, prop.Property, argumentType));
+            command.Arguments.Add(argument);
         }
 
-        command.SetHandler(async (InvocationContext context) =>
+        command.SetAction(parseResult =>
         {
             var instance = (ICommandDefinition)ActivatorUtilities.CreateInstance(serviceProvider, commandType);
 
-            foreach (var (argument, property) in arguments)
+            foreach (var (argument, property, argumentType) in arguments)
             {
-                var value = context.ParseResult.GetValueForArgument(argument);
-                property.SetValue(instance, value);
+                // GetValueメソッドを呼び出す
+                var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
+                    ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
+                
+                if (getValueMethod == null)
+                {
+                    // 汎用的なGetValueメソッドを取得
+                    var methods = typeof(ParseResult).GetMethods()
+                        .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
+                    
+                    foreach (var method in methods)
+                    {
+                        var parameters = method.GetParameters();
+                        if (parameters[0].ParameterType.IsGenericType && 
+                            parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
+                        {
+                            getValueMethod = method.MakeGenericMethod(property.PropertyType);
+                            break;
+                        }
+                    }
+                }
+                
+                if (getValueMethod != null)
+                {
+                    var value = getValueMethod.Invoke(parseResult, [argument]);
+                    property.SetValue(instance, value);
+                }
             }
 
-            await instance.ExecuteAsync();
+            instance.ExecuteAsync().AsTask().Wait();
+            return 0;
         });
 
         return command;
+    }
+
+    private static Func<ArgumentResult, T> CreateDefaultValueFactory<T>(object? value)
+    {
+        return _ => (T)value!;
     }
 
     private static CliArgumentInfo? GetCliArgumentAttribute(PropertyInfo property)
@@ -195,7 +229,7 @@ internal sealed class CliHostImplementation : ICliHost
 
     public async Task<int> RunAsync()
     {
-        return await _rootCommand.InvokeAsync(_args);
+        return _rootCommand.Parse(_args).Invoke();
     }
 
     public async ValueTask DisposeAsync()
