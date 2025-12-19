@@ -73,7 +73,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
             .Select(p => new
             {
                 Property = p,
-                Attribute = p.GetCustomAttribute<CliArgumentAttribute>()
+                Attribute = GetCliArgumentAttribute(p)
             })
             .Where(x => x.Attribute != null)
             .OrderBy(x => x.Attribute!.Position)
@@ -90,23 +90,15 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 argAttr.Description)!;
 
             // デフォルト値を設定
-            if (argAttr.DefaultValue != null)
+            var defaultValue = GetDefaultValue(prop.Property, argAttr);
+            if (defaultValue.HasValue)
             {
                 var setDefaultValueMethod = argument.GetType().GetMethod("SetDefaultValue");
-                setDefaultValueMethod?.Invoke(argument, [argAttr.DefaultValue]);
-            }
-            else if (!argAttr.IsRequired)
-            {
-                // IsRequiredがfalseでデフォルト値が指定されていない場合、型のデフォルト値を設定
-                var defaultValue = prop.Property.PropertyType.IsValueType
-                    ? Activator.CreateInstance(prop.Property.PropertyType)
-                    : null;
-                var setDefaultValueMethod = argument.GetType().GetMethod("SetDefaultValue");
-                setDefaultValueMethod?.Invoke(argument, [defaultValue]);
+                setDefaultValueMethod?.Invoke(argument, [defaultValue.Value]);
             }
 
             // Arityを設定（オプション引数の場合）
-            if (!argAttr.IsRequired || argAttr.DefaultValue != null)
+            if (!argAttr.IsRequired || defaultValue.HasValue)
             {
                 var arityProperty = argument.GetType().GetProperty("Arity");
                 if (arityProperty != null)
@@ -138,6 +130,53 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         });
 
         return command;
+    }
+
+    private static CliArgumentInfo? GetCliArgumentAttribute(PropertyInfo property)
+    {
+        // ジェネリック版の属性を検索
+        var genericAttr = property.GetCustomAttributes(true)
+            .FirstOrDefault(a => a.GetType().IsGenericType && 
+                                 a.GetType().GetGenericTypeDefinition() == typeof(CliArgumentAttribute<>));
+
+        if (genericAttr != null)
+        {
+            var attrType = genericAttr.GetType();
+            var position = (int)attrType.GetProperty("Position")!.GetValue(genericAttr)!;
+            var name = (string)attrType.GetProperty("Name")!.GetValue(genericAttr)!;
+            var description = (string?)attrType.GetProperty("Description")?.GetValue(genericAttr);
+            var isRequired = (bool)attrType.GetProperty("IsRequired")!.GetValue(genericAttr)!;
+            var defaultValue = attrType.GetProperty("DefaultValue")?.GetValue(genericAttr);
+
+            return new CliArgumentInfo(position, name, description, isRequired, defaultValue);
+        }
+
+        // 非ジェネリック版の属性を検索
+        var attr = property.GetCustomAttribute<CliArgumentAttribute>();
+        if (attr != null)
+        {
+            return new CliArgumentInfo(attr.Position, attr.Name, attr.Description, attr.IsRequired, null);
+        }
+
+        return null;
+    }
+
+    private static (bool HasValue, object? Value) GetDefaultValue(PropertyInfo property, CliArgumentInfo argInfo)
+    {
+        if (argInfo.DefaultValue != null)
+        {
+            return (true, argInfo.DefaultValue);
+        }
+
+        if (!argInfo.IsRequired)
+        {
+            var defaultValue = property.PropertyType.IsValueType
+                ? Activator.CreateInstance(property.PropertyType)
+                : null;
+            return (true, defaultValue);
+        }
+
+        return (false, null);
     }
 }
 
@@ -171,3 +210,10 @@ internal sealed class CliHostImplementation : ICliHost
         }
     }
 }
+
+internal sealed record CliArgumentInfo(
+    int Position,
+    string Name,
+    string? Description,
+    bool IsRequired,
+    object? DefaultValue);

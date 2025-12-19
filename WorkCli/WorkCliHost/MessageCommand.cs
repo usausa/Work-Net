@@ -12,7 +12,7 @@ public sealed class MessageCommand : ICommandDefinition
         _logger = logger;
     }
 
-    [CliArgument(0, "text", Description = "Text to show", IsRequired = true)]
+    [CliArgument<string>(0, "text", Description = "Text to show", IsRequired = true)]
     public string Text { get; set; } = default!;
 
     public ValueTask ExecuteAsync()
