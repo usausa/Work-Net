@@ -1,4 +1,4 @@
-﻿using WorkCliHost;
+using WorkCliHost;
 
 var builder = CliHost.CreateDefaultBuilder(args);
 
@@ -10,6 +10,7 @@ builder.ConfigureCommands(root =>
 builder.ConfigureServices(services =>
 {
     services.AddCliCommand<MessageCommand>();
+    services.AddCliCommand<GreetCommand>();
 });
 
 var host = builder.Build();

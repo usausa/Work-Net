@@ -89,6 +89,37 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 argAttr.Name,
                 argAttr.Description)!;
 
+            // デフォルト値を設定
+            if (argAttr.DefaultValue != null)
+            {
+                var setDefaultValueMethod = argument.GetType().GetMethod("SetDefaultValue");
+                setDefaultValueMethod?.Invoke(argument, [argAttr.DefaultValue]);
+            }
+            else if (!argAttr.IsRequired)
+            {
+                // IsRequiredがfalseでデフォルト値が指定されていない場合、型のデフォルト値を設定
+                var defaultValue = prop.Property.PropertyType.IsValueType
+                    ? Activator.CreateInstance(prop.Property.PropertyType)
+                    : null;
+                var setDefaultValueMethod = argument.GetType().GetMethod("SetDefaultValue");
+                setDefaultValueMethod?.Invoke(argument, [defaultValue]);
+            }
+
+            // Arityを設定（オプション引数の場合）
+            if (!argAttr.IsRequired || argAttr.DefaultValue != null)
+            {
+                var arityProperty = argument.GetType().GetProperty("Arity");
+                if (arityProperty != null)
+                {
+                    var arityType = arityProperty.PropertyType;
+                    var zeroOrOneField = arityType.GetProperty("ZeroOrOne", BindingFlags.Public | BindingFlags.Static);
+                    if (zeroOrOneField != null)
+                    {
+                        arityProperty.SetValue(argument, zeroOrOneField.GetValue(null));
+                    }
+                }
+            }
+
             arguments.Add((argument, prop.Property));
             command.Add(argument);
         }

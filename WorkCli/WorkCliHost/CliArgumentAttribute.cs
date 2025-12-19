@@ -7,6 +7,7 @@ public sealed class CliArgumentAttribute : Attribute
     public string Name { get; }
     public string? Description { get; set; }
     public bool IsRequired { get; set; } = true;
+    public object? DefaultValue { get; set; }
 
     public CliArgumentAttribute(int position, string name)
     {
