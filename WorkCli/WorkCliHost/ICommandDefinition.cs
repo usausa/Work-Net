@@ -2,5 +2,5 @@ namespace WorkCliHost;
 
 public interface ICommandDefinition
 {
-    ValueTask ExecuteAsync();
+    ValueTask ExecuteAsync(CommandContext context);
 }

@@ -21,15 +21,15 @@ public sealed class GreetCommand : ICommandDefinition
     [CliArgument<int>(2, "count", Description = "Number of times to greet", IsRequired = false, DefaultValue = 1)]
     public int Count { get; set; }
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
+        _logger.LogInformation("Greeting: {Greeting}, {Name}!", Greeting, Name);
+        
         for (int i = 0; i < Count; i++)
         {
-            var message = $"{Greeting}, {Name}!";
-            _logger.LogInformation("Greeting: {Message}", message);
-            Console.WriteLine(message);
+            Console.WriteLine($"{Greeting}, {Name}!");
         }
-
+        
         return ValueTask.CompletedTask;
     }
 }

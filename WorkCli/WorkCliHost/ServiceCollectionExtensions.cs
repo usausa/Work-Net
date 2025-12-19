@@ -27,6 +27,44 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(registration);
         return services;
     }
+
+    /// <summary>
+    /// Adds a global filter that applies to all commands.
+    /// </summary>
+    public static IServiceCollection AddGlobalCommandFilter<TFilter>(this IServiceCollection services, int order = 0)
+        where TFilter : class, ICommandFilter
+    {
+        services.Configure<CommandFilterOptions>(options =>
+        {
+            options.GlobalFilters.Add(new GlobalFilterDescriptor(typeof(TFilter), order));
+        });
+
+        // Register the filter in DI
+        services.AddTransient<TFilter>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a global filter with instance.
+    /// </summary>
+    public static IServiceCollection AddGlobalCommandFilter(this IServiceCollection services, Type filterType, int order = 0)
+    {
+        if (!typeof(ICommandFilter).IsAssignableFrom(filterType))
+        {
+            throw new ArgumentException($"Filter type must implement {nameof(ICommandFilter)}", nameof(filterType));
+        }
+
+        services.Configure<CommandFilterOptions>(options =>
+        {
+            options.GlobalFilters.Add(new GlobalFilterDescriptor(filterType, order));
+        });
+
+        // Register the filter in DI
+        services.AddTransient(filterType);
+
+        return services;
+    }
 }
 
 internal sealed class CommandRegistration

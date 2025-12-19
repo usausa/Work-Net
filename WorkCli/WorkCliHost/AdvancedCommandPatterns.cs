@@ -48,7 +48,7 @@ public sealed class UserPermissionGrantCommand : ICommandDefinition, IUserTarget
     [CliArgument<string>(2, "permission", Description = "Permission to grant")]
     public string Permission { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Granting permission '{Permission}' in role '{Role}' to user '{Username}'", Permission, Role, Username);
         Console.WriteLine($"Successfully granted permission '{Permission}' in role '{Role}' to user '{Username}'");
@@ -78,7 +78,7 @@ public abstract class CommandWithUserAndRole<TLogger> : ICommandDefinition
     [CliArgument<string>(1, "role", Description = "Role name")]
     public string Role { get; set; } = default!;
 
-    public abstract ValueTask ExecuteAsync();
+    public abstract ValueTask ExecuteAsync(CommandContext context);
 }
 
 // 使用例
@@ -89,7 +89,7 @@ public sealed class UserRoleVerifyCommand : CommandWithUserAndRole<UserRoleVerif
     {
     }
 
-    public override ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync(CommandContext context)
     {
         Logger.LogInformation("Verifying role '{Role}' for user '{Username}'", Role, Username);
         Console.WriteLine($"Verifying if user '{Username}' has role '{Role}'");
@@ -138,7 +138,7 @@ public sealed class UserRoleAuditCommand : ICommandDefinition
     [CliArgument<string>(1, "role", Description = "Role name")]
     public string Role { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Auditing role '{Role}' for user '{Username}'", Role, Username);
         Console.WriteLine($"Audit log for user '{Username}' with role '{Role}'");

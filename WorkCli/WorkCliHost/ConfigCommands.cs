@@ -34,7 +34,7 @@ public sealed class ConfigSetCommand : ICommandDefinition
     [CliArgument<string>("environment", Description = "Target environment", IsRequired = false, DefaultValue = "development")]
     public string Environment { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Setting {Key}={Value} for environment {Environment}", Key, Value, Environment);
         Console.WriteLine($"Set {Key}={Value} for environment '{Environment}'");
@@ -63,7 +63,7 @@ public sealed class ConfigGetCommand : ICommandDefinition
     [CliArgument<string>("environment", Description = "Target environment", IsRequired = false, DefaultValue = "development")]
     public string Environment { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Getting {Key} for environment {Environment}", Key, Environment);
         Console.WriteLine($"Getting {Key} for environment '{Environment}'");
@@ -83,7 +83,7 @@ public abstract class DeploymentCommandBase : ICommandDefinition
     [CliArgument<string>("version", Description = "Application version")]
     public string Version { get; set; } = default!;
 
-    public abstract ValueTask ExecuteAsync();
+    public abstract ValueTask ExecuteAsync(CommandContext context);
 }
 
 [CliCommand("deploy", Description = "Deploy application")]
@@ -103,7 +103,7 @@ public sealed class DeployCommand : DeploymentCommandBase
     [CliArgument<bool>("force", Description = "Force deployment", IsRequired = false, DefaultValue = false)]
     public bool Force { get; set; }
 
-    public override ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Deploying {Application} v{Version} to {Target} (force: {Force})", 
             Application, Version, Target, Force);

@@ -21,7 +21,7 @@ public sealed class UserListCommand : ICommandDefinition
     [CliArgument<int>(0, "count", Description = "Number of users to list", IsRequired = false, DefaultValue = 10)]
     public int Count { get; set; }
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Listing {Count} users", Count);
         Console.WriteLine($"Listing {Count} users:");
@@ -49,7 +49,7 @@ public sealed class UserAddCommand : ICommandDefinition
     [CliArgument<string>(1, "email", Description = "User email address")]
     public string Email { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Adding user: {Username} ({Email})", Username, Email);
         Console.WriteLine($"Successfully added user: {Username} ({Email})");
@@ -74,7 +74,7 @@ public abstract class UserRoleCommandBase : ICommandDefinition
     [CliArgument<string>(1, "role", Description = "Role name")]
     public string Role { get; set; } = default!;
 
-    public abstract ValueTask ExecuteAsync();
+    public abstract ValueTask ExecuteAsync(CommandContext context);
 }
 
 [CliCommand("assign", Description = "Assign role to user")]
@@ -87,7 +87,7 @@ public sealed class UserRoleAssignCommand : UserRoleCommandBase
         _logger = logger;
     }
 
-    public override ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Assigning role '{Role}' to user '{Username}'", Role, Username);
         Console.WriteLine($"Successfully assigned role '{Role}' to user '{Username}'");
@@ -105,7 +105,7 @@ public sealed class UserRoleRemoveCommand : UserRoleCommandBase
         _logger = logger;
     }
 
-    public override ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Removing role '{Role}' from user '{Username}'", Role, Username);
         Console.WriteLine($"Successfully removed role '{Role}' from user '{Username}'");

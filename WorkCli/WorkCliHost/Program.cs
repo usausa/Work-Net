@@ -4,11 +4,15 @@ var builder = CliHost.CreateDefaultBuilder(args);
 
 builder.ConfigureCommands(root =>
 {
-    root.Description = "My Attribute-based CLI tool";
+    root.Description = "My Attribute-based CLI tool with Filters";
 });
 
 builder.ConfigureServices(services =>
 {
+    // グローバルフィルタを登録
+    services.AddGlobalCommandFilter<TimingFilter>(order: -100);
+    services.AddGlobalCommandFilter<ExceptionHandlingFilter>(order: int.MaxValue);
+
     // シンプルなコマンド
     services.AddCliCommand<MessageCommand>();
     services.AddCliCommand<GreetCommand>();
@@ -36,6 +40,10 @@ builder.ConfigureServices(services =>
 
     // 基底クラスでのPosition省略テスト
     services.AddCliCommand<DeployCommand>();
+
+    // フィルタテストコマンド
+    services.AddCliCommand<TestFilterCommand>();
+    services.AddCliCommand<TestExceptionCommand>();
 });
 
 var host = builder.Build();

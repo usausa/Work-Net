@@ -15,7 +15,7 @@ public sealed class MessageCommand : ICommandDefinition
     [CliArgument<string>(0, "text", Description = "Text to show", IsRequired = true)]
     public string Text { get; set; } = default!;
 
-    public ValueTask ExecuteAsync()
+    public ValueTask ExecuteAsync(CommandContext context)
     {
         _logger.LogInformation("Show {Text}", Text);
         Console.WriteLine(Text);
