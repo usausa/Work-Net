@@ -82,94 +82,102 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
         var command = new Command(attribute.Name, attribute.Description);
 
-        var properties = commandType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(p => new
-            {
-                Property = p,
-                Attribute = GetCliArgumentAttribute(p)
-            })
-            .Where(x => x.Attribute != null)
-            .OrderBy(x => x.Attribute!.Position)
-            .ToList();
-
-        var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
-        foreach (var prop in properties)
+        // ICommandDefinitionを実装しているかチェック
+        var isExecutableCommand = typeof(ICommandDefinition).IsAssignableFrom(commandType);
+        
+        if (isExecutableCommand)
         {
-            var argAttr = prop.Attribute!;
-            var argumentType = typeof(Argument<>).MakeGenericType(prop.Property.PropertyType);
-
-            // Argument<T>のコンストラクタ: Argument(string name)
-            var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
-
-            // Descriptionプロパティを設定
-            var descriptionProperty = argumentType.GetProperty("Description");
-            if (descriptionProperty != null && argAttr.Description != null)
-            {
-                descriptionProperty.SetValue(argument, argAttr.Description);
-            }
-
-            // デフォルト値を設定
-            var defaultValue = GetDefaultValue(prop.Property, argAttr);
-            if (defaultValue.HasValue)
-            {
-                var defaultValueFactoryProperty = argumentType.GetProperty("DefaultValueFactory");
-                if (defaultValueFactoryProperty != null)
+            var properties = commandType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => new
                 {
-                    // Func<ArgumentResult, T>のデリゲートを作成
-                    var argumentResultType = typeof(ArgumentResult);
-                    var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, prop.Property.PropertyType);
+                    Property = p,
+                    Attribute = GetCliArgumentAttribute(p)
+                })
+                .Where(x => x.Attribute != null)
+                .OrderBy(x => x.Attribute!.Position)
+                .ToList();
 
-                    var capturedValue = defaultValue.Value;
-                    var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
-                        .MakeGenericMethod(prop.Property.PropertyType);
-
-                    var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
-                    defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
+            var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
+            foreach (var prop in properties)
+            {
+                var argAttr = prop.Attribute!;
+                var argumentType = typeof(Argument<>).MakeGenericType(prop.Property.PropertyType);
+                
+                // Argument<T>のコンストラクタ: Argument(string name)
+                var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
+                
+                // Descriptionプロパティを設定
+                var descriptionProperty = argumentType.GetProperty("Description");
+                if (descriptionProperty != null && argAttr.Description != null)
+                {
+                    descriptionProperty.SetValue(argument, argAttr.Description);
                 }
-            }
 
-            arguments.Add((argument, prop.Property, argumentType));
-            command.Arguments.Add(argument);
-        }
-
-        command.SetAction(parseResult =>
-        {
-            var instance = (ICommandDefinition)ActivatorUtilities.CreateInstance(serviceProvider, commandType);
-
-            foreach (var (argument, property, argumentType) in arguments)
-            {
-                // GetValueメソッドを呼び出す
-                var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
-                    ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
-
-                if (getValueMethod == null)
+                // デフォルト値を設定
+                var defaultValue = GetDefaultValue(prop.Property, argAttr);
+                if (defaultValue.HasValue)
                 {
-                    // 汎用的なGetValueメソッドを取得
-                    var methods = typeof(ParseResult).GetMethods()
-                        .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
-
-                    foreach (var method in methods)
+                    var defaultValueFactoryProperty = argumentType.GetProperty("DefaultValueFactory");
+                    if (defaultValueFactoryProperty != null)
                     {
-                        var parameters = method.GetParameters();
-                        if (parameters[0].ParameterType.IsGenericType &&
-                            parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
-                        {
-                            getValueMethod = method.MakeGenericMethod(property.PropertyType);
-                            break;
-                        }
+                        // Func<ArgumentResult, T>のデリゲートを作成
+                        var argumentResultType = typeof(ArgumentResult);
+                        var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, prop.Property.PropertyType);
+                        
+                        var capturedValue = defaultValue.Value;
+                        var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
+                            .MakeGenericMethod(prop.Property.PropertyType);
+                        
+                        var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
+                        defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
                     }
                 }
 
-                if (getValueMethod != null)
-                {
-                    var value = getValueMethod.Invoke(parseResult, [argument]);
-                    property.SetValue(instance, value);
-                }
+                arguments.Add((argument, prop.Property, argumentType));
+                command.Arguments.Add(argument);
             }
 
-            instance.ExecuteAsync().AsTask().Wait();
-            return 0;
-        });
+            command.SetAction(parseResult =>
+            {
+                var instance = (ICommandDefinition)ActivatorUtilities.CreateInstance(serviceProvider, commandType);
+
+                foreach (var (argument, property, argumentType) in arguments)
+                {
+                    // GetValueメソッドを呼び出す
+                    var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
+                        ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
+                    
+                    if (getValueMethod == null)
+                    {
+                        // 汎用的なGetValueメソッドを取得
+                        var methods = typeof(ParseResult).GetMethods()
+                            .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
+                        
+                        foreach (var method in methods)
+                        {
+                            var parameters = method.GetParameters();
+                            if (parameters[0].ParameterType.IsGenericType && 
+                                parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
+                            {
+                                getValueMethod = method.MakeGenericMethod(property.PropertyType);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (getValueMethod != null)
+                    {
+                        var value = getValueMethod.Invoke(parseResult, [argument]);
+                        property.SetValue(instance, value);
+                    }
+                }
+
+                instance.ExecuteAsync().AsTask().Wait();
+                return 0;
+            });
+        }
+        // ICommandGroupまたはサブコマンドのみの場合は、アクションを設定しない
+        // System.CommandLineはアクションがない場合、自動的にヘルプを表示する
 
         return command;
     }

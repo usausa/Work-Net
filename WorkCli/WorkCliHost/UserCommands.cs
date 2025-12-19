@@ -3,21 +3,9 @@ using Microsoft.Extensions.Logging;
 namespace WorkCliHost;
 
 [CliCommand("user", Description = "User management commands")]
-public sealed class UserCommand : ICommandDefinition
+public sealed class UserCommand : ICommandGroup
 {
-    private readonly ILogger<UserCommand> _logger;
-
-    public UserCommand(ILogger<UserCommand> logger)
-    {
-        _logger = logger;
-    }
-
-    public ValueTask ExecuteAsync()
-    {
-        _logger.LogInformation("User command executed. Please specify a subcommand.");
-        Console.WriteLine("User management. Use --help to see available subcommands.");
-        return ValueTask.CompletedTask;
-    }
+    // 実装不要 - サブコマンドのみのグループコマンド
 }
 
 [CliCommand("list", Description = "List all users")]
@@ -70,21 +58,9 @@ public sealed class UserAddCommand : ICommandDefinition
 }
 
 [CliCommand("role", Description = "User role management")]
-public sealed class UserRoleCommand : ICommandDefinition
+public sealed class UserRoleCommand : ICommandGroup
 {
-    private readonly ILogger<UserRoleCommand> _logger;
-
-    public UserRoleCommand(ILogger<UserRoleCommand> logger)
-    {
-        _logger = logger;
-    }
-
-    public ValueTask ExecuteAsync()
-    {
-        _logger.LogInformation("User role command executed. Please specify a subcommand.");
-        Console.WriteLine("User role management. Use --help to see available subcommands.");
-        return ValueTask.CompletedTask;
-    }
+    // 実装不要 - サブコマンドのみのグループコマンド
 }
 
 [CliCommand("assign", Description = "Assign role to user")]

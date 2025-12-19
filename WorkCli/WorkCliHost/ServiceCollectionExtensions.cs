@@ -7,9 +7,13 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCliCommand<TCommand>(
         this IServiceCollection services,
         Action<ICommandConfigurator>? configure = null)
-        where TCommand : class, ICommandDefinition
+        where TCommand : class
     {
-        services.AddTransient<TCommand>();
+        // ICommandDefinitionを実装している場合のみ、DIコンテナに登録
+        if (typeof(ICommandDefinition).IsAssignableFrom(typeof(TCommand)))
+        {
+            services.AddTransient<TCommand>();
+        }
         
         var registration = new CommandRegistration(typeof(TCommand));
         
@@ -47,9 +51,13 @@ internal sealed class CommandConfigurator : ICommandConfigurator
     }
 
     public ICommandConfigurator AddSubCommand<TCommand>(Action<ICommandConfigurator>? configure = null)
-        where TCommand : class, ICommandDefinition
+        where TCommand : class
     {
-        _services.AddTransient<TCommand>();
+        // ICommandDefinitionを実装している場合のみ、DIコンテナに登録
+        if (typeof(ICommandDefinition).IsAssignableFrom(typeof(TCommand)))
+        {
+            _services.AddTransient<TCommand>();
+        }
         
         var registration = new CommandRegistration(typeof(TCommand));
         
