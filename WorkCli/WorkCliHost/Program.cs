@@ -2,23 +2,34 @@ using WorkCliHost;
 
 var builder = CliHost.CreateDefaultBuilder(args);
 
-builder.ConfigureCommands(root =>
-{
-    root.Description = "My Attribute-based CLI tool with Filters";
-});
-
+// アプリケーションサービスの設定（コマンド以外）
 builder.ConfigureServices(services =>
 {
-    // グローバルフィルタを登録
-    services.AddGlobalCommandFilter<TimingFilter>(order: -100);
-    services.AddGlobalCommandFilter<ExceptionHandlingFilter>(order: int.MaxValue);
+    // ここにDBコンテキスト、HTTPクライアント、その他のサービスを登録
+    // 例: services.AddDbContext<MyDbContext>();
+    //     services.AddHttpClient();
+    //     services.AddSingleton<IMyService, MyService>();
+});
 
+// コマンド関連の設定
+builder.ConfigureCommands(commands =>
+{
+    // RootCommandの設定
+    commands.ConfigureRootCommand(root =>
+    {
+        root.WithDescription("My Attribute-based CLI tool with Filters");
+    });
+    
+    // グローバルフィルタの追加
+    commands.AddGlobalFilter<TimingFilter>(order: -100);
+    commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);
+    
     // シンプルなコマンド
-    services.AddCliCommand<MessageCommand>();
-    services.AddCliCommand<GreetCommand>();
-
+    commands.AddCommand<MessageCommand>();
+    commands.AddCommand<GreetCommand>();
+    
     // 階層的なコマンド構造
-    services.AddCliCommand<UserCommand>(user =>
+    commands.AddCommand<UserCommand>(user =>
     {
         user.AddSubCommand<UserListCommand>();
         user.AddSubCommand<UserAddCommand>();
@@ -30,20 +41,20 @@ builder.ConfigureServices(services =>
         });
         user.AddSubCommand<UserPermissionGrantCommand>();
     });
-
+    
     // Position省略のテスト
-    services.AddCliCommand<ConfigCommand>(config =>
+    commands.AddCommand<ConfigCommand>(config =>
     {
         config.AddSubCommand<ConfigSetCommand>();
         config.AddSubCommand<ConfigGetCommand>();
     });
-
+    
     // 基底クラスでのPosition省略テスト
-    services.AddCliCommand<DeployCommand>();
-
+    commands.AddCommand<DeployCommand>();
+    
     // フィルタテストコマンド
-    services.AddCliCommand<TestFilterCommand>();
-    services.AddCliCommand<TestExceptionCommand>();
+    commands.AddCommand<TestFilterCommand>();
+    commands.AddCommand<TestExceptionCommand>();
 });
 
 var host = builder.Build();

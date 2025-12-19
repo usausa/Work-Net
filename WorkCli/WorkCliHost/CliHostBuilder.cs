@@ -11,8 +11,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 {
     private readonly string[] _args;
     private readonly ServiceCollection _services = new();
-    private readonly List<Action<RootCommand>> _commandConfigurations = new();
-    private RootCommand? _customRootCommand;
+    private Action<ICommandConfigurator>? _commandConfiguration;
 
     public CliHostBuilder(string[] args)
     {
@@ -22,10 +21,10 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         {
             builder.AddConsole();
         });
-
+        
         // フィルタパイプラインを登録
         _services.AddSingleton<FilterPipeline>();
-
+        
         // デフォルトのフィルタオプションを登録
         _services.AddOptions<CommandFilterOptions>();
     }
@@ -36,45 +35,45 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         return this;
     }
 
-    public ICliHostBuilder ConfigureCommands(Action<RootCommand> configureRoot)
+    public ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configureCommands)
     {
-        _commandConfigurations.Add(configureRoot);
-        return this;
-    }
-
-    public ICliHostBuilder UseRootCommand(RootCommand rootCommand)
-    {
-        _customRootCommand = rootCommand;
+        _commandConfiguration = configureCommands;
         return this;
     }
 
     public ICliHost Build()
     {
-        // フィルタオプションから全てのフィルタ型を収集して登録
-        var filterOptions = new CommandFilterOptions();
-        var optionsConfig = _services.BuildServiceProvider().GetService<IOptions<CommandFilterOptions>>();
-        if (optionsConfig != null)
+        // コマンド設定を実行
+        var commandConfigurator = new CommandConfigurator(_services);
+        _commandConfiguration?.Invoke(commandConfigurator);
+
+        // フィルタオプションを登録
+        var filterOptions = commandConfigurator.GetFilterOptions();
+        _services.Configure<CommandFilterOptions>(options =>
         {
-            filterOptions = optionsConfig.Value;
-        }
+            options.GlobalFilters.Clear();
+            options.GlobalFilters.AddRange(filterOptions.GlobalFilters);
+            options.IncludeBaseClassFilters = filterOptions.IncludeBaseClassFilters;
+            options.DefaultFilterOrder = filterOptions.DefaultFilterOrder;
+        });
 
-        // すべてのコマンド登録からフィルタ属性を収集
-        var commandRegistrations = _services.BuildServiceProvider().GetServices<CommandRegistration>();
+        // コマンド登録からフィルタ型を収集してDI登録
+        var commandRegistrations = commandConfigurator.GetCommandRegistrations();
         var filterTypes = new HashSet<Type>();
-
+        
         // グローバルフィルタを追加
         foreach (var globalFilter in filterOptions.GlobalFilters)
         {
             filterTypes.Add(globalFilter.FilterType);
         }
-
+        
         // コマンド属性からフィルタを収集
         foreach (var registration in commandRegistrations)
         {
             CollectFilterTypes(registration.CommandType, filterTypes);
         }
-
-        // 収集したフィルタ型をDIに登録
+        
+        // 収集したフィルタ型をDIに登録（まだ登録されていない場合）
         foreach (var filterType in filterTypes)
         {
             if (!_services.Any(sd => sd.ServiceType == filterType))
@@ -82,53 +81,36 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 _services.AddTransient(filterType);
             }
         }
-
+        
         var serviceProvider = _services.BuildServiceProvider();
-
-        var rootCommand = _customRootCommand ?? new RootCommand();
-
-        foreach (var configure in _commandConfigurations)
-        {
-            configure(rootCommand);
-        }
-
+        
+        // RootCommandの作成と設定
+        var customRootCommand = commandConfigurator.GetCustomRootCommand();
+        var rootCommand = customRootCommand ?? new RootCommand();
+        
+        var rootCommandConfiguration = commandConfigurator.GetRootCommandConfiguration();
+        rootCommandConfiguration?.Invoke(rootCommand);
+        
+        // コマンドを追加
         foreach (var registration in commandRegistrations)
         {
             var command = CreateCommandWithSubCommands(registration, serviceProvider);
             rootCommand.Subcommands.Add(command);
         }
-
+        
         return new CliHostImplementation(_args, rootCommand, serviceProvider);
-    }
-
-    private static void CollectFilterTypes(Type commandType, HashSet<Type> filterTypes)
-    {
-        // 継承階層を収集
-        var currentType = commandType;
-        while (currentType != null && currentType != typeof(object))
-        {
-            var attributes = currentType.GetCustomAttributes(typeof(CommandFilterAttribute), inherit: false)
-                .Cast<CommandFilterAttribute>();
-
-            foreach (var attr in attributes)
-            {
-                filterTypes.Add(attr.FilterType);
-            }
-
-            currentType = currentType.BaseType;
-        }
     }
 
     private Command CreateCommandWithSubCommands(CommandRegistration registration, IServiceProvider serviceProvider)
     {
         var command = CreateCommand(registration.CommandType, serviceProvider);
-
+        
         foreach (var subRegistration in registration.SubCommands)
         {
             var subCommand = CreateCommandWithSubCommands(subRegistration, serviceProvider);
             command.Subcommands.Add(subCommand);
         }
-
+        
         return command;
     }
 
@@ -141,21 +123,21 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
         // ICommandDefinitionを実装しているかチェック
         var isExecutableCommand = typeof(ICommandDefinition).IsAssignableFrom(commandType);
-
+        
         if (isExecutableCommand)
         {
             // プロパティと属性を収集（継承階層を考慮）
             var propertyInfos = CollectPropertiesWithArguments(commandType);
 
             var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
-
+            
             foreach (var (property, argAttr) in propertyInfos)
             {
                 var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
-
+                
                 // Argument<T>のコンストラクタ: Argument(string name)
                 var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
-
+                
                 // Descriptionプロパティを設定
                 var descriptionProperty = argumentType.GetProperty("Description");
                 if (descriptionProperty != null && argAttr.Description != null)
@@ -173,11 +155,11 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                         // Func<ArgumentResult, T>のデリゲートを作成
                         var argumentResultType = typeof(ArgumentResult);
                         var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, property.PropertyType);
-
+                        
                         var capturedValue = defaultValue.Value;
                         var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
                             .MakeGenericMethod(property.PropertyType);
-
+                        
                         var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
                         defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
                     }
@@ -196,17 +178,17 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                     // GetValueメソッドを呼び出す
                     var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
                         ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
-
+                    
                     if (getValueMethod == null)
                     {
                         // 汎用的なGetValueメソッドを取得
                         var methods = typeof(ParseResult).GetMethods()
                             .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
-
+                        
                         foreach (var method in methods)
                         {
                             var parameters = method.GetParameters();
-                            if (parameters[0].ParameterType.IsGenericType &&
+                            if (parameters[0].ParameterType.IsGenericType && 
                                 parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
                             {
                                 getValueMethod = method.MakeGenericMethod(property.PropertyType);
@@ -214,7 +196,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                             }
                         }
                     }
-
+                    
                     if (getValueMethod != null)
                     {
                         var value = getValueMethod.Invoke(parseResult, [argument]);
@@ -225,7 +207,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 // フィルタパイプラインを通してコマンドを実行
                 var filterPipeline = serviceProvider.GetRequiredService<FilterPipeline>();
                 var exitCode = await filterPipeline.ExecuteAsync(commandType, instance, CancellationToken.None);
-
+                
                 return exitCode;
             });
         }
@@ -235,6 +217,24 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         return command;
     }
 
+    private static void CollectFilterTypes(Type commandType, HashSet<Type> filterTypes)
+    {
+        // 継承階層を収集
+        var currentType = commandType;
+        while (currentType != null && currentType != typeof(object))
+        {
+            var attributes = currentType.GetCustomAttributes(typeof(CommandFilterAttribute), inherit: false)
+                .Cast<CommandFilterAttribute>();
+            
+            foreach (var attr in attributes)
+            {
+                filterTypes.Add(attr.FilterType);
+            }
+            
+            currentType = currentType.BaseType;
+        }
+    }
+
     /// <summary>
     /// 継承階層を考慮してプロパティと引数属性を収集し、適切な順序でソートします。
     /// </summary>
@@ -242,29 +242,29 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     {
         var typeHierarchy = new List<Type>();
         var currentType = commandType;
-
+        
         // 継承階層を収集（派生→基底の順）
         while (currentType != null && currentType != typeof(object))
         {
             typeHierarchy.Add(currentType);
             currentType = currentType.BaseType;
         }
-
+        
         // 基底→派生の順に反転
         typeHierarchy.Reverse();
 
         var allProperties = new List<(PropertyInfo Property, CliArgumentInfo Attribute, int TypeLevel, int PropertyIndex)>();
-
+        
         for (int typeLevel = 0; typeLevel < typeHierarchy.Count; typeLevel++)
         {
             var type = typeHierarchy[typeLevel];
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-
+            
             for (int propIndex = 0; propIndex < properties.Length; propIndex++)
             {
                 var property = properties[propIndex];
                 var argAttr = GetCliArgumentAttribute(property);
-
+                
                 if (argAttr != null)
                 {
                     allProperties.Add((property, argAttr, typeLevel, propIndex));
