@@ -44,22 +44,35 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     public ICliHost Build()
     {
         var serviceProvider = _services.BuildServiceProvider();
-
+        
         var rootCommand = _customRootCommand ?? new RootCommand();
-
+        
         foreach (var configure in _commandConfigurations)
         {
             configure(rootCommand);
         }
-
+        
         var commandRegistrations = serviceProvider.GetServices<CommandRegistration>();
         foreach (var registration in commandRegistrations)
         {
-            var command = CreateCommand(registration.CommandType, serviceProvider);
+            var command = CreateCommandWithSubCommands(registration, serviceProvider);
             rootCommand.Subcommands.Add(command);
         }
-
+        
         return new CliHostImplementation(_args, rootCommand, serviceProvider);
+    }
+
+    private Command CreateCommandWithSubCommands(CommandRegistration registration, IServiceProvider serviceProvider)
+    {
+        var command = CreateCommand(registration.CommandType, serviceProvider);
+        
+        foreach (var subRegistration in registration.SubCommands)
+        {
+            var subCommand = CreateCommandWithSubCommands(subRegistration, serviceProvider);
+            command.Subcommands.Add(subCommand);
+        }
+        
+        return command;
     }
 
     private Command CreateCommand(Type commandType, IServiceProvider serviceProvider)
