@@ -12,7 +12,7 @@ builder.ConfigureServices(services =>
     // シンプルなコマンド
     services.AddCliCommand<MessageCommand>();
     services.AddCliCommand<GreetCommand>();
-    
+
     // 階層的なコマンド構造
     services.AddCliCommand<UserCommand>(user =>
     {
@@ -26,6 +26,16 @@ builder.ConfigureServices(services =>
         });
         user.AddSubCommand<UserPermissionGrantCommand>();
     });
+
+    // Position省略のテスト
+    services.AddCliCommand<ConfigCommand>(config =>
+    {
+        config.AddSubCommand<ConfigSetCommand>();
+        config.AddSubCommand<ConfigGetCommand>();
+    });
+
+    // 基底クラスでのPosition省略テスト
+    services.AddCliCommand<DeployCommand>();
 });
 
 var host = builder.Build();

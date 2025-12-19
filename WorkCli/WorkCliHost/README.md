@@ -12,6 +12,7 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 - ✅ **自動ヘルプ生成**
 - ✅ **グループコマンドの自動ヘルプ表示**
 - ✅ **共通引数の柔軟な定義パターン**
+- ✅ **Position自動決定（省略可能）**
 
 ## 基本的な使い方
 
@@ -110,6 +111,142 @@ public sealed class GreetCommand : ICommandDefinition
 }
 ```
 
+## Position自動決定（NEW!）
+
+`CliArgumentAttribute`の`Position`パラメータを省略できます。省略した場合、以下の順序で自動的に決定されます：
+
+### Position省略の基本
+
+```csharp
+[CliCommand("set", Description = "Set configuration value")]
+public sealed class ConfigSetCommand : ICommandDefinition
+{
+    // Position省略 - プロパティ定義順で自動決定される
+    [CliArgument<string>("key", Description = "Configuration key")]
+    public string Key { get; set; } = default!;
+
+    [CliArgument<string>("value", Description = "Configuration value")]
+    public string Value { get; set; } = default!;
+
+    [CliArgument<string>("environment", Description = "Target environment", IsRequired = false, DefaultValue = "development")]
+    public string Environment { get; set; } = default!;
+
+    public ValueTask ExecuteAsync()
+    {
+        Console.WriteLine($"Set {Key}={Value} for environment '{Environment}'");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+**使用例**:
+```bash
+app config set database.host localhost
+# Key=database.host, Value=localhost, Environment=development (デフォルト)
+
+app config set database.host localhost production
+# Key=database.host, Value=localhost, Environment=production
+```
+
+### Position明示指定と自動の混在
+
+```csharp
+[CliCommand("get", Description = "Get configuration value")]
+public sealed class ConfigGetCommand : ICommandDefinition
+{
+    // Position明示指定 - 0番目
+    [CliArgument<string>(0, "key", Description = "Configuration key")]
+    public string Key { get; set; } = default!;
+
+    // Position省略 - 明示的なPositionの後に自動配置される
+    [CliArgument<string>("environment", Description = "Target environment", IsRequired = false, DefaultValue = "development")]
+    public string Environment { get; set; } = default!;
+
+    public ValueTask ExecuteAsync()
+    {
+        Console.WriteLine($"Getting {Key} for environment '{Environment}'");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+### 継承階層での自動Position決定
+
+基底クラスのプロパティは派生クラスより先に配置されます：
+
+```csharp
+public abstract class DeploymentCommandBase : ICommandDefinition
+{
+    // 基底クラスのプロパティは先に来る（Position 0, 1相当）
+    [CliArgument<string>("application", Description = "Application name")]
+    public string Application { get; set; } = default!;
+
+    [CliArgument<string>("version", Description = "Application version")]
+    public string Version { get; set; } = default!;
+
+    public abstract ValueTask ExecuteAsync();
+}
+
+[CliCommand("deploy", Description = "Deploy application")]
+public sealed class DeployCommand : DeploymentCommandBase
+{
+    // 派生クラスのプロパティは基底クラスの後に来る（Position 2, 3相当）
+    [CliArgument<string>("target", Description = "Deployment target", IsRequired = false, DefaultValue = "staging")]
+    public string Target { get; set; } = default!;
+
+    [CliArgument<bool>("force", Description = "Force deployment", IsRequired = false, DefaultValue = false)]
+    public bool Force { get; set; }
+
+    public override ValueTask ExecuteAsync()
+    {
+        Console.WriteLine($"Deploying {Application} v{Version} to {Target}{(Force ? " (forced)" : "")}");
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+**使用例**:
+```bash
+app deploy MyApp 1.2.3
+# application=MyApp, version=1.2.3, target=staging (デフォルト), force=false (デフォルト)
+
+app deploy MyApp 1.2.3 production true
+# application=MyApp, version=1.2.3, target=production, force=true
+```
+
+### Position決定のルール
+
+1. **明示的なPosition指定がある引数**: 指定されたPositionで配置
+2. **Position省略の引数**: 以下の順序で自動配置
+   - 基底クラスのプロパティが優先（継承階層の上位から）
+   - 同一クラス内ではプロパティ定義順
+
+**例**:
+```csharp
+public abstract class BaseCommand : ICommandDefinition
+{
+    [CliArgument<string>("base-arg1", Description = "Base argument 1")]  // Position: 自動 → 0
+    public string BaseArg1 { get; set; } = default!;
+
+    [CliArgument<string>("base-arg2", Description = "Base argument 2")]  // Position: 自動 → 1
+    public string BaseArg2 { get; set; } = default!;
+}
+
+public class DerivedCommand : BaseCommand
+{
+    [CliArgument<string>(10, "explicit", Description = "Explicit position")]  // Position: 明示 → 10
+    public string Explicit { get; set; } = default!;
+
+    [CliArgument<string>("derived-arg1", Description = "Derived argument 1")]  // Position: 自動 → 2
+    public string DerivedArg1 { get; set; } = default!;
+
+    [CliArgument<string>("derived-arg2", Description = "Derived argument 2")]  // Position: 自動 → 3
+    public string DerivedArg2 { get; set; } = default!;
+}
+```
+
+**結果の順序**: base-arg1(0), base-arg2(1), derived-arg1(2), derived-arg2(3), explicit(10)
+
 ## 共通引数の定義パターン
 
 複数のコマンドで同じ引数を使用する場合、以下のパターンが利用できます。
@@ -149,6 +286,21 @@ public sealed class UserRoleAssignCommand : UserRoleCommandBase
         Console.WriteLine($"Successfully assigned role '{Role}' to user '{Username}'");
         return ValueTask.CompletedTask;
     }
+}
+```
+
+**Position省略版**（推奨）:
+```csharp
+public abstract class UserRoleCommandBase : ICommandDefinition
+{
+    // Position省略 - 基底クラスなので最初に来る
+    [CliArgument<string>("username", Description = "Username")]
+    public string Username { get; set; } = default!;
+
+    [CliArgument<string>("role", Description = "Role name")]
+    public string Role { get; set; } = default!;
+
+    public abstract ValueTask ExecuteAsync();
 }
 ```
 
@@ -233,8 +385,8 @@ public sealed class UserRoleVerifyCommand : CommandWithUserAndRole<UserRoleVerif
 
 | パターン | メリット | デメリット | 使用場面 |
 |---------|---------|-----------|----------|
-| 抽象基底クラス | シンプル、型安全、IntelliSense良好 | 単一継承のみ | 関連するコマンドグループ |
-| インターフェース | 複数の引数セットを組み合わせ可能 | プロパティ実装が必要 | 横断的な共通引数 |
+| 抽象基底クラス | シンプル、型安全、IntelliSense良好、Position省略可 | 単一継承のみ | 関連するコマンドグループ |
+| インターフェース | 複数の引数セットを組み合わせ可能 | プロパティ実装が必要、属性手動 | 横断的な共通引数 |
 | ジェネリック基底 | ロガーも共通化、高い再利用性 | やや複雑 | 大規模プロジェクト |
 
 ## コマンドライン使用例
@@ -261,6 +413,12 @@ app user list 5
 # サブサブコマンド（共通引数を使用）
 app user role assign john admin
 app user role remove bob editor
+
+# Position省略のコマンド
+app config set database.host localhost
+app config set database.host localhost production
+app deploy MyApp 1.2.3
+app deploy MyApp 1.2.3 production true
 
 # ヘルプの表示
 app --help
@@ -306,7 +464,14 @@ public interface ICommandGroup
 型安全な引数を定義するジェネリック属性：
 
 ```csharp
+// Position明示指定
 [CliArgument<T>(position, "argument-name", 
+    Description = "Argument description", 
+    IsRequired = true,
+    DefaultValue = defaultValue)]
+
+// Position省略（推奨）
+[CliArgument<T>("argument-name", 
     Description = "Argument description", 
     IsRequired = true,
     DefaultValue = defaultValue)]
@@ -320,3 +485,4 @@ public interface ICommandGroup
 4. **型安全性**: ジェネリック属性による型チェック
 5. **保守性**: 明確な役割分担（ICommandDefinition vs ICommandGroup）
 6. **DRY原則**: 共通引数の再利用パターンが豊富
+7. **使いやすさ**: Position省略で定義が簡潔に

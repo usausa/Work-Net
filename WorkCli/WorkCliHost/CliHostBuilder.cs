@@ -87,21 +87,14 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         
         if (isExecutableCommand)
         {
-            var properties = commandType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(p => new
-                {
-                    Property = p,
-                    Attribute = GetCliArgumentAttribute(p)
-                })
-                .Where(x => x.Attribute != null)
-                .OrderBy(x => x.Attribute!.Position)
-                .ToList();
+            // プロパティと属性を収集（継承階層を考慮）
+            var propertyInfos = CollectPropertiesWithArguments(commandType);
 
             var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
-            foreach (var prop in properties)
+            
+            foreach (var (property, argAttr) in propertyInfos)
             {
-                var argAttr = prop.Attribute!;
-                var argumentType = typeof(Argument<>).MakeGenericType(prop.Property.PropertyType);
+                var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
                 
                 // Argument<T>のコンストラクタ: Argument(string name)
                 var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
@@ -114,7 +107,7 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                 }
 
                 // デフォルト値を設定
-                var defaultValue = GetDefaultValue(prop.Property, argAttr);
+                var defaultValue = GetDefaultValue(property, argAttr);
                 if (defaultValue.HasValue)
                 {
                     var defaultValueFactoryProperty = argumentType.GetProperty("DefaultValueFactory");
@@ -122,18 +115,18 @@ internal sealed class CliHostBuilder : ICliHostBuilder
                     {
                         // Func<ArgumentResult, T>のデリゲートを作成
                         var argumentResultType = typeof(ArgumentResult);
-                        var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, prop.Property.PropertyType);
+                        var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, property.PropertyType);
                         
                         var capturedValue = defaultValue.Value;
                         var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
-                            .MakeGenericMethod(prop.Property.PropertyType);
+                            .MakeGenericMethod(property.PropertyType);
                         
                         var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
                         defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
                     }
                 }
 
-                arguments.Add((argument, prop.Property, argumentType));
+                arguments.Add((argument, property, argumentType));
                 command.Arguments.Add(argument);
             }
 
@@ -180,6 +173,67 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         // System.CommandLineはアクションがない場合、自動的にヘルプを表示する
 
         return command;
+    }
+
+    /// <summary>
+    /// 継承階層を考慮してプロパティと引数属性を収集し、適切な順序でソートします。
+    /// </summary>
+    private static List<(PropertyInfo Property, CliArgumentInfo Attribute)> CollectPropertiesWithArguments(Type commandType)
+    {
+        var typeHierarchy = new List<Type>();
+        var currentType = commandType;
+        
+        // 継承階層を収集（派生→基底の順）
+        while (currentType != null && currentType != typeof(object))
+        {
+            typeHierarchy.Add(currentType);
+            currentType = currentType.BaseType;
+        }
+        
+        // 基底→派生の順に反転
+        typeHierarchy.Reverse();
+
+        var allProperties = new List<(PropertyInfo Property, CliArgumentInfo Attribute, int TypeLevel, int PropertyIndex)>();
+        
+        for (int typeLevel = 0; typeLevel < typeHierarchy.Count; typeLevel++)
+        {
+            var type = typeHierarchy[typeLevel];
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            
+            for (int propIndex = 0; propIndex < properties.Length; propIndex++)
+            {
+                var property = properties[propIndex];
+                var argAttr = GetCliArgumentAttribute(property);
+                
+                if (argAttr != null)
+                {
+                    allProperties.Add((property, argAttr, typeLevel, propIndex));
+                }
+            }
+        }
+
+        // ソート順序:
+        // 1. Position指定がある場合は、そのPositionで優先
+        // 2. Position指定がない場合（AutoPosition）は、TypeLevel（基底クラスが先）→ PropertyIndex
+        var sortedProperties = allProperties
+            .OrderBy(p =>
+            {
+                if (p.Attribute.Position != CliArgumentAttribute<object>.AutoPosition)
+                {
+                    // 明示的なPositionがある場合は、それを最優先（負でない値として扱う）
+                    return (0, p.Attribute.Position, 0, 0);
+                }
+                else
+                {
+                    // AutoPositionの場合は、TypeLevel → PropertyIndexでソート
+                    // 明示的なPositionより後になるように、第1キーを1にする
+                    return (1, 0, p.TypeLevel, p.PropertyIndex);
+                }
+            })
+            .Select(p => (p.Property, p.Attribute))
+            .ToList();
+
+        return sortedProperties;
     }
 
     private static Func<ArgumentResult, T> CreateDefaultValueFactory<T>(object? value)
