@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using WorkCliHost;
+using WorkCliHost.Core;
+using WorkCliHost.Samples;
 
 // 最小構成版のテスト
 var builder = CliHost.CreateBuilder(args);

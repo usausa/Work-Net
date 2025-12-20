@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 [AttributeUsage(AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
 public sealed class CliArgumentAttribute<T> : Attribute

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using WorkCliHost;
+using WorkCliHost.Core;
 
 namespace WorkCliHost.Samples;
 

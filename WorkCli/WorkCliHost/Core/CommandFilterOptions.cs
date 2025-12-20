@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Options for configuring command filters.

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 public static class ServiceCollectionExtensions
 {

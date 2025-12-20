@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Executes the filter pipeline for command execution.

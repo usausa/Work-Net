@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Base interface for all command filters.

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Extension methods for ICliHostBuilder to configure default settings.

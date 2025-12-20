@@ -8,7 +8,7 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Reflection;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 internal sealed class CliHostBuilder : ICliHostBuilder
 {

@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Marker interface for command group that contains only subcommands.

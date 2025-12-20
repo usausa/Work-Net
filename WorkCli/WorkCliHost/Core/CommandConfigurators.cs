@@ -1,7 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Implementation of ICommandConfigurator for configuring commands and filters.

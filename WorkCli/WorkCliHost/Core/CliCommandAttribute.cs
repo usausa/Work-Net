@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class CliCommandAttribute : Attribute

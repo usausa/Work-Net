@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Base attribute for applying filters to commands.

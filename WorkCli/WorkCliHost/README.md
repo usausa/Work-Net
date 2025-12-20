@@ -6,8 +6,8 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 
 ```
 WorkCliHost/
-├── Core/        # ライブラリコア（フレームワーク本体）
-├── Samples/     # サンプル実装
+├── Core/        # ライブラリコア（フレームワーク本体）- namespace: WorkCliHost.Core
+├── Samples/     # サンプル実装 - namespace: WorkCliHost.Samples
 └── Docs/        # ドキュメント
 ```
 
@@ -29,18 +29,16 @@ WorkCliHost/
 - ✅ **HostApplicationBuilder風のプロパティベースAPI**
 - ✅ **最小構成とフル機能版の選択可能**
 - ✅ **整理されたフォルダ構造（Core/Samples/Docs）**
+- ✅ **フォルダ構造に合わせた名前空間（WorkCliHost.Core/Samples）**
 
 ## クイックスタート
 
 ### 最小構成版
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using WorkCliHost;
+using WorkCliHost.Core;
 
 var builder = CliHost.CreateBuilder(args);
-
-builder.Services.AddSingleton<IMyService, MyService>();
 
 builder.ConfigureCommands(commands =>
 {
@@ -56,33 +54,14 @@ var host = builder.Build();
 return await host.RunAsync();
 ```
 
-### フル機能版
-
-```csharp
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using WorkCliHost;
-
-var builder = CliHost.CreateDefaultBuilder(args);
-
-builder.Services.AddDbContext<AppDbContext>();
-
-builder.ConfigureCommands(commands =>
-{
-    commands.AddGlobalFilter<TimingFilter>();
-    commands.AddCommand<UserCommand>(user =>
-    {
-        user.AddSubCommand<UserListCommand>();
-    });
-});
-
-var host = builder.Build();
-return await host.RunAsync();
-```
-
 ### コマンドの定義
 
 ```csharp
+using Microsoft.Extensions.Logging;
+using WorkCliHost.Core;
+
+namespace MyApp.Commands;
+
 [CliCommand("message", Description = "Show message")]
 public sealed class MessageCommand : ICommandDefinition
 {
@@ -105,25 +84,55 @@ public sealed class MessageCommand : ICommandDefinition
 }
 ```
 
+### フィルターの実装
+
+```csharp
+using WorkCliHost.Core;
+
+namespace MyApp.Filters;
+
+public sealed class TimingFilter : ICommandExecutionFilter
+{
+    public int Order => -100;
+
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        await next();
+        
+        stopwatch.Stop();
+        Console.WriteLine($"⏱  Command executed in {stopwatch.ElapsedMilliseconds}ms");
+    }
+}
+```
+
+## 名前空間
+
+### WorkCliHost.Core
+
+フレームワークの中核機能を提供する名前空間：
+
+- `CliHost` - ファクトリメソッド
+- `ICliHostBuilder` - ビルダーインターフェース
+- `ICommandDefinition` - コマンド定義インターフェース
+- `ICommandFilter` - フィルターインターフェース群
+- `CliCommandAttribute` - コマンド属性
+- `CliArgumentAttribute<T>` - 引数属性
+- その他、フレームワーク機能
+
+### WorkCliHost.Samples
+
+サンプル実装を含む名前空間：
+
+- `MessageCommand` - シンプルなコマンド例
+- `UserCommand` - 階層的なコマンド例
+- `TimingFilter` - フィルター実装例
+- その他、サンプルコマンドとフィルター
+
 ## サンプル
 
-`Samples/` フォルダに各種サンプルが含まれています：
-
-### コマンドサンプル
-- **MessageCommand.cs** - 最もシンプルなコマンド
-- **GreetCommand.cs** - デフォルト値を持つコマンド
-- **UserCommands.cs** - 階層的なコマンド構造
-- **ConfigCommands.cs** - Position自動決定
-- **AdvancedCommandPatterns.cs** - 基底クラスを使った共通引数
-
-### フィルターサンプル
-- **CommonFilters.cs** - `TimingFilter`, `LoggingFilter`, `ExceptionHandlingFilter`
-- **AdvancedFilters.cs** - `AuthorizationFilter`, `ValidationFilter`, `TransactionFilter`, `CleanupFilter`
-- **TestFilterCommands.cs** - フィルターテストコマンド
-
-### その他
-- **Program.cs** - メインのサンプルアプリケーション
-- **Program_Minimal.cs.example** - 最小構成版の例
+`Samples/` フォルダに各種サンプルが含まれています。詳細は [Samples/](Samples/) を参照してください。
 
 実行例：
 
@@ -138,6 +147,8 @@ dotnet run -- test-filter "Testing filters"
 ### CreateBuilder（最小構成版）
 
 ```csharp
+using WorkCliHost.Core;
+
 var builder = CliHost.CreateBuilder(args);
 ```
 
@@ -148,6 +159,8 @@ var builder = CliHost.CreateBuilder(args);
 ### CreateDefaultBuilder（フル機能版）
 
 ```csharp
+using WorkCliHost.Core;
+
 var builder = CliHost.CreateDefaultBuilder(args);
 ```
 
@@ -159,6 +172,8 @@ var builder = CliHost.CreateDefaultBuilder(args);
 ## 拡張メソッド
 
 ```csharp
+using WorkCliHost.Core;
+
 var builder = CliHost.CreateBuilder(args);
 
 builder
@@ -173,14 +188,14 @@ builder
 
 ## フィルター機構
 
-### 利用可能なフィルターインターフェース（Core）
+### 利用可能なフィルターインターフェース（WorkCliHost.Core）
 
 - `ICommandExecutionFilter` - コマンド実行の前後で処理
 - `IBeforeCommandFilter` - コマンド実行前に処理
 - `IAfterCommandFilter` - コマンド実行後に処理
 - `IExceptionFilter` - 例外発生時に処理
 
-### サンプル実装（Samples）
+### サンプル実装（WorkCliHost.Samples）
 
 - `TimingFilter` - 実行時間の計測
 - `LoggingFilter` - ログ出力
@@ -193,10 +208,12 @@ builder
 ## ドキュメント
 
 - [フォルダ構造](Docs/FOLDER_STRUCTURE.md) - プロジェクトの構成
+- [名前空間の整理](Docs/NAMESPACE_REORGANIZATION.md) - 名前空間の変更内容
 - [プロパティベースAPI](Docs/PROPERTY_BASED_API.md) - Configuration、Environment、Services、Logging
 - [新しいAPI設計](Docs/NEW_API_DESIGN.md) - 責任分離と型安全性
 - [レビュー結果](Docs/REVIEW_RESULTS.md) - レビューで発見された問題と解決策
 - [フォルダ整理サマリー](Docs/FOLDER_REORGANIZATION_SUMMARY.md) - 整理の経緯
+- [Filtersフォルダの削除](Docs/FILTERS_FOLDER_CLEANUP.md) - Filtersフォルダの削除理由
 
 ## パッケージ要件
 

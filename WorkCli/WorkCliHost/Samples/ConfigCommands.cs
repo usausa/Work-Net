@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
+using WorkCliHost.Core;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Samples;
 
 // ============================================================================
 // Position省略のテスト

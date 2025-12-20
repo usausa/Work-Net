@@ -1,4 +1,4 @@
-namespace WorkCliHost;
+namespace WorkCliHost.Core;
 
 /// <summary>
 /// Execution context that is passed through the filter pipeline and to the command execution.

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
+using WorkCliHost.Core;
 
-namespace WorkCliHost;
+namespace WorkCliHost.Samples;
 
 [CliCommand("greet", Description = "Greet someone")]
 public sealed class GreetCommand : ICommandDefinition

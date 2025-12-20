@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using WorkCliHost;
+using WorkCliHost.Core;
+using WorkCliHost.Samples;
 
 // 最小構成版を使用（高速起動）
 var builder = CliHost.CreateBuilder(args);
@@ -22,13 +23,13 @@ builder.ConfigureCommands(commands =>
     {
         root.WithDescription("My Attribute-based CLI tool with Filters");
     });
-    
+
     commands.AddGlobalFilter<TimingFilter>(order: -100);
     commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);
-    
+
     commands.AddCommand<MessageCommand>();
     commands.AddCommand<GreetCommand>();
-    
+
     commands.AddCommand<UserCommand>(user =>
     {
         user.AddSubCommand<UserListCommand>();
@@ -41,13 +42,13 @@ builder.ConfigureCommands(commands =>
         });
         user.AddSubCommand<UserPermissionGrantCommand>();
     });
-    
+
     commands.AddCommand<ConfigCommand>(config =>
     {
         config.AddSubCommand<ConfigSetCommand>();
         config.AddSubCommand<ConfigGetCommand>();
     });
-    
+
     commands.AddCommand<DeployCommand>();
     commands.AddCommand<TestFilterCommand>();
     commands.AddCommand<TestExceptionCommand>();
