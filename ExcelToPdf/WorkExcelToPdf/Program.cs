@@ -60,9 +60,47 @@ public static class Program
             Console.WriteLine($"出力ファイル: {pdfFilePath}");
             Console.WriteLine();
 
-            // PDF生成
+            // Excelシート情報を読み込み
             var readerEx = new ExcelBorderReaderEx();
             var sheetInfoEx = readerEx.ReadSheet(excelFilePath);
+
+            // プレースホルダーの検出と表示
+            Console.WriteLine("=== プレースホルダーの検出 ===");
+            var replacer = new PlaceholderReplacer();
+            var detectedPlaceholders = replacer.DetectPlaceholders(sheetInfoEx);
+            
+            if (detectedPlaceholders.Count > 0)
+            {
+                Console.WriteLine($"検出されたプレースホルダー: {detectedPlaceholders.Count}個");
+                foreach (var placeholder in detectedPlaceholders)
+                {
+                    Console.WriteLine($"  - {placeholder}");
+                }
+                Console.WriteLine();
+            }
+            else
+            {
+                Console.WriteLine("プレースホルダーは検出されませんでした。");
+                Console.WriteLine();
+            }
+
+            // プレースホルダーの置換設定（サンプル）
+            Console.WriteLine("=== プレースホルダーの置換 ===");
+            replacer
+                .Add("$NAME", "うさうさ")
+                .Add("$DATE", DateTime.Now.ToString("yyyy年MM月dd日"))
+                .Add("$COMPANY", "株式会社サンプル");
+
+            Console.WriteLine("置換ルール:");
+            Console.WriteLine("  $NAME → うさうさ");
+            Console.WriteLine("  $DATE → " + DateTime.Now.ToString("yyyy年MM月dd日"));
+            Console.WriteLine("  $COMPANY → 株式会社サンプル");
+            Console.WriteLine();
+
+            // 置換実行
+            int replacedCount = replacer.Replace(sheetInfoEx);
+            Console.WriteLine($"置換完了: {replacedCount}個のセルを更新しました。");
+            Console.WriteLine();
 
             // PDF生成オプション（カスタマイズ可能）
             var options = new PdfGenerationOptions
@@ -85,6 +123,7 @@ public static class Program
             Console.WriteLine("✓ 処理が完了しました！");
             Console.WriteLine($"  入力: {excelFilePath}");
             Console.WriteLine($"  出力: {pdfFilePath}");
+            Console.WriteLine($"  プレースホルダー置換: {replacedCount}個");
             Console.WriteLine(new string('=', 100));
         }
         catch (Exception ex)

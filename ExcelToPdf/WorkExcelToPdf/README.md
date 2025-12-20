@@ -331,6 +331,50 @@ var generator = new PdfGenerator();
 generator.GeneratePdf(sheetInfo, "output.pdf");
 ```
 
+### プレースホルダー置換機能
+
+Excelファイル内の`$NAME`のような変数を動的に置換してPDF生成できます。
+
+```csharp
+// Excel読み込み
+var reader = new ExcelBorderReaderEx();
+var sheetInfo = reader.ReadSheet("template.xlsx");
+
+// プレースホルダーの検出
+var replacer = new PlaceholderReplacer();
+var detectedPlaceholders = replacer.DetectPlaceholders(sheetInfo);
+
+// プレースホルダーを置換
+replacer
+    .Add("$NAME", "うさうさ")
+    .Add("$DATE", DateTime.Now.ToString("yyyy年MM月dd日"))
+    .Add("$COMPANY", "株式会社サンプル");
+
+int replacedCount = replacer.Replace(sheetInfo);
+Console.WriteLine($"置換完了: {replacedCount}個のセルを更新");
+
+// PDF生成
+var generator = new PdfGenerator();
+generator.GeneratePdf(sheetInfo, "output.pdf");
+```
+
+#### プレースホルダーの書式
+
+- `$`で始まる英数字とアンダースコアの組み合わせ
+- 例: `$NAME`, `$DATE`, `$COMPANY`, `$USER_ID`
+- 大文字小文字は区別しません
+
+#### PlaceholderReplacerのメソッド
+
+| メソッド | 説明 |
+|---------|------|
+| `Add(placeholder, value)` | プレースホルダーと置換値を追加 |
+| `AddRange(dictionary)` | 複数のプレースホルダーを一括追加 |
+| `Replace(sheetInfo)` | すべてのセルに対して置換を実行 |
+| `DetectPlaceholders(sheetInfo)` | シート内のプレースホルダーを自動検出 |
+| `FindCells(sheetInfo, placeholder)` | 特定のプレースホルダーを含むセルを検索 |
+| `Clear()` | 登録されたすべての置換ルールをクリア |
+
 ### オプション指定
 
 ```csharp
