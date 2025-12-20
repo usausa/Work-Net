@@ -90,6 +90,18 @@ public class PdfGenerationOptions
     public bool IgnoreBackgroundColor { get; set; } = false;
     public int ImageQuality { get; set; } = 90;
     public bool DebugMode { get; set; } = false;
+    
+    /// <summary>
+    /// 疑似Bold（太字）を有効にするか
+    /// フォントが単一ウェイトの場合、テキストを重ね描きして太字を再現します
+    /// </summary>
+    public bool EnableSimulatedBold { get; set; } = true;
+    
+    /// <summary>
+    /// 疑似Italic（斜体）を有効にするか
+    /// フォントが斜体をサポートしていない場合、Skew変換で斜体を再現します
+    /// </summary>
+    public bool EnableSimulatedItalic { get; set; } = true;
 }
 
 /// <summary>
@@ -807,7 +819,8 @@ public class PdfGenerator
 
             Console.WriteLine($"  フォント: {cell.Style.FontName}, サイズ:{cell.Style.FontSize}, スタイル:{fontStyle}");
 
-            XFont font = new XFont(cell.Style.FontName, cell.Style.FontSize, fontStyle);
+            // IPAフォントは単一ウェイトなので、Regularフォントを使用
+            XFont font = new XFont(cell.Style.FontName, cell.Style.FontSize, XFontStyleEx.Regular);
             XBrush brush = new XSolidBrush(ParseColor(cell.Style.FontColor));
 
             double x = marginLeft + cell.X * PixelToPoint;
@@ -838,29 +851,55 @@ public class PdfGenerator
 
             Console.WriteLine($"  描画領域: ({rect.X:F1}, {rect.Y:F1}) - ({rect.Width:F1} x {rect.Height:F1})");
 
-            // テキスト回転が設定されている場合
-            if (cell.Style.TextRotation != 0)
+            // グラフィックス状態を保存
+            var state = gfx.Save();
+
+            try
             {
-                var state = gfx.Save();
-                
-                // 回転の中心点を計算
-                double centerX = x + width / 2;
-                double centerY = y + height / 2;
-                
-                gfx.TranslateTransform(centerX, centerY);
-                gfx.RotateTransform(-cell.Style.TextRotation); // 反時計回りに回転
-                gfx.TranslateTransform(-centerX, -centerY);
-                
-                gfx.DrawString(cell.Value, font, brush, rect, format);
-                
-                gfx.Restore(state);
-            }
-            else
-            {
+                // テキスト回転が設定されている場合
+                if (cell.Style.TextRotation != 0)
+                {
+                    // 回転の中心点を計算
+                    double centerX = x + width / 2;
+                    double centerY = y + height / 2;
+                    
+                    gfx.TranslateTransform(centerX, centerY);
+                    gfx.RotateTransform(-cell.Style.TextRotation); // 反時計回りに回転
+                    gfx.TranslateTransform(-centerX, -centerY);
+                }
+
+                // 疑似Italic：斜体変換（オプションで制御）
+                if (cell.Style.IsItalic && _options.EnableSimulatedItalic)
+                {
+                    Console.WriteLine($"  疑似Italic適用");
+                    // Skew変換で斜体を実現（15度傾ける）
+                    var matrix = new XMatrix();
+                    matrix.TranslatePrepend(rect.X, rect.Y);
+                    matrix.SkewPrepend(-15, 0); // 15度傾ける（負の値で右に傾く）
+                    matrix.TranslatePrepend(-rect.X, -rect.Y);
+                    gfx.MultiplyTransform(matrix);
+                }
+
                 // 通常の描画
                 Console.WriteLine($"  DrawString実行: '{cell.Value}'");
                 gfx.DrawString(cell.Value, font, brush, rect, format);
+                
+                // 疑似Bold：同じ位置に少しずらして重ね描き（オプションで制御）
+                if (cell.Style.IsBold && _options.EnableSimulatedBold)
+                {
+                    Console.WriteLine($"  疑似Bold適用（重ね描き）");
+                    // 0.3ポイントずらして描画
+                    var boldRect1 = new XRect(rect.X + 0.3, rect.Y, rect.Width, rect.Height);
+                    var boldRect2 = new XRect(rect.X, rect.Y + 0.3, rect.Width, rect.Height);
+                    gfx.DrawString(cell.Value, font, brush, boldRect1, format);
+                    gfx.DrawString(cell.Value, font, brush, boldRect2, format);
+                }
+
                 Console.WriteLine($"  DrawString完了");
+            }
+            finally
+            {
+                gfx.Restore(state);
             }
 
             // 下線を描画
@@ -990,13 +1029,18 @@ public class PdfGenerator
         if (cellsWithText.Any())
         {
             Console.WriteLine("  テキストセル一覧:");
-            foreach (var cell in cellsWithText.Take(10))
+            foreach (var cell in cellsWithText.Take(20))
             {
-                Console.WriteLine($"    {cell.CellAddress}: '{cell.Value}' (太字:{cell.Style.IsBold}, 斜体:{cell.Style.IsItalic}, 背景色:{cell.Style.BackgroundColor})");
+                var styleInfo = new List<string>();
+                if (cell.Style.IsBold) styleInfo.Add("太字");
+                if (cell.Style.IsItalic) styleInfo.Add("斜体");
+                if (cell.Style.IsUnderline) styleInfo.Add("下線");
+                var styles = styleInfo.Any() ? $" [{string.Join(",", styleInfo)}]" : "";
+                Console.WriteLine($"    {cell.CellAddress}: '{cell.Value}'{styles} (背景色:{cell.Style.BackgroundColor})");
             }
-            if (cellsWithText.Count > 10)
+            if (cellsWithText.Count > 20)
             {
-                Console.WriteLine($"    ... 他 {cellsWithText.Count - 10} セル");
+                Console.WriteLine($"    ... 他 {cellsWithText.Count - 20} セル");
             }
         }
 

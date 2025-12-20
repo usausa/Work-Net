@@ -4,8 +4,8 @@ using System.Reflection;
 namespace WorkExcelToPdf;
 
 /// <summary>
-/// ƒJƒXƒ^ƒ€ƒtƒHƒ“ƒgƒŠƒ]ƒ‹ƒo[
-/// “ú–{ŒêƒtƒHƒ“ƒg‚ªŒ©‚Â‚©‚ç‚È‚¢ê‡‚Éipaexm.ttf‚ÉƒtƒH[ƒ‹ƒoƒbƒN‚·‚é
+/// ã‚«ã‚¹ã‚¿ãƒ ãƒ•ã‚©ãƒ³ãƒˆãƒªã‚¾ãƒ«ãƒãƒ¼
+/// æ—¥æœ¬èªãƒ•ã‚©ãƒ³ãƒˆãŒè¦‹ã¤ã‹ã‚‰ãªã„å ´åˆã«ipaexm.ttfã«ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ã™ã‚‹
 /// </summary>
 public class CustomFontResolver : IFontResolver
 {
@@ -13,67 +13,79 @@ public class CustomFontResolver : IFontResolver
 
     public byte[]? GetFont(string faceName)
     {
-        // “ú–{ŒêƒtƒHƒ“ƒgi‚l‚r ‚oƒSƒVƒbƒNAMS PGothic“™j‚Ìê‡
-        if (faceName.Contains("ƒSƒVƒbƒN") || faceName.Contains("Gothic") || 
-            faceName.Contains("PƒSƒVƒbƒN") || faceName.Contains("PGothic") ||
-            faceName.Contains("–¾’©") || faceName.Contains("Mincho"))
-        {
-            return LoadFontData("ipaexm.ttf");
-        }
-
-        // ƒfƒtƒHƒ‹ƒg‚Åipaexm.ttf‚ğg—p
+        // ã™ã¹ã¦ã®ãƒ•ã‚§ã‚¤ã‚¹åï¼ˆRegular, Bold, Italic, BoldItalicï¼‰ã«å¯¾ã—ã¦
+        // åŒã˜IPAãƒ•ã‚©ãƒ³ãƒˆã‚’è¿”ã™
+        // PDFSharpãŒç–‘ä¼¼Bold/Italicã‚’è‡ªå‹•ç”Ÿæˆã™ã‚‹
+        
+        // ãƒ•ã‚§ã‚¤ã‚¹åã‹ã‚‰ãƒ™ãƒ¼ã‚¹åã‚’æŠ½å‡ºï¼ˆ-Bold, -Italicç­‰ã‚’å‰Šé™¤ï¼‰
+        var baseFaceName = faceName.Split('-')[0];
+        
+        Console.WriteLine($"ãƒ•ã‚©ãƒ³ãƒˆè¦æ±‚: {faceName} (ãƒ™ãƒ¼ã‚¹: {baseFaceName})");
+        
+        // ã™ã¹ã¦ã®ã‚¹ã‚¿ã‚¤ãƒ«ã«å¯¾ã—ã¦ipaexm.ttfã‚’è¿”ã™
         return LoadFontData("ipaexm.ttf");
     }
 
     public FontResolverInfo? ResolveTypeface(string familyName, bool bold, bool italic)
     {
-        // “ú–{ŒêƒtƒHƒ“ƒg‚Ìê‡
-        if (familyName.Contains("ƒSƒVƒbƒN") || familyName.Contains("Gothic") || 
-            familyName.Contains("PƒSƒVƒbƒN") || familyName.Contains("PGothic") ||
-            familyName.Contains("–¾’©") || familyName.Contains("Mincho") ||
-            familyName.Contains("‚l‚r") || familyName.Contains("MS"))
+        // IPAãƒ•ã‚©ãƒ³ãƒˆã¯å˜ä¸€ã‚¦ã‚§ã‚¤ãƒˆãªã®ã§ã€Bold/Italicã¯ç–‘ä¼¼çš„ã«ç”Ÿæˆã•ã‚Œã‚‹
+        // PDFSharpã«ç–‘ä¼¼Bold/Italicã‚’ç”Ÿæˆã•ã›ã‚‹ãŸã‚ã€ã‚¹ã‚¿ã‚¤ãƒ«æƒ…å ±ã‚’å«ã‚ãŸãƒ•ã‚©ãƒ³ãƒˆåã‚’è¿”ã™
+        
+        string faceName = "IPAexMincho";
+        
+        // Bold/Italicã®å ´åˆã€ç•°ãªã‚‹ãƒ•ã‚§ã‚¤ã‚¹åã‚’è¿”ã™ã“ã¨ã§ã€PDFSharpãŒç–‘ä¼¼ã‚¹ã‚¿ã‚¤ãƒ«ã‚’é©ç”¨ã™ã‚‹
+        if (bold && italic)
         {
-            return new FontResolverInfo("IPAexMincho");
+            faceName = "IPAexMincho-BoldItalic";
         }
-
-        // ‚»‚Ì‘¼‚ÌƒtƒHƒ“ƒg‚àipaexm.ttf‚ÉƒtƒH[ƒ‹ƒoƒbƒN
-        return new FontResolverInfo("IPAexMincho");
+        else if (bold)
+        {
+            faceName = "IPAexMincho-Bold";
+        }
+        else if (italic)
+        {
+            faceName = "IPAexMincho-Italic";
+        }
+        
+        // å®Ÿéš›ã®ãƒ•ã‚©ãƒ³ãƒˆãƒ‡ãƒ¼ã‚¿ã¯åŒã˜ã‚‚ã®ã‚’ä½¿ç”¨ã™ã‚‹ãŒã€ãƒ•ã‚§ã‚¤ã‚¹åã‚’å¤‰ãˆã‚‹ã“ã¨ã§
+        // PDFSharpãŒç–‘ä¼¼Bold/Italicã‚’ç”Ÿæˆã™ã‚‹
+        return new FontResolverInfo(faceName);
     }
 
     /// <summary>
-    /// ƒtƒHƒ“ƒgƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚Ş
+    /// ãƒ•ã‚©ãƒ³ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚€
     /// </summary>
     private byte[]? LoadFontData(string fontFileName)
     {
         try
         {
-            // ƒvƒƒWƒFƒNƒg‚Ìƒ‹[ƒgƒfƒBƒŒƒNƒgƒŠ‚©‚çƒtƒHƒ“ƒg‚ğ“Ç‚İ‚Ş
+            // ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ«ãƒ¼ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‹ã‚‰ãƒ•ã‚©ãƒ³ãƒˆã‚’èª­ã¿è¾¼ã‚€
             var fontPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fontFileName);
             
             if (File.Exists(fontPath))
             {
-                Console.WriteLine($"ƒtƒHƒ“ƒg‚ğ“Ç‚İ‚İ‚Ü‚µ‚½: {fontPath}");
+                Console.WriteLine($"ãƒ•ã‚©ãƒ³ãƒˆã‚’èª­ã¿è¾¼ã¿ã¾ã—ãŸ: {fontPath}");
                 return File.ReadAllBytes(fontPath);
             }
 
-            // ƒJƒŒƒ“ƒgƒfƒBƒŒƒNƒgƒŠ‚©‚ç‚·
+            // ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‹ã‚‰è©¦ã™
             fontPath = Path.Combine(Directory.GetCurrentDirectory(), fontFileName);
             if (File.Exists(fontPath))
             {
-                Console.WriteLine($"ƒtƒHƒ“ƒg‚ğ“Ç‚İ‚İ‚Ü‚µ‚½: {fontPath}");
+                Console.WriteLine($"ãƒ•ã‚©ãƒ³ãƒˆã‚’èª­ã¿è¾¼ã¿ã¾ã—ãŸ: {fontPath}");
                 return File.ReadAllBytes(fontPath);
             }
 
-            // eƒfƒBƒŒƒNƒgƒŠ‚©‚ç‚·
+            // è¦ªãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‹ã‚‰è©¦ã™
             fontPath = Path.Combine(Directory.GetCurrentDirectory(), "..", fontFileName);
             if (File.Exists(fontPath))
             {
-                Console.WriteLine($"ƒtƒHƒ“ƒg‚ğ“Ç‚İ‚İ‚Ü‚µ‚½: {fontPath}");
+                Console.WriteLine($"ãƒ•ã‚©ãƒ³ãƒˆã‚’èª­ã¿è¾¼ã¿ã¾ã—ãŸ: {fontPath}");
                 return File.ReadAllBytes(fontPath);
             }
 
-            Console.WriteLine($"Œx: ƒtƒHƒ“ƒgƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: {fontFileName}");
-            Console.WriteLine($"’T‚µ‚½ƒpƒX:");
+            Console.WriteLine($"è­¦å‘Š: ãƒ•ã‚©ãƒ³ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: {fontFileName}");
+            Console.WriteLine($"æ¢ã—ãŸãƒ‘ã‚¹:");
             Console.WriteLine($"  - {Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fontFileName)}");
             Console.WriteLine($"  - {Path.Combine(Directory.GetCurrentDirectory(), fontFileName)}");
             
@@ -81,7 +93,7 @@ public class CustomFontResolver : IFontResolver
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"ƒtƒHƒ“ƒg“Ç‚İ‚İƒGƒ‰[: {ex.Message}");
+            Console.WriteLine($"ãƒ•ã‚©ãƒ³ãƒˆèª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼: {ex.Message}");
             return null;
         }
     }

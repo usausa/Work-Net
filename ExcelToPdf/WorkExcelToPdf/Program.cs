@@ -1,4 +1,4 @@
-﻿namespace WorkExcelToPdf;
+namespace WorkExcelToPdf;
 
 using ClosedXML.Excel;
 
@@ -64,7 +64,20 @@ public static class Program
             var readerEx = new ExcelBorderReaderEx();
             var sheetInfoEx = readerEx.ReadSheet(excelFilePath);
 
-            var pdfGenerator = new PdfGenerator();
+            // PDF生成オプション（カスタマイズ可能）
+            var options = new PdfGenerationOptions
+            {
+                // 疑似Bold/Italicを有効にするか（デフォルト: true）
+                EnableSimulatedBold = true,
+                EnableSimulatedItalic = true,
+                
+                // その他のオプション
+                // PageSize = PdfSharp.PageSize.A4,
+                // Scale = 1.0,
+                // ShowGridLines = false,
+            };
+
+            var pdfGenerator = new PdfGenerator(options);
             pdfGenerator.GeneratePdf(sheetInfoEx, pdfFilePath);
 
             Console.WriteLine();

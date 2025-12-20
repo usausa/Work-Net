@@ -122,7 +122,7 @@ public class ExcelDebugTool
         Console.WriteLine("特定セルの強制チェック:");
         Console.WriteLine(new string('=', 80));
 
-        var specificCells = new[] { "D1", "A3", "B3", "C3", "D3", "E3", "F3", "G3", "A4", "B4", "C4", "A5", "A8" };
+        var specificCells = new[] { "D1", "A3", "B3", "C3", "D3", "E3", "F3", "G3", "A4", "B4", "C4", "A5", "A8", "D6", "E6" };
         foreach (var cellAddress in specificCells)
         {
             try
@@ -136,6 +136,8 @@ public class ExcelDebugTool
                 Console.WriteLine($"  データ型: {cell.DataType}");
                 Console.WriteLine($"  太字: {style.Font.Bold}");
                 Console.WriteLine($"  斜体: {style.Font.Italic}");
+                Console.WriteLine($"  下線: {style.Font.Underline}");
+                Console.WriteLine($"  取り消し線: {style.Font.Strikethrough}");
                 Console.WriteLine($"  背景色: {GetColorInfo(style.Fill.BackgroundColor)}");
                 Console.WriteLine($"  水平アライメント: {style.Alignment.Horizontal}");
                 Console.WriteLine($"  罫線:");
