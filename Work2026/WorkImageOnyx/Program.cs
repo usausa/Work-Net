@@ -123,6 +123,14 @@ public static class Program
 
         foreach (var face in faces)
         {
+            // 正規化座標から画像座標に変換
+            var left = face.Left * bitmap.Width;
+            var top = face.Top * bitmap.Height;
+            var right = face.Right * bitmap.Width;
+            var bottom = face.Bottom * bitmap.Height;
+            var width = right - left;
+            var height = bottom - top;
+
             // スコアに応じて色を黄色(0.5)～赤(1.0)に変化
             var normalizedScore = Math.Clamp((face.Confidence - 0.5f) / 0.5f, 0f, 1f);
             var red = (byte)255;
@@ -136,7 +144,7 @@ public static class Program
                 Style = SKPaintStyle.Stroke
             };
 
-            var rect = new SKRect(face.X, face.Y, face.X + face.Width, face.Y + face.Height);
+            var rect = new SKRect(left, top, right, bottom);
             canvas.DrawRect(rect, paint);
 
             // スコアをテキストで描画
@@ -149,8 +157,8 @@ public static class Program
             };
 
             var scoreText = $"{face.Confidence:F2}";
-            var textY = face.Y > 20 ? face.Y - 5 : face.Y + face.Height + 20;
-            canvas.DrawText(scoreText, face.X, textY, textPaint);
+            var textY = top > 20 ? top - 5 : bottom + 20;
+            canvas.DrawText(scoreText, left, textY, textPaint);
         }
 
         var outputPath = @"D:\学習データ\people640x480.output.png";
@@ -167,7 +175,8 @@ public static class Program
 [SimpleJob(warmupCount: 3, iterationCount: 10)]
 public class FaceDetectionBenchmark
 {
-    private const int N = 30;
+    //private const int N = 30;
+    private const int N = 30 * 60;
 
     private FaceDetector? _detector320;
     private FaceDetector? _detector640;
@@ -377,7 +386,7 @@ public sealed class FaceDetector : IDisposable
         }
 
         _inputTensor = new DenseTensor<float>(new[] { 1, 3, ModelHeight, ModelWidth });
-        
+
         // 再利用するListを初期化（十分な容量を確保）
         _scores = new List<float>(10000);
         _boxes = new List<float>(10000);
@@ -437,17 +446,12 @@ public sealed class FaceDetector : IDisposable
 
             if (faceScore > confidenceThreshold)
             {
-                var x1 = _boxes[i * 4] * width;
-                var y1 = _boxes[i * 4 + 1] * height;
-                var x2 = _boxes[i * 4 + 2] * width;
-                var y2 = _boxes[i * 4 + 3] * height;
-
                 _detectionBuffer.Add(new FaceBox
                 {
-                    X = (int)x1,
-                    Y = (int)y1,
-                    Width = (int)(x2 - x1),
-                    Height = (int)(y2 - y1),
+                    Left = _boxes[i * 4],
+                    Top = _boxes[i * 4 + 1],
+                    Right = _boxes[i * 4 + 2],
+                    Bottom = _boxes[i * 4 + 3],
                     Confidence = faceScore
                 });
             }
@@ -466,7 +470,7 @@ public sealed class FaceDetector : IDisposable
         }
 
         var count = boxes.Count;
-        
+
         // FaceBox配列を直接ソート（インプレース）
         var boxArray = ArrayPool<FaceBox>.Shared.Rent(count);
         var suppressed = ArrayPool<bool>.Shared.Rent(count);
@@ -492,7 +496,8 @@ public sealed class FaceDetector : IDisposable
                     continue;
                 }
 
-                results.Add(boxArray[i]);
+                ref readonly var currentBox = ref boxArray[i];
+                results.Add(currentBox);
 
                 // 残りのボックスとのIOUをチェック
                 for (var j = i + 1; j < count; j++)
@@ -502,7 +507,7 @@ public sealed class FaceDetector : IDisposable
                         continue;
                     }
 
-                    if (CalculateIOU(boxArray[i], boxArray[j]) >= iouThreshold)
+                    if (CalculateIOU(in currentBox, in boxArray[j]) >= iouThreshold)
                     {
                         suppressed[j] = true;
                     }
@@ -518,16 +523,16 @@ public sealed class FaceDetector : IDisposable
         }
     }
 
-    private static float CalculateIOU(FaceBox box1, FaceBox box2)
+    private static float CalculateIOU(in FaceBox box1, in FaceBox box2)
     {
-        var x1 = Math.Max(box1.X, box2.X);
-        var y1 = Math.Max(box1.Y, box2.Y);
-        var x2 = Math.Min(box1.X + box1.Width, box2.X + box2.Width);
-        var y2 = Math.Min(box1.Y + box1.Height, box2.Y + box2.Height);
+        var x1 = Math.Max(box1.Left, box2.Left);
+        var y1 = Math.Max(box1.Top, box2.Top);
+        var x2 = Math.Min(box1.Right, box2.Right);
+        var y2 = Math.Min(box1.Bottom, box2.Bottom);
 
         var intersectionArea = Math.Max(0, x2 - x1) * Math.Max(0, y2 - y1);
-        var box1Area = box1.Width * box1.Height;
-        var box2Area = box2.Width * box2.Height;
+        var box1Area = (box1.Right - box1.Left) * (box1.Bottom - box1.Top);
+        var box2Area = (box2.Right - box2.Left) * (box2.Bottom - box2.Top);
         var unionArea = box1Area + box2Area - intersectionArea;
 
         return unionArea > 0 ? (float)intersectionArea / unionArea : 0;
@@ -638,25 +643,25 @@ public sealed class FaceDetector : IDisposable
     }
 }
 
-public class FaceBox
+public readonly struct FaceBox
 {
-    public int X { get; set; }
-    public int Y { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public float Confidence { get; set; }
+    public float Left { get; init; }
+    public float Top { get; init; }
+    public float Right { get; init; }
+    public float Bottom { get; init; }
+    public float Confidence { get; init; }
 
     public override string ToString()
     {
-        return $"Face at ({X}, {Y}) [{Width}x{Height}] - Confidence: {Confidence:F2}";
+        return $"Face at ({Left:F4}, {Top:F4}) to ({Right:F4}, {Bottom:F4}) - Confidence: {Confidence:F2}";
     }
 
     // FaceBox専用のConfidence降順Comparer
     private sealed class ConfidenceDescendingComparer : IComparer<FaceBox>
     {
-        public int Compare(FaceBox? x, FaceBox? y)
+        public int Compare(FaceBox x, FaceBox y)
         {
-            if (x == null || y == null) return 0;
+            // FaceBoxはstructなので参照比較は不要
             return y.Confidence.CompareTo(x.Confidence);
         }
     }
