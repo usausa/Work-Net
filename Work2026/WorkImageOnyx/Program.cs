@@ -18,9 +18,7 @@ public static class Program
         Console.WriteLine("1. version-RFB-320.onnx (320x240)");
         Console.WriteLine("2. version-RFB-640.onnx (640x480)");
         Console.WriteLine("3. version-slim-320.onnx (320x240)");
-        Console.WriteLine("4. version-RFB-320_simplified.onnx (320x240)");
-        Console.WriteLine("5. version-RFB-320_without_postprocessing.onnx (320x240)");
-        Console.Write("\n使用するモデルを選択してください (1-5): ");
+        Console.Write("\n使用するモデルを選択してください (1-3): ");
 
         var choice = Console.ReadLine();
         var modelPath = choice switch
@@ -28,8 +26,6 @@ public static class Program
             "1" => "version-RFB-320.onnx",
             "2" => "version-RFB-640.onnx",
             "3" => "version-slim-320.onnx",
-            "4" => "version-RFB-320_simplified.onnx",
-            "5" => "version-RFB-320_without_postprocessing.onnx",
             _ => "version-RFB-320.onnx"
         };
 
@@ -174,7 +170,15 @@ public sealed class FaceDetector : IDisposable
         var mean = new[] { 127f, 127f, 127f };
         var scale = 128f;
 
-        ResizeBilinearDirectToTensor(image, _inputTensor, width, height, ModelWidth, ModelHeight, mean, scale);
+        // サイズが一致する場合はリサイズ不要
+        if (width == ModelWidth && height == ModelHeight)
+        {
+            CopyDirectToTensor(image, _inputTensor, width, height, mean, scale);
+        }
+        else
+        {
+            ResizeBilinearDirectToTensor(image, _inputTensor, width, height, ModelWidth, ModelHeight, mean, scale);
+        }
 
         var inputs = new List<NamedOnnxValue>
         {
@@ -275,6 +279,21 @@ public sealed class FaceDetector : IDisposable
     //--------------------------------------------------------------------------------
     // スカラー処理
     //--------------------------------------------------------------------------------
+
+    private static void CopyDirectToTensor(ReadOnlySpan<byte> source, DenseTensor<float> tensor, int width, int height, float[] mean, float scale)
+    {
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var idx = (y * width + x) * 3;
+                
+                tensor[0, 0, y, x] = (source[idx] - mean[0]) / scale;
+                tensor[0, 1, y, x] = (source[idx + 1] - mean[1]) / scale;
+                tensor[0, 2, y, x] = (source[idx + 2] - mean[2]) / scale;
+            }
+        }
+    }
 
     private static void ResizeBilinearDirectToTensor(ReadOnlySpan<byte> source, DenseTensor<float> tensor, int srcWidth, int srcHeight, int dstWidth, int dstHeight, float[] mean, float scale)
     {
