@@ -23,7 +23,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Examples\" />
+    <!-- Documentation -->
+    <None Include="Docs\**\*.md" />
+    <None Include="Samples\*.example" />
   </ItemGroup>
 
 </Project>

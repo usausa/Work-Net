@@ -2,6 +2,17 @@
 
 System.CommandLineを使用した、属性ベースのCLIホストフレームワークです。
 
+## フォルダ構造
+
+```
+WorkCliHost/
+├── Core/        # ライブラリコア（フレームワーク本体）
+├── Samples/     # サンプル実装
+└── Docs/        # ドキュメント
+```
+
+詳細は [Docs/FOLDER_STRUCTURE.md](Docs/FOLDER_STRUCTURE.md) を参照してください。
+
 ## 特徴
 
 - ✅ **属性ベースの宣言的なコマンド定義**
@@ -17,22 +28,20 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 - ✅ **明確な責任分離（サービス vs コマンド設定）**
 - ✅ **HostApplicationBuilder風のプロパティベースAPI**
 - ✅ **最小構成とフル機能版の選択可能**
+- ✅ **整理されたフォルダ構造（Core/Samples/Docs）**
 
-## 基本的な使い方
+## クイックスタート
 
-### 1. プログラムのセットアップ（最小構成）
+### 最小構成版
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using WorkCliHost;
 
-// 最小構成版（高速起動）
 var builder = CliHost.CreateBuilder(args);
 
-// サービスの追加
 builder.Services.AddSingleton<IMyService, MyService>();
 
-// コマンド設定
 builder.ConfigureCommands(commands =>
 {
     commands.ConfigureRootCommand(root =>
@@ -47,52 +56,20 @@ var host = builder.Build();
 return await host.RunAsync();
 ```
 
-### 2. プログラムのセットアップ（フル機能版）
+### フル機能版
 
 ```csharp
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WorkCliHost;
 
-// フル機能版（従来通り）
 var builder = CliHost.CreateDefaultBuilder(args);
-// デフォルトで以下が設定済み：
-// - appsettings.json
-// - appsettings.{Environment}.json
-// - 環境変数
-// - Console logging
 
-// または最小構成版に標準設定を追加
-var builder = CliHost.CreateBuilder(args);
-builder.UseDefaults(); // 上記の標準設定をすべて追加
-
-// Configuration - プロパティ経由で直接アクセス
-builder.Configuration.AddJsonFile("custom-settings.json", optional: true);
-
-// Environment - ホスト環境情報
-Console.WriteLine($"Application: {builder.Environment.ApplicationName}");
-Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
-
-// Logging - ログ設定
-builder.Logging.AddDebug();
-builder.Logging.SetMinimumLevel(LogLevel.Information);
-
-// Services - DIコンテナへのサービス登録
 builder.Services.AddDbContext<AppDbContext>();
-builder.Services.AddHttpClient<IApiClient, ApiClient>();
-builder.Services.AddSingleton<IMyService, MyService>();
 
-// Commands - コマンド設定
 builder.ConfigureCommands(commands =>
 {
-    commands.ConfigureRootCommand(root =>
-    {
-        root.WithDescription("My CLI Application");
-    });
-    
     commands.AddGlobalFilter<TimingFilter>();
-    commands.AddCommand<MessageCommand>();
     commands.AddCommand<UserCommand>(user =>
     {
         user.AddSubCommand<UserListCommand>();
@@ -103,65 +80,7 @@ var host = builder.Build();
 return await host.RunAsync();
 ```
 
-## ファクトリメソッド
-
-### CreateBuilder（最小構成版）
-
-```csharp
-var builder = CliHost.CreateBuilder(args);
-```
-
-**含まれる設定:**
-- Console logging のみ
-
-**利点:**
-- 高速起動（50-100ms高速化）
-- 必要な機能だけを追加可能
-
-**使用ケース:**
-- シンプルなCLIツール
-- 起動速度が重要なケース
-
-### CreateDefaultBuilder（フル機能版）
-
-```csharp
-var builder = CliHost.CreateDefaultBuilder(args);
-```
-
-**含まれる設定:**
-- `appsettings.json`（optional）
-- `appsettings.{Environment}.json`（optional）
-- 環境変数
-- Console logging
-
-**使用ケース:**
-- 複雑なアプリケーション
-- 設定ファイルを使用するケース
-
-## 拡張メソッドによるカスタマイズ
-
-```csharp
-var builder = CliHost.CreateBuilder(args);
-
-// 標準設定を追加
-builder.UseDefaultConfiguration();  // JSON + 環境変数
-builder.UseDefaultLogging();         // Console + Configuration
-// または
-builder.UseDefaults();               // 上記2つをまとめて
-
-// 個別に設定を追加
-builder
-    .AddJsonFile("settings.json", optional: true)
-    .AddEnvironmentVariables("MYAPP_")
-    .AddUserSecrets<Program>()
-    .SetMinimumLogLevel(LogLevel.Warning)
-    .AddLoggingFilter("Microsoft", LogLevel.Error)
-    .AddDebugLogging();
-```
-
-## シンプルなコマンド
-
-実行可能なコマンドは`ICommandDefinition`を実装します：
+### コマンドの定義
 
 ```csharp
 [CliCommand("message", Description = "Show message")]
@@ -186,142 +105,117 @@ public sealed class MessageCommand : ICommandDefinition
 }
 ```
 
-## プロパティベースAPI
+## サンプル
 
-`ICliHostBuilder`は`Microsoft.Extensions.Hosting.HostApplicationBuilder`と同様のプロパティベースAPIをサポート：
+`Samples/` フォルダに各種サンプルが含まれています：
 
-```csharp
-public interface ICliHostBuilder
-{
-    ConfigurationManager Configuration { get; }  // Configuration管理
-    IHostEnvironment Environment { get; }        // ホスト環境情報
-    IServiceCollection Services { get; }         // DIコンテナ
-    ILoggingBuilder Logging { get; }             // Logging設定
-    
-    ICliHostBuilder ConfigureCommands(...);      // コマンド設定
-    ICliHost Build();                            // ビルド
-}
-```
+### コマンドサンプル
+- **MessageCommand.cs** - 最もシンプルなコマンド
+- **GreetCommand.cs** - デフォルト値を持つコマンド
+- **UserCommands.cs** - 階層的なコマンド構造
+- **ConfigCommands.cs** - Position自動決定
+- **AdvancedCommandPatterns.cs** - 基底クラスを使った共通引数
 
-## レビュー結果と改善点
+### フィルターサンプル
+- **CommonFilters.cs** - `TimingFilter`, `LoggingFilter`, `ExceptionHandlingFilter`
+- **AdvancedFilters.cs** - `AuthorizationFilter`, `ValidationFilter`, `TransactionFilter`, `CleanupFilter`
+- **TestFilterCommands.cs** - フィルターテストコマンド
 
-### 修正された問題
+### その他
+- **Program.cs** - メインのサンプルアプリケーション
+- **Program_Minimal.cs.example** - 最小構成版の例
 
-1. **ConfigurationManager.AddCommandLine の競合**
-   - ❌ 問題: `System.CommandLine` とコマンドライン引数の解析が競合
-   - ✅ 解決: `AddCommandLine()` の呼び出しを完全削除
-
-2. **不要な初期化処理**
-   - ❌ 問題: シンプルなCLIでも常にJSON、環境変数を読み込み
-   - ✅ 解決: `CreateBuilder()` で最小構成版を提供
-
-詳細は [REVIEW_RESULTS.md](REVIEW_RESULTS.md) を参照してください。
-
-## Position自動決定
-
-`CliArgumentAttribute`の`Position`パラメータを省略できます：
-
-```csharp
-[CliCommand("set", Description = "Set configuration value")]
-public sealed class ConfigSetCommand : ICommandDefinition
-{
-    // Position省略 - プロパティ定義順で自動決定
-    [CliArgument<string>("key", Description = "Configuration key")]
-    public string Key { get; set; } = default!;
-
-    [CliArgument<string>("value", Description = "Configuration value")]
-    public string Value { get; set; } = default!;
-
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        Console.WriteLine($"Set {Key}={Value}");
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-## フィルタ機構
-
-ASP.NET Coreライクなフィルタ機構をサポート：
-
-### グローバルフィルタ
-
-```csharp
-builder.ConfigureCommands(commands =>
-{
-    commands.AddGlobalFilter<TimingFilter>(order: -100);
-    commands.AddGlobalFilter<LoggingFilter>();
-    commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);
-});
-```
-
-### コマンド個別フィルタ
-
-```csharp
-[CommandFilter<TimingFilter>(Order = -100)]
-[CommandFilter<LoggingFilter>]
-[CliCommand("process", Description = "Process data")]
-public sealed class ProcessCommand : ICommandDefinition
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        Console.WriteLine("Processing...");
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-## コマンドライン使用例
+実行例：
 
 ```bash
-# ヘルプ表示
-app --help
-
-# シンプルなコマンド
-app message "Hello, World!"
-
-# デフォルト値を使用
-app config set database.host localhost
-
-# サブコマンド
-app user list 5
-
-# サブサブコマンド
-app user role assign john admin
-
-# フィルタ付きコマンド
-app test-filter "Hello!"
-⏱  Command executed in 114ms
+dotnet run -- message "Hello, World!"
+dotnet run -- user role assign alice admin
+dotnet run -- test-filter "Testing filters"
 ```
 
-## 設計の利点
+## ファクトリメソッド
 
-1. **ASP.NET Coreとの一貫性**: `HostApplicationBuilder`と同様のAPI
-2. **プロパティベース**: 直感的で発見しやすい
-3. **明確な責任分離**: Services（アプリケーションサービス）とCommands（CLI設定）
-4. **型安全性**: コンパイル時の型チェック
-5. **拡張性**: 新機能の追加が容易
-6. **パフォーマンス**: 最小構成版で高速起動
-7. **柔軟性**: 拡張メソッドでカスタマイズ可能
-8. **保守性**: 統一されたAPI設計
+### CreateBuilder（最小構成版）
+
+```csharp
+var builder = CliHost.CreateBuilder(args);
+```
+
+- Console logging のみ
+- 高速起動（50-100ms高速化）
+- 必要な機能だけを追加可能
+
+### CreateDefaultBuilder（フル機能版）
+
+```csharp
+var builder = CliHost.CreateDefaultBuilder(args);
+```
+
+- appsettings.json
+- 環境変数
+- Console logging
+- すべて設定済み
+
+## 拡張メソッド
+
+```csharp
+var builder = CliHost.CreateBuilder(args);
+
+builder
+    .UseDefaultConfiguration()      // JSON + 環境変数
+    .UseDefaultLogging()             // Console + Configuration
+    .AddJsonFile("settings.json")
+    .AddEnvironmentVariables("APP_")
+    .AddUserSecrets<Program>()
+    .SetMinimumLogLevel(LogLevel.Warning)
+    .AddDebugLogging();
+```
+
+## フィルター機構
+
+### 利用可能なフィルターインターフェース（Core）
+
+- `ICommandExecutionFilter` - コマンド実行の前後で処理
+- `IBeforeCommandFilter` - コマンド実行前に処理
+- `IAfterCommandFilter` - コマンド実行後に処理
+- `IExceptionFilter` - 例外発生時に処理
+
+### サンプル実装（Samples）
+
+- `TimingFilter` - 実行時間の計測
+- `LoggingFilter` - ログ出力
+- `ExceptionHandlingFilter` - 例外ハンドリング
+- `AuthorizationFilter` - 認可チェック
+- `ValidationFilter` - 引数検証
+- `TransactionFilter` - トランザクション管理
+- `CleanupFilter` - クリーンアップ処理
 
 ## ドキュメント
 
-- [プロパティベースAPI](PROPERTY_BASED_API.md) - Configuration、Environment、Services、Loggingの詳細
-- [新しいAPI設計](NEW_API_DESIGN.md) - 責任分離と型安全性
-- [レビュー結果](REVIEW_RESULTS.md) - レビューで発見された問題と解決策
-- [フィルタ機構](FILTER_IMPLEMENTATION.md) - フィルタの設計と実装
+- [フォルダ構造](Docs/FOLDER_STRUCTURE.md) - プロジェクトの構成
+- [プロパティベースAPI](Docs/PROPERTY_BASED_API.md) - Configuration、Environment、Services、Logging
+- [新しいAPI設計](Docs/NEW_API_DESIGN.md) - 責任分離と型安全性
+- [レビュー結果](Docs/REVIEW_RESULTS.md) - レビューで発見された問題と解決策
+- [フォルダ整理サマリー](Docs/FOLDER_REORGANIZATION_SUMMARY.md) - 整理の経緯
 
 ## パッケージ要件
 
 ```xml
 <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
-<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
-<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
-<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" />
 <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
 <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
 <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-<PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.1" />
-<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
 <PackageReference Include="System.CommandLine" Version="2.0.1" />
+```
+
+完全なパッケージリストは [WorkCliHost.csproj](WorkCliHost.csproj) を参照してください。
+
+## ライセンス
+
+MIT License
+
+## 今後の予定
+
+- NuGetパッケージとしての公開を検討
+- Core フォルダの別プロジェクト化
+- より多くのサンプルとフィルター実装
