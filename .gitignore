@@ -401,3 +401,4 @@ FodyWeavers.xsd
 desktop.ini
 __*
 /Cognitive/*/Properties/launchSettings.json
+/ExcelToPdf/WorkExcelToPdf/output.pdf
