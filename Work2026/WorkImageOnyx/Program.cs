@@ -2,6 +2,7 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace WorkImageOnyx;
 
@@ -12,7 +13,35 @@ public static class Program
         const float confidenceThreshold = 0.5f;
         const float iouThreshold = 0.3f;
 
-        using var detector = new FaceDetector("version-RFB-320.onnx");
+        // 利用可能なモデルを表示
+        Console.WriteLine("=== 顔検出モデルの選択 ===");
+        Console.WriteLine("1. version-RFB-320.onnx (320x240)");
+        Console.WriteLine("2. version-RFB-640.onnx (640x480)");
+        Console.WriteLine("3. version-slim-320.onnx (320x240)");
+        Console.WriteLine("4. version-RFB-320_simplified.onnx (320x240)");
+        Console.WriteLine("5. version-RFB-320_without_postprocessing.onnx (320x240)");
+        Console.Write("\n使用するモデルを選択してください (1-5): ");
+
+        var choice = Console.ReadLine();
+        var modelPath = choice switch
+        {
+            "1" => "version-RFB-320.onnx",
+            "2" => "version-RFB-640.onnx",
+            "3" => "version-slim-320.onnx",
+            "4" => "version-RFB-320_simplified.onnx",
+            "5" => "version-RFB-320_without_postprocessing.onnx",
+            _ => "version-RFB-320.onnx"
+        };
+
+        if (!File.Exists(modelPath))
+        {
+            Console.WriteLine($"エラー: モデルファイル '{modelPath}' が見つかりません。");
+            return;
+        }
+
+        Console.WriteLine();
+
+        using var detector = new FaceDetector(modelPath);
 
         var imagePath = @"D:\学習データ\people640x480.png";
         using var bitmap = SKBitmap.Decode(imagePath);
@@ -22,6 +51,8 @@ public static class Program
             return;
         }
 
+        Console.WriteLine($"使用モデル: {modelPath}");
+        Console.WriteLine($"モデル入力サイズ: {detector.ModelWidth}x{detector.ModelHeight}");
         Console.WriteLine($"画像サイズ: {bitmap.Width}x{bitmap.Height}");
 
         var imageBytes = new byte[bitmap.Width * bitmap.Height * 3];
@@ -38,9 +69,12 @@ public static class Program
             }
         }
 
+        var stopwatch = Stopwatch.StartNew();
         var faces = detector.Detect(imageBytes, bitmap.Width, bitmap.Height, confidenceThreshold, iouThreshold);
+        stopwatch.Stop();
 
-        Console.WriteLine($"\n検出された顔の数: {faces.Count}");
+        Console.WriteLine($"\n検出処理時間: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.Elapsed.TotalSeconds:F3} 秒)");
+        Console.WriteLine($"検出された顔の数: {faces.Count}");
         foreach (var face in faces)
         {
             Console.WriteLine(face);
@@ -95,8 +129,10 @@ public static class Program
 public sealed class FaceDetector : IDisposable
 {
     private readonly InferenceSession _session;
-    private const int ModelWidth = 320;
-    private const int ModelHeight = 240;
+    private readonly DenseTensor<float> _inputTensor;
+    
+    public int ModelWidth { get; }
+    public int ModelHeight { get; }
 
     public FaceDetector(string modelPath)
     {
@@ -109,6 +145,23 @@ public sealed class FaceDetector : IDisposable
         };
 
         _session = new InferenceSession(modelPath, options);
+
+        // ONNXモデルから入力サイズを取得
+        var inputMetadata = _session.InputMetadata.First().Value;
+        var dimensions = inputMetadata.Dimensions;
+        
+        // 入力テンソルの形状は [batch, channels, height, width] を想定
+        if (dimensions.Length >= 4)
+        {
+            ModelHeight = dimensions[2];
+            ModelWidth = dimensions[3];
+        }
+        else
+        {
+            throw new InvalidOperationException("モデルの入力テンソルの形状が想定と異なります。");
+        }
+
+        _inputTensor = new DenseTensor<float>(new[] { 1, 3, ModelHeight, ModelWidth });
     }
 
     public void Dispose()
@@ -118,34 +171,21 @@ public sealed class FaceDetector : IDisposable
 
     public List<FaceBox> Detect(ReadOnlySpan<byte> image, int width, int height, float confidenceThreshold, float iouThreshold)
     {
-        var resizedImage = new byte[ModelWidth * ModelHeight * 3];
-        ResizeBilinearScalar(image, resizedImage, width, height, ModelWidth, ModelHeight);
-
-        var inputTensor = new DenseTensor<float>(new[] { 1, 3, ModelHeight, ModelWidth });
         var mean = new[] { 127f, 127f, 127f };
         var scale = 128f;
 
-        for (var y = 0; y < ModelHeight; y++)
-        {
-            for (var x = 0; x < ModelWidth; x++)
-            {
-                var idx = (y * ModelWidth + x) * 3;
-                inputTensor[0, 0, y, x] = (resizedImage[idx] - mean[0]) / scale;
-                inputTensor[0, 1, y, x] = (resizedImage[idx + 1] - mean[1]) / scale;
-                inputTensor[0, 2, y, x] = (resizedImage[idx + 2] - mean[2]) / scale;
-            }
-        }
+        ResizeBilinearDirectToTensor(image, _inputTensor, width, height, ModelWidth, ModelHeight, mean, scale);
 
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor(_session.InputMetadata.First().Key, inputTensor)
+            NamedOnnxValue.CreateFromTensor(_session.InputMetadata.First().Key, _inputTensor)
         };
 
         using var results = _session.Run(inputs);
         var outputList = results.ToList();
 
-        var scores = outputList[0].AsEnumerable<float>().ToArray();
-        var boxes = outputList[1].AsEnumerable<float>().ToArray();
+        var scores = outputList[0].AsEnumerable<float>().ToList();
+        var boxes = outputList[1].AsEnumerable<float>().ToList();
 
         var scoresDims = (outputList[0].Value as DenseTensor<float>)?.Dimensions.ToArray();
         var numBoxes = scoresDims?[1] ?? 0;
@@ -236,8 +276,7 @@ public sealed class FaceDetector : IDisposable
     // スカラー処理
     //--------------------------------------------------------------------------------
 
-    // スカラー処理
-    public static void ResizeBilinearScalar(ReadOnlySpan<byte> source, Span<byte> destination, int srcWidth, int srcHeight, int dstWidth, int dstHeight)
+    private static void ResizeBilinearDirectToTensor(ReadOnlySpan<byte> source, DenseTensor<float> tensor, int srcWidth, int srcHeight, int dstWidth, int dstHeight, float[] mean, float scale)
     {
         var xRatio = (float)(srcWidth - 1) / dstWidth;
         var yRatio = (float)(srcHeight - 1) / dstHeight;
@@ -252,61 +291,53 @@ public sealed class FaceDetector : IDisposable
 
             var srcRow0 = srcYInt * srcWidth * 3;
             var srcRow1 = srcY1 * srcWidth * 3;
-            var dstRow = y * dstWidth * 3;
 
             for (var x = 0; x < dstWidth; x++)
             {
-                ProcessPixelScalar(source, destination, x, srcRow0, srcRow1, dstRow, xRatio, yDiff, yDiffInv, srcWidth);
+                var srcX = x * xRatio;
+                var srcXInt = (int)srcX;
+                var xDiff = srcX - srcXInt;
+                var xDiffInv = 1.0f - xDiff;
+                var srcX1 = Min(srcXInt + 1, srcWidth - 1);
+
+                var srcCol0 = srcXInt * 3;
+                var srcCol1 = srcX1 * 3;
+
+                var idx00 = srcRow0 + srcCol0;
+                var idx10 = srcRow0 + srcCol1;
+                var idx01 = srcRow1 + srcCol0;
+                var idx11 = srcRow1 + srcCol1;
+
+                var w00 = xDiffInv * yDiffInv;
+                var w10 = xDiff * yDiffInv;
+                var w01 = xDiffInv * yDiff;
+                var w11 = xDiff * yDiff;
+
+                // R channel
+                var valR =
+                    source[idx00] * w00 +
+                    source[idx10] * w10 +
+                    source[idx01] * w01 +
+                    source[idx11] * w11;
+                tensor[0, 0, y, x] = (valR - mean[0]) / scale;
+
+                // G channel
+                var valG =
+                    source[idx00 + 1] * w00 +
+                    source[idx10 + 1] * w10 +
+                    source[idx01 + 1] * w01 +
+                    source[idx11 + 1] * w11;
+                tensor[0, 1, y, x] = (valG - mean[1]) / scale;
+
+                // B channel
+                var valB =
+                    source[idx00 + 2] * w00 +
+                    source[idx10 + 2] * w10 +
+                    source[idx01 + 2] * w01 +
+                    source[idx11 + 2] * w11;
+                tensor[0, 2, y, x] = (valB - mean[2]) / scale;
             }
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ProcessPixelScalar(ReadOnlySpan<byte> source, Span<byte> dst, int x, int srcRow0, int srcRow1, int dstRow, float xRatio, float yDiff, float yDiffInv, int srcWidth)
-    {
-        var srcX = x * xRatio;
-        var srcXInt = (int)srcX;
-        var xDiff = srcX - srcXInt;
-        var xDiffInv = 1.0f - xDiff;
-        var srcX1 = Min(srcXInt + 1, srcWidth - 1);
-
-        var srcCol0 = srcXInt * 3;
-        var srcCol1 = srcX1 * 3;
-        var dstIdx = dstRow + x * 3;
-
-        var idx00 = srcRow0 + srcCol0;
-        var idx10 = srcRow0 + srcCol1;
-        var idx01 = srcRow1 + srcCol0;
-        var idx11 = srcRow1 + srcCol1;
-
-        var w00 = xDiffInv * yDiffInv;
-        var w10 = xDiff * yDiffInv;
-        var w01 = xDiffInv * yDiff;
-        var w11 = xDiff * yDiff;
-
-        // R channel
-        var valR =
-            source[idx00] * w00 +
-            source[idx10] * w10 +
-            source[idx01] * w01 +
-            source[idx11] * w11;
-        dst[dstIdx] = Clamp(valR);
-
-        // G channel
-        var valG =
-            source[idx00 + 1] * w00 +
-            source[idx10 + 1] * w10 +
-            source[idx01 + 1] * w01 +
-            source[idx11 + 1] * w11;
-        dst[dstIdx + 1] = Clamp(valG);
-
-        // B channel
-        var valB =
-            source[idx00 + 2] * w00 +
-            source[idx10 + 2] * w10 +
-            source[idx01 + 2] * w01 +
-            source[idx11 + 2] * w11;
-        dst[dstIdx + 2] = Clamp(valB);
     }
 }
 
