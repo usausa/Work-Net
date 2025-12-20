@@ -3,6 +3,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Buffers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 
@@ -245,14 +246,14 @@ public class FaceDetectionBenchmark
         //_detector640Gpu?.Dispose();
     }
 
-    [Benchmark(OperationsPerInvoke = N)]
-    public void RFB320_CPU_NoResize()
-    {
-        for (var i = 0; i < N; i++)
-        {
-            _detector320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
-        }
-    }
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public void RFB320_CPU_NoResize()
+    //{
+    //    for (var i = 0; i < N; i++)
+    //    {
+    //        _detector320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+    //    }
+    //}
 
     [Benchmark(OperationsPerInvoke = N)]
     public void RFB320_CPU_WithResize()
@@ -272,32 +273,32 @@ public class FaceDetectionBenchmark
         }
     }
 
-    [Benchmark(OperationsPerInvoke = N)]
-    public void RFB640_CPU_WithResize()
-    {
-        for (var i = 0; i < N; i++)
-        {
-            _detector640!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
-        }
-    }
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public void RFB640_CPU_WithResize()
+    //{
+    //    for (var i = 0; i < N; i++)
+    //    {
+    //        _detector640!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+    //    }
+    //}
 
-    [Benchmark(OperationsPerInvoke = N)]
-    public void Slim320_CPU_NoResize()
-    {
-        for (var i = 0; i < N; i++)
-        {
-            _detectorSlim320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
-        }
-    }
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public void Slim320_CPU_NoResize()
+    //{
+    //    for (var i = 0; i < N; i++)
+    //    {
+    //        _detectorSlim320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+    //    }
+    //}
 
-    [Benchmark(OperationsPerInvoke = N)]
-    public void Slim320_CPU_WithResize()
-    {
-        for (var i = 0; i < N; i++)
-        {
-            _detectorSlim320!.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
-        }
-    }
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public void Slim320_CPU_WithResize()
+    //{
+    //    for (var i = 0; i < N; i++)
+    //    {
+    //        _detectorSlim320!.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
+    //    }
+    //}
 
     //[Benchmark(OperationsPerInvoke = N)]
     //public List<FaceBox>? RFB320_GPU_NoResize()
@@ -318,6 +319,7 @@ public sealed class FaceDetector : IDisposable
     private readonly DenseTensor<float> _inputTensor;
     private readonly List<float> _scores;
     private readonly List<float> _boxes;
+    private readonly List<FaceBox> _detectionBuffer;
 
     public int ModelWidth { get; }
     public int ModelHeight { get; }
@@ -379,6 +381,7 @@ public sealed class FaceDetector : IDisposable
         // 再利用するListを初期化（十分な容量を確保）
         _scores = new List<float>(10000);
         _boxes = new List<float>(10000);
+        _detectionBuffer = new List<FaceBox>(100);
     }
 
     public void Dispose()
@@ -426,7 +429,7 @@ public sealed class FaceDetector : IDisposable
         var scoresDims = (outputList[0].Value as DenseTensor<float>)?.Dimensions.ToArray();
         var numBoxes = scoresDims?[1] ?? 0;
 
-        var detections = new List<FaceBox>();
+        _detectionBuffer.Clear();
 
         for (var i = 0; i < numBoxes; i++)
         {
@@ -439,7 +442,7 @@ public sealed class FaceDetector : IDisposable
                 var x2 = _boxes[i * 4 + 2] * width;
                 var y2 = _boxes[i * 4 + 3] * height;
 
-                detections.Add(new FaceBox
+                _detectionBuffer.Add(new FaceBox
                 {
                     X = (int)x1,
                     Y = (int)y1,
@@ -450,26 +453,69 @@ public sealed class FaceDetector : IDisposable
             }
         }
 
-        var nmsResults = ApplyNMS(detections, iouThreshold);
+        var nmsResults = ApplyNMS(_detectionBuffer, iouThreshold);
 
         return nmsResults;
     }
 
     private static List<FaceBox> ApplyNMS(List<FaceBox> boxes, float iouThreshold)
     {
-        var sortedBoxes = boxes.OrderByDescending(b => b.Confidence).ToList();
-        var results = new List<FaceBox>();
-
-        while (sortedBoxes.Count > 0)
+        if (boxes.Count == 0)
         {
-            var best = sortedBoxes[0];
-            results.Add(best);
-            sortedBoxes.RemoveAt(0);
-
-            sortedBoxes = sortedBoxes.Where(box => CalculateIOU(best, box) < iouThreshold).ToList();
+            return new List<FaceBox>();
         }
 
-        return results;
+        var count = boxes.Count;
+        
+        // FaceBox配列を直接ソート（インプレース）
+        var boxArray = ArrayPool<FaceBox>.Shared.Rent(count);
+        var suppressed = ArrayPool<bool>.Shared.Rent(count);
+
+        try
+        {
+            // Listから配列にコピー
+            for (var i = 0; i < count; i++)
+            {
+                boxArray[i] = boxes[i];
+                suppressed[i] = false;
+            }
+
+            // FaceBox配列をConfidence降順でソート
+            Array.Sort(boxArray, 0, count, FaceBox.ConfidenceComparer);
+
+            var results = new List<FaceBox>();
+
+            for (var i = 0; i < count; i++)
+            {
+                if (suppressed[i])
+                {
+                    continue;
+                }
+
+                results.Add(boxArray[i]);
+
+                // 残りのボックスとのIOUをチェック
+                for (var j = i + 1; j < count; j++)
+                {
+                    if (suppressed[j])
+                    {
+                        continue;
+                    }
+
+                    if (CalculateIOU(boxArray[i], boxArray[j]) >= iouThreshold)
+                    {
+                        suppressed[j] = true;
+                    }
+                }
+            }
+
+            return results;
+        }
+        finally
+        {
+            ArrayPool<FaceBox>.Shared.Return(boxArray);
+            ArrayPool<bool>.Shared.Return(suppressed);
+        }
     }
 
     private static float CalculateIOU(FaceBox box1, FaceBox box2)
@@ -604,4 +650,18 @@ public class FaceBox
     {
         return $"Face at ({X}, {Y}) [{Width}x{Height}] - Confidence: {Confidence:F2}";
     }
+
+    // FaceBox専用のConfidence降順Comparer
+    private sealed class ConfidenceDescendingComparer : IComparer<FaceBox>
+    {
+        public int Compare(FaceBox? x, FaceBox? y)
+        {
+            if (x == null || y == null) return 0;
+            return y.Confidence.CompareTo(x.Confidence);
+        }
+    }
+
+    private static readonly ConfidenceDescendingComparer s_confidenceComparer = new();
+
+    public static IComparer<FaceBox> ConfidenceComparer => s_confidenceComparer;
 }
