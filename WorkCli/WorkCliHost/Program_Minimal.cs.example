@@ -2,15 +2,20 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WorkCliHost;
 
-// 最小構成版を使用（高速起動）
+// 最小構成版のテスト
 var builder = CliHost.CreateBuilder(args);
 
-// 必要に応じて標準設定を追加
-// builder.UseDefaults(); // または個別に UseDefaultConfiguration() と UseDefaultLogging()
+// 必要な機能だけを追加
+if (args.Contains("--use-config"))
+{
+    builder.UseDefaultConfiguration();
+}
 
-// Environment情報
-Console.WriteLine($"Application: {builder.Environment.ApplicationName}");
-Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+if (args.Contains("--debug"))
+{
+    builder.AddDebugLogging();
+    builder.SetMinimumLogLevel(LogLevel.Debug);
+}
 
 // サービスの追加
 builder.Services.AddSingleton<IMyCustomService, MyCustomService>();
@@ -20,15 +25,15 @@ builder.ConfigureCommands(commands =>
 {
     commands.ConfigureRootCommand(root =>
     {
-        root.WithDescription("My Attribute-based CLI tool with Filters");
+        root.WithDescription("CLI Host Framework - Minimal Configuration Example");
     });
     
+    // グローバルフィルタ
     commands.AddGlobalFilter<TimingFilter>(order: -100);
-    commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);
     
+    // コマンド
     commands.AddCommand<MessageCommand>();
     commands.AddCommand<GreetCommand>();
-    
     commands.AddCommand<UserCommand>(user =>
     {
         user.AddSubCommand<UserListCommand>();

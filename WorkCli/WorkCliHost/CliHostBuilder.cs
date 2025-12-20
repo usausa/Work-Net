@@ -1,7 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.CommandLine;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
-using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -22,11 +19,11 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     private readonly LoggingBuilder _loggingBuilder;
     private Action<ICommandConfigurator>? _commandConfiguration;
 
-    public CliHostBuilder(string[] args)
+    public CliHostBuilder(string[] args, bool useDefaults = true)
     {
         _args = args;
 
-        // Environmentの初期化
+        // Environmentの初期化（常に必要）
         var contentRootPath = AppContext.BaseDirectory;
         _environment = new HostEnvironment
         {
@@ -38,28 +35,29 @@ internal sealed class CliHostBuilder : ICliHostBuilder
             ContentRootFileProvider = new PhysicalFileProvider(contentRootPath)
         };
 
-        // Configurationの初期化
+        // Configurationの初期化（最小限）
         _configuration = new ConfigurationManager();
-        _configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-        _configuration.AddJsonFile($"appsettings.{_environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
-        _configuration.AddEnvironmentVariables();
-        if (args.Length > 0)
+
+        if (useDefaults)
         {
-            _configuration.AddCommandLine(args);
+            // デフォルト設定を適用
+            this.UseDefaultConfiguration();
+            this.UseDefaultLogging();
         }
+        else
+        {
+            // 最小限のLogging設定（Consoleのみ）
+            _services.AddLogging(builder =>
+            {
+                builder.AddConsole();
+            });
+        }
+
+        _loggingBuilder = new LoggingBuilder(_services);
 
         // 基本サービスの登録
         _services.AddSingleton<IConfiguration>(_configuration);
         _services.AddSingleton<IHostEnvironment>(_environment);
-        
-        // Loggingの初期化（サービスコレクションに登録後）
-        _services.AddLogging(builder =>
-        {
-            builder.AddConfiguration(_configuration.GetSection("Logging"));
-            builder.AddConsole();
-        });
-        
-        _loggingBuilder = new LoggingBuilder(_services);
         
         // フィルタパイプラインを登録
         _services.AddSingleton<FilterPipeline>();
