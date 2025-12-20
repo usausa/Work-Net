@@ -3,12 +3,26 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
 
 namespace WorkImageOnyx;
 
 public static class Program
 {
-    public static void Main()
+    public static void Main(string[] args)
+    {
+        if (args.Length > 0 && args[0] == "--benchmark")
+        {
+            BenchmarkRunner.Run<FaceDetectionBenchmark>();
+        }
+        else
+        {
+            RunInteractive();
+        }
+    }
+
+    private static void RunInteractive()
     {
         const float confidenceThreshold = 0.5f;
         const float iouThreshold = 0.3f;
@@ -39,8 +53,8 @@ public static class Program
 
         // 実行オプションの設定
         var useGpu = false;
-        var intraOpNumThreads = 0; // 0は自動設定
-        var interOpNumThreads = 0; // 0は自動設定
+        var intraOpNumThreads = 0;
+        var interOpNumThreads = 0;
 
         Console.Write("GPU (CUDA) を使用しますか？ (y/n, デフォルト: n): ");
         var gpuChoice = Console.ReadLine()?.Trim().ToLower();
@@ -146,6 +160,156 @@ public static class Program
 
         Console.WriteLine($"\n結果画像を保存しました: {outputPath}");
     }
+}
+
+[MemoryDiagnoser]
+[SimpleJob(warmupCount: 3, iterationCount: 10)]
+public class FaceDetectionBenchmark
+{
+    private const int N = 30;
+
+    private FaceDetector? _detector320;
+    private FaceDetector? _detector640;
+    private FaceDetector? _detectorSlim320;
+    //private FaceDetector? _detector320Gpu;
+    //private FaceDetector? _detector640Gpu;
+    private byte[]? _imageBytes320;
+    private byte[]? _imageBytes640;
+    private const float ConfidenceThreshold = 0.5f;
+    private const float IouThreshold = 0.3f;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        // 320x240画像データを準備
+        _imageBytes320 = new byte[320 * 240 * 3];
+        using (var bitmap = SKBitmap.Decode(@"D:\学習データ\people640x480.png"))
+        {
+            using var resized = bitmap.Resize(new SKImageInfo(320, 240), SKFilterQuality.High);
+            var pixels = resized.Pixels;
+            var idx = 0;
+            for (var y = 0; y < 240; y++)
+            {
+                for (var x = 0; x < 320; x++)
+                {
+                    var pixel = pixels[y * 320 + x];
+                    _imageBytes320[idx++] = pixel.Red;
+                    _imageBytes320[idx++] = pixel.Green;
+                    _imageBytes320[idx++] = pixel.Blue;
+                }
+            }
+        }
+
+        // 640x480画像データを準備
+        _imageBytes640 = new byte[640 * 480 * 3];
+        using (var bitmap = SKBitmap.Decode(@"D:\学習データ\people640x480.png"))
+        {
+            var pixels = bitmap.Pixels;
+            var idx = 0;
+            for (var y = 0; y < 480; y++)
+            {
+                for (var x = 0; x < 640; x++)
+                {
+                    var pixel = pixels[y * 640 + x];
+                    _imageBytes640[idx++] = pixel.Red;
+                    _imageBytes640[idx++] = pixel.Green;
+                    _imageBytes640[idx++] = pixel.Blue;
+                }
+            }
+        }
+
+        // モデル初期化
+        _detector320 = new FaceDetector("version-RFB-320.onnx", useGpu: false);
+        _detector640 = new FaceDetector("version-RFB-640.onnx", useGpu: false);
+        _detectorSlim320 = new FaceDetector("version-slim-320.onnx", useGpu: false);
+
+        //// GPU版（利用可能な場合）
+        //try
+        //{
+        //    _detector320Gpu = new FaceDetector("version-RFB-320.onnx", useGpu: true);
+        //    _detector640Gpu = new FaceDetector("version-RFB-640.onnx", useGpu: true);
+        //}
+        //catch
+        //{
+        //    // GPU利用不可の場合はnullのまま
+        //}
+    }
+
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        _detector320?.Dispose();
+        _detector640?.Dispose();
+        _detectorSlim320?.Dispose();
+        //_detector320Gpu?.Dispose();
+        //_detector640Gpu?.Dispose();
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void RFB320_CPU_NoResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detector320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void RFB320_CPU_WithResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detector320!.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void RFB640_CPU_NoResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detector640!.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void RFB640_CPU_WithResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detector640!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void Slim320_CPU_NoResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detectorSlim320!.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    [Benchmark(OperationsPerInvoke = N)]
+    public void Slim320_CPU_WithResize()
+    {
+        for (var i = 0; i < N; i++)
+        {
+            _detectorSlim320!.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
+        }
+    }
+
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public List<FaceBox>? RFB320_GPU_NoResize()
+    //{
+    //    return _detector320Gpu?.Detect(_imageBytes320!, 320, 240, ConfidenceThreshold, IouThreshold);
+    //}
+
+    //[Benchmark(OperationsPerInvoke = N)]
+    //public List<FaceBox>? RFB640_GPU_NoResize()
+    //{
+    //    return _detector640Gpu?.Detect(_imageBytes640!, 640, 480, ConfidenceThreshold, IouThreshold);
+    //}
 }
 
 public sealed class FaceDetector : IDisposable
