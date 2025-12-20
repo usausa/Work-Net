@@ -1,15 +1,27 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Debug;
 using WorkCliHost;
 
 var builder = CliHost.CreateDefaultBuilder(args);
 
-// アプリケーションサービスの設定（コマンド以外）
-builder.ConfigureServices(services =>
-{
-    // ここにDBコンテキスト、HTTPクライアント、その他のサービスを登録
-    // 例: services.AddDbContext<MyDbContext>();
-    //     services.AddHttpClient();
-    //     services.AddSingleton<IMyService, MyService>();
-});
+// Configuration（プロパティ経由で直接アクセス可能）
+Microsoft.Extensions.Configuration.JsonConfigurationExtensions.AddJsonFile(
+    builder.Configuration, "custom-settings.json", optional: true);
+
+// Environment情報
+Console.WriteLine($"Application: {builder.Environment.ApplicationName}");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+
+// Logging設定
+Microsoft.Extensions.Logging.DebugLoggerFactoryExtensions.AddDebug(builder.Logging);
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+// アプリケーションサービスの設定（プロパティ経由）
+builder.Services.AddSingleton<IMyCustomService, MyCustomService>();
+// 例: builder.Services.AddDbContext<AppDbContext>();
+//     builder.Services.AddHttpClient();
 
 // コマンド関連の設定
 builder.ConfigureCommands(commands =>
@@ -59,3 +71,7 @@ builder.ConfigureCommands(commands =>
 
 var host = builder.Build();
 return await host.RunAsync();
+
+// ダミーサービスインターフェース
+public interface IMyCustomService { }
+public class MyCustomService : IMyCustomService { }

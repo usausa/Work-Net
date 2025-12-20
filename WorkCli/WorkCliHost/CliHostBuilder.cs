@@ -1,4 +1,10 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.CommandLine;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.CommandLine;
@@ -11,16 +17,49 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 {
     private readonly string[] _args;
     private readonly ServiceCollection _services = new();
+    private readonly ConfigurationManager _configuration;
+    private readonly HostEnvironment _environment;
+    private readonly LoggingBuilder _loggingBuilder;
     private Action<ICommandConfigurator>? _commandConfiguration;
 
     public CliHostBuilder(string[] args)
     {
         _args = args;
 
+        // Environmentの初期化
+        var contentRootPath = AppContext.BaseDirectory;
+        _environment = new HostEnvironment
+        {
+            ApplicationName = Assembly.GetEntryAssembly()?.GetName().Name ?? "CliApp",
+            EnvironmentName = System.Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") 
+                ?? System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+                ?? "Production",
+            ContentRootPath = contentRootPath,
+            ContentRootFileProvider = new PhysicalFileProvider(contentRootPath)
+        };
+
+        // Configurationの初期化
+        _configuration = new ConfigurationManager();
+        _configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        _configuration.AddJsonFile($"appsettings.{_environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+        _configuration.AddEnvironmentVariables();
+        if (args.Length > 0)
+        {
+            _configuration.AddCommandLine(args);
+        }
+
+        // 基本サービスの登録
+        _services.AddSingleton<IConfiguration>(_configuration);
+        _services.AddSingleton<IHostEnvironment>(_environment);
+        
+        // Loggingの初期化（サービスコレクションに登録後）
         _services.AddLogging(builder =>
         {
+            builder.AddConfiguration(_configuration.GetSection("Logging"));
             builder.AddConsole();
         });
+        
+        _loggingBuilder = new LoggingBuilder(_services);
         
         // フィルタパイプラインを登録
         _services.AddSingleton<FilterPipeline>();
@@ -29,11 +68,13 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         _services.AddOptions<CommandFilterOptions>();
     }
 
-    public ICliHostBuilder ConfigureServices(Action<IServiceCollection> configureServices)
-    {
-        configureServices(_services);
-        return this;
-    }
+    public ConfigurationManager Configuration => _configuration;
+
+    public IHostEnvironment Environment => _environment;
+
+    public IServiceCollection Services => _services;
+
+    public ILoggingBuilder Logging => _loggingBuilder;
 
     public ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configureCommands)
     {
@@ -346,6 +387,30 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         }
 
         return (false, null);
+    }
+}
+
+/// <summary>
+/// Implementation of IHostEnvironment for CLI applications.
+/// </summary>
+internal sealed class HostEnvironment : IHostEnvironment
+{
+    public string ApplicationName { get; set; } = default!;
+    public string EnvironmentName { get; set; } = default!;
+    public string ContentRootPath { get; set; } = default!;
+    public IFileProvider ContentRootFileProvider { get; set; } = default!;
+}
+
+/// <summary>
+/// Implementation of ILoggingBuilder for CLI applications.
+/// </summary>
+internal sealed class LoggingBuilder : ILoggingBuilder
+{
+    public IServiceCollection Services { get; }
+
+    public LoggingBuilder(IServiceCollection services)
+    {
+        Services = services;
     }
 }
 

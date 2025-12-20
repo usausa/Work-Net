@@ -1,18 +1,37 @@
-using Microsoft.Extensions.DependencyInjection;
 using System.CommandLine;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace WorkCliHost;
 
 /// <summary>
 /// Builder for CLI host configuration.
+/// Similar to HostApplicationBuilder in Microsoft.Extensions.Hosting.
 /// </summary>
 public interface ICliHostBuilder
 {
     /// <summary>
-    /// Configures application services (excluding commands).
-    /// Use this for registering services like database contexts, HTTP clients, etc.
+    /// Gets the application configuration.
     /// </summary>
-    ICliHostBuilder ConfigureServices(Action<IServiceCollection> configureServices);
+    ConfigurationManager Configuration { get; }
+
+    /// <summary>
+    /// Gets information about the hosting environment.
+    /// </summary>
+    IHostEnvironment Environment { get; }
+
+    /// <summary>
+    /// Gets a collection of services for the application to compose.
+    /// This is useful for adding services like database contexts, HTTP clients, etc.
+    /// </summary>
+    IServiceCollection Services { get; }
+
+    /// <summary>
+    /// Gets a collection of logging providers for the application to compose.
+    /// </summary>
+    ILoggingBuilder Logging { get; }
 
     /// <summary>
     /// Configures CLI commands and related settings.

@@ -15,44 +15,49 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 - ✅ **Position自動決定（省略可能）**
 - ✅ **ASP.NET Coreライクなフィルタ機構**
 - ✅ **明確な責任分離（サービス vs コマンド設定）**
+- ✅ **HostApplicationBuilder風のプロパティベースAPI**
 
 ## 基本的な使い方
 
 ### 1. プログラムのセットアップ
 
 ```csharp
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using WorkCliHost;
 
 var builder = CliHost.CreateDefaultBuilder(args);
 
-// アプリケーションサービスの設定（コマンド以外）
-builder.ConfigureServices(services =>
-{
-    services.AddDbContext<MyDbContext>();
-    services.AddHttpClient();
-    services.AddSingleton<IMyService, MyService>();
-});
+// Configuration - プロパティ経由で直接アクセス
+builder.Configuration.AddJsonFile("custom-settings.json", optional: true);
 
-// コマンド関連の設定
+// Environment - ホスト環境情報
+Console.WriteLine($"Application: {builder.Environment.ApplicationName}");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+
+// Logging - ログ設定
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+// Services - DIコンテナへのサービス登録
+builder.Services.AddDbContext<AppDbContext>();
+builder.Services.AddHttpClient<IApiClient, ApiClient>();
+builder.Services.AddSingleton<IMyService, MyService>();
+
+// Commands - コマンド設定
 builder.ConfigureCommands(commands =>
 {
-    // RootCommandの設定
     commands.ConfigureRootCommand(root =>
     {
-        root.WithDescription("My CLI Application")
-            .WithName("mycli");
+        root.WithDescription("My CLI Application");
     });
     
-    // グローバルフィルタの追加
-    commands.AddGlobalFilter<TimingFilter>(order: -100);
-    commands.AddGlobalFilter<LoggingFilter>();
-    
-    // コマンドの追加
+    commands.AddGlobalFilter<TimingFilter>();
     commands.AddCommand<MessageCommand>();
     commands.AddCommand<UserCommand>(user =>
     {
         user.AddSubCommand<UserListCommand>();
-        user.AddSubCommand<UserAddCommand>();
     });
 });
 
@@ -100,69 +105,80 @@ public sealed class UserCommand : ICommandGroup
 }
 ```
 
-### 4. 階層的なコマンド構造の登録
+## プロパティベースAPI
+
+`ICliHostBuilder`は`Microsoft.Extensions.Hosting.HostApplicationBuilder`と同様のプロパティベースAPIをサポート：
 
 ```csharp
-builder.ConfigureCommands(commands =>
+public interface ICliHostBuilder
 {
-    commands.AddCommand<UserCommand>(user =>
-    {
-        user.AddSubCommand<UserListCommand>();
-        user.AddSubCommand<UserAddCommand>();
-        user.AddSubCommand<UserRoleCommand>(role =>
-        {
-            role.AddSubCommand<UserRoleAssignCommand>();
-            role.AddSubCommand<UserRoleRemoveCommand>();
-        });
-    });
-});
-```
-
-## API設計の特徴
-
-### 明確な責任分離
-
-#### ConfigureServices - アプリケーションサービス
-コマンド実装で使用するサービス（DBコンテキスト、HTTPクライアント、ビジネスロジック等）を登録：
-
-```csharp
-builder.ConfigureServices(services =>
-{
-    services.AddDbContext<AppDbContext>();
-    services.AddHttpClient<IApiClient, ApiClient>();
-    services.AddSingleton<IEmailService, EmailService>();
-});
-```
-
-#### ConfigureCommands - コマンド設定
-CLI固有の設定（コマンド、フィルタ、ルートコマンド）を登録：
-
-```csharp
-builder.ConfigureCommands(commands =>
-{
-    // RootCommand設定
-    commands.ConfigureRootCommand(root => { });
+    ConfigurationManager Configuration { get; }  // Configuration管理
+    IHostEnvironment Environment { get; }        // ホスト環境情報
+    IServiceCollection Services { get; }         // DIコンテナ
+    ILoggingBuilder Logging { get; }             // Logging設定
     
-    // グローバルフィルタ
-    commands.AddGlobalFilter<TimingFilter>();
-    
-    // コマンド登録
-    commands.AddCommand<MyCommand>();
-});
-```
-
-### 型安全な設定API
-
-`ICommandConfigurator`経由でのみコマンド関連の設定が可能：
-
-```csharp
-public interface ICommandConfigurator
-{
-    ICommandConfigurator AddCommand<TCommand>(...);
-    ICommandConfigurator AddGlobalFilter<TFilter>(...);
-    ICommandConfigurator ConfigureRootCommand(...);
-    ICommandConfigurator ConfigureFilterOptions(...);
+    ICliHostBuilder ConfigureCommands(...);      // コマンド設定
+    ICliHost Build();                            // ビルド
 }
+```
+
+### Configuration
+
+```csharp
+// JSON設定ファイル
+builder.Configuration.AddJsonFile("appsettings.json", optional: true);
+builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
+
+// 環境変数とコマンドライン（デフォルトで設定済み）
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
+
+// 設定値の取得
+var apiKey = builder.Configuration["ApiKey"];
+```
+
+### Environment
+
+```csharp
+// ホスト環境情報へのアクセス
+Console.WriteLine(builder.Environment.ApplicationName);  // "WorkCliHost"
+Console.WriteLine(builder.Environment.EnvironmentName);  // "Production" / "Development"
+Console.WriteLine(builder.Environment.ContentRootPath);  // アプリのベースディレクトリ
+
+// 環境チェック
+if (builder.Environment.IsDevelopment())
+{
+    // 開発環境でのみ実行
+}
+```
+
+### Services
+
+```csharp
+// DIコンテナへのサービス登録
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddTransient<IEmailSender, EmailSender>();
+
+// DbContext
+builder.Services.AddDbContext<AppDbContext>();
+
+// HttpClient
+builder.Services.AddHttpClient<IApiClient, ApiClient>();
+```
+
+### Logging
+
+```csharp
+// ログプロバイダーの追加
+builder.Logging.AddConsole();  // デフォルトで追加済み
+builder.Logging.AddDebug();
+
+// 最小ログレベル
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+// フィルター
+builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 ```
 
 ## Position自動決定
@@ -180,13 +196,9 @@ public sealed class ConfigSetCommand : ICommandDefinition
     [CliArgument<string>("value", Description = "Configuration value")]
     public string Value { get; set; } = default!;
 
-    [CliArgument<string>("environment", Description = "Target environment", 
-        IsRequired = false, DefaultValue = "development")]
-    public string Environment { get; set; } = default!;
-
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        Console.WriteLine($"Set {Key}={Value} for '{Environment}'");
+        Console.WriteLine($"Set {Key}={Value}");
         return ValueTask.CompletedTask;
     }
 }
@@ -196,41 +208,19 @@ public sealed class ConfigSetCommand : ICommandDefinition
 
 ASP.NET Coreライクなフィルタ機構をサポート：
 
-### フィルタの定義
+### グローバルフィルタ
 
-```csharp
-public sealed class LoggingFilter : ICommandExecutionFilter
-{
-    private readonly ILogger<LoggingFilter> _logger;
-
-    public LoggingFilter(ILogger<LoggingFilter> logger)
-    {
-        _logger = logger;
-    }
-
-    public int Order => 0;
-
-    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
-    {
-        _logger.LogInformation("Before: {CommandType}", context.CommandType.Name);
-        await next();
-        _logger.LogInformation("After: {CommandType}", context.CommandType.Name);
-    }
-}
-```
-
-### フィルタの適用
-
-**グローバル**（全コマンドに適用）:
 ```csharp
 builder.ConfigureCommands(commands =>
 {
     commands.AddGlobalFilter<TimingFilter>(order: -100);
     commands.AddGlobalFilter<LoggingFilter>();
+    commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);
 });
 ```
 
-**コマンド個別**:
+### コマンド個別フィルタ
+
 ```csharp
 [CommandFilter<TimingFilter>(Order = -100)]
 [CommandFilter<LoggingFilter>]
@@ -245,9 +235,9 @@ public sealed class ProcessCommand : ICommandDefinition
 }
 ```
 
-## 共通引数の定義パターン
+## 共通引数の定義
 
-### パターン1: 抽象基底クラス（推奨）
+抽象基底クラスによる共通引数の定義（推奨）：
 
 ```csharp
 public abstract class UserRoleCommandBase : ICommandDefinition
@@ -283,7 +273,6 @@ app message "Hello, World!"
 
 # デフォルト値を使用
 app config set database.host localhost
-# Key=database.host, Value=localhost, Environment=development
 
 # サブコマンド
 app user list 5
@@ -296,49 +285,29 @@ app test-filter "Hello!"
 ⏱  Command executed in 114ms
 ```
 
-## インターフェース
-
-### ICommandDefinition
-
-実行可能なコマンド：
-
-```csharp
-public interface ICommandDefinition
-{
-    ValueTask ExecuteAsync(CommandContext context);
-}
-```
-
-### ICommandGroup
-
-サブコマンドのみを持つグループコマンド：
-
-```csharp
-public interface ICommandGroup
-{
-}
-```
-
-### ICommandConfigurator
-
-コマンド設定用のconfigurator：
-
-```csharp
-public interface ICommandConfigurator
-{
-    ICommandConfigurator AddCommand<TCommand>(...);
-    ICommandConfigurator AddGlobalFilter<TFilter>(...);
-    ICommandConfigurator ConfigureRootCommand(...);
-    ICommandConfigurator ConfigureFilterOptions(...);
-}
-```
-
 ## 設計の利点
 
-1. **明確な責任分離**: サービス設定とコマンド設定が分離
-2. **型安全性**: 専用のconfigurator経由でのみ設定可能
-3. **一貫性**: コマンド関連の設定が1か所に集約
-4. **発見可能性**: IntelliSenseで利用可能なメソッドが明確
-5. **拡張性**: 新しい設定メソッドを追加しやすい
-6. **自動化**: グループコマンドのヘルプ表示、Position決定、フィルタDI登録
-7. **保守性**: ASP.NET Coreと同様の設計思想
+1. **ASP.NET Coreとの一貫性**: `HostApplicationBuilder`と同様のAPI
+2. **プロパティベース**: 直感的で発見しやすい
+3. **明確な責任分離**: Services（アプリケーションサービス）とCommands（CLI設定）
+4. **型安全性**: コンパイル時の型チェック
+5. **拡張性**: 新機能の追加が容易
+6. **自動化**: Position決定、フィルタDI登録など
+7. **保守性**: 統一されたAPI設計
+
+## ドキュメント
+
+- [プロパティベースAPI](PROPERTY_BASED_API.md) - Configuration、Environment、Services、Loggingの詳細
+- [新しいAPI設計](NEW_API_DESIGN.md) - 責任分離と型安全性
+- [フィルタ機構](FILTERS.md) - フィルタの設計と実装
+- [Position自動決定](POSITION_AUTO.md) - Position省略機能
+
+## パッケージ要件
+
+```xml
+<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
+<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+<PackageReference Include="System.CommandLine" Version="2.0.1" />
