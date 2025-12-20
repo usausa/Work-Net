@@ -7,6 +7,7 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 ## 目次
 
 - [クラス・インターフェース一覧](#クラスインターフェース一覧)
+- [プロジェクト構造](#プロジェクト構造)
 - [アーキテクチャ](#アーキテクチャ)
 - [詳細解説](#詳細解説)
   - [ホストビルダー](#ホストビルダー)
@@ -21,41 +22,54 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 
 ### サマリー表
 
-| 分類 | ファイル名 | 型 | 主要メンバー数 | ステップ数(概算) | 説明 |
-|------|-----------|-----|---------------|-----------------|------|
-| **ホストビルダー** | | | | | |
-| | CliHost.cs | static class | 2 | 20 | ファクトリメソッド提供 |
-| | ICliHostBuilder.cs | interface | 5 | 15 | ビルダーインターフェース |
-| | CliHostBuilder.cs | class | 8 | 350 | ビルダー実装 |
-| | ICliHost.cs | interface | 1 | 5 | ホストインターフェース |
-| | CliHostBuilderExtensions.cs | static class | 9 | 130 | 拡張メソッド群 |
-| **コマンド定義** | | | | | |
-| | ICommandDefinition.cs | interface | 1 | 5 | 実行可能コマンド |
-| | ICommandGroup.cs | interface | 0 | 5 | グループコマンド |
-| | CommandContext.cs | class | 6 | 35 | コマンド実行コンテキスト |
-| | CliCommandAttribute.cs | class | 2 | 10 | コマンド属性 |
-| | CliArgumentAttribute.cs | class | 10 | 50 | 引数属性 |
-| **フィルター機構** | | | | | |
-| | ICommandFilter.cs | interface | 1 | 5 | フィルター基底 |
-| | ICommandExecutionFilter.cs | interface | 1 | 5 | 実行フィルター |
-| | IBeforeCommandFilter.cs | interface | 1 | 5 | 実行前フィルター |
-| | IAfterCommandFilter.cs | interface | 1 | 5 | 実行後フィルター |
-| | IExceptionFilter.cs | interface | 1 | 5 | 例外フィルター |
-| | CommandFilterAttribute.cs | class | 3 | 20 | フィルター属性 |
-| | CommandFilterOptions.cs | class | 3 | 30 | フィルターオプション |
-| | FilterPipeline.cs | class | 4 | 200 | フィルター実行エンジン |
-| **内部実装** | | | | | |
-| | CommandConfigurators.cs | class | 15+ | 250 | コマンド設定クラス群 |
-| | ServiceCollectionExtensions.cs | static class | 0 | 10 | 非推奨拡張メソッド |
-| **合計** | **16ファイル** | **20+ 型** | **70+ メンバー** | **~1,160行** | |
+| 分類 | ファイル名 | 型名 | 種類 | 主要メンバー数 | ステップ数(概算) | 説明 |
+|------|-----------|------|------|---------------|-----------------|------|
+| **ホストビルダー** | | | | | | |
+| | CliHost.cs | CliHost | static class | 2 | 20 | ファクトリメソッド提供 |
+| | ICliHostBuilder.cs | ICliHostBuilder | interface | 6 | 50 | ビルダーインターフェース |
+| | | ICommandConfigurator | interface | 5 | 30 | コマンド設定インターフェース |
+| | | ISubCommandConfigurator | interface | 1 | 10 | サブコマンド設定インターフェース |
+| | | IRootCommandConfigurator | interface | 4 | 15 | ルートコマンド設定インターフェース |
+| | CliHostBuilder.cs | CliHostBuilder | class (internal) | 8 | 350 | ビルダー実装 |
+| | | HostEnvironment | class (internal) | 4 | 10 | 環境情報実装 |
+| | | LoggingBuilder | class (internal) | 1 | 10 | ロギングビルダー実装 |
+| | | CliHostImplementation | class (internal) | 2 | 30 | ホスト実装 |
+| | | CliArgumentInfo | record (internal) | 5 | 5 | 引数情報 |
+| | ICliHost.cs | ICliHost | interface | 1 | 5 | ホストインターフェース |
+| | CliHostBuilderExtensions.cs | CliHostBuilderExtensions | static class | 9 | 130 | 拡張メソッド群 |
+| **コマンド定義** | | | | | | |
+| | ICommandDefinition.cs | ICommandDefinition | interface | 1 | 5 | 実行可能コマンド |
+| | CommandContext.cs | CommandContext | class | 6 | 35 | コマンド実行コンテキスト |
+| | CliCommandAttribute.cs | CliCommandAttribute | class | 2 | 10 | コマンド属性 |
+| | CliArgumentAttribute.cs | CliArgumentAttribute<T> | class (generic) | 7 | 30 | 引数属性（ジェネリック） |
+| | | CliArgumentAttribute | class | 7 | 20 | 引数属性（非ジェネリック） |
+| **フィルター機構** | | | | | | |
+| | ICommandFilter.cs | ICommandFilter | interface | 1 | 5 | フィルター基底 |
+| | | ICommandExecutionFilter | interface | 1 | 5 | 実行フィルター |
+| | | IBeforeCommandFilter | interface | 1 | 5 | 実行前フィルター |
+| | | IAfterCommandFilter | interface | 1 | 5 | 実行後フィルター |
+| | | IExceptionFilter | interface | 1 | 5 | 例外フィルター |
+| | | CommandExecutionDelegate | delegate | - | 1 | パイプラインデリゲート |
+| | CommandFilterAttribute.cs | CommandFilterAttribute | abstract class | 2 | 10 | フィルター属性（抽象） |
+| | | CommandFilterAttribute<TFilter> | class (generic) | 1 | 5 | フィルター属性（ジェネリック） |
+| | CommandFilterOptions.cs | CommandFilterOptions | class | 3 | 20 | フィルターオプション |
+| | | GlobalFilterDescriptor | class | 2 | 15 | グローバルフィルター記述子 |
+| | FilterPipeline.cs | FilterPipeline | class (internal) | 4 | 200 | フィルター実行エンジン |
+| | | FilterDescriptor | class (internal) | 3 | 10 | フィルター記述子 |
+| **内部実装** | | | | | | |
+| | CommandConfigurators.cs | CommandConfigurator | class (internal) | 8 | 80 | コマンド設定実装 |
+| | | SubCommandConfigurator | class (internal) | 2 | 30 | サブコマンド設定実装 |
+| | | RootCommandConfigurator | class (internal) | 6 | 60 | ルートコマンド設定実装 |
+| | | CommandRegistration | class (internal) | 2 | 15 | コマンド登録情報 |
+| | ServiceCollectionExtensions.cs | ServiceCollectionExtensions | static class | 0 | 10 | 非推奨拡張メソッド |
+| **合計** | **15ファイル** | **31型** | - | **100+** | **~1,160** | |
 
 ### 型の分類
 
 #### パブリックインターフェース (11個)
 - `ICliHostBuilder` - ビルダー
 - `ICliHost` - ホスト
-- `ICommandDefinition` - コマンド
-- `ICommandGroup` - グループコマンド
+- `ICommandDefinition` - 実行可能コマンド
 - `ICommandFilter` - フィルター基底
 - `ICommandExecutionFilter` - 実行フィルター
 - `IBeforeCommandFilter` - 実行前フィルター
@@ -65,7 +79,7 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 - `ISubCommandConfigurator` - サブコマンド設定
 - `IRootCommandConfigurator` - ルートコマンド設定
 
-#### パブリッククラス (7個)
+#### パブリッククラス (9個)
 - `CliHost` - ファクトリ
 - `CliHostBuilderExtensions` - 拡張メソッド
 - `CommandContext` - コンテキスト
@@ -77,18 +91,166 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 - `CommandFilterOptions` - フィルターオプション
 - `GlobalFilterDescriptor` - グローバルフィルター記述子
 
-#### 内部クラス (7個)
+#### 内部クラス (11個)
 - `CliHostBuilder` - ビルダー実装
+- `HostEnvironment` - 環境情報実装
+- `LoggingBuilder` - ロギングビルダー実装
+- `CliHostImplementation` - ホスト実装
 - `FilterPipeline` - フィルター実行
+- `FilterDescriptor` - フィルター記述子
 - `CommandConfigurator` - コマンド設定実装
 - `SubCommandConfigurator` - サブコマンド設定実装
 - `RootCommandConfigurator` - ルートコマンド設定実装
 - `CommandRegistration` - コマンド登録情報
-- `HostEnvironment` - 環境情報実装
-- `LoggingBuilder` - ロギングビルダー実装
-- `CliHostImplementation` - ホスト実装
 - `CliArgumentInfo` - 引数情報（record）
-- `FilterDescriptor` - フィルター記述子（内部）
+
+---
+
+## プロジェクト構造
+
+### フォルダ構成
+
+```
+WorkCliHost/
+├── Core/                          # フレームワーク本体 (15ファイル)
+│   ├── CliHost.cs                # ファクトリメソッド
+│   ├── CliHostBuilder.cs         # ビルダー実装
+│   ├── CliHostBuilderExtensions.cs # ビルダー拡張メソッド
+│   ├── ICliHostBuilder.cs        # ビルダーインターフェース
+│   ├── ICliHost.cs               # ホストインターフェース
+│   ├── CliCommandAttribute.cs    # コマンド属性
+│   ├── CliArgumentAttribute.cs   # 引数属性
+│   ├── ICommandDefinition.cs     # コマンド定義インターフェース
+│   ├── CommandContext.cs         # コマンド実行コンテキスト
+│   ├── ICommandFilter.cs         # フィルターインターフェース（全種類）
+│   ├── CommandFilterAttribute.cs # フィルター属性
+│   ├── CommandFilterOptions.cs   # フィルターオプション
+│   ├── FilterPipeline.cs         # フィルターパイプライン実装
+│   ├── CommandConfigurators.cs   # コマンド設定クラス群
+│   └── ServiceCollectionExtensions.cs # 非推奨拡張メソッド
+│
+├── Samples/                       # サンプル実装 (10ファイル)
+│   ├── Program.cs                # エントリーポイント
+│   ├── MessageCommand.cs         # シンプルなコマンド例
+│   ├── GreetCommand.cs           # デフォルト値の例
+│   ├── UserCommands.cs           # 階層構造の例
+│   ├── ConfigCommands.cs         # Position自動決定の例
+│   ├── AdvancedCommandPatterns.cs # 高度なパターン例
+│   ├── CommonFilters.cs          # 共通フィルター実装
+│   ├── AdvancedFilters.cs        # 高度なフィルター実装
+│   ├── TestFilterCommands.cs     # フィルターテストコマンド
+│   └── Program_Minimal.cs.example # 最小構成版の例
+│
+└── Docs/                          # ドキュメント (3ファイル)
+    ├── API_DESIGN.md             # API設計と使い方
+    ├── TECHNICAL_GUIDE.md        # このファイル（技術解説）
+    └── INDEX.md                  # ドキュメントインデックス
+```
+
+### 名前空間の構成
+
+| 名前空間 | フォルダ | 説明 | ファイル数 |
+|---------|---------|------|-----------|
+| `WorkCliHost.Core` | Core/ | フレームワーク本体 | 15 |
+| `WorkCliHost.Samples` | Samples/ | サンプル実装 | 10 |
+
+**設計原則**:
+- フォルダ構造と名前空間が一致
+- Core = 再利用可能なライブラリ
+- Samples = 使い方の例
+
+**使用方法**:
+```csharp
+// フレームワーク利用時
+using WorkCliHost.Core;
+
+var builder = CliHost.CreateBuilder(args);
+builder.ConfigureCommands(commands =>
+{
+    commands.AddCommand<YourCommand>();
+});
+```
+
+### Core（フレームワーク本体）
+
+**役割**: 再利用可能なCLIフレームワークの提供
+
+**分類**:
+1. **ホストビルダー関連** (5ファイル)
+   - ファクトリメソッド、ビルダー、拡張メソッド
+
+2. **コマンド定義関連** (4ファイル)
+   - 属性、インターフェース、コンテキスト
+
+3. **フィルター機構関連** (4ファイル)
+   - インターフェース、属性、オプション、パイプライン
+
+4. **内部実装** (2ファイル)
+   - Configurator、非推奨拡張メソッド
+
+### Samples（サンプル実装）
+
+**役割**: フレームワークの使い方を示す実例
+
+**分類**:
+1. **エントリーポイント** (2ファイル)
+   - フル機能版、最小構成版
+
+2. **コマンド例** (5ファイル)
+   - シンプル、デフォルト値、階層構造、Position自動、継承パターン
+
+3. **フィルター例** (3ファイル)
+   - 共通フィルター、高度なフィルター、テストコマンド
+
+### Docs（ドキュメント）
+
+**役割**: 技術文書の提供
+
+**構成**:
+- **API_DESIGN.md** - API設計思想と使い方（利用者向け）
+- **TECHNICAL_GUIDE.md** - 技術詳細と内部実装（開発者向け）
+- **INDEX.md** - ドキュメントインデックスと学習パス
+
+### 分離の利点
+
+#### 1. 再利用性
+- Coreフォルダのみをコピーすれば、別プロジェクトで使用可能
+- すべての必要なインターフェースがCoreに含まれる
+
+#### 2. 保守性
+- フレームワーク本体とサンプルが混在しない
+- 変更の影響範囲が明確（Coreの変更はSamplesに影響しない）
+
+#### 3. 学習のしやすさ
+- Samplesを見れば使い方がわかる
+- Coreを見ればフレームワークの仕組みがわかる
+
+#### 4. 拡張性
+- 新しいコマンドやフィルターをSamplesに追加しやすい
+- Coreの変更なしに機能追加が可能
+
+### 今後の展開
+
+#### NuGetパッケージ化
+
+```
+WorkCliHost.Core/              # NuGetパッケージ
+  namespace: WorkCliHost.Core
+  
+WorkCliHost.Samples/           # サンプルプロジェクト
+  namespace: WorkCliHost.Samples
+  PackageReference: WorkCliHost.Core
+```
+
+#### オプショナルパッケージ
+
+```
+WorkCliHost.Filters/           # 共通フィルター集
+  ├── AuthenticationFilter.cs  # JWT/OAuth認証
+  ├── AuthorizationFilter.cs   # ロールベース認可
+  ├── ValidationFilter.cs       # FluentValidation統合
+  └── CachingFilter.cs          # 結果のキャッシング
+```
 
 ---
 
@@ -241,7 +403,7 @@ builder.ConfigureCommands(commands =>
 
 ---
 
-#### CliHostBuilder
+#### CliHost
 
 **ファイル**: `CliHostBuilder.cs`
 **役割**: ビルダーの実装クラス
@@ -454,50 +616,6 @@ public sealed class GreetCommand : ICommandDefinition
         return ValueTask.CompletedTask;
     }
 }
-```
-
----
-
-#### ICommandGroup
-
-**ファイル**: `ICommandGroup.cs`
-**役割**: グループコマンド（サブコマンドのみ）のマーカー
-
-```csharp
-public interface ICommandGroup
-{
-}
-```
-
-**責務**:
-- サブコマンドのみを持つコマンドの識別
-- 実装不要（マーカーインターフェース）
-
-**動作**:
-- サブコマンドなしで実行された場合、自動的にヘルプを表示
-- System.CommandLine のデフォルト動作を利用
-
-**使用例**:
-```csharp
-[CliCommand("user", Description = "User management")]
-public sealed class UserCommand : ICommandGroup
-{
-    // 実装不要 - サブコマンドのみのグループ
-}
-
-// 登録
-builder.ConfigureCommands(commands =>
-{
-    commands.AddCommand<UserCommand>(user =>
-    {
-        user.AddSubCommand<UserAddCommand>();
-        user.AddSubCommand<UserListCommand>();
-    });
-});
-
-// 実行
-// $ app user          → ヘルプ表示
-// $ app user add ...  → UserAddCommand実行
 ```
 
 ---
@@ -1230,7 +1348,6 @@ builder.ConfigureCommands(commands =>
 | ICliHost.cs | 5 | シンプルなインターフェース |
 | CliHostBuilderExtensions.cs | 130 | 9つの拡張メソッド |
 | ICommandDefinition.cs | 5 | シンプルなインターフェース |
-| ICommandGroup.cs | 5 | マーカーインターフェース |
 | CommandContext.cs | 35 | データクラス + コンストラクタ |
 | CliCommandAttribute.cs | 10 | シンプルな属性 |
 | CliArgumentAttribute.cs | 50 | 2つのバージョン（ジェネリック/非ジェネリック） |
@@ -1239,7 +1356,6 @@ builder.ConfigureCommands(commands =>
 | CommandFilterOptions.cs | 30 | オプションクラス + 記述子 |
 | FilterPipeline.cs | 200 | フィルタ実行ロジック |
 | CommandConfigurators.cs | 250 | 複数の設定クラス |
-| ServiceCollectionExtensions.cs | 10 | 空（コメントのみ） |
 | **合計** | **~1,275行** | |
 
 ### パフォーマンス特性

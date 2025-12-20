@@ -4,9 +4,9 @@ using WorkCliHost.Core;
 namespace WorkCliHost.Samples;
 
 [CliCommand("user", Description = "User management commands")]
-public sealed class UserCommand : ICommandGroup
+public sealed class UserCommand
 {
-    // 実装不要 - サブコマンドのみのグループコマンド
+    // 空のクラス - ICommandDefinition非実装なのでグループコマンド
 }
 
 [CliCommand("list", Description = "List all users")]
@@ -59,9 +59,9 @@ public sealed class UserAddCommand : ICommandDefinition
 }
 
 [CliCommand("role", Description = "User role management")]
-public sealed class UserRoleCommand : ICommandGroup
+public sealed class UserRoleCommand
 {
-    // 実装不要 - サブコマンドのみのグループコマンド
+    // 空のクラス - ICommandDefinition非実装なのでグループコマンド
 }
 
 /// <summary>

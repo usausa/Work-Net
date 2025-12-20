@@ -8,8 +8,9 @@ namespace WorkCliHost.Samples;
 // ============================================================================
 
 [CliCommand("config", Description = "Configuration management")]
-public sealed class ConfigCommand : ICommandGroup
+public sealed class ConfigCommand
 {
+    // 空のクラス - ICommandDefinition非実装なのでグループコマンド
 }
 
 /// <summary>

@@ -1,306 +1,148 @@
 # ドキュメントインデックス
 
-WorkCliHost プロジェクトのドキュメント一覧です。
+WorkCliHost.Core のドキュメント一覧です。
 
-## 📚 ドキュメント一覧
+## 📚 必須ドキュメント
 
-### 🎯 はじめに
-
-| ドキュメント | 説明 | 対象読者 |
-|-------------|------|----------|
-| [README.md](../README.md) | プロジェクト概要、クイックスタート、基本的な使い方 | 全員 |
-
-### 📖 技術解説
-
-| ドキュメント | 説明 | 対象読者 |
-|-------------|------|----------|
-| [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) | Core ライブラリの技術解説、クラス一覧、実装詳細 | 開発者、コントリビューター |
-
-### 🏗️ 設計ドキュメント
-
-| ドキュメント | 説明 | 対象読者 |
-|-------------|------|----------|
-| [NEW_API_DESIGN.md](NEW_API_DESIGN.md) | 新しいAPI設計、責任分離、型安全性に関する設計思想 | アーキテクト、上級開発者 |
-| [PROPERTY_BASED_API.md](PROPERTY_BASED_API.md) | プロパティベースAPI（Configuration、Services、Logging）の詳細 | 中級〜上級開発者 |
-
-### 📂 構造・整理
-
-| ドキュメント | 説明 | 対象読者 |
-|-------------|------|----------|
-| [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md) | フォルダ構造の説明、Core/Samples/Docsの役割分担 | 全員 |
-| [FOLDER_REORGANIZATION_SUMMARY.md](FOLDER_REORGANIZATION_SUMMARY.md) | フォルダ整理の経緯、変更内容のサマリー | コントリビューター |
-| [NAMESPACE_REORGANIZATION.md](NAMESPACE_REORGANIZATION.md) | 名前空間の変更内容、WorkCliHost.Core/Samplesへの移行 | 開発者 |
-| [FILTERS_FOLDER_CLEANUP.md](FILTERS_FOLDER_CLEANUP.md) | Filtersフォルダ削除の理由と経緯 | コントリビューター |
-
-### 🔍 レビュー・問題解決
-
-| ドキュメント | 説明 | 対象読者 |
-|-------------|------|----------|
-| [REVIEW_RESULTS.md](REVIEW_RESULTS.md) | コードレビューで発見された問題と解決策 | 開発者、コントリビューター |
-
----
-
-## 📑 ドキュメント詳細
-
-### README.md
+### 1. [README.md](../README.md)
+**場所**: プロジェクト直下  
 **内容**: 
 - プロジェクト概要
-- 特徴一覧
-- クイックスタート（最小構成版/フル機能版）
-- コマンド・フィルターの定義方法
-- サンプルコード
-- パッケージ要件
+- クイックスタート
+- 主要機能の紹介
+- ドキュメントへのリンク
 
-**いつ読むべきか**: 
-- プロジェクトを初めて使う時
-- 基本的な使い方を知りたい時
+**対象読者**: 全員（初めての方はここから）
 
 ---
 
-### TECHNICAL_GUIDE.md
+### 2. [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md)
 **内容**:
-- Core ライブラリの全クラス・インターフェース一覧表
-- 各クラスのステップ数、メソッド数
-- アーキテクチャ図
-- 各クラスの責務と実装詳細
+- クラス・インターフェース一覧（詳細な表）
+- アーキテクチャ全体像
+- 各コンポーネントの技術的詳細
+- 内部実装の解説
 - パフォーマンス特性
-- メモリ使用量
+- 設計上の重要な決定事項
 
-**いつ読むべきか**:
-- フレームワークの内部実装を理解したい時
-- コントリビューションを検討している時
-- 高度なカスタマイズが必要な時
+**対象読者**: 開発者、コントリビューター、フレームワークの内部を理解したい方
 
 **主要セクション**:
-1. クラス・インターフェース一覧
-2. アーキテクチャ（全体構成、データフロー）
-3. 詳細解説
-   - ホストビルダー（CliHost、CliHostBuilder、拡張メソッド）
-   - コマンド定義（ICommandDefinition、CommandContext）
-   - フィルター機構（各種フィルター、FilterPipeline）
-   - 属性システム（CliCommand、CliArgument、CommandFilter）
-   - 内部実装（Configurators、ServiceCollectionExtensions）
-4. 付録（ステップ数、パフォーマンス、メモリ）
+- サマリー表（ファイル名、型名、種類、メンバー数、ステップ数）
+- ホストビルダーの実装詳細
+- コマンド定義の仕組み
+- フィルター機構の実装
+- 属性システムの詳細
+- 内部クラスの役割
 
 ---
 
-### NEW_API_DESIGN.md
+### 3. [API_DESIGN.md](API_DESIGN.md)
 **内容**:
-- API設計の方針
-- 責任分離の考え方（Services vs Commands）
-- プロパティベースAPIの採用理由
-- 型安全性の実現方法
-- ASP.NET Coreとの比較
+- API設計思想と使い方
+- ホストビルダーAPI
+- コマンド定義API
+- フィルター機構の使い方
+- 引数定義（Position自動決定含む）
+- 実用的な使用例
 
-**いつ読むべきか**:
-- なぜこの設計になっているのか理解したい時
-- API設計の背景を知りたい時
-- 他のフレームワークと比較したい時
-
-**重要なポイント**:
-- ConfigureServices() → Services プロパティ
-- ConfigureLogging() → Logging プロパティ
-- ConfigureCommands() による明確な分離
-
----
-
-### PROPERTY_BASED_API.md
-**内容**:
-- `builder.Configuration` の使い方
-- `builder.Environment` の情報取得
-- `builder.Services` での DI 登録
-- `builder.Logging` でのログ設定
-- 各プロパティの詳細仕様
-
-**いつ読むべきか**:
-- Configuration、Services、Loggingの詳細を知りたい時
-- ASP.NET Coreからの移行を考えている時
-- 高度な設定が必要な時
-
-**コード例が豊富**:
-- JSON設定ファイル読み込み
-- 環境変数設定
-- ユーザーシークレット
-- ログレベル設定
-- DI登録パターン
-
----
-
-### FOLDER_STRUCTURE.md
-**内容**:
-- フォルダ構造の全体像
-- Core フォルダ（フレームワーク本体）の内容
-- Samples フォルダ（サンプル実装）の内容
-- Docs フォルダ（ドキュメント）の内容
-- 各フォルダの役割と責務
-- 分離の利点
-
-**いつ読むべきか**:
-- プロジェクトの構成を理解したい時
-- どこに何があるか確認したい時
-- コントリビューションでファイル配置を判断する時
+**対象読者**: フレームワーク利用者、API設計に興味がある方
 
 **主要セクション**:
-- フォルダツリー図
-- Core の詳細（ホストビルダー、コマンド定義、フィルター機構）
-- Samples の詳細（コマンド例、フィルター例）
-- 使用方法（ライブラリとして、サンプル参照）
-- 今後の拡張（NuGetパッケージ化）
+- 基本設計思想（責任分離、型安全性、プロパティベースAPI）
+- ファクトリメソッド（CreateBuilder vs CreateDefaultBuilder）
+- コマンド定義（グループ vs 実行可能）
+- フィルター機構（4種類のフィルター + CommandContext）
+- Position自動決定機能
+- 実用例（シンプル、エンタープライズ、カスタム）
 
 ---
 
-### FOLDER_REORGANIZATION_SUMMARY.md
+## 📂 補助ドキュメント
+
+### 4. [INDEX.md](INDEX.md)
 **内容**:
-- フォルダ整理の実施内容
-- 新しいフォルダ構造
-- 移動されたファイル一覧（Core、Samples、Docs）
-- 変更されたファイル（csprojなど）
-- 分離の利点
-- 動作確認結果
+- ドキュメントインデックス
+- 学習パス
+- トピック別ガイド
 
-**いつ読むべきか**:
-- フォルダ整理の経緯を知りたい時
-- 変更履歴を確認したい時
-- プロジェクトの歴史を理解したい時
-
-**整理前後の比較**:
-- Before: すべて同じフォルダ
-- After: Core/Samples/Docs に分離
-
----
-
-### NAMESPACE_REORGANIZATION.md
-**内容**:
-- 名前空間の変更内容
-- Core → WorkCliHost.Core
-- Samples → WorkCliHost.Samples
-- 変更されたファイル一覧（26ファイル）
-- 使用方法の変更
-- 利点（分離、衝突回避、IntelliSense改善）
-
-**いつ読むべきか**:
-- 名前空間の変更を理解したい時
-- using文の書き方を確認したい時
-- NuGetパッケージ化の準備を理解したい時
-
-**重要な変更**:
-```csharp
-// Before
-using WorkCliHost;
-
-// After
-using WorkCliHost.Core;
-using WorkCliHost.Samples; // サンプル参照時
-```
-
----
-
-### FILTERS_FOLDER_CLEANUP.md
-**内容**:
-- Filtersフォルダが存在した理由
-- 削除した理由（内容の混在、重複、中途半端な分離）
-- 解決策（Core に統合、Samples に移動）
-- 新しい構造
-- 利点
-
-**いつ読むべきか**:
-- なぜFiltersフォルダがないのか疑問に思った時
-- フィルター実装の配置場所を知りたい時
-- プロジェクトの整理過程を理解したい時
-
-**問題点**:
-- インターフェース定義とサンプル実装が混在
-- Core/ICommandFilter.cs と重複
-- フォルダの目的が不明確
-
-**解決**:
-- すべてのインターフェース → Core/ICommandFilter.cs
-- サンプル実装 → Samples/AdvancedFilters.cs
-
----
-
-### REVIEW_RESULTS.md
-**内容**:
-- コードレビューで発見された問題
-- 各問題の詳細説明
-- 解決策と実装
-- Before/After コード比較
-
-**いつ読むべきか**:
-- プロジェクトの品質改善過程を知りたい時
-- 同様の問題に直面した時
-- ベストプラクティスを学びたい時
-
-**主な問題と解決**:
-- 非ジェネリック属性の削除
-- Position自動決定の実装
-- フィルタAPIの改善
-- 責任分離の明確化
+**対象読者**: 全員
 
 ---
 
 ## 🗺️ 学習パス
 
-### 初心者向け
-1. [README.md](../README.md) - 基本を学ぶ
-2. [FOLDER_STRUCTURE.md](FOLDER_STRUCTURE.md) - 構成を理解
-3. Samples フォルダのコードを見る
+### 初めての方
 
-### 中級者向け
-1. [PROPERTY_BASED_API.md](PROPERTY_BASED_API.md) - 詳細なAPI仕様
-2. [NEW_API_DESIGN.md](NEW_API_DESIGN.md) - 設計思想
-3. [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - 実装詳細（概要部分）
+1. **[README.md](../README.md)** - プロジェクト概要とクイックスタート
+2. **[API_DESIGN.md](API_DESIGN.md)** - 基本的な使い方を学ぶ
+3. **[Samples/](../Samples/)** - サンプルコードを参照
 
-### 上級者・コントリビューター向け
-1. [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - 完全な技術解説
-2. [REVIEW_RESULTS.md](REVIEW_RESULTS.md) - 品質改善の過程
-3. [NAMESPACE_REORGANIZATION.md](NAMESPACE_REORGANIZATION.md) - 整理の経緯
-4. Core フォルダのソースコードを読む
+### 開発者・コントリビューター
 
----
+1. **[README.md](../README.md)** - 全体像を把握
+2. **[API_DESIGN.md](API_DESIGN.md)** - API設計思想を理解
+3. **[TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md)** - 内部実装を深く理解
 
-## 🔗 関連リンク
+### アーキテクト
 
-### 外部ドキュメント
-- [System.CommandLine](https://github.com/dotnet/command-line-api) - 基盤ライブラリ
-- [Microsoft.Extensions.DependencyInjection](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection) - DI解説
-- [Microsoft.Extensions.Configuration](https://docs.microsoft.com/en-us/dotnet/core/extensions/configuration) - Configuration解説
-- [Microsoft.Extensions.Logging](https://docs.microsoft.com/en-us/dotnet/core/extensions/logging) - Logging解説
-
-### プロジェクト内リンク
-- [Core フォルダ](../Core/) - フレームワーク本体
-- [Samples フォルダ](../Samples/) - サンプル実装
-- [WorkCliHost.csproj](../WorkCliHost.csproj) - プロジェクトファイル
+1. **[API_DESIGN.md](API_DESIGN.md)** - 設計思想
+2. **[TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md)** - アーキテクチャと実装詳細
 
 ---
 
-## 📝 ドキュメント更新履歴
+## 📝 ドキュメントの役割分担
 
-| 日付 | ドキュメント | 変更内容 |
-|------|-------------|---------|
-| 2024/12 | TECHNICAL_GUIDE.md | 新規作成 - Core ライブラリの技術解説 |
-| 2024/12 | NAMESPACE_REORGANIZATION.md | 新規作成 - 名前空間変更のサマリー |
-| 2024/12 | FILTERS_FOLDER_CLEANUP.md | 新規作成 - Filtersフォルダ削除の説明 |
-| 2024/12 | FOLDER_REORGANIZATION_SUMMARY.md | 新規作成 - フォルダ整理のサマリー |
-| 2024/12 | FOLDER_STRUCTURE.md | 新規作成 - フォルダ構造の詳細説明 |
-| 2024/12 | PROPERTY_BASED_API.md | 既存 - プロパティベースAPI解説 |
-| 2024/12 | NEW_API_DESIGN.md | 既存 - 新API設計の解説 |
-| 2024/12 | REVIEW_RESULTS.md | 既存 - レビュー結果の記録 |
+| ドキュメント | 目的 | 詳細度 |
+|-------------|------|--------|
+| **README.md** | 導入・概要・プロジェクト構造 | ⭐ |
+| **API_DESIGN.md** | 使い方・設計思想 | ⭐⭐⭐ |
+| **TECHNICAL_GUIDE.md** | 技術詳細・内部実装・フォルダ構造・名前空間 | ⭐⭐⭐⭐⭐ |
+| **INDEX.md** | ドキュメントナビゲーション | ⭐ |
 
 ---
 
-## 🤝 コントリビューション
+## 🔍 トピック別ガイド
 
-ドキュメントの改善提案やバグ報告は、GitHubのIssueでお願いします。
+### ホストビルダーについて知りたい
 
-### ドキュメントの追加ガイドライン
-1. **対象読者を明確に**: 初心者/中級者/上級者
-2. **コード例を含める**: 実用的な例を提供
-3. **構造化する**: 見出し、リスト、表を活用
-4. **このインデックスを更新**: 新しいドキュメントを追加したら、このファイルも更新
+- **API**: [API_DESIGN.md](API_DESIGN.md) - ホストビルダーAPI
+- **実装**: [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - ホストビルダーの実装詳細
+
+### コマンド定義について知りたい
+
+- **API**: [API_DESIGN.md](API_DESIGN.md) - コマンド定義API
+- **実装**: [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - コマンド定義の仕組み
+- **サンプル**: [Samples/UserCommands.cs](../Samples/UserCommands.cs) - 階層的なコマンド例
+
+### フィルター機構について知りたい
+
+- **API**: [API_DESIGN.md](API_DESIGN.md) - フィルター機構（使い方）
+- **実装**: [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - フィルター機構の実装
+- **サンプル**: 
+  - [Samples/CommonFilters.cs](../Samples/CommonFilters.cs) - 基本的なフィルター
+  - [Samples/AdvancedFilters.cs](../Samples/AdvancedFilters.cs) - 高度なフィルター
+
+### Position自動決定について知りたい
+
+- **API**: [API_DESIGN.md](API_DESIGN.md) - 引数定義（Position自動決定）
+- **実装**: [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - CollectPropertiesWithArguments
+- **サンプル**: [Samples/ConfigCommands.cs](../Samples/ConfigCommands.cs) - Position省略例
+
+### プロジェクト構造について知りたい
+
+- **概要**: [README.md](../README.md) - プロジェクト構造の概要
+- **詳細**: [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) - プロジェクト構造（フォルダ構成、名前空間、分離の利点）
 
 ---
 
-## 📧 お問い合わせ
+## 🎯 まとめ
 
-質問や提案がある場合は、GitHubのDiscussionsまたはIssueでお知らせください。
+WorkCliHost.Coreのドキュメント構成：
+
+1. **README.md** - 導入、クイックスタート、プロジェクト構造概要
+2. **API_DESIGN.md** - API設計と使い方（全APIの使用方法を網羅）
+3. **TECHNICAL_GUIDE.md** - 技術詳細、内部実装、フォルダ構造詳細、名前空間
+4. **INDEX.md** - このファイル（ドキュメントナビゲーション）
+
+必要な情報は上記4つのドキュメントに集約されています。

@@ -160,11 +160,12 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
         var command = new Command(attribute.Name, attribute.Description);
 
-        // ICommandDefinitionを実装しているかチェック
+        // ICommandDefinitionを実装していない場合はグループコマンド
         var isExecutableCommand = typeof(ICommandDefinition).IsAssignableFrom(commandType);
         
         if (isExecutableCommand)
         {
+            // 実行可能コマンドの処理
             // プロパティと属性を収集（継承階層を考慮）
             var propertyInfos = CollectPropertiesWithArguments(commandType);
 

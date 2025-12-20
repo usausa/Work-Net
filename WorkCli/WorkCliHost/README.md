@@ -2,17 +2,6 @@
 
 System.CommandLineを使用した、属性ベースのCLIホストフレームワークです。
 
-## フォルダ構造
-
-```
-WorkCliHost/
-├── Core/        # ライブラリコア（フレームワーク本体）- namespace: WorkCliHost.Core
-├── Samples/     # サンプル実装 - namespace: WorkCliHost.Samples
-└── Docs/        # ドキュメント
-```
-
-詳細は [Docs/FOLDER_STRUCTURE.md](Docs/FOLDER_STRUCTURE.md) を参照してください。
-
 ## 特徴
 
 - ✅ **属性ベースの宣言的なコマンド定義**
@@ -31,7 +20,40 @@ WorkCliHost/
 - ✅ **整理されたフォルダ構造（Core/Samples/Docs）**
 - ✅ **フォルダ構造に合わせた名前空間（WorkCliHost.Core/Samples）**
 
-## クイックスタート
+## ⚡ クイックスタート
+
+### インストール
+
+```bash
+# プロジェクトをクローン
+git clone https://github.com/yourusername/WorkCliHost
+cd WorkCliHost
+```
+
+### プロジェクト構造
+
+```
+WorkCliHost/
+├── Core/           # フレームワーク本体 (15ファイル)
+│   ├── CliHost.cs
+│   ├── CliHostBuilder.cs
+│   ├── ICommandDefinition.cs
+│   ├── ICommandFilter.cs
+│   └── ...
+├── Samples/        # サンプル実装 (10ファイル)
+│   ├── Program.cs
+│   ├── MessageCommand.cs
+│   ├── UserCommands.cs
+│   └── ...
+└── Docs/           # ドキュメント (3ファイル)
+    ├── API_DESIGN.md
+    ├── TECHNICAL_GUIDE.md
+    └── INDEX.md
+```
+
+**名前空間**:
+- `WorkCliHost.Core` - フレームワーク本体
+- `WorkCliHost.Samples` - サンプル実装
 
 ### 最小構成版
 
@@ -109,8 +131,14 @@ public sealed class TimingFilter : ICommandExecutionFilter
 
 ## 名前空間
 
-### WorkCliHost.Core
+フレームワークは以下の名前空間で構成されています：
 
+- **`WorkCliHost.Core`** - フレームワークの中核機能
+- **`WorkCliHost.Samples`** - サンプル実装
+
+### WorkCliHost.Core（フレームワーク本体）
+
+ライブラリとして使用する際にインポートする名前空間：
 フレームワークの中核機能を提供する名前空間：
 
 - `CliHost` - ファクトリメソッド
@@ -121,20 +149,18 @@ public sealed class TimingFilter : ICommandExecutionFilter
 - `CliArgumentAttribute<T>` - 引数属性
 - その他、フレームワーク機能
 
-### WorkCliHost.Samples
+### WorkCliHost.Samples（サンプル実装）
 
-サンプル実装を含む名前空間：
+サンプル実装を含む名前空間。学習や参照用：
 
 - `MessageCommand` - シンプルなコマンド例
 - `UserCommand` - 階層的なコマンド例
 - `TimingFilter` - フィルター実装例
 - その他、サンプルコマンドとフィルター
 
-## サンプル
+## 実行例
 
-`Samples/` フォルダに各種サンプルが含まれています。詳細は [Samples/](Samples/) を参照してください。
-
-実行例：
+`Samples/` フォルダに各種サンプルが含まれています：
 
 ```bash
 dotnet run -- message "Hello, World!"
@@ -142,9 +168,11 @@ dotnet run -- user role assign alice admin
 dotnet run -- test-filter "Testing filters"
 ```
 
-## ファクトリメソッド
+## API概要
 
-### CreateBuilder（最小構成版）
+### ファクトリメソッド
+
+#### CreateBuilder（最小構成版）⭐推奨⭐
 
 ```csharp
 using WorkCliHost.Core;
@@ -156,7 +184,7 @@ var builder = CliHost.CreateBuilder(args);
 - 高速起動（50-100ms高速化）
 - 必要な機能だけを追加可能
 
-### CreateDefaultBuilder（フル機能版）
+#### CreateDefaultBuilder（フル機能版）
 
 ```csharp
 using WorkCliHost.Core;
@@ -188,7 +216,7 @@ builder
 
 ## フィルター機構
 
-### 利用可能なフィルターインターフェース（WorkCliHost.Core）
+#### 利用可能なフィルター（WorkCliHost.Core）
 
 - `ICommandExecutionFilter` - コマンド実行の前後で処理
 - `IBeforeCommandFilter` - コマンド実行前に処理
@@ -196,6 +224,8 @@ builder
 - `IExceptionFilter` - 例外発生時に処理
 
 ### サンプル実装（WorkCliHost.Samples）
+
+実装例として以下のフィルターを提供：
 
 - `TimingFilter` - 実行時間の計測
 - `LoggingFilter` - ログ出力
@@ -205,50 +235,10 @@ builder
 - `TransactionFilter` - トランザクション管理
 - `CleanupFilter` - クリーンアップ処理
 
-## ドキュメント
+詳細は [API設計ガイド](Docs/API_DESIGN.md) を参照してください。
 
-### 📚 ドキュメントインデックス
+## 📖 ドキュメント
 
-すべてのドキュメントの一覧は [Docs/INDEX.md](Docs/INDEX.md) を参照してください。
-
-### 主要ドキュメント
-
-#### 技術解説
-- [技術解説](Docs/TECHNICAL_GUIDE.md) - Core ライブラリの詳細、クラス一覧、実装解説
-
-#### 設計ドキュメント
-- [新しいAPI設計](Docs/NEW_API_DESIGN.md) - 責任分離と型安全性に関する設計
-- [プロパティベースAPI](Docs/PROPERTY_BASED_API.md) - Configuration、Environment、Services、Logging
-
-#### 構造・整理
-- [フォルダ構造](Docs/FOLDER_STRUCTURE.md) - プロジェクトの構成
-- [名前空間の整理](Docs/NAMESPACE_REORGANIZATION.md) - 名前空間の変更内容
-
-#### レビュー・問題解決
-- [レビュー結果](Docs/REVIEW_RESULTS.md) - レビューで発見された問題と解決策
-
-#### その他
-- [フォルダ整理サマリー](Docs/FOLDER_REORGANIZATION_SUMMARY.md) - 整理の経緯
-- [Filtersフォルダの削除](Docs/FILTERS_FOLDER_CLEANUP.md) - Filtersフォルダの削除理由
-
-## パッケージ要件
-
-```xml
-<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
-<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
-<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
-<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-<PackageReference Include="System.CommandLine" Version="2.0.1" />
-```
-
-完全なパッケージリストは [WorkCliHost.csproj](WorkCliHost.csproj) を参照してください。
-
-## ライセンス
-
-MIT License
-
-## 今後の予定
-
-- NuGetパッケージとしての公開を検討
-- Core フォルダの別プロジェクト化
-- より多くのサンプルとフィルター実装
+- **[API設計ガイド](Docs/API_DESIGN.md)** - API設計思想と使い方の完全ガイド
+- **[技術解説](Docs/TECHNICAL_GUIDE.md)** - フレームワークの技術詳細・内部実装・プロジェクト構造
+- **[ドキュメントインデックス](Docs/INDEX.md)** - 全ドキュメントへのリンクと学習パス
