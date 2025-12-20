@@ -5,7 +5,7 @@ using PdfSharp.Pdf;
 namespace WorkExcelToPdf;
 
 /// <summary>
-/// ƒZƒ‹‚ÌŒrüî•ñ‚ğ•Û‚·‚éƒNƒ‰ƒXiPDF—pŠg’£”Åj
+/// ã‚»ãƒ«ã®ç½«ç·šæƒ…å ±ã‚’ä¿æŒã™ã‚‹ã‚¯ãƒ©ã‚¹ï¼ˆPDFç”¨æ‹¡å¼µç‰ˆï¼‰
 /// </summary>
 public class CellBorderInfoEx
 {
@@ -19,19 +19,25 @@ public class CellBorderInfoEx
     public BorderSideInfo DiagonalUp { get; set; } = new();
     public BorderSideInfo DiagonalDown { get; set; } = new();
 
-    // ƒZƒ‹‚ÌˆÊ’u‚ÆƒTƒCƒYî•ñ
+    // ã‚»ãƒ«ã®ä½ç½®ã¨ã‚µã‚¤ã‚ºæƒ…å ±
     public double X { get; set; }
     public double Y { get; set; }
     public double Width { get; set; }
     public double Height { get; set; }
 
-    // ƒZƒ‹‚Ì“à—e
+    // ã‚»ãƒ«ã®å†…å®¹
     public string Value { get; set; } = string.Empty;
     public CellStyleInfo Style { get; set; } = new();
+    
+    // ã‚»ãƒ«çµåˆæƒ…å ±
+    public bool IsMerged { get; set; }
+    public int MergeWidth { get; set; } = 1;  // çµåˆã•ã‚ŒãŸåˆ—æ•°
+    public int MergeHeight { get; set; } = 1; // çµåˆã•ã‚ŒãŸè¡Œæ•°
+    public string MergeRangeAddress { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// ƒZƒ‹‚ÌƒXƒ^ƒCƒ‹î•ñ
+/// ã‚»ãƒ«ã®ã‚¹ã‚¿ã‚¤ãƒ«æƒ…å ±ï¼ˆæ‹¡å¼µç‰ˆï¼‰
 /// </summary>
 public class CellStyleInfo
 {
@@ -39,14 +45,20 @@ public class CellStyleInfo
     public double FontSize { get; set; } = 11;
     public bool IsBold { get; set; }
     public bool IsItalic { get; set; }
+    public bool IsUnderline { get; set; }
+    public bool IsStrikethrough { get; set; }
     public string FontColor { get; set; } = "#000000";
     public string BackgroundColor { get; set; } = string.Empty;
     public string HorizontalAlignment { get; set; } = "Left";
     public string VerticalAlignment { get; set; } = "Top";
+    public int TextRotation { get; set; } = 0; // 0, 90, 180, 270åº¦
+    public int Indent { get; set; } = 0;
+    public bool WrapText { get; set; } = false;
+    public bool ShrinkToFit { get; set; } = false;
 }
 
 /// <summary>
-/// ƒV[ƒg‘S‘Ì‚Ìî•ñiPDF—pŠg’£”Åj
+/// ã‚·ãƒ¼ãƒˆå…¨ä½“ã®æƒ…å ±ï¼ˆPDFç”¨æ‹¡å¼µç‰ˆï¼‰
 /// </summary>
 public class SheetInfoEx
 {
@@ -57,15 +69,39 @@ public class SheetInfoEx
 }
 
 /// <summary>
-/// ExcelŒrüƒŠ[ƒ_[iPDF—pŠg’£”Åj
+/// PDFç”Ÿæˆã‚ªãƒ—ã‚·ãƒ§ãƒ³
+/// </summary>
+public class PdfGenerationOptions
+{
+    public PdfSharp.PageSize PageSize { get; set; } = PdfSharp.PageSize.A4;
+    public PdfSharp.PageOrientation Orientation { get; set; } = PdfSharp.PageOrientation.Portrait;
+    public double MarginLeft { get; set; } = 30;
+    public double MarginTop { get; set; } = 30;
+    public double MarginRight { get; set; } = 30;
+    public double MarginBottom { get; set; } = 30;
+    public double Scale { get; set; } = 1.0;
+    public bool EnableAutoPageBreak { get; set; } = false;
+    public bool ShowPageNumber { get; set; } = false;
+    public string PageNumberFormat { get; set; } = "Page {0}";
+    public string HeaderText { get; set; } = string.Empty;
+    public string FooterText { get; set; } = string.Empty;
+    public bool ShowGridLines { get; set; } = false;
+    public bool IgnoreMergedCells { get; set; } = false;
+    public bool IgnoreBackgroundColor { get; set; } = false;
+    public int ImageQuality { get; set; } = 90;
+    public bool DebugMode { get; set; } = false;
+}
+
+/// <summary>
+/// Excelç½«ç·šãƒªãƒ¼ãƒ€ãƒ¼ï¼ˆPDFç”¨æ‹¡å¼µç‰ˆï¼‰
 /// </summary>
 public class ExcelBorderReaderEx
 {
-    private const double DefaultColumnWidth = 64.0; // ƒsƒNƒZƒ‹
-    private const double DefaultRowHeight = 20.0;   // ƒsƒNƒZƒ‹
+    private const double DefaultColumnWidth = 64.0; // ãƒ”ã‚¯ã‚»ãƒ«
+    private const double DefaultRowHeight = 20.0;   // ãƒ”ã‚¯ã‚»ãƒ«
 
     /// <summary>
-    /// Excelƒtƒ@ƒCƒ‹‚©‚çƒV[ƒgî•ñ‚ğæ“¾
+    /// Excelãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ã‚·ãƒ¼ãƒˆæƒ…å ±ã‚’å–å¾—
     /// </summary>
     public SheetInfoEx ReadSheet(string filePath, string? sheetName = null)
     {
@@ -82,22 +118,22 @@ public class ExcelBorderReaderEx
             var usedRange = worksheet.RangeUsed();
             if (usedRange == null)
             {
-                Console.WriteLine("g—p‚³‚ê‚Ä‚¢‚éƒZƒ‹‚ª‚ ‚è‚Ü‚¹‚ñB");
+                Console.WriteLine("ä½¿ç”¨ã•ã‚Œã¦ã„ã‚‹ã‚»ãƒ«ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
                 return sheetInfo;
             }
 
-            Console.WriteLine($"\n=== Excel“Ç‚İ‚İÚ× ===");
-            Console.WriteLine($"ƒV[ƒg–¼: {worksheet.Name}");
-            Console.WriteLine($"g—p”ÍˆÍiRangeUsedj: {usedRange.RangeAddress}");
+            Console.WriteLine($"\n=== Excelèª­ã¿è¾¼ã¿è©³ç´° ===");
+            Console.WriteLine($"ã‚·ãƒ¼ãƒˆå: {worksheet.Name}");
+            Console.WriteLine($"ä½¿ç”¨ç¯„å›²ï¼ˆRangeUsedï¼‰: {usedRange.RangeAddress}");
             
-            // ÀÛ‚ÉŒrü‚ª‚ ‚éƒZƒ‹‚ğ’T‚·‚½‚ßA‚æ‚èL‚¢”ÍˆÍ‚ğƒXƒLƒƒƒ“
+            // å®Ÿéš›ã«ç½«ç·šãŒã‚ã‚‹ã‚»ãƒ«ã‚’æ¢ã™ãŸã‚ã€ã‚ˆã‚Šåºƒã„ç¯„å›²ã‚’ã‚¹ã‚­ãƒ£ãƒ³
             int firstRow = usedRange.FirstRow().RowNumber();
             int firstCol = usedRange.FirstColumn().ColumnNumber();
             int lastRow = usedRange.LastRow().RowNumber();
             int lastCol = usedRange.LastColumn().ColumnNumber();
             
-            // Œrü‚Ì‚İ‚ªİ’è‚³‚ê‚Ä‚¢‚éƒZƒ‹‚ğŒ©‚Â‚¯‚é‚½‚ßA‚³‚ç‚É‰º•ûŒü‚ÉƒXƒLƒƒƒ“
-            int scanRows = Math.Max(lastRow + 10, 20); // Å’á20s‚Ü‚ÅƒXƒLƒƒƒ“
+            // ç½«ç·šã®ã¿ãŒè¨­å®šã•ã‚Œã¦ã„ã‚‹ã‚»ãƒ«ã‚’è¦‹ã¤ã‘ã‚‹ãŸã‚ã€ã•ã‚‰ã«ä¸‹æ–¹å‘ã«ã‚¹ã‚­ãƒ£ãƒ³
+            int scanRows = Math.Max(lastRow + 10, 20); // æœ€ä½20è¡Œã¾ã§ã‚¹ã‚­ãƒ£ãƒ³
             for (int row = lastRow + 1; row <= scanRows; row++)
             {
                 for (int col = firstCol; col <= lastCol; col++)
@@ -105,7 +141,7 @@ public class ExcelBorderReaderEx
                     var cell = worksheet.Cell(row, col);
                     var style = cell.Style;
                     
-                    // Œrü‚ª‚ ‚é‚©ƒ`ƒFƒbƒN
+                    // ç½«ç·šãŒã‚ã‚‹ã‹ãƒã‚§ãƒƒã‚¯
                     if (style.Border.TopBorder != XLBorderStyleValues.None ||
                         style.Border.BottomBorder != XLBorderStyleValues.None ||
                         style.Border.LeftBorder != XLBorderStyleValues.None ||
@@ -117,28 +153,28 @@ public class ExcelBorderReaderEx
                 }
             }
             
-            Console.WriteLine($"Šg’£Œã‚Ì”ÍˆÍ: s{firstRow}`{lastRow}, —ñ{firstCol}`{lastCol}");
+            Console.WriteLine($"æ‹¡å¼µå¾Œã®ç¯„å›²: è¡Œ{firstRow}ï½{lastRow}, åˆ—{firstCol}ï½{lastCol}");
 
-            // —ñ•‚ğæ“¾
+            // åˆ—å¹…ã‚’å–å¾—
             for (int col = firstCol; col <= lastCol; col++)
             {
                 var column = worksheet.Column(col);
-                sheetInfo.ColumnWidths[col] = column.Width * 7; // Excel‚Ì•’PˆÊ‚ğƒsƒNƒZƒ‹‚É•ÏŠ·
+                sheetInfo.ColumnWidths[col] = column.Width * 7; // Excelã®å¹…å˜ä½ã‚’ãƒ”ã‚¯ã‚»ãƒ«ã«å¤‰æ›
             }
 
-            // s‚‚ğæ“¾
+            // è¡Œé«˜ã‚’å–å¾—
             for (int row = firstRow; row <= lastRow; row++)
             {
                 var rowObj = worksheet.Row(row);
-                sheetInfo.RowHeights[row] = rowObj.Height * 1.33; // Excel‚Ìƒ|ƒCƒ“ƒg‚ğƒsƒNƒZƒ‹‚É•ÏŠ·
+                sheetInfo.RowHeights[row] = rowObj.Height * 1.33; // Excelã®ãƒã‚¤ãƒ³ãƒˆã‚’ãƒ”ã‚¯ã‚»ãƒ«ã«å¤‰æ›
             }
 
-            // ƒZƒ‹î•ñ‚ğæ“¾iŠg’£”ÍˆÍ“à‚Ì‚·‚×‚Ä‚ÌƒZƒ‹‚ğŠm”Fj
+            // ã‚»ãƒ«æƒ…å ±ã‚’å–å¾—ï¼ˆæ‹¡å¼µç¯„å›²å†…ã®ã™ã¹ã¦ã®ã‚»ãƒ«ã‚’ç¢ºèªï¼‰
             int cellCount = 0;
             int cellsWithValue = 0;
             int cellsWithBorder = 0;
 
-            Console.WriteLine($"\n=== ƒZƒ‹î•ñ“Ç‚İæ‚è ===");
+            Console.WriteLine($"\n=== ã‚»ãƒ«æƒ…å ±èª­ã¿å–ã‚Š ===");
             for (int row = firstRow; row <= lastRow; row++)
             {
                 for (int col = firstCol; col <= lastCol; col++)
@@ -153,20 +189,20 @@ public class ExcelBorderReaderEx
 
                     if (hasValue || hasBorder)
                     {
-                        Console.Write($"ƒZƒ‹ {cellInfo.CellAddress}: ");
+                        Console.Write($"ã‚»ãƒ« {cellInfo.CellAddress}: ");
                         if (hasValue)
                         {
-                            Console.Write($"’l='{cellInfo.Value}' ");
+                            Console.Write($"å€¤='{cellInfo.Value}' ");
                             cellsWithValue++;
                         }
                         if (hasBorder)
                         {
-                            Console.Write($"Œrü=[");
+                            Console.Write($"ç½«ç·š=[");
                             var borders = new List<string>();
-                            if (cellInfo.Top.HasBorder) borders.Add($"ã:{cellInfo.Top.LineStyle}");
-                            if (cellInfo.Bottom.HasBorder) borders.Add($"‰º:{cellInfo.Bottom.LineStyle}");
-                            if (cellInfo.Left.HasBorder) borders.Add($"¶:{cellInfo.Left.LineStyle}");
-                            if (cellInfo.Right.HasBorder) borders.Add($"‰E:{cellInfo.Right.LineStyle}");
+                            if (cellInfo.Top.HasBorder) borders.Add($"ä¸Š:{cellInfo.Top.LineStyle}");
+                            if (cellInfo.Bottom.HasBorder) borders.Add($"ä¸‹:{cellInfo.Bottom.LineStyle}");
+                            if (cellInfo.Left.HasBorder) borders.Add($"å·¦:{cellInfo.Left.LineStyle}");
+                            if (cellInfo.Right.HasBorder) borders.Add($"å³:{cellInfo.Right.LineStyle}");
                             Console.Write(string.Join(",", borders));
                             Console.Write("]");
                             cellsWithBorder++;
@@ -176,17 +212,17 @@ public class ExcelBorderReaderEx
                 }
             }
 
-            Console.WriteLine($"\n=== “Ç‚İ‚İŒ‹‰ÊƒTƒ}ƒŠ[ ===");
-            Console.WriteLine($"“Ç‚İ‚ñ‚¾ƒZƒ‹‘”: {cellCount}");
-            Console.WriteLine($"’l‚ª‚ ‚éƒZƒ‹: {cellsWithValue}ŒÂ");
-            Console.WriteLine($"Œrü‚ª‚ ‚éƒZƒ‹: {cellsWithBorder}ŒÂ");
+            Console.WriteLine($"\n=== èª­ã¿è¾¼ã¿çµæœã‚µãƒãƒªãƒ¼ ===");
+            Console.WriteLine($"èª­ã¿è¾¼ã‚“ã ã‚»ãƒ«ç·æ•°: {cellCount}");
+            Console.WriteLine($"å€¤ãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithValue}å€‹");
+            Console.WriteLine($"ç½«ç·šãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithBorder}å€‹");
         }
 
         return sheetInfo;
     }
 
     /// <summary>
-    /// Œrü‚ª‚ ‚é‚©ƒ`ƒFƒbƒN
+    /// ç½«ç·šãŒã‚ã‚‹ã‹ãƒã‚§ãƒƒã‚¯
     /// </summary>
     private bool HasAnyBorder(CellBorderInfoEx cellInfo)
     {
@@ -199,7 +235,7 @@ public class ExcelBorderReaderEx
     }
 
     /// <summary>
-    /// ƒZƒ‹‚©‚çŠ®‘S‚Èî•ñ‚ğ’Šo
+    /// ã‚»ãƒ«ã‹ã‚‰å®Œå…¨ãªæƒ…å ±ã‚’æŠ½å‡º
     /// </summary>
     private CellBorderInfoEx ExtractCellInfo(IXLCell cell, SheetInfoEx sheetInfo)
     {
@@ -211,7 +247,7 @@ public class ExcelBorderReaderEx
             Value = cell.GetString()
         };
 
-        // ƒZƒ‹‚ÌˆÊ’u‚ğŒvZ
+        // ã‚»ãƒ«ã®ä½ç½®ã‚’è¨ˆç®—
         cellInfo.X = CalculateX(cellInfo.Column, sheetInfo.ColumnWidths);
         cellInfo.Y = CalculateY(cellInfo.Row, sheetInfo.RowHeights);
         cellInfo.Width = sheetInfo.ColumnWidths.GetValueOrDefault(cellInfo.Column, DefaultColumnWidth);
@@ -219,25 +255,56 @@ public class ExcelBorderReaderEx
 
         var style = cell.Style;
 
-        // Œrüî•ñ‚ğæ“¾
+        // ç½«ç·šæƒ…å ±ã‚’å–å¾—
         cellInfo.Top = GetBorderSideInfo(style.Border.TopBorder, style.Border.TopBorderColor);
         cellInfo.Bottom = GetBorderSideInfo(style.Border.BottomBorder, style.Border.BottomBorderColor);
         cellInfo.Left = GetBorderSideInfo(style.Border.LeftBorder, style.Border.LeftBorderColor);
         cellInfo.Right = GetBorderSideInfo(style.Border.RightBorder, style.Border.RightBorderColor);
         
-        // Î‚ßü‚Ìˆ—iboolŒ^‘Î‰j
+        // æ–œã‚ç·šã®å‡¦ç†ï¼ˆboolå‹å¯¾å¿œï¼‰
         cellInfo.DiagonalUp = GetDiagonalBorderInfo(style.Border.DiagonalUp, style.Border.DiagonalBorder, style.Border.DiagonalBorderColor);
         cellInfo.DiagonalDown = GetDiagonalBorderInfo(style.Border.DiagonalDown, style.Border.DiagonalBorder, style.Border.DiagonalBorderColor);
 
-        // ƒXƒ^ƒCƒ‹î•ñ‚ğæ“¾
+        // ã‚¹ã‚¿ã‚¤ãƒ«æƒ…å ±ã‚’å–å¾—
         cellInfo.Style.FontName = style.Font.FontName;
         cellInfo.Style.FontSize = style.Font.FontSize;
         cellInfo.Style.IsBold = style.Font.Bold;
         cellInfo.Style.IsItalic = style.Font.Italic;
+        cellInfo.Style.IsUnderline = style.Font.Underline != XLFontUnderlineValues.None;
+        cellInfo.Style.IsStrikethrough = style.Font.Strikethrough;
         cellInfo.Style.FontColor = GetColorHex(style.Font.FontColor);
         cellInfo.Style.BackgroundColor = GetColorHex(style.Fill.BackgroundColor);
         cellInfo.Style.HorizontalAlignment = style.Alignment.Horizontal.ToString();
         cellInfo.Style.VerticalAlignment = style.Alignment.Vertical.ToString();
+        cellInfo.Style.TextRotation = style.Alignment.TextRotation;
+        cellInfo.Style.Indent = style.Alignment.Indent;
+        cellInfo.Style.WrapText = style.Alignment.WrapText;
+        cellInfo.Style.ShrinkToFit = style.Alignment.ShrinkToFit;
+
+        // ã‚»ãƒ«çµåˆæƒ…å ±ã‚’å–å¾—
+        if (cell.IsMerged())
+        {
+            var mergedRange = cell.MergedRange();
+            cellInfo.IsMerged = true;
+            cellInfo.MergeRangeAddress = mergedRange.RangeAddress.ToString();
+            cellInfo.MergeWidth = mergedRange.ColumnCount();
+            cellInfo.MergeHeight = mergedRange.RowCount();
+            
+            // çµåˆã•ã‚ŒãŸã‚»ãƒ«ã®ã‚µã‚¤ã‚ºã‚’è¨ˆç®—
+            double mergedWidth = 0;
+            for (int col = cellInfo.Column; col < cellInfo.Column + cellInfo.MergeWidth; col++)
+            {
+                mergedWidth += sheetInfo.ColumnWidths.GetValueOrDefault(col, DefaultColumnWidth);
+            }
+            cellInfo.Width = mergedWidth;
+            
+            double mergedHeight = 0;
+            for (int row = cellInfo.Row; row < cellInfo.Row + cellInfo.MergeHeight; row++)
+            {
+                mergedHeight += sheetInfo.RowHeights.GetValueOrDefault(row, DefaultRowHeight);
+            }
+            cellInfo.Height = mergedHeight;
+        }
 
         return cellInfo;
     }
@@ -276,7 +343,7 @@ public class ExcelBorderReaderEx
     }
 
     /// <summary>
-    /// Î‚ßü‚Ìî•ñ‚ğæ“¾
+    /// æ–œã‚ç·šã®æƒ…å ±ã‚’å–å¾—
     /// </summary>
     private BorderSideInfo GetDiagonalBorderInfo(bool hasDiagonal, XLBorderStyleValues borderStyle, XLColor borderColor)
     {
@@ -297,7 +364,7 @@ public class ExcelBorderReaderEx
     }
 
     /// <summary>
-    /// Fî•ñ‚ğ16i”•¶š—ñ‚É•ÏŠ·
+    /// è‰²æƒ…å ±ã‚’16é€²æ•°æ–‡å­—åˆ—ã«å¤‰æ›
     /// </summary>
     private string GetColorHex(XLColor color)
     {
@@ -343,63 +410,423 @@ public class ExcelBorderReaderEx
 }
 
 /// <summary>
-/// PDF¶¬ƒNƒ‰ƒX
+/// PDFç”Ÿæˆã‚¯ãƒ©ã‚¹ï¼ˆæ‹¡å¼µç‰ˆï¼‰
 /// </summary>
 public class PdfGenerator
 {
-    private const double PixelToPoint = 0.75; // ƒsƒNƒZƒ‹‚©‚çƒ|ƒCƒ“ƒg‚Ö‚Ì•ÏŠ·ŒW”
+    private const double PixelToPoint = 0.75; // ãƒ”ã‚¯ã‚»ãƒ«ã‹ã‚‰ãƒã‚¤ãƒ³ãƒˆã¸ã®å¤‰æ›ä¿‚æ•°
+    private PdfGenerationOptions _options;
 
-    /// <summary>
-    /// ƒV[ƒgî•ñ‚©‚çPDF‚ğ¶¬
-    /// </summary>
-    public void GeneratePdf(SheetInfoEx sheetInfo, string outputPath)
+    public PdfGenerator()
     {
-        Console.WriteLine($"\nPDF¶¬‚ğŠJn‚µ‚Ü‚·...");
-        Console.WriteLine($"ƒV[ƒg–¼: {sheetInfo.Name}");
-        Console.WriteLine($"ƒZƒ‹”: {sheetInfo.Cells.Count}");
+        _options = new PdfGenerationOptions();
+    }
 
-        // ƒJƒXƒ^ƒ€ƒtƒHƒ“ƒgƒŠƒ]ƒ‹ƒo[‚ğİ’è
-        if (PdfSharp.Fonts.GlobalFontSettings.FontResolver == null)
-        {
-            PdfSharp.Fonts.GlobalFontSettings.FontResolver = new CustomFontResolver();
-            Console.WriteLine("ƒJƒXƒ^ƒ€ƒtƒHƒ“ƒgƒŠƒ]ƒ‹ƒo[‚ğİ’è‚µ‚Ü‚µ‚½B");
-        }
-
-        // PDFƒhƒLƒ…ƒƒ“ƒg‚ğì¬
-        PdfDocument document = new PdfDocument();
-        document.Info.Title = sheetInfo.Name;
-
-        // ƒy[ƒW‚ğ’Ç‰Á
-        PdfPage page = document.AddPage();
-        page.Size = PdfSharp.PageSize.A4;
-        page.Orientation = PdfSharp.PageOrientation.Portrait;
-
-        // ƒOƒ‰ƒtƒBƒbƒNƒXƒIƒuƒWƒFƒNƒg‚ğæ“¾
-        XGraphics gfx = XGraphics.FromPdfPage(page);
-
-        // •`‰æ
-        DrawSheet(gfx, sheetInfo);
-
-        // PDF‚ğ•Û‘¶
-        document.Save(outputPath);
-        Console.WriteLine($"? PDF‚ğ¶¬‚µ‚Ü‚µ‚½: {outputPath}");
+    public PdfGenerator(PdfGenerationOptions options)
+    {
+        _options = options ?? new PdfGenerationOptions();
     }
 
     /// <summary>
-    /// ƒV[ƒg‘S‘Ì‚ğ•`‰æ
+    /// ã‚·ãƒ¼ãƒˆæƒ…å ±ã‹ã‚‰PDFã‚’ç”Ÿæˆ
+    /// </summary>
+    public void GeneratePdf(SheetInfoEx sheetInfo, string outputPath)
+    {
+        GeneratePdf(sheetInfo, outputPath, _options);
+    }
+
+    /// <summary>
+    /// ã‚·ãƒ¼ãƒˆæƒ…å ±ã‹ã‚‰PDFã‚’ç”Ÿæˆï¼ˆã‚ªãƒ—ã‚·ãƒ§ãƒ³æŒ‡å®šï¼‰
+    /// </summary>
+    public void GeneratePdf(SheetInfoEx sheetInfo, string outputPath, PdfGenerationOptions options)
+    {
+        _options = options ?? _options;
+        
+        Console.WriteLine($"\nPDFç”Ÿæˆã‚’é–‹å§‹ã—ã¾ã™...");
+        Console.WriteLine($"ã‚·ãƒ¼ãƒˆå: {sheetInfo.Name}");
+        Console.WriteLine($"ã‚»ãƒ«æ•°: {sheetInfo.Cells.Count}");
+        Console.WriteLine($"ãƒšãƒ¼ã‚¸ã‚µã‚¤ã‚º: {_options.PageSize}");
+        Console.WriteLine($"å‘ã: {_options.Orientation}");
+        Console.WriteLine($"ã‚¹ã‚±ãƒ¼ãƒ«: {_options.Scale * 100}%");
+
+        // ã‚«ã‚¹ã‚¿ãƒ ãƒ•ã‚©ãƒ³ãƒˆãƒªã‚¾ãƒ«ãƒãƒ¼ã‚’è¨­å®š
+        if (PdfSharp.Fonts.GlobalFontSettings.FontResolver == null)
+        {
+            PdfSharp.Fonts.GlobalFontSettings.FontResolver = new CustomFontResolver();
+            Console.WriteLine("ã‚«ã‚¹ã‚¿ãƒ ãƒ•ã‚©ãƒ³ãƒˆãƒªã‚¾ãƒ«ãƒãƒ¼ã‚’è¨­å®šã—ã¾ã—ãŸã€‚");
+        }
+
+        // PDFãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆã‚’ä½œæˆ
+        PdfDocument document = new PdfDocument();
+        document.Info.Title = sheetInfo.Name;
+        document.Info.Author = "Excel to PDF Converter";
+        document.Info.Creator = "WorkExcelToPdf";
+        document.Info.Subject = $"Converted from Excel sheet: {sheetInfo.Name}";
+
+        if (_options.EnableAutoPageBreak)
+        {
+            // è¤‡æ•°ãƒšãƒ¼ã‚¸å¯¾å¿œ
+            GenerateMultiplePages(document, sheetInfo);
+        }
+        else
+        {
+            // å˜ä¸€ãƒšãƒ¼ã‚¸
+            GenerateSinglePage(document, sheetInfo);
+        }
+
+        // PDFã‚’ä¿å­˜
+        document.Save(outputPath);
+        Console.WriteLine($"âœ“ PDFã‚’ç”Ÿæˆã—ã¾ã—ãŸ: {outputPath}");
+    }
+
+    /// <summary>
+    /// å˜ä¸€ãƒšãƒ¼ã‚¸ã‚’ç”Ÿæˆ
+    /// </summary>
+    private void GenerateSinglePage(PdfDocument document, SheetInfoEx sheetInfo)
+    {
+        // ãƒšãƒ¼ã‚¸ã‚’è¿½åŠ 
+        PdfPage page = document.AddPage();
+        page.Size = _options.PageSize;
+        page.Orientation = _options.Orientation;
+
+        // ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ã‚¹ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’å–å¾—
+        XGraphics gfx = XGraphics.FromPdfPage(page);
+
+        // ãƒ˜ãƒƒãƒ€ãƒ¼ãƒ»ãƒ•ãƒƒã‚¿ãƒ¼ã‚’æç”»
+        if (!string.IsNullOrEmpty(_options.HeaderText))
+        {
+            DrawHeader(gfx, page, _options.HeaderText, 1, 1);
+        }
+
+        if (!string.IsNullOrEmpty(_options.FooterText) || _options.ShowPageNumber)
+        {
+            string footerText = _options.FooterText;
+            if (_options.ShowPageNumber)
+            {
+                footerText += (string.IsNullOrEmpty(footerText) ? "" : " - ") + 
+                             string.Format(_options.PageNumberFormat, 1);
+            }
+            DrawFooter(gfx, page, footerText);
+        }
+
+        // ã‚·ãƒ¼ãƒˆã‚’æç”»
+        DrawSheet(gfx, sheetInfo);
+    }
+
+    /// <summary>
+    /// è¤‡æ•°ãƒšãƒ¼ã‚¸ã‚’ç”Ÿæˆ
+    /// </summary>
+    private void GenerateMultiplePages(PdfDocument document, SheetInfoEx sheetInfo)
+    {
+        // ãƒšãƒ¼ã‚¸ã‚µã‚¤ã‚ºã‚’å–å¾—
+        PdfPage tempPage = document.AddPage();
+        tempPage.Size = _options.PageSize;
+        tempPage.Orientation = _options.Orientation;
+        
+        double pageWidth = tempPage.Width.Point - _options.MarginLeft - _options.MarginRight;
+        double pageHeight = tempPage.Height.Point - _options.MarginTop - _options.MarginBottom;
+        
+        document.Pages.Remove(tempPage);
+
+        // ã‚·ãƒ¼ãƒˆå…¨ä½“ã®ã‚µã‚¤ã‚ºã‚’è¨ˆç®—
+        double totalWidth = sheetInfo.Cells.Max(c => c.X + c.Width) * PixelToPoint * _options.Scale;
+        double totalHeight = sheetInfo.Cells.Max(c => c.Y + c.Height) * PixelToPoint * _options.Scale;
+
+        // å¿…è¦ãªãƒšãƒ¼ã‚¸æ•°ã‚’è¨ˆç®—
+        int pagesX = (int)Math.Ceiling(totalWidth / pageWidth);
+        int pagesY = (int)Math.Ceiling(totalHeight / pageHeight);
+        int totalPages = pagesX * pagesY;
+
+        Console.WriteLine($"è¤‡æ•°ãƒšãƒ¼ã‚¸ãƒ¢ãƒ¼ãƒ‰: {pagesX} x {pagesY} = {totalPages} ãƒšãƒ¼ã‚¸");
+
+        int currentPage = 1;
+        for (int py = 0; py < pagesY; py++)
+        {
+            for (int px = 0; px < pagesX; px++)
+            {
+                PdfPage page = document.AddPage();
+                page.Size = _options.PageSize;
+                page.Orientation = _options.Orientation;
+
+                XGraphics gfx = XGraphics.FromPdfPage(page);
+
+                // ãƒ˜ãƒƒãƒ€ãƒ¼ãƒ»ãƒ•ãƒƒã‚¿ãƒ¼
+                if (!string.IsNullOrEmpty(_options.HeaderText))
+                {
+                    DrawHeader(gfx, page, _options.HeaderText, currentPage, totalPages);
+                }
+
+                if (!string.IsNullOrEmpty(_options.FooterText) || _options.ShowPageNumber)
+                {
+                    string footerText = _options.FooterText;
+                    if (_options.ShowPageNumber)
+                    {
+                        footerText += (string.IsNullOrEmpty(footerText) ? "" : " - ") + 
+                                     string.Format(_options.PageNumberFormat, currentPage, totalPages);
+                    }
+                    DrawFooter(gfx, page, footerText);
+                }
+
+                // ç¾åœ¨ã®ãƒšãƒ¼ã‚¸ã«æç”»ã™ã‚‹ç¯„å›²ã‚’è¨ˆç®—
+                double offsetX = px * pageWidth;
+                double offsetY = py * pageHeight;
+
+                DrawSheetPartial(gfx, sheetInfo, offsetX, offsetY, pageWidth, pageHeight);
+
+                currentPage++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// ãƒ˜ãƒƒãƒ€ãƒ¼ã‚’æç”»
+    /// </summary>
+    private void DrawHeader(XGraphics gfx, PdfPage page, string text, int currentPage, int totalPages)
+    {
+        XFont font = new XFont("Arial", 10, XFontStyleEx.Regular);
+        XBrush brush = XBrushes.Gray;
+        
+        string headerText = text.Replace("{page}", currentPage.ToString())
+                                .Replace("{total}", totalPages.ToString());
+        
+        gfx.DrawString(headerText, font, brush, 
+            new XRect(0, 10, page.Width.Point, 20), 
+            XStringFormats.TopCenter);
+    }
+
+    /// <summary>
+    /// ãƒ•ãƒƒã‚¿ãƒ¼ã‚’æç”»
+    /// </summary>
+    private void DrawFooter(XGraphics gfx, PdfPage page, string text)
+    {
+        XFont font = new XFont("Arial", 10, XFontStyleEx.Regular);
+        XBrush brush = XBrushes.Gray;
+        
+        gfx.DrawString(text, font, brush, 
+            new XRect(0, page.Height.Point - 30, page.Width.Point, 20), 
+            XStringFormats.BottomCenter);
+    }
+
+    /// <summary>
+    /// ã‚·ãƒ¼ãƒˆã®ä¸€éƒ¨ã‚’æç”»ï¼ˆè¤‡æ•°ãƒšãƒ¼ã‚¸ç”¨ï¼‰
+    /// </summary>
+    private void DrawSheetPartial(XGraphics gfx, SheetInfoEx sheetInfo, double offsetX, double offsetY, double viewWidth, double viewHeight)
+    {
+        // ã‚¯ãƒªãƒƒãƒ”ãƒ³ã‚°é ˜åŸŸã‚’è¨­å®š
+        gfx.Save();
+        gfx.IntersectClip(new XRect(_options.MarginLeft, _options.MarginTop, viewWidth, viewHeight));
+
+        // ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’é©ç”¨
+        gfx.TranslateTransform(_options.MarginLeft - offsetX, _options.MarginTop - offsetY);
+
+        // ã‚¹ã‚±ãƒ¼ãƒ«ã‚’é©ç”¨
+        if (_options.Scale != 1.0)
+        {
+            gfx.ScaleTransform(_options.Scale, _options.Scale);
+        }
+
+        // æç”»
+        DrawSheetContent(gfx, sheetInfo, 0, 0);
+
+        gfx.Restore();
+    }
+
+    /// <summary>
+    /// ã‚»ãƒ«ã®èƒŒæ™¯è‰²ã‚’æç”»
+    /// </summary>
+    private void DrawCellBackground(XGraphics gfx, CellBorderInfoEx cell, double marginLeft, double marginTop)
+    {
+        try
+        {
+            var color = ParseColor(cell.Style.BackgroundColor);
+            XBrush brush = new XSolidBrush(color);
+
+            double x = marginLeft + cell.X * PixelToPoint;
+            double y = marginTop + cell.Y * PixelToPoint;
+            double width = cell.Width * PixelToPoint;
+            double height = cell.Height * PixelToPoint;
+
+            gfx.DrawRectangle(brush, x, y, width, height);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"èƒŒæ™¯è‰²æç”»ã‚¨ãƒ©ãƒ¼ ({cell.CellAddress}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ã‚»ãƒ«ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æç”»ï¼ˆæ‹¡å¼µç‰ˆï¼‰
+    /// </summary>
+    private void DrawCellText(XGraphics gfx, CellBorderInfoEx cell, double marginLeft, double marginTop)
+    {
+        try
+        {
+            // ãƒ•ã‚©ãƒ³ãƒˆã‚’ä½œæˆ
+            XFontStyleEx fontStyle = XFontStyleEx.Regular;
+            if (cell.Style.IsBold) fontStyle |= XFontStyleEx.Bold;
+            if (cell.Style.IsItalic) fontStyle |= XFontStyleEx.Italic;
+
+            XFont font = new XFont(cell.Style.FontName, cell.Style.FontSize, fontStyle);
+            XBrush brush = new XSolidBrush(ParseColor(cell.Style.FontColor));
+
+            double x = marginLeft + cell.X * PixelToPoint;
+            double y = marginTop + cell.Y * PixelToPoint;
+            double width = cell.Width * PixelToPoint;
+            double height = cell.Height * PixelToPoint;
+
+            // ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆé©ç”¨
+            double indentOffset = cell.Style.Indent * 8; // ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆ1ãƒ¬ãƒ™ãƒ« = ç´„8ãƒã‚¤ãƒ³ãƒˆ
+            
+            // ãƒ†ã‚­ã‚¹ãƒˆã®é…ç½®ã‚’æ±ºå®š
+            XStringFormat format = new XStringFormat();
+            format.Alignment = GetHorizontalAlignment(cell.Style.HorizontalAlignment);
+            format.LineAlignment = GetVerticalAlignment(cell.Style.VerticalAlignment);
+
+            // ãƒ†ã‚­ã‚¹ãƒˆé ˜åŸŸã‚’èª¿æ•´ï¼ˆç½«ç·šã¨ã®ä½™ç™½ã‚’è€ƒæ…®ï¼‰
+            double padding = 2;
+            XRect rect = new XRect(
+                x + padding + indentOffset, 
+                y + padding, 
+                width - (padding * 2) - indentOffset, 
+                height - (padding * 2)
+            );
+
+            // ãƒ†ã‚­ã‚¹ãƒˆå›è»¢ãŒè¨­å®šã•ã‚Œã¦ã„ã‚‹å ´åˆ
+            if (cell.Style.TextRotation != 0)
+            {
+                var state = gfx.Save();
+                
+                // å›è»¢ã®ä¸­å¿ƒç‚¹ã‚’è¨ˆç®—
+                double centerX = x + width / 2;
+                double centerY = y + height / 2;
+                
+                gfx.TranslateTransform(centerX, centerY);
+                gfx.RotateTransform(-cell.Style.TextRotation); // åæ™‚è¨ˆå›ã‚Šã«å›è»¢
+                gfx.TranslateTransform(-centerX, -centerY);
+                
+                gfx.DrawString(cell.Value, font, brush, rect, format);
+                
+                gfx.Restore(state);
+            }
+            else
+            {
+                // é€šå¸¸ã®æç”»
+                gfx.DrawString(cell.Value, font, brush, rect, format);
+            }
+
+            // ä¸‹ç·šã‚’æç”»
+            if (cell.Style.IsUnderline)
+            {
+                DrawUnderline(gfx, cell, font, rect, brush);
+            }
+
+            // å–ã‚Šæ¶ˆã—ç·šã‚’æç”»
+            if (cell.Style.IsStrikethrough)
+            {
+                DrawStrikethrough(gfx, cell, font, rect, brush);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ãƒ†ã‚­ã‚¹ãƒˆæç”»ã‚¨ãƒ©ãƒ¼ ({cell.CellAddress}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ä¸‹ç·šã‚’æç”»
+    /// </summary>
+    private void DrawUnderline(XGraphics gfx, CellBorderInfoEx cell, XFont font, XRect rect, XBrush brush)
+    {
+        try
+        {
+            var size = gfx.MeasureString(cell.Value, font);
+            double underlineY = rect.Y + size.Height - 1;
+            
+            XPen pen = new XPen(((XSolidBrush)brush).Color, 0.5);
+            
+            // é…ç½®ã«å¿œã˜ã¦ä¸‹ç·šã®ä½ç½®ã‚’èª¿æ•´
+            double startX = rect.X;
+            double endX = rect.X + size.Width;
+            
+            if (cell.Style.HorizontalAlignment == "Center")
+            {
+                startX = rect.X + (rect.Width - size.Width) / 2;
+                endX = startX + size.Width;
+            }
+            else if (cell.Style.HorizontalAlignment == "Right")
+            {
+                startX = rect.X + rect.Width - size.Width;
+                endX = rect.X + rect.Width;
+            }
+            
+            gfx.DrawLine(pen, startX, underlineY, endX, underlineY);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ä¸‹ç·šæç”»ã‚¨ãƒ©ãƒ¼ ({cell.CellAddress}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// å–ã‚Šæ¶ˆã—ç·šã‚’æç”»
+    /// </summary>
+    private void DrawStrikethrough(XGraphics gfx, CellBorderInfoEx cell, XFont font, XRect rect, XBrush brush)
+    {
+        try
+        {
+            var size = gfx.MeasureString(cell.Value, font);
+            double strikeY = rect.Y + size.Height / 2;
+            
+            XPen pen = new XPen(((XSolidBrush)brush).Color, 0.5);
+            
+            // é…ç½®ã«å¿œã˜ã¦å–ã‚Šæ¶ˆã—ç·šã®ä½ç½®ã‚’èª¿æ•´
+            double startX = rect.X;
+            double endX = rect.X + size.Width;
+            
+            if (cell.Style.HorizontalAlignment == "Center")
+            {
+                startX = rect.X + (rect.Width - size.Width) / 2;
+                endX = startX + size.Width;
+            }
+            else if (cell.Style.HorizontalAlignment == "Right")
+            {
+                startX = rect.X + rect.Width - size.Width;
+                endX = rect.X + rect.Width;
+            }
+            
+            gfx.DrawLine(pen, startX, strikeY, endX, strikeY);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"å–ã‚Šæ¶ˆã—ç·šæç”»ã‚¨ãƒ©ãƒ¼ ({cell.CellAddress}): {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ã‚·ãƒ¼ãƒˆå…¨ä½“ã‚’æç”»
     /// </summary>
     private void DrawSheet(XGraphics gfx, SheetInfoEx sheetInfo)
     {
-        // ƒ}[ƒWƒ“İ’è
-        double marginLeft = 30;
-        double marginTop = 30;
+        // ã‚¹ã‚±ãƒ¼ãƒ«ã‚’é©ç”¨
+        if (_options.Scale != 1.0)
+        {
+            gfx.ScaleTransform(_options.Scale, _options.Scale);
+        }
 
+        DrawSheetContent(gfx, sheetInfo, _options.MarginLeft / _options.Scale, _options.MarginTop / _options.Scale);
+    }
+
+    /// <summary>
+    /// ã‚·ãƒ¼ãƒˆã®å†…å®¹ã‚’æç”»ï¼ˆå…±é€šå‡¦ç†ï¼‰
+    /// </summary>
+    private void DrawSheetContent(XGraphics gfx, SheetInfoEx sheetInfo, double marginLeft, double marginTop)
+    {
         int bgCount = 0, textCount = 0, borderCount = 0;
 
-        Console.WriteLine($"\n=== PDF•`‰æˆ— ===");
-        Console.WriteLine($"‘SƒZƒ‹”: {sheetInfo.Cells.Count}");
+        Console.WriteLine($"\n=== PDFæç”»å‡¦ç† ===");
+        Console.WriteLine($"å…¨ã‚»ãƒ«æ•°: {sheetInfo.Cells.Count}");
 
-        // ƒfƒoƒbƒO: ƒZƒ‹î•ñ‚ğƒƒOo—Í
+        // ãƒ‡ãƒãƒƒã‚°: ã‚»ãƒ«æƒ…å ±ã‚’ãƒ­ã‚°å‡ºåŠ›
         var cellsWithText = sheetInfo.Cells.Where(c => !string.IsNullOrEmpty(c.Value)).ToList();
         var cellsWithBorders = sheetInfo.Cells.Where(c => HasAnyBorder(c)).ToList();
         var cellsWithBackground = sheetInfo.Cells.Where(c => 
@@ -407,82 +834,70 @@ public class PdfGenerator
             c.Style.BackgroundColor != "#FFFFFF" &&
             c.Style.BackgroundColor != "#000000").ToList();
 
-        Console.WriteLine($"ƒeƒLƒXƒg‚ª‚ ‚éƒZƒ‹: {cellsWithText.Count}ŒÂ");
-        if (cellsWithText.Any())
+        Console.WriteLine($"ãƒ†ã‚­ã‚¹ãƒˆãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithText.Count}å€‹");
+        Console.WriteLine($"ç½«ç·šãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithBorders.Count}å€‹");
+        Console.WriteLine($"èƒŒæ™¯è‰²ãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithBackground.Count}å€‹");
+
+        Console.WriteLine($"\n=== æç”»å®Ÿè¡Œ ===");
+
+        // ã‚°ãƒªãƒƒãƒ‰ç·šã‚’æç”»ï¼ˆã‚ªãƒ—ã‚·ãƒ§ãƒ³ï¼‰
+        if (_options.ShowGridLines)
         {
-            Console.WriteLine("  ƒeƒLƒXƒgƒZƒ‹ˆê——:");
-            foreach (var cell in cellsWithText)
+            DrawGridLines(gfx, sheetInfo, marginLeft, marginTop);
+        }
+
+        // èƒŒæ™¯è‰²ã‚’å…ˆã«æç”»
+        if (!_options.IgnoreBackgroundColor)
+        {
+            foreach (var cell in sheetInfo.Cells)
             {
-                Console.WriteLine($"    {cell.CellAddress}: '{cell.Value}'");
+                if (!string.IsNullOrEmpty(cell.Style.BackgroundColor) &&
+                    cell.Style.BackgroundColor != "#FFFFFF" &&
+                    cell.Style.BackgroundColor != "#000000")
+                {
+                    DrawCellBackground(gfx, cell, marginLeft, marginTop);
+                    bgCount++;
+                }
             }
         }
 
-        Console.WriteLine($"Œrü‚ª‚ ‚éƒZƒ‹: {cellsWithBorders.Count}ŒÂ");
-        if (cellsWithBorders.Any())
+        // ã‚»ãƒ«ã®å†…å®¹ã‚’æç”»ï¼ˆçµåˆã‚»ãƒ«ã¯æœ€åˆã®ã‚»ãƒ«ã®ã¿æç”»ï¼‰
+        var cellsToDraw = sheetInfo.Cells.Where(c => 
+            !string.IsNullOrEmpty(c.Value) && 
+            (!c.IsMerged || c.CellAddress == c.MergeRangeAddress.Split(':')[0])
+        ).ToList();
+
+        foreach (var cell in cellsToDraw)
         {
-            Console.WriteLine("  ŒrüƒZƒ‹ˆê——iÅ‰‚Ì10ŒÂj:");
-            foreach (var cell in cellsWithBorders.Take(10))
-            {
-                var borders = new List<string>();
-                if (cell.Top.HasBorder) borders.Add($"ã:{cell.Top.LineStyle}");
-                if (cell.Bottom.HasBorder) borders.Add($"‰º:{cell.Bottom.LineStyle}");
-                if (cell.Left.HasBorder) borders.Add($"¶:{cell.Left.LineStyle}");
-                if (cell.Right.HasBorder) borders.Add($"‰E:{cell.Right.LineStyle}");
-                Console.WriteLine($"    {cell.CellAddress}: [{string.Join(",", borders)}]");
-            }
-            if (cellsWithBorders.Count > 10)
-            {
-                Console.WriteLine($"    ... ‘¼ {cellsWithBorders.Count - 10} ƒZƒ‹");
-            }
+            DrawCellText(gfx, cell, marginLeft, marginTop);
+            textCount++;
         }
 
-        Console.WriteLine($"”wŒiF‚ª‚ ‚éƒZƒ‹: {cellsWithBackground.Count}ŒÂ");
-
-        Console.WriteLine($"\n=== •`‰æÀs ===");
-
-        // ”wŒiF‚ğæ‚É•`‰æ
-        foreach (var cell in sheetInfo.Cells)
-        {
-            if (!string.IsNullOrEmpty(cell.Style.BackgroundColor) &&
-                cell.Style.BackgroundColor != "#FFFFFF" &&
-                cell.Style.BackgroundColor != "#000000")
-            {
-                DrawCellBackground(gfx, cell, marginLeft, marginTop);
-                bgCount++;
-            }
-        }
-
-        // ƒZƒ‹‚Ì“à—e‚ğ•`‰æ
-        foreach (var cell in sheetInfo.Cells)
-        {
-            if (!string.IsNullOrEmpty(cell.Value))
-            {
-                DrawCellText(gfx, cell, marginLeft, marginTop);
-                textCount++;
-            }
-        }
-
-        // Œrü‚ğ‘¾‚³‡‚É•`‰æi×‚¢ü‚©‚ç‘¾‚¢ü‚Öj
-        // ‚±‚ê‚É‚æ‚èA‘¾‚¢ü‚ª×‚¢ü‚ğã‘‚«‚·‚é
+        // ç½«ç·šã‚’å¤ªã•é †ã«æç”»ï¼ˆç´°ã„ç·šã‹ã‚‰å¤ªã„ç·šã¸ï¼‰
         var bordersToDrawn = new List<(CellBorderInfoEx cell, string side, BorderSideInfo border)>();
 
         foreach (var cell in sheetInfo.Cells)
         {
-            if (cell.Top.HasBorder)
-                bordersToDrawn.Add((cell, "Top", cell.Top));
-            if (cell.Bottom.HasBorder)
-                bordersToDrawn.Add((cell, "Bottom", cell.Bottom));
-            if (cell.Left.HasBorder)
-                bordersToDrawn.Add((cell, "Left", cell.Left));
-            if (cell.Right.HasBorder)
-                bordersToDrawn.Add((cell, "Right", cell.Right));
-            if (cell.DiagonalUp.HasBorder)
-                bordersToDrawn.Add((cell, "DiagonalUp", cell.DiagonalUp));
-            if (cell.DiagonalDown.HasBorder)
-                bordersToDrawn.Add((cell, "DiagonalDown", cell.DiagonalDown));
+            // çµåˆã‚»ãƒ«ã®å ´åˆã€æœ€åˆã®ã‚»ãƒ«ã®ã¿ç½«ç·šã‚’æç”»
+            if (_options.IgnoreMergedCells || !cell.IsMerged || 
+                cell.CellAddress == cell.MergeRangeAddress.Split(':')[0])
+            {
+                if (cell.Top.HasBorder)
+                    bordersToDrawn.Add((cell, "Top", cell.Top));
+                if (cell.Bottom.HasBorder)
+                    bordersToDrawn.Add((cell, "Bottom", cell.Bottom));
+                if (cell.Left.HasBorder)
+                    bordersToDrawn.Add((cell, "Left", cell.Left));
+                if (cell.Right.HasBorder)
+                    bordersToDrawn.Add((cell, "Right", cell.Right));
+                if (cell.DiagonalUp.HasBorder)
+                    bordersToDrawn.Add((cell, "DiagonalUp", cell.DiagonalUp));
+                if (cell.DiagonalDown.HasBorder)
+                    bordersToDrawn.Add((cell, "DiagonalDown", cell.DiagonalDown));
+            }
         }
 
-        // ‘¾‚³‚Åƒ\[ƒgi×‚¢ü‚©‚ç‘¾‚¢ü‚Öj
+        // å¤ªã•ã§ã‚½ãƒ¼ãƒˆï¼ˆç´°ã„ç·šã‹ã‚‰å¤ªã„ç·šã¸ï¼‰
         var sortedBorders = bordersToDrawn.OrderBy(b => b.border.Width).ToList();
 
         foreach (var (cell, side, border) in sortedBorders)
@@ -516,8 +931,66 @@ public class PdfGenerator
             borderCount++;
         }
 
-        Console.WriteLine($"\n=== •`‰æŠ®—¹ ===");
-        Console.WriteLine($"”wŒiF: {bgCount}ŒÂ, ƒeƒLƒXƒg: {textCount}ŒÂ, Œrü: {borderCount}–{");
+        // ãƒ‡ãƒãƒƒã‚°ãƒ¢ãƒ¼ãƒ‰: ã‚»ãƒ«ã®å¢ƒç•Œç·šã‚’è¡¨ç¤º
+        if (_options.DebugMode)
+        {
+            DrawDebugBorders(gfx, sheetInfo, marginLeft, marginTop);
+        }
+
+        Console.WriteLine($"\n=== æç”»å®Œäº† ===");
+        Console.WriteLine($"èƒŒæ™¯è‰²: {bgCount}å€‹, ãƒ†ã‚­ã‚¹ãƒˆ: {textCount}å€‹, ç½«ç·š: {borderCount}æœ¬");
+    }
+
+    /// <summary>
+    /// ã‚°ãƒªãƒƒãƒ‰ç·šã‚’æç”»
+    /// </summary>
+    private void DrawGridLines(XGraphics gfx, SheetInfoEx sheetInfo, double marginLeft, double marginTop)
+    {
+        XPen gridPen = new XPen(XColor.FromArgb(220, 220, 220), 0.25);
+        
+        // åˆ—ã®ã‚°ãƒªãƒƒãƒ‰ç·š
+        double x = marginLeft;
+        foreach (var width in sheetInfo.ColumnWidths.Values)
+        {
+            double y1 = marginTop;
+            double y2 = marginTop + sheetInfo.RowHeights.Values.Sum() * PixelToPoint;
+            gfx.DrawLine(gridPen, x, y1, x, y2);
+            x += width * PixelToPoint;
+        }
+        
+        // è¡Œã®ã‚°ãƒªãƒƒãƒ‰ç·š
+        double y = marginTop;
+        foreach (var height in sheetInfo.RowHeights.Values)
+        {
+            double x1 = marginLeft;
+            double x2 = marginLeft + sheetInfo.ColumnWidths.Values.Sum() * PixelToPoint;
+            gfx.DrawLine(gridPen, x1, y, x2, y);
+            y += height * PixelToPoint;
+        }
+    }
+
+    /// <summary>
+    /// ãƒ‡ãƒãƒƒã‚°ç”¨ã®ã‚»ãƒ«å¢ƒç•Œç·šã‚’æç”»
+    /// </summary>
+    private void DrawDebugBorders(XGraphics gfx, SheetInfoEx sheetInfo, double marginLeft, double marginTop)
+    {
+        XPen debugPen = new XPen(XColors.Red, 0.5);
+        debugPen.DashStyle = XDashStyle.Dot;
+        
+        foreach (var cell in sheetInfo.Cells)
+        {
+            double x = marginLeft + cell.X * PixelToPoint;
+            double y = marginTop + cell.Y * PixelToPoint;
+            double width = cell.Width * PixelToPoint;
+            double height = cell.Height * PixelToPoint;
+            
+            gfx.DrawRectangle(debugPen, x, y, width, height);
+            
+            // ã‚»ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’è¡¨ç¤º
+            XFont debugFont = new XFont("Arial", 6, XFontStyleEx.Regular);
+            gfx.DrawString(cell.CellAddress, debugFont, XBrushes.Red, 
+                new XPoint(x + 1, y + 8));
+        }
     }
 
     private bool HasAnyBorder(CellBorderInfoEx cell)
@@ -528,111 +1001,7 @@ public class PdfGenerator
     }
 
     /// <summary>
-    /// ƒZƒ‹‚Ì”wŒiF‚ğ•`‰æ
-    /// </summary>
-    private void DrawCellBackground(XGraphics gfx, CellBorderInfoEx cell, double marginLeft, double marginTop)
-    {
-        try
-        {
-            var color = ParseColor(cell.Style.BackgroundColor);
-            XBrush brush = new XSolidBrush(color);
-
-            double x = marginLeft + cell.X * PixelToPoint;
-            double y = marginTop + cell.Y * PixelToPoint;
-            double width = cell.Width * PixelToPoint;
-            double height = cell.Height * PixelToPoint;
-
-            gfx.DrawRectangle(brush, x, y, width, height);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"”wŒiF•`‰æƒGƒ‰[ ({cell.CellAddress}): {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// ƒZƒ‹‚ÌƒeƒLƒXƒg‚ğ•`‰æ
-    /// </summary>
-    private void DrawCellText(XGraphics gfx, CellBorderInfoEx cell, double marginLeft, double marginTop)
-    {
-        try
-        {
-            // ƒtƒHƒ“ƒg‚ğì¬
-            XFontStyleEx fontStyle = XFontStyleEx.Regular;
-            if (cell.Style.IsBold) fontStyle |= XFontStyleEx.Bold;
-            if (cell.Style.IsItalic) fontStyle |= XFontStyleEx.Italic;
-
-            XFont font = new XFont(cell.Style.FontName, cell.Style.FontSize, fontStyle);
-            XBrush brush = new XSolidBrush(ParseColor(cell.Style.FontColor));
-
-            double x = marginLeft + cell.X * PixelToPoint;
-            double y = marginTop + cell.Y * PixelToPoint;
-            double width = cell.Width * PixelToPoint;
-            double height = cell.Height * PixelToPoint;
-
-            // ƒeƒLƒXƒg‚Ì”z’u‚ğŒˆ’è
-            XStringFormat format = new XStringFormat();
-            format.Alignment = GetHorizontalAlignment(cell.Style.HorizontalAlignment);
-            format.LineAlignment = GetVerticalAlignment(cell.Style.VerticalAlignment);
-
-            XRect rect = new XRect(x + 2, y + 2, width - 4, height - 4);
-            gfx.DrawString(cell.Value, font, brush, rect, format);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"ƒeƒLƒXƒg•`‰æƒGƒ‰[ ({cell.CellAddress}): {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// ƒZƒ‹‚ÌŒrü‚ğ•`‰æ
-    /// </summary>
-    private void DrawCellBorders(XGraphics gfx, CellBorderInfoEx cell, double marginLeft, double marginTop)
-    {
-        double x = marginLeft + cell.X * PixelToPoint;
-        double y = marginTop + cell.Y * PixelToPoint;
-        double width = cell.Width * PixelToPoint;
-        double height = cell.Height * PixelToPoint;
-
-        // ã•Ó
-        if (cell.Top.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.Top, x, y, x + width, y);
-        }
-
-        // ‰º•Ó
-        if (cell.Bottom.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.Bottom, x, y + height, x + width, y + height);
-        }
-
-        // ¶•Ó
-        if (cell.Left.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.Left, x, y, x, y + height);
-        }
-
-        // ‰E•Ó
-        if (cell.Right.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.Right, x + width, y, x + width, y + height);
-        }
-
-        // Î‚ßüi¶ã‚©‚ç‰E‰ºj
-        if (cell.DiagonalDown.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.DiagonalDown, x, y, x + width, y + height);
-        }
-
-        // Î‚ßüi¶‰º‚©‚ç‰Eãj
-        if (cell.DiagonalUp.HasBorder)
-        {
-            DrawBorderLine(gfx, cell.DiagonalUp, x, y + height, x + width, y);
-        }
-    }
-
-    /// <summary>
-    /// Œrü‚ğ•`‰æ
+    /// ç½«ç·šã‚’æç”»
     /// </summary>
     private void DrawBorderLine(XGraphics gfx, BorderSideInfo border, double x1, double y1, double x2, double y2)
     {
@@ -643,19 +1012,19 @@ public class PdfGenerator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Œrü•`‰æƒGƒ‰[: {ex.Message}");
+            Console.WriteLine($"ç½«ç·šæç”»ã‚¨ãƒ©ãƒ¼: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Œrüî•ñ‚©‚çƒyƒ“‚ğì¬
+    /// ç½«ç·šæƒ…å ±ã‹ã‚‰ãƒšãƒ³ã‚’ä½œæˆ
     /// </summary>
     private XPen CreatePen(BorderSideInfo border)
     {
         XColor color = ParseColor(border.Color);
         XPen pen = new XPen(color, border.Width);
 
-        // ü‚ÌƒXƒ^ƒCƒ‹‚ğİ’è
+        // ç·šã®ã‚¹ã‚¿ã‚¤ãƒ«ã‚’è¨­å®š
         switch (border.LineStyle)
         {
             case "Dotted":
@@ -674,7 +1043,7 @@ public class PdfGenerator
                 pen.DashStyle = XDashStyle.DashDotDot;
                 break;
             case "Double":
-                // “ñdü‚Í2–{‚Ìü‚Å•\Œ»
+                // äºŒé‡ç·šã¯2æœ¬ã®ç·šã§è¡¨ç¾
                 pen.Width = border.Width / 2;
                 break;
             default:
@@ -686,7 +1055,7 @@ public class PdfGenerator
     }
 
     /// <summary>
-    /// 16i”ƒJƒ‰[ƒR[ƒh‚ğXColor‚É•ÏŠ·
+    /// 16é€²æ•°ã‚«ãƒ©ãƒ¼ã‚³ãƒ¼ãƒ‰ã‚’XColorã«å¤‰æ›
     /// </summary>
     private XColor ParseColor(string hexColor)
     {
@@ -722,7 +1091,7 @@ public class PdfGenerator
     }
 
     /// <summary>
-    /// …•½•ûŒü‚Ì”z’u‚ğæ“¾
+    /// æ°´å¹³æ–¹å‘ã®é…ç½®ã‚’å–å¾—
     /// </summary>
     private XStringAlignment GetHorizontalAlignment(string alignment)
     {
@@ -735,7 +1104,7 @@ public class PdfGenerator
     }
 
     /// <summary>
-    /// ‚’¼•ûŒü‚Ì”z’u‚ğæ“¾
+    /// å‚ç›´æ–¹å‘ã®é…ç½®ã‚’å–å¾—
     /// </summary>
     private XLineAlignment GetVerticalAlignment(string alignment)
     {
