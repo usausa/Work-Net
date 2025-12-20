@@ -37,7 +37,33 @@ public static class Program
 
         Console.WriteLine();
 
-        using var detector = new FaceDetector(modelPath);
+        // 実行オプションの設定
+        var useGpu = false;
+        var intraOpNumThreads = 0; // 0は自動設定
+        var interOpNumThreads = 0; // 0は自動設定
+
+        Console.Write("GPU (CUDA) を使用しますか？ (y/n, デフォルト: n): ");
+        var gpuChoice = Console.ReadLine()?.Trim().ToLower();
+        if (gpuChoice == "y" || gpuChoice == "yes")
+        {
+            useGpu = true;
+        }
+
+        Console.Write("IntraOpスレッド数を指定しますか？ (0=自動, デフォルト: 0): ");
+        if (int.TryParse(Console.ReadLine(), out var intraThreads))
+        {
+            intraOpNumThreads = intraThreads;
+        }
+
+        Console.Write("InterOpスレッド数を指定しますか？ (0=自動, デフォルト: 0): ");
+        if (int.TryParse(Console.ReadLine(), out var interThreads))
+        {
+            interOpNumThreads = interThreads;
+        }
+
+        Console.WriteLine();
+
+        using var detector = new FaceDetector(modelPath, useGpu, intraOpNumThreads, interOpNumThreads);
 
         var imagePath = @"D:\学習データ\people640x480.png";
         using var bitmap = SKBitmap.Decode(imagePath);
@@ -126,11 +152,11 @@ public sealed class FaceDetector : IDisposable
 {
     private readonly InferenceSession _session;
     private readonly DenseTensor<float> _inputTensor;
-    
+
     public int ModelWidth { get; }
     public int ModelHeight { get; }
 
-    public FaceDetector(string modelPath)
+    public FaceDetector(string modelPath, bool useGpu = false, int intraOpNumThreads = 0, int interOpNumThreads = 0)
     {
         var options = new SessionOptions
         {
@@ -140,12 +166,37 @@ public sealed class FaceDetector : IDisposable
             GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
         };
 
+        // パラレル実行のスレッド数設定
+        if (intraOpNumThreads > 0)
+        {
+            options.IntraOpNumThreads = intraOpNumThreads;
+        }
+        if (interOpNumThreads > 0)
+        {
+            options.InterOpNumThreads = interOpNumThreads;
+        }
+
+        // GPU使用設定
+        if (useGpu)
+        {
+            try
+            {
+                options.AppendExecutionProvider_CUDA(0);
+                Console.WriteLine("GPU (CUDA) を使用します。");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GPU (CUDA) の初期化に失敗しました: {ex.Message}");
+                Console.WriteLine("CPUで実行します。");
+            }
+        }
+
         _session = new InferenceSession(modelPath, options);
 
         // ONNXモデルから入力サイズを取得
         var inputMetadata = _session.InputMetadata.First().Value;
         var dimensions = inputMetadata.Dimensions;
-        
+
         // 入力テンソルの形状は [batch, channels, height, width] を想定
         if (dimensions.Length >= 4)
         {
@@ -287,7 +338,7 @@ public sealed class FaceDetector : IDisposable
             for (var x = 0; x < width; x++)
             {
                 var idx = (y * width + x) * 3;
-                
+
                 tensor[0, 0, y, x] = (source[idx] - mean[0]) / scale;
                 tensor[0, 1, y, x] = (source[idx + 1] - mean[1]) / scale;
                 tensor[0, 2, y, x] = (source[idx + 2] - mean[2]) / scale;
