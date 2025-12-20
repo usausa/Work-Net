@@ -316,6 +316,8 @@ public sealed class FaceDetector : IDisposable
 {
     private readonly InferenceSession _session;
     private readonly DenseTensor<float> _inputTensor;
+    private readonly List<float> _scores;
+    private readonly List<float> _boxes;
 
     public int ModelWidth { get; }
     public int ModelHeight { get; }
@@ -373,6 +375,10 @@ public sealed class FaceDetector : IDisposable
         }
 
         _inputTensor = new DenseTensor<float>(new[] { 1, 3, ModelHeight, ModelWidth });
+        
+        // 再利用するListを初期化（十分な容量を確保）
+        _scores = new List<float>(10000);
+        _boxes = new List<float>(10000);
     }
 
     public void Dispose()
@@ -403,8 +409,19 @@ public sealed class FaceDetector : IDisposable
         using var results = _session.Run(inputs);
         var outputList = results.ToList();
 
-        var scores = outputList[0].AsEnumerable<float>().ToList();
-        var boxes = outputList[1].AsEnumerable<float>().ToList();
+        // 再利用するListをクリアしてからデータをコピー
+        _scores.Clear();
+        _boxes.Clear();
+
+        foreach (var score in outputList[0].AsEnumerable<float>())
+        {
+            _scores.Add(score);
+        }
+
+        foreach (var box in outputList[1].AsEnumerable<float>())
+        {
+            _boxes.Add(box);
+        }
 
         var scoresDims = (outputList[0].Value as DenseTensor<float>)?.Dimensions.ToArray();
         var numBoxes = scoresDims?[1] ?? 0;
@@ -413,14 +430,14 @@ public sealed class FaceDetector : IDisposable
 
         for (var i = 0; i < numBoxes; i++)
         {
-            var faceScore = scores[i * 2 + 1];
+            var faceScore = _scores[i * 2 + 1];
 
             if (faceScore > confidenceThreshold)
             {
-                var x1 = boxes[i * 4] * width;
-                var y1 = boxes[i * 4 + 1] * height;
-                var x2 = boxes[i * 4 + 2] * width;
-                var y2 = boxes[i * 4 + 3] * height;
+                var x1 = _boxes[i * 4] * width;
+                var y1 = _boxes[i * 4 + 1] * height;
+                var x2 = _boxes[i * 4 + 2] * width;
+                var y2 = _boxes[i * 4 + 3] * height;
 
                 detections.Add(new FaceBox
                 {
