@@ -272,9 +272,51 @@ public class ExcelBorderReaderEx
         cellInfo.Style.IsItalic = style.Font.Italic;
         cellInfo.Style.IsUnderline = style.Font.Underline != XLFontUnderlineValues.None;
         cellInfo.Style.IsStrikethrough = style.Font.Strikethrough;
-        cellInfo.Style.FontColor = GetColorHex(style.Font.FontColor);
-        cellInfo.Style.BackgroundColor = GetColorHex(style.Fill.BackgroundColor);
-        cellInfo.Style.HorizontalAlignment = style.Alignment.Horizontal.ToString();
+        cellInfo.Style.FontColor = GetColorHex(style.Font.FontColor, isBackgroundColor: false);
+        
+        // 背景色の取得 - PatternTypeもチェック
+        if (style.Fill.PatternType != XLFillPatternValues.None)
+        {
+            // パターン塗りつぶしがある場合、BackgroundColorを取得
+            cellInfo.Style.BackgroundColor = GetColorHex(style.Fill.BackgroundColor, isBackgroundColor: true);
+            
+            // もし背景色が取得できない場合、PatternColorを試す
+            if (string.IsNullOrEmpty(cellInfo.Style.BackgroundColor))
+            {
+                cellInfo.Style.BackgroundColor = GetColorHex(style.Fill.PatternColor, isBackgroundColor: true);
+            }
+        }
+        else
+        {
+            cellInfo.Style.BackgroundColor = string.Empty;
+        }
+        
+        // 水平方向のアライメント取得 - Excelのデフォルト動作を再現
+        var horizontalAlignment = style.Alignment.Horizontal;
+        if (horizontalAlignment == XLAlignmentHorizontalValues.General)
+        {
+            // Generalの場合、セルの値の型に応じてアライメントを決定
+            if (cell.DataType == XLDataType.Number || cell.DataType == XLDataType.DateTime)
+            {
+                // 数値・日付は右揃え（Excelのデフォルト動作）
+                cellInfo.Style.HorizontalAlignment = "Right";
+            }
+            else if (cell.DataType == XLDataType.Boolean)
+            {
+                // ブール値は中央揃え（Excelのデフォルト動作）
+                cellInfo.Style.HorizontalAlignment = "Center";
+            }
+            else
+            {
+                // テキストは左揃え（Excelのデフォルト動作）
+                cellInfo.Style.HorizontalAlignment = "Left";
+            }
+        }
+        else
+        {
+            cellInfo.Style.HorizontalAlignment = horizontalAlignment.ToString();
+        }
+        
         cellInfo.Style.VerticalAlignment = style.Alignment.Vertical.ToString();
         cellInfo.Style.TextRotation = style.Alignment.TextRotation;
         cellInfo.Style.Indent = style.Alignment.Indent;
@@ -331,11 +373,19 @@ public class ExcelBorderReaderEx
 
     private BorderSideInfo GetBorderSideInfo(XLBorderStyleValues borderStyle, XLColor borderColor)
     {
+        var color = GetColorHex(borderColor, isBackgroundColor: false);
+        
+        // 罫線色が取得できない場合は黒をデフォルトとする
+        if (string.IsNullOrEmpty(color))
+        {
+            color = "#000000";
+        }
+        
         var info = new BorderSideInfo
         {
             HasBorder = borderStyle != XLBorderStyleValues.None,
             LineStyle = borderStyle.ToString(),
-            Color = GetColorHex(borderColor),
+            Color = color,
             Width = GetBorderWidth(borderStyle)
         };
 
@@ -352,11 +402,19 @@ public class ExcelBorderReaderEx
             return new BorderSideInfo { HasBorder = false };
         }
 
+        var color = GetColorHex(borderColor, isBackgroundColor: false);
+        
+        // 罫線色が取得できない場合は黒をデフォルトとする
+        if (string.IsNullOrEmpty(color))
+        {
+            color = "#000000";
+        }
+
         var info = new BorderSideInfo
         {
             HasBorder = true,
             LineStyle = borderStyle.ToString(),
-            Color = GetColorHex(borderColor),
+            Color = color,
             Width = GetBorderWidth(borderStyle)
         };
 
@@ -366,23 +424,99 @@ public class ExcelBorderReaderEx
     /// <summary>
     /// 色情報を16進数文字列に変換
     /// </summary>
-    private string GetColorHex(XLColor color)
+    private string GetColorHex(XLColor color, bool isBackgroundColor = false)
     {
         if (color == null)
-            return "#000000";
+            return string.Empty;
 
         try
         {
             var colorType = color.ColorType;
+            
+            // Colorタイプ（直接RGB指定）
             if (colorType == XLColorType.Color)
             {
-                return $"#{color.Color.ToArgb() & 0xFFFFFF:X6}";
+                var argb = color.Color.ToArgb() & 0xFFFFFF;
+                
+                // 背景色の場合、白または黒は無視
+                if (isBackgroundColor && (argb == 0xFFFFFF || argb == 0x000000))
+                    return string.Empty;
+                
+                return $"#{argb:X6}";
             }
-            return "#000000";
+            
+            // Indexedタイプ（インデックス色）
+            if (colorType == XLColorType.Indexed)
+            {
+                try
+                {
+                    var argb = color.Color.ToArgb() & 0xFFFFFF;
+                    
+                    if (isBackgroundColor)
+                    {
+                        // 背景色の場合、白または黒は無視
+                        if (argb == 0xFFFFFF || argb == 0x000000)
+                            return string.Empty;
+                    }
+                    else
+                    {
+                        // フォント色・罫線色の場合、白はデフォルトの黒に変換
+                        if (argb == 0xFFFFFF)
+                            return "#000000";
+                    }
+                    
+                    return $"#{argb:X6}";
+                }
+                catch
+                {
+                    // フォント色・罫線色のデフォルトは黒
+                    return isBackgroundColor ? string.Empty : "#000000";
+                }
+            }
+            
+            // Themeタイプ（テーマ色）
+            if (colorType == XLColorType.Theme)
+            {
+                try
+                {
+                    var argb = color.Color.ToArgb() & 0xFFFFFF;
+                    
+                    // 背景色の場合
+                    if (isBackgroundColor)
+                    {
+                        // 白が返される場合、テーマのアクセントカラーを使用
+                        if (argb == 0xFFFFFF)
+                        {
+                            return "#4472C4"; // Excel default accent1 color
+                        }
+                        
+                        if (argb == 0x000000)
+                            return string.Empty;
+                    }
+                    else
+                    {
+                        // フォント色・罫線色の場合
+                        // 白が返される場合は、デフォルトの黒色（テキスト色）を使用
+                        if (argb == 0xFFFFFF)
+                        {
+                            return "#000000"; // 黒（デフォルトテキスト色）
+                        }
+                    }
+                    
+                    return $"#{argb:X6}";
+                }
+                catch
+                {
+                    // エラー時のデフォルト値
+                    return isBackgroundColor ? "#4472C4" : "#000000";
+                }
+            }
+            
+            return string.Empty;
         }
         catch
         {
-            return "#000000";
+            return string.Empty;
         }
     }
 
@@ -646,7 +780,10 @@ public class PdfGenerator
             double width = cell.Width * PixelToPoint;
             double height = cell.Height * PixelToPoint;
 
+            // 塗りつぶし矩形を描画（ペンなし）
             gfx.DrawRectangle(brush, x, y, width, height);
+            
+            Console.WriteLine($"背景色描画: {cell.CellAddress} at ({x:F1}, {y:F1}) size ({width:F1} x {height:F1}) color {cell.Style.BackgroundColor}");
         }
         catch (Exception ex)
         {
@@ -661,10 +798,14 @@ public class PdfGenerator
     {
         try
         {
+            Console.WriteLine($"テキスト描画開始: {cell.CellAddress} = '{cell.Value}'");
+            
             // フォントを作成
             XFontStyleEx fontStyle = XFontStyleEx.Regular;
             if (cell.Style.IsBold) fontStyle |= XFontStyleEx.Bold;
             if (cell.Style.IsItalic) fontStyle |= XFontStyleEx.Italic;
+
+            Console.WriteLine($"  フォント: {cell.Style.FontName}, サイズ:{cell.Style.FontSize}, スタイル:{fontStyle}");
 
             XFont font = new XFont(cell.Style.FontName, cell.Style.FontSize, fontStyle);
             XBrush brush = new XSolidBrush(ParseColor(cell.Style.FontColor));
@@ -674,6 +815,8 @@ public class PdfGenerator
             double width = cell.Width * PixelToPoint;
             double height = cell.Height * PixelToPoint;
 
+            Console.WriteLine($"  位置: ({x:F1}, {y:F1}), サイズ: ({width:F1} x {height:F1})");
+
             // インデント適用
             double indentOffset = cell.Style.Indent * 8; // インデント1レベル = 約8ポイント
             
@@ -681,6 +824,8 @@ public class PdfGenerator
             XStringFormat format = new XStringFormat();
             format.Alignment = GetHorizontalAlignment(cell.Style.HorizontalAlignment);
             format.LineAlignment = GetVerticalAlignment(cell.Style.VerticalAlignment);
+
+            Console.WriteLine($"  配置: 水平={cell.Style.HorizontalAlignment}, 垂直={cell.Style.VerticalAlignment}");
 
             // テキスト領域を調整（罫線との余白を考慮）
             double padding = 2;
@@ -690,6 +835,8 @@ public class PdfGenerator
                 width - (padding * 2) - indentOffset, 
                 height - (padding * 2)
             );
+
+            Console.WriteLine($"  描画領域: ({rect.X:F1}, {rect.Y:F1}) - ({rect.Width:F1} x {rect.Height:F1})");
 
             // テキスト回転が設定されている場合
             if (cell.Style.TextRotation != 0)
@@ -711,7 +858,9 @@ public class PdfGenerator
             else
             {
                 // 通常の描画
+                Console.WriteLine($"  DrawString実行: '{cell.Value}'");
                 gfx.DrawString(cell.Value, font, brush, rect, format);
+                Console.WriteLine($"  DrawString完了");
             }
 
             // 下線を描画
@@ -725,10 +874,13 @@ public class PdfGenerator
             {
                 DrawStrikethrough(gfx, cell, font, rect, brush);
             }
+            
+            Console.WriteLine($"テキスト描画完了: {cell.CellAddress}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"テキスト描画エラー ({cell.CellAddress}): {ex.Message}");
+            Console.WriteLine($"  スタックトレース: {ex.StackTrace}");
         }
     }
 
@@ -835,8 +987,47 @@ public class PdfGenerator
             c.Style.BackgroundColor != "#000000").ToList();
 
         Console.WriteLine($"テキストがあるセル: {cellsWithText.Count}個");
+        if (cellsWithText.Any())
+        {
+            Console.WriteLine("  テキストセル一覧:");
+            foreach (var cell in cellsWithText.Take(10))
+            {
+                Console.WriteLine($"    {cell.CellAddress}: '{cell.Value}' (太字:{cell.Style.IsBold}, 斜体:{cell.Style.IsItalic}, 背景色:{cell.Style.BackgroundColor})");
+            }
+            if (cellsWithText.Count > 10)
+            {
+                Console.WriteLine($"    ... 他 {cellsWithText.Count - 10} セル");
+            }
+        }
+
         Console.WriteLine($"罫線があるセル: {cellsWithBorders.Count}個");
+        if (cellsWithBorders.Any())
+        {
+            Console.WriteLine("  罫線セル一覧（最初の10個）:");
+            foreach (var cell in cellsWithBorders.Take(10))
+            {
+                var borders = new List<string>();
+                if (cell.Top.HasBorder) borders.Add($"上:{cell.Top.LineStyle}");
+                if (cell.Bottom.HasBorder) borders.Add($"下:{cell.Bottom.LineStyle}");
+                if (cell.Left.HasBorder) borders.Add($"左:{cell.Left.LineStyle}");
+                if (cell.Right.HasBorder) borders.Add($"右:{cell.Right.LineStyle}");
+                Console.WriteLine($"    {cell.CellAddress}: [{string.Join(",", borders)}]");
+            }
+            if (cellsWithBorders.Count > 10)
+            {
+                Console.WriteLine($"    ... 他 {cellsWithBorders.Count - 10} セル");
+            }
+        }
+
         Console.WriteLine($"背景色があるセル: {cellsWithBackground.Count}個");
+        if (cellsWithBackground.Any())
+        {
+            Console.WriteLine("  背景色セル一覧:");
+            foreach (var cell in cellsWithBackground)
+            {
+                Console.WriteLine($"    {cell.CellAddress}: {cell.Style.BackgroundColor}");
+            }
+        }
 
         Console.WriteLine($"\n=== 描画実行 ===");
 

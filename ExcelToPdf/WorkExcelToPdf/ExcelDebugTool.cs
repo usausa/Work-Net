@@ -3,39 +3,42 @@ using ClosedXML.Excel;
 namespace WorkExcelToPdf;
 
 /// <summary>
-/// Excelƒtƒ@ƒCƒ‹‚ÌÚ×î•ñ‚ğ•\¦‚·‚éƒfƒoƒbƒOƒc[ƒ‹
+/// Excelãƒ•ã‚¡ã‚¤ãƒ«ã®è©³ç´°æƒ…å ±ã‚’è¡¨ç¤ºã™ã‚‹ãƒ‡ãƒãƒƒã‚°ãƒ„ãƒ¼ãƒ«
 /// </summary>
 public class ExcelDebugTool
 {
     public static void InspectExcelFile(string filePath)
     {
         Console.WriteLine("\n" + new string('=', 80));
-        Console.WriteLine($"ExcelÚ×•ªÍ: {filePath}");
+        Console.WriteLine($"Excelè©³ç´°åˆ†æ: {filePath}");
         Console.WriteLine(new string('=', 80));
 
         using var workbook = new XLWorkbook(filePath);
         var worksheet = workbook.Worksheet(1);
 
-        Console.WriteLine($"\nƒV[ƒg–¼: {worksheet.Name}");
+        Console.WriteLine($"\nã‚·ãƒ¼ãƒˆå: {worksheet.Name}");
 
         var usedRange = worksheet.RangeUsed();
         if (usedRange == null)
         {
-            Console.WriteLine("g—p‚³‚ê‚Ä‚¢‚éƒZƒ‹‚ª‚ ‚è‚Ü‚¹‚ñB");
+            Console.WriteLine("ä½¿ç”¨ã•ã‚Œã¦ã„ã‚‹ã‚»ãƒ«ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
             return;
         }
 
-        Console.WriteLine($"g—p”ÍˆÍ: {usedRange.RangeAddress}");
-        Console.WriteLine($"ŠJn: s{usedRange.FirstRow().RowNumber()}, —ñ{usedRange.FirstColumn().ColumnNumber()} ({GetColumnName(usedRange.FirstColumn().ColumnNumber())})");
-        Console.WriteLine($"I—¹: s{usedRange.LastRow().RowNumber()}, —ñ{usedRange.LastColumn().ColumnNumber()} ({GetColumnName(usedRange.LastColumn().ColumnNumber())})");
+        Console.WriteLine($"ä½¿ç”¨ç¯„å›²: {usedRange.RangeAddress}");
+        Console.WriteLine($"é–‹å§‹: è¡Œ{usedRange.FirstRow().RowNumber()}, åˆ—{usedRange.FirstColumn().ColumnNumber()} ({GetColumnName(usedRange.FirstColumn().ColumnNumber())})");
+        Console.WriteLine($"çµ‚äº†: è¡Œ{usedRange.LastRow().RowNumber()}, åˆ—{usedRange.LastColumn().ColumnNumber()} ({GetColumnName(usedRange.LastColumn().ColumnNumber())})");
 
         Console.WriteLine("\n" + new string('-', 80));
-        Console.WriteLine("‚·‚×‚Ä‚ÌƒZƒ‹‚ÌÚ×î•ñ:");
+        Console.WriteLine("ã™ã¹ã¦ã®ã‚»ãƒ«ã®è©³ç´°æƒ…å ±:");
         Console.WriteLine(new string('-', 80));
 
         int totalCells = 0;
         int cellsWithValue = 0;
         int cellsWithBorder = 0;
+        int cellsWithBackground = 0;
+        int cellsWithBold = 0;
+        int cellsWithItalic = 0;
         int emptyCellsNoBorder = 0;
 
         for (int row = usedRange.FirstRow().RowNumber(); row <= usedRange.LastRow().RowNumber(); row++)
@@ -49,70 +52,74 @@ public class ExcelDebugTool
 
                 totalCells++;
 
-                // Œrüî•ñ
+                // ç½«ç·šæƒ…å ±
                 var style = cell.Style;
                 bool hasTopBorder = style.Border.TopBorder != XLBorderStyleValues.None;
                 bool hasBottomBorder = style.Border.BottomBorder != XLBorderStyleValues.None;
                 bool hasLeftBorder = style.Border.LeftBorder != XLBorderStyleValues.None;
                 bool hasRightBorder = style.Border.RightBorder != XLBorderStyleValues.None;
-
                 bool hasBorder = hasTopBorder || hasBottomBorder || hasLeftBorder || hasRightBorder;
 
-                if (!isEmpty) cellsWithValue++;
-                if (hasBorder) cellsWithBorder++;
-                if (isEmpty && !hasBorder) emptyCellsNoBorder++;
-
-                // ‚·‚×‚Ä‚ÌƒZƒ‹‚ğ•\¦iA4ƒZƒ‹‚ğŒ©“¦‚³‚È‚¢‚½‚ßj
-                Console.WriteLine($"\nƒZƒ‹ {address} (s{row}, —ñ{col}):");
+                // ã‚¹ã‚¿ã‚¤ãƒ«æƒ…å ±
+                bool hasBold = style.Font.Bold;
+                bool hasItalic = style.Font.Italic;
+                // èƒŒæ™¯è‰²
+                var bgColorInfo = "ãªã—";
+                if (style.Fill.PatternType != XLFillPatternValues.None)
+                {
+                    var bgColor = GetColorInfo(style.Fill.BackgroundColor);
+                    var patternColor = GetColorInfo(style.Fill.PatternColor);
+                    
+                    if (bgColor != "ãªã—" && bgColor != "Indexed (#FFFFFF)")
+                    {
+                        bgColorInfo = $"{bgColor} (Pattern:{style.Fill.PatternType})";
+                    }
+                    else if (patternColor != "ãªã—" && patternColor != "Indexed (#FFFFFF)")
+                    {
+                        bgColorInfo = $"PatternColor:{patternColor} (Pattern:{style.Fill.PatternType})";
+                    }
+                    else
+                    {
+                        bgColorInfo = $"Pattern:{style.Fill.PatternType}, BG:{bgColor}, Pattern:{patternColor}";
+                    }
+                }
                 
-                if (!isEmpty)
-                {
-                    Console.WriteLine($"  ’l: '{value}'");
-                    Console.WriteLine($"  ƒtƒHƒ“ƒg: {style.Font.FontName}, ƒTƒCƒY:{style.Font.FontSize}pt, ‘¾š:{style.Font.Bold}");
-                    Console.WriteLine($"  ”z’u: ‰¡={style.Alignment.Horizontal}, c={style.Alignment.Vertical}");
-                }
-                else
-                {
-                    Console.WriteLine($"  ’l: (‹ó)");
-                }
+                Console.WriteLine($"  èƒŒæ™¯è‰²: {bgColorInfo}");
 
+                // ç½«ç·š
                 if (hasBorder)
                 {
-                    Console.WriteLine($"  Œrü:");
+                    Console.WriteLine($"  ç½«ç·š:");
                     if (hasTopBorder)
-                        Console.WriteLine($"    ã: {style.Border.TopBorder} (F:{GetColorInfo(style.Border.TopBorderColor)})");
+                        Console.WriteLine($"    ä¸Š: {style.Border.TopBorder} (è‰²:{GetColorInfo(style.Border.TopBorderColor)})");
                     if (hasBottomBorder)
-                        Console.WriteLine($"    ‰º: {style.Border.BottomBorder} (F:{GetColorInfo(style.Border.BottomBorderColor)})");
+                        Console.WriteLine($"    ä¸‹: {style.Border.BottomBorder} (è‰²:{GetColorInfo(style.Border.BottomBorderColor)})");
                     if (hasLeftBorder)
-                        Console.WriteLine($"    ¶: {style.Border.LeftBorder} (F:{GetColorInfo(style.Border.LeftBorderColor)})");
+                        Console.WriteLine($"    å·¦: {style.Border.LeftBorder} (è‰²:{GetColorInfo(style.Border.LeftBorderColor)})");
                     if (hasRightBorder)
-                        Console.WriteLine($"    ‰E: {style.Border.RightBorder} (F:{GetColorInfo(style.Border.RightBorderColor)})");
+                        Console.WriteLine($"    å³: {style.Border.RightBorder} (è‰²:{GetColorInfo(style.Border.RightBorderColor)})");
                 }
                 else
                 {
-                    Console.WriteLine($"  Œrü: ‚È‚µ");
-                }
-
-                // ”wŒiF
-                var bgColor = GetColorInfo(style.Fill.BackgroundColor);
-                if (bgColor != "‚È‚µ" && bgColor != "#FFFFFF")
-                {
-                    Console.WriteLine($"  ”wŒiF: {bgColor}");
+                    Console.WriteLine($"  ç½«ç·š: ãªã—");
                 }
             }
         }
 
         Console.WriteLine("\n" + new string('=', 80));
-        Console.WriteLine("•ªÍƒTƒ}ƒŠ[:");
-        Console.WriteLine($"  ‘ƒZƒ‹”: {totalCells}");
-        Console.WriteLine($"  ’l‚ª‚ ‚éƒZƒ‹: {cellsWithValue}");
-        Console.WriteLine($"  Œrü‚ª‚ ‚éƒZƒ‹: {cellsWithBorder}");
-        Console.WriteLine($"  ‹ó‚ÅŒrü‚È‚µ‚ÌƒZƒ‹: {emptyCellsNoBorder}");
+        Console.WriteLine("åˆ†æã‚µãƒãƒªãƒ¼:");
+        Console.WriteLine($"  ç·ã‚»ãƒ«æ•°: {totalCells}");
+        Console.WriteLine($"  å€¤ãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithValue}");
+        Console.WriteLine($"  ç½«ç·šãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithBorder}");
+        Console.WriteLine($"  èƒŒæ™¯è‰²ãŒã‚ã‚‹ã‚»ãƒ«: {cellsWithBackground}");
+        Console.WriteLine($"  å¤ªå­—ã®ã‚»ãƒ«: {cellsWithBold}");
+        Console.WriteLine($"  æ–œä½“ã®ã‚»ãƒ«: {cellsWithItalic}");
+        Console.WriteLine($"  ç©ºã§ç½«ç·šãªã—ã®ã‚»ãƒ«: {emptyCellsNoBorder}");
         Console.WriteLine(new string('=', 80));
 
-        // “Á’èƒZƒ‹‚Ì‹­§ƒ`ƒFƒbƒN
+        // ç‰¹å®šã‚»ãƒ«ã®å¼·åˆ¶ãƒã‚§ãƒƒã‚¯
         Console.WriteLine("\n" + new string('=', 80));
-        Console.WriteLine("“Á’èƒZƒ‹‚Ì‹­§ƒ`ƒFƒbƒN:");
+        Console.WriteLine("ç‰¹å®šã‚»ãƒ«ã®å¼·åˆ¶ãƒã‚§ãƒƒã‚¯:");
         Console.WriteLine(new string('=', 80));
 
         var specificCells = new[] { "D1", "A3", "B3", "C3", "D3", "E3", "F3", "G3", "A4", "B4", "C4", "A5", "A8" };
@@ -125,16 +132,21 @@ public class ExcelDebugTool
                 var style = cell.Style;
 
                 Console.WriteLine($"\n{cellAddress}:");
-                Console.WriteLine($"  ’l: '{value}' (IsEmpty: {string.IsNullOrEmpty(value)})");
-                Console.WriteLine($"  Œrü:");
-                Console.WriteLine($"    ã: {style.Border.TopBorder}");
-                Console.WriteLine($"    ‰º: {style.Border.BottomBorder}");
-                Console.WriteLine($"    ¶: {style.Border.LeftBorder}");
-                Console.WriteLine($"    ‰E: {style.Border.RightBorder}");
+                Console.WriteLine($"  å€¤: '{value}' (IsEmpty: {string.IsNullOrEmpty(value)})");
+                Console.WriteLine($"  ãƒ‡ãƒ¼ã‚¿å‹: {cell.DataType}");
+                Console.WriteLine($"  å¤ªå­—: {style.Font.Bold}");
+                Console.WriteLine($"  æ–œä½“: {style.Font.Italic}");
+                Console.WriteLine($"  èƒŒæ™¯è‰²: {GetColorInfo(style.Fill.BackgroundColor)}");
+                Console.WriteLine($"  æ°´å¹³ã‚¢ãƒ©ã‚¤ãƒ¡ãƒ³ãƒˆ: {style.Alignment.Horizontal}");
+                Console.WriteLine($"  ç½«ç·š:");
+                Console.WriteLine($"    ä¸Š: {style.Border.TopBorder}");
+                Console.WriteLine($"    ä¸‹: {style.Border.BottomBorder}");
+                Console.WriteLine($"    å·¦: {style.Border.LeftBorder}");
+                Console.WriteLine($"    å³: {style.Border.RightBorder}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\n{cellAddress}: ƒGƒ‰[ - {ex.Message}");
+                Console.WriteLine($"\n{cellAddress}: ã‚¨ãƒ©ãƒ¼ - {ex.Message}");
             }
         }
 
@@ -153,22 +165,57 @@ public class ExcelDebugTool
         return columnName;
     }
 
-    private static string GetColorInfo(XLColor color)
+    private static string GetColorInfo(XLColor? color)
     {
         if (color == null)
-            return "‚È‚µ";
+            return "ãªã—";
 
         try
         {
-            if (color.ColorType == XLColorType.Color)
+            var colorType = color.ColorType;
+            
+            // Colorã‚¿ã‚¤ãƒ—ï¼ˆç›´æ¥RGBæŒ‡å®šï¼‰
+            if (colorType == XLColorType.Color)
             {
-                return $"#{color.Color.ToArgb() & 0xFFFFFF:X6}";
+                var argb = color.Color.ToArgb() & 0xFFFFFF;
+                return $"#{argb:X6}";
             }
-            return color.ColorType.ToString();
+            
+            // Indexedã‚¿ã‚¤ãƒ—ï¼ˆã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹è‰²ï¼‰
+            if (colorType == XLColorType.Indexed)
+            {
+                try
+                {
+                    var indexedColor = color.Color;
+                    var argb = indexedColor.ToArgb() & 0xFFFFFF;
+                    return $"Indexed (#{argb:X6})";
+                }
+                catch
+                {
+                    return "Indexed";
+                }
+            }
+            
+            // Themeã‚¿ã‚¤ãƒ—ï¼ˆãƒ†ãƒ¼ãƒè‰²ï¼‰
+            if (colorType == XLColorType.Theme)
+            {
+                try
+                {
+                    var themeColor = color.Color;
+                    var argb = themeColor.ToArgb() & 0xFFFFFF;
+                    return $"Theme (#{argb:X6})";
+                }
+                catch
+                {
+                    return $"Theme";
+                }
+            }
+            
+            return colorType.ToString();
         }
         catch
         {
-            return "‚È‚µ";
+            return "ã‚¨ãƒ©ãƒ¼";
         }
     }
 }
