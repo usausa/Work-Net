@@ -464,49 +464,48 @@ private static List<(PropertyInfo Property, CliArgumentInfo Attribute)>
 }
 ```
 
-##### 2. フィルタの自動DI登録
+##### 2. カスタムDIコンテナのサポート
 
 ```csharp
-// グローバルフィルタ + コマンド属性フィルタを収集
-var filterTypes = new HashSet<Type>();
-foreach (var globalFilter in filterOptions.GlobalFilters)
-    filterTypes.Add(globalFilter.FilterType);
-
-foreach (var registration in commandRegistrations)
-    CollectFilterTypes(registration.CommandType, filterTypes);
-
-// DIコンテナに登録
-foreach (var filterType in filterTypes)
-    if (!_services.Any(sd => sd.ServiceType == filterType))
-        _services.AddTransient(filterType);
-```
-
-##### 3. リフレクションによる引数バインディング
-
-```csharp
-command.SetAction(async parseResult =>
+// ConfigureContainerでカスタムファクトリを設定
+public void ConfigureContainer<TContainerBuilder>(
+    IServiceProviderFactory<TContainerBuilder> factory,
+    Action<TContainerBuilder>? configure = null)
 {
-    // DIでコマンドインスタンス生成
-    var instance = ActivatorUtilities.CreateInstance(serviceProvider, commandType);
+    _serviceProviderFactory = factory;
+    _containerConfiguration = configure;
+}
+
+// Build時にファクトリを使用
+public ICliHost Build()
+{
+    // ...サービス登録...
     
-    // 各引数をプロパティに設定
-    foreach (var (argument, property, argumentType) in arguments)
+    IServiceProvider serviceProvider;
+    if (_serviceProviderFactory != null)
     {
-        var value = parseResult.GetValue(argument);
-        property.SetValue(instance, value);
+        // カスタムファクトリを使用（リフレクション経由）
+        var containerBuilder = CreateBuilder(_services);
+        _containerConfiguration?.Invoke(containerBuilder);
+        serviceProvider = CreateServiceProvider(containerBuilder);
+    }
+    else
+    {
+        // デフォルト
+        serviceProvider = _services.BuildServiceProvider();
     }
     
-    // フィルタパイプライン経由で実行
-    var filterPipeline = serviceProvider.GetRequiredService<FilterPipeline>();
-    return await filterPipeline.ExecuteAsync(commandType, instance, CancellationToken.None);
-});
+    // ...
+}
 ```
 
-**パフォーマンス考慮**:
-- リフレクションは起動時のみ（実行時は生成済みのデリゲート使用）
-- フィルタ型の重複登録を防止（HashSet使用）
+**利点**:
+- Autofac、DryIoc、Grace等のサードパーティDIコンテナを使用可能
+- エンタープライズアプリケーションでの高度なDI機能を活用
 
----
+##### 3. フィルタの自動DI登録
+
+````````
 
 #### CliHostBuilderExtensions
 
