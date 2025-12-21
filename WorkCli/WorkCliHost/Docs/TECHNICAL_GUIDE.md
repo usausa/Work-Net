@@ -361,7 +361,12 @@ public interface ICliHostBuilder
     IServiceCollection Services { get; }
     ILoggingBuilder Logging { get; }
     
-    ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configureCommands);
+    void ConfigureContainer<TContainerBuilder>(
+        IServiceProviderFactory<TContainerBuilder> factory,
+        Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull;
+    
+    ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configure);
     ICliHost Build();
 }
 ```
@@ -369,11 +374,13 @@ public interface ICliHostBuilder
 **責務**:
 - ASP.NET Core の `HostApplicationBuilder` に倣ったプロパティベースAPI
 - Configuration、Services、Logging への直接アクセス
+- カスタムDIコンテナのサポート
 - コマンド設定の分離
 
 **設計思想**:
 - **プロパティベース**: 従来の `ConfigureXxx()` メソッドではなく、プロパティ経由で直接設定
 - **責任分離**: アプリケーションサービス（Services）とCLI設定（Commands）を明確に分離
+- **拡張性**: `ConfigureContainer`でDIコンテナを差し替え可能
 
 **使用パターン**:
 ```csharp
@@ -1132,7 +1139,7 @@ public sealed class DerivedCommand : BaseCommand
 internal sealed class CommandConfigurator : ICommandConfigurator
 {
     public ICommandConfigurator AddCommand<TCommand>(Action<ISubCommandConfigurator>? configure);
-    public ICommandConfigurator AddGlobalFilter<TFilter>(int order);
+    public ICommandConfigurator AddGlobalFilter<TFilter>(Action<TFilter> configure);
     public ICommandConfigurator AddGlobalFilter(Type filterType, int order);
     public ICommandConfigurator ConfigureRootCommand(Action<IRootCommandConfigurator> configure);
     public ICommandConfigurator ConfigureFilterOptions(Action<CommandFilterOptions> configure);

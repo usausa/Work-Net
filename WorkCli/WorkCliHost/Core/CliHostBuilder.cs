@@ -81,8 +81,8 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         Action<TContainerBuilder>? configure = null)
         where TContainerBuilder : notnull
     {
-        // 型安全なファクトリとして保存
-        _serviceProviderFactory = new ServiceProviderFactoryAdapter<TContainerBuilder>(factory);
+        // ジェネリックファクトリをそのまま保存
+        _serviceProviderFactory = factory;
         
         // 設定デリゲートを保存（ビルド時に実行）
         if (configure != null)
@@ -142,10 +142,19 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         IServiceProvider serviceProvider;
         if (_serviceProviderFactory != null)
         {
-            // カスタムファクトリを使用
-            var containerBuilder = _serviceProviderFactory.CreateBuilder(_services);
-            _containerConfiguration?.Invoke(containerBuilder);
-            serviceProvider = _serviceProviderFactory.CreateServiceProvider(containerBuilder);
+            // カスタムファクトリを使用（リフレクション経由）
+            var factoryType = _serviceProviderFactory.GetType();
+            var createBuilderMethod = factoryType.GetMethod(nameof(IServiceProviderFactory<object>.CreateBuilder));
+            var createServiceProviderMethod = factoryType.GetMethod(nameof(IServiceProviderFactory<object>.CreateServiceProvider));
+            
+            if (createBuilderMethod == null || createServiceProviderMethod == null)
+            {
+                throw new InvalidOperationException("Invalid service provider factory.");
+            }
+            
+            var containerBuilder = createBuilderMethod.Invoke(_serviceProviderFactory, new object[] { _services });
+            _containerConfiguration?.Invoke(containerBuilder!);
+            serviceProvider = (IServiceProvider)createServiceProviderMethod.Invoke(_serviceProviderFactory, new[] { containerBuilder })!;
         }
         else
         {
@@ -480,31 +489,3 @@ internal sealed record CliArgumentInfo(
     string? Description,
     bool IsRequired,
     object? DefaultValue);
-
-/// <summary>
-/// Adapter to wrap a typed IServiceProviderFactory into an untyped one.
-/// </summary>
-internal sealed class ServiceProviderFactoryAdapter<TContainerBuilder> : IServiceProviderFactory<IServiceCollection>
-    where TContainerBuilder : notnull
-{
-    private readonly IServiceProviderFactory<TContainerBuilder> _factory;
-
-    public ServiceProviderFactoryAdapter(IServiceProviderFactory<TContainerBuilder> factory)
-    {
-        _factory = factory;
-    }
-
-    public IServiceCollection CreateBuilder(IServiceCollection services)
-    {
-        // TContainerBuilderを作成し、IServiceCollectionとして返す
-        // 実際のコンテナビルダーは内部で保持
-        return services;
-    }
-
-    public IServiceProvider CreateServiceProvider(IServiceCollection containerBuilder)
-    {
-        // IServiceCollectionからTContainerBuilderを作成し、サービスプロバイダを構築
-        var typedBuilder = _factory.CreateBuilder(containerBuilder);
-        return _factory.CreateServiceProvider(typedBuilder);
-    }
-}

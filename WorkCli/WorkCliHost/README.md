@@ -19,6 +19,7 @@ System.CommandLineを使用した、属性ベースのCLIホストフレーム�
 - ✅ **最小構成とフル機能版の選択可能**
 - ✅ **整理されたフォルダ構造（Core/Samples/Docs）**
 - ✅ **フォルダ構造に合わせた名前空間（WorkCliHost.Core/Samples）**
+- ✅ **カスタムDIコンテナのサポート（ConfigureContainer）**
 
 ## ⚡ クイックスタート
 

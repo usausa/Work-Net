@@ -108,6 +108,11 @@ public interface ICliHostBuilder
     IServiceCollection Services { get; }
     ILoggingBuilder Logging { get; }
     
+    void ConfigureContainer<TContainerBuilder>(
+        IServiceProviderFactory<TContainerBuilder> factory,
+        Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull;
+    
     ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configure);
     ICliHostBuilder Build();
 }
@@ -127,10 +132,74 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 // Logging設定
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
+// カスタムDIコンテナの設定（オプション）
+// builder.ConfigureContainer(new AutofacServiceProviderFactory(), container =>
+// {
+//     container.RegisterType<MyService>().As<IMyService>();
+// });
+
 // コマンド設定（分離）
 builder.ConfigureCommands(commands =>
 {
     commands.AddCommand<MyCommand>();
+});
+```
+
+### ConfigureContainer（カスタムDIコンテナ）
+
+```csharp
+void ConfigureContainer<TContainerBuilder>(
+    IServiceProviderFactory<TContainerBuilder> factory,
+    Action<TContainerBuilder>? configure = null)
+    where TContainerBuilder : notnull;
+```
+
+**用途**:
+- デフォルトの`ServiceProvider`を別のDIコンテナに置き換える
+- Autofac、DryIoc、Grace等のサードパーティDIコンテナを使用
+
+**使用例（Autofac）**:
+```csharp
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+
+var builder = CliHost.CreateBuilder(args);
+
+// Autofacコンテナを使用
+builder.ConfigureContainer(new AutofacServiceProviderFactory(), container =>
+{
+    // Autofac固有の登録
+    container.RegisterType<MyService>()
+        .As<IMyService>()
+        .SingleInstance();
+    
+    // モジュールの登録
+    container.RegisterModule<MyAutofacModule>();
+    
+    // アセンブリスキャン
+    container.RegisterAssemblyTypes(typeof(Program).Assembly)
+        .Where(t => t.Name.EndsWith("Repository"))
+        .AsImplementedInterfaces();
+});
+
+builder.ConfigureCommands(commands =>
+{
+    commands.AddCommand<MyCommand>();
+});
+
+var host = builder.Build();
+return await host.RunAsync();
+```
+
+**使用例（カスタムファクトリ）**:
+```csharp
+var builder = CliHost.CreateBuilder(args);
+
+// カスタムファクトリを使用
+builder.ConfigureContainer(new CustomServiceProviderFactory(), container =>
+{
+    // カスタムコンテナの設定
+    container.AddSingleton<ICustomService, CustomService>();
 });
 ```
 
