@@ -13,4 +13,5 @@
     <Project Path="WorkWebOpenApi/WorkWebOpenApi.csproj" Id="a35f781d-34de-453d-94bb-776f8731e357" />
   </Folder>
   <Folder Name="/Yarp/" />
+  <Project Path="WorkPipeline/WorkPipeline.csproj" Id="3fafd174-721a-495c-922b-46941a7fc21b" />
 </Solution>
