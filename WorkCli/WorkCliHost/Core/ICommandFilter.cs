@@ -13,8 +13,9 @@ public interface ICommandFilter
 
 /// <summary>
 /// Delegate representing the next filter or command execution in the pipeline.
+/// Similar to ASP.NET Core's RequestDelegate pattern.
 /// </summary>
-public delegate ValueTask CommandExecutionDelegate();
+public delegate ValueTask CommandExecutionDelegate(CommandContext context);
 
 /// <summary>
 /// Filter that runs around command execution.

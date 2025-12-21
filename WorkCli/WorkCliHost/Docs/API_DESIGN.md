@@ -440,7 +440,7 @@ public sealed class AuthorizationFilter : ICommandExecutionFilter
             return; // next()を呼ばない = ショートサーキット
         }
 
-        await next(); // 認可OKなら次へ
+        await next(context); // 認可OKなら次へ
     }
 }
 ```
@@ -454,7 +454,7 @@ public sealed class CleanupFilter : ICommandExecutionFilter
 
     public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
-        await next(); // コマンド実行
+        await next(context); // コマンド実行
 
         // 実行後: クリーンアップ
         if (context.Items.TryGetValue("TempFiles", out var files))
@@ -478,7 +478,7 @@ public sealed class ExceptionHandlingFilter : ICommandExecutionFilter
     {
         try
         {
-            await next();
+            await next(context);
         }
         catch (Exception exception)
         {
@@ -509,7 +509,7 @@ public sealed class TimingFilter : ICommandExecutionFilter
     {
         var sw = Stopwatch.StartNew();
         
-        await next(); // 実行前後でラップ
+        await next(context); // 実行前後でラップ
         
         sw.Stop();
         Console.WriteLine($"⏱  {sw.ElapsedMilliseconds}ms");
@@ -635,7 +635,7 @@ commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);  // 最�
 
 ### ショートサーキット
 
-`next()`を呼ばずにreturnすることで、以降の処理をスキップできます。
+`next(context)`を呼ばずにreturnすることで、以降の処理をスキップできます。
 
 ```csharp
 public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
@@ -644,19 +644,19 @@ public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDele
     {
         context.ExitCode = 403;
         Console.Error.WriteLine("Access denied");
-        return; // next()を呼ばない = ショートサーキット
+        return; // next(context)を呼ばない = ショートサーキット
     }
     
-    await next(); // 認可OKなら続行
+    await next(context); // 認可OKなら続行
 }
 ```
 
 **動作**:
-- AuthorizationFilterが`next()`を呼ばずにreturn
+- AuthorizationFilterが`next(context)`を呼ばずにreturn
 - コマンド実行とそれ以降のフィルタはスキップされる
 
 **ポイント**:
-- フラグ不要: `next()`を呼ぶか呼ばないかで制御
+- フラグ不要: `next(context)`を呼ぶか呼ばないかで制御
 - ASP.NET Coreミドルウェアと同じパターン
 
 ---

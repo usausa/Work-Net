@@ -13,12 +13,12 @@ public sealed class CommandActionBuilderContext
     /// The command type being built.
     /// </summary>
     public Type CommandType { get; init; } = default!;
-    
+
     /// <summary>
     /// The System.CommandLine.Command instance.
     /// </summary>
     public Command Command { get; init; } = default!;
-    
+
     /// <summary>
     /// The service provider for dependency resolution.
     /// </summary>
@@ -35,7 +35,7 @@ public sealed class CommandActionBuilderContext
 /// <returns>A task representing the asynchronous operation.</returns>
 public delegate ValueTask CommandActionDelegate(
     ICommandDefinition commandInstance,
-    ParseResult parseResult, 
+    ParseResult parseResult,
     CommandContext commandContext);
 
 /// <summary>
@@ -123,10 +123,10 @@ internal sealed class CommandConfigurator : ICommandConfigurator
     {
         var rootConfigurator = new RootCommandConfigurator();
         configure(rootConfigurator);
-        
+
         _rootCommandConfiguration = rootConfigurator.GetConfiguration();
         _customRootCommand = rootConfigurator.GetCustomRootCommand();
-        
+
         return this;
     }
 
@@ -268,7 +268,7 @@ internal sealed class CommandRegistration
 {
     public Type CommandType { get; }
     public List<CommandRegistration> SubCommands { get; } = new();
-    
+
     /// <summary>
     /// Custom action builder for creating the command action.
     /// If null, reflection-based builder will be used.

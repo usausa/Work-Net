@@ -24,7 +24,7 @@ public sealed class LoggingFilter : ICommandExecutionFilter
 
         try
         {
-            await next();
+            await next(context);
         }
         finally
         {
@@ -48,7 +48,7 @@ public sealed class TimingFilter : ICommandExecutionFilter
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
-        await next();
+        await next(context);
         
         stopwatch.Stop();
         context.Items["ExecutionTime"] = stopwatch.Elapsed;
@@ -75,7 +75,7 @@ public sealed class ExceptionHandlingFilter : ICommandExecutionFilter
     {
         try
         {
-            await next();
+            await next(context);
         }
         catch (Exception exception)
         {

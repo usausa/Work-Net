@@ -503,308 +503,122 @@ public ICliHost Build()
 - Autofac、DryIoc、Grace等のサードパーティDIコンテナを使用可能
 - エンタープライズアプリケーションでの高度なDI機能を活用
 
-##### 3. フィルタの自動DI登録
-
-````````
-
-#### CliHostBuilderExtensions
-
-**ファイル**: `CliHostBuilderExtensions.cs`
-**役割**: ビルダーの拡張メソッド群
-
-**提供する拡張メソッド** (9個):
-
-| メソッド | 説明 | ステップ数 |
-|---------|------|-----------|
-| `UseDefaultConfiguration()` | JSON + 環境変数を追加 | ~15 |
-| `UseDefaultLogging()` | Console + Configuration logging | ~20 |
-| `UseDefaults()` | 上記2つをまとめて実行 | ~10 |
-| `AddJsonFile()` | JSON設定ファイル追加 | ~10 |
-| `AddEnvironmentVariables()` | 環境変数追加 | ~15 |
-| `AddUserSecrets<T>()` | ユーザーシークレット追加 | ~5 |
-| `SetMinimumLogLevel()` | ログレベル設定 | ~5 |
-| `AddLoggingFilter()` | ログフィルタ追加 | ~5 |
-| `AddDebugLogging()` | デバッグログ追加 | ~5 |
-
-**責務**:
-- よく使う設定パターンの簡略化
-- オプトイン方式の設定追加
-
-**実装の特徴**:
-
-##### 1. 完全修飾名での拡張メソッド呼び出し
+##### 3. フィルタの自動DI登録とパイプライン構築
 
 ```csharp
-public static ICliHostBuilder UseDefaultConfiguration(this ICliHostBuilder builder)
+// フィルタ型の収集とDI登録
+var filterTypes = new HashSet<Type>();
+CollectFilterTypes(commandType, filterTypes);
+foreach (var filterType in filterTypes)
 {
-    // 名前衝突を避けるため完全修飾名で呼び出し
-    Microsoft.Extensions.Configuration.JsonConfigurationExtensions.AddJsonFile(
-        builder.Configuration, "appsettings.json", optional: true, reloadOnChange: true);
-    
-    // ...
-}
-```
-
-理由: `using` による名前空間汚染を避け、明示的な依存関係を示す。
-
-##### 2. メソッドチェーン対応
-
-```csharp
-public static ICliHostBuilder UseDefaults(this ICliHostBuilder builder)
-{
-    return builder
-        .UseDefaultConfiguration()
-        .UseDefaultLogging();
-}
-```
-
-すべての拡張メソッドが `ICliHostBuilder` を返すため、流暢なAPI実現。
-
-**使用例**:
-```csharp
-var builder = CliHost.CreateBuilder(args)
-    .UseDefaultConfiguration()
-    .AddJsonFile("custom.json")
-    .AddEnvironmentVariables("MYAPP_")
-    .SetMinimumLogLevel(LogLevel.Warning)
-    .AddDebugLogging();
-```
-
----
-
-### コマンド定義
-
-#### ICommandDefinition
-
-**ファイル**: `ICommandDefinition.cs`
-**役割**: 実行可能なコマンドのインターフェース
-
-```csharp
-public interface ICommandDefinition
-{
-    ValueTask ExecuteAsync(CommandContext context);
-}
-```
-
-**責務**:
-- コマンドが実行可能であることのマーカー
-- 実行メソッドの定義
-
-**設計思想**:
-- シンプルな非同期実行モデル
-- `CommandContext` による実行時情報へのアクセス
-
-**実装パターン**:
-```csharp
-[CliCommand("greet", Description = "Greet someone")]
-public sealed class GreetCommand : ICommandDefinition
-{
-    private readonly ILogger<GreetCommand> _logger;
-    
-    public GreetCommand(ILogger<GreetCommand> logger)
-    {
-        _logger = logger;
-    }
-    
-    [CliArgument<string>("name")]
-    public string Name { get; set; } = default!;
-    
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        _logger.LogInformation("Greeting {Name}", Name);
-        Console.WriteLine($"Hello, {Name}!");
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
----
-
-#### CommandContext
-
-**ファイル**: `CommandContext.cs`
-**役割**: コマンド実行時のコンテキスト情報
-
-```csharp
-public sealed class CommandContext
-{
-    public Type CommandType { get; }
-    public ICommandDefinition Command { get; }
-    public int ExitCode { get; set; }
-    public Dictionary<string, object?> Items { get; }
-    public CancellationToken CancellationToken { get; set; }
-}
-```
-
-**プロパティ詳細**:
-
-| プロパティ | 型 | 説明 | 用途 |
-|-----------|-----|------|------|
-| `CommandType` | `Type` | 実行中のコマンド型 | フィルタでの型判定 |
-| `Command` | `ICommandDefinition` | コマンドインスタンス | プロパティアクセス |
-| `ExitCode` | `int` | 終了コード | フィルタでの制御 |
-| `Items` | `Dictionary` | データ共有用 | フィルタ間通信 |
-| `CancellationToken` | `CancellationToken` | キャンセル通知 | 非同期処理制御 |
-
-**責務**:
-1. **実行情報の保持**: コマンド型とインスタンス
-2. **終了制御**: ExitCode
-3. **データ共有**: Items ディクショナリ
-4. **キャンセル対応**: CancellationToken
-
-**使用パターン**:
-
-##### 1. フィルタ間でのデータ共有
-```csharp
-// Filter 1: データ設定
-public ValueTask OnBeforeExecutionAsync(CommandContext context)
-{
-    context.Items["StartTime"] = DateTime.UtcNow;
-    context.Items["CorrelationId"] = Guid.NewGuid();
-    return ValueTask.CompletedTask;
+    _services.AddTransient(filterType);
 }
 
-// Filter 2: データ取得
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+// パイプライン構築（ASP.NET Coreパターン）
+CommandExecutionDelegate pipeline = ctx => commandInstance.ExecuteAsync(ctx);
+
+for (int i = executionFilters.Count - 1; i >= 0; i--)
 {
-    await next();
-    
-    var startTime = (DateTime)context.Items["StartTime"]!;
-    var elapsed = DateTime.UtcNow - startTime;
-    Console.WriteLine($"Elapsed: {elapsed.TotalMilliseconds}ms");
+    var filter = executionFilters[i];
+    var next = pipeline;
+    pipeline = ctx => filter.ExecuteAsync(ctx, next);
 }
+
+await pipeline(context);
 ```
 
-##### 2. ショートサーキット（早期終了）
-```csharp
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
-{
-    if (!IsAuthorized())
-    {
-        context.ExitCode = 403;
-        Console.Error.WriteLine("Access denied");
-        return; // next()を呼ばない = ショートサーキット
-    }
-    
-    await next();
-}
-```
+**利点**:
+- ASP.NET Coreのミドルウェアパターンと一貫性
+- `CommandContext`を明示的に引数で渡すため、パイプライン内での状態変更が可能
+- クロージャによるキャプチャがないため、メモリ効率が良い
 
 ---
 
 ### フィルター機構
 
-#### ICommandFilter（基底インターフェース）
+#### ICommandFilter
 
 **ファイル**: `ICommandFilter.cs`
-**役割**: すべてのフィルターの基底
+**役割**: フィルター基底インターフェース
 
 ```csharp
 public interface ICommandFilter
 {
-    int Order { get; }
+    // フィルター実行メソッド（何らかの処理）
 }
 ```
 
-**責務**:
-- フィルタ実行順序の定義
-- フィルタの共通プロパティ
-
-**Order の動作**:
-- 小さい値が先に実行される
-- デフォルトは `0`
-- 負の値で優先度を上げる（例: `-100`）
-- `int.MaxValue` で最後に実行
-
----
-
 #### ICommandExecutionFilter
 
-**ファイル**: `ICommandFilter.cs`
-**役割**: コマンド実行の完全な制御を提供する統一フィルター
+**ファイル**: `ICommandExecutionFilter.cs`
+**役割**: 実行フィルターインターフェース
 
 ```csharp
 public interface ICommandExecutionFilter : ICommandFilter
 {
     ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next);
 }
-
-public delegate ValueTask CommandExecutionDelegate();
 ```
 
 **責務**:
-- コマンド実行をラップする処理
-- 実行前処理、実行後処理、例外処理の全てを実現
+- コマンド実行の前後に処理を挿入
+- 次のフィルターまたはコマンド本体を呼び出す制御
 
-**設計思想**:
-- 単一のフィルターインターフェースで全ての処理パターンをカバー
-- `next()`デリゲートの呼び出し位置で動作を制御
-- ASP.NET Core の `IAsyncActionFilter` に相当
-
-**実装パターン**:
-
-##### 1. 実行前処理
+**使用例**:
 ```csharp
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+public class MyLoggingFilter : ICommandExecutionFilter
 {
-    // Before: 実行前処理
-    if (!IsAuthorized())
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
-        context.ExitCode = 403;
-        return; // ショートサーキット
-    }
-    
-    await next(); // コマンド実行
-}
-```
-
-##### 2. 実行後処理
-```csharp
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
-{
-    await next(); // コマンド実行
-    
-    // After: 実行後処理
-    if (context.Items.TryGetValue("TempFiles", out var files))
-    {
-        DeleteTempFiles((List<string>)files!);
+        Console.WriteLine("Before executing command");
+        
+        // 次のフィルター/コマンドを実行
+        await next(context);
+        
+        Console.WriteLine("After executing command");
     }
 }
 ```
 
-##### 3. 実行前後の処理
+#### CommandFilterAttribute
+
+**ファイル**: `CommandFilterAttribute.cs`
+**役割**: フィルター属性（抽象クラス）
+
 ```csharp
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
+public abstract class CommandFilterAttribute : Attribute, ICommandFilter
 {
-    var sw = Stopwatch.StartNew();
-    
-    await next(); // コマンド実行
-    
-    sw.Stop();
-    Console.WriteLine($"⏱  {sw.ElapsedMilliseconds}ms");
+    // フィルターとしてのメタデータ
 }
 ```
 
-##### 4. 例外処理
+**使用例**:
+
 ```csharp
-public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+[CommandFilter]
+public class MyFilter : ICommandFilter
 {
-    try
-    {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        context.ExitCode = 500;
-        Console.Error.WriteLine($"❌ {ex.Message}");
-    }
+    // フィルターの実装
 }
 ```
 
-**`next` デリゲートの役割**:
-- パイプライン内の次の処理（次のフィルタまたはコマンド）を呼び出す
-- 呼び出さなければ、以降の処理はスキップされる（ショートサーキット）
-- 例外ハンドリング、リトライ、キャッシングなどに利用可能
+#### CommandFilterOptions
+
+**ファイル**: `CommandFilterOptions.cs`
+**役割**: フィルターオプション設定クラス
+
+```csharp
+public class CommandFilterOptions
+{
+    public bool EnableGlobalFilters { get; set; } = true;
+    public bool IncludeBaseClassFilters { get; set; } = true;
+}
+```
+
+**責務**:
+- フィルター機能のグローバル設定
+- 基底クラスのフィルターを含めるかどうか
 
 ---
 
@@ -816,7 +630,7 @@ public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDele
 **責務**:
 1. **フィルタ収集**: グローバル + コマンド属性フィルタ
 2. **順序決定**: Order プロパティに基づくソート
-3. **パイプライン構築**: フィルタのネストされたデリゲート構造を構築
+3. **パイプライン構築**: フィルタのネストされたデリゲート構造を構築（ASP.NET Coreパターン）
 4. **実行**: パイプラインの実行
 
 **実装の詳細**:
@@ -852,7 +666,7 @@ private List<FilterDescriptor> CollectFilters(Type commandType)
 }
 ```
 
-##### 2. パイプライン構築
+##### 2. パイプライン構築（ASP.NET Coreパターン）
 
 ```csharp
 private async ValueTask ExecutePipelineAsync(CommandContext context, List<FilterDescriptor> filters, ICommandDefinition commandInstance)
@@ -870,18 +684,19 @@ private async ValueTask ExecutePipelineAsync(CommandContext context, List<Filter
     }
     
     // パイプラインの中心: コマンド実行
-    CommandExecutionDelegate pipeline = () => commandInstance.ExecuteAsync(context);
+    // CommandContextを引数で受け取る（ASP.NET Coreパターン）
+    CommandExecutionDelegate pipeline = ctx => commandInstance.ExecuteAsync(ctx);
     
     // Execution filtersでラップ（逆順でラップして正順で実行）
     for (int i = executionFilters.Count - 1; i >= 0; i--)
     {
         var filter = executionFilters[i];
         var next = pipeline;
-        pipeline = () => filter.ExecuteAsync(context, next);
+        pipeline = ctx => filter.ExecuteAsync(ctx, next);
     }
     
     // パイプライン実行
-    await pipeline();
+    await pipeline(context);
 }
 ```
 
@@ -896,408 +711,32 @@ private async ValueTask ExecutePipelineAsync(CommandContext context, List<Filter
   - ExceptionHandlingFilter (Order: int.MaxValue, ICommandExecutionFilter)
 
 実行順序:
-  1. ExceptionHandlingFilter.ExecuteAsync() 開始 (try)
-  2.   LoggingFilter.ExecuteAsync() 開始
-  3.     TimingFilter.ExecuteAsync() 開始
-  4.       ValidationFilter.ExecuteAsync() 開始
-  5.         AuthFilter.ExecuteAsync() 開始
-  6.           Command.ExecuteAsync()
-  7.         AuthFilter.ExecuteAsync() 終了
-  8.       ValidationFilter.ExecuteAsync() 終了
-  9.     TimingFilter.ExecuteAsync() 終了
-  10.   LoggingFilter.ExecuteAsync() 終了
-  11. ExceptionHandlingFilter.ExecuteAsync() 終了 (catch if exception)
+  1. ExceptionHandlingFilter.ExecuteAsync(context, next) 開始 (try)
+  2.   LoggingFilter.ExecuteAsync(context, next) 開始
+  3.     TimingFilter.ExecuteAsync(context, next) 開始
+  4.       ValidationFilter.ExecuteAsync(context, next) 開始
+  5.         AuthFilter.ExecuteAsync(context, next) 開始
+  6.           Command.ExecuteAsync(context)
+  7.         AuthFilter.ExecuteAsync(context, next) 終了
+  8.       ValidationFilter.ExecuteAsync(context, next) 終了
+  9.     TimingFilter.ExecuteAsync(context, next) 終了
+  10.   LoggingFilter.ExecuteAsync(context, next) 終了
+  11. ExceptionHandlingFilter.ExecuteAsync(context, next) 終了 (catch if exception)
 ```
 
 **パイプライン構築のメカニズム**:
-1. 最初に `pipeline = () => commandInstance.ExecuteAsync(context)` を設定
+1. 最初に `pipeline = ctx => commandInstance.ExecuteAsync(ctx)` を設定
 2. フィルタを**逆順**でラップ: 最後のフィルタ → 最初のフィルタ
 3. 各フィルタが前のデリゲートを `next` として受け取る
-4. 結果として、実行時は**正順**で実行される
+4. 各デリゲートは `CommandContext` を引数として受け取る（ASP.NET Coreパターン）
+5. 結果として、実行時は**正順**で実行される
 
----
-
-### 属性システム
-
-#### CliCommandAttribute
-
-**ファイル**: `CliCommandAttribute.cs`
-**役割**: コマンドの定義
-
+**ASP.NET Coreとの類似性**:
 ```csharp
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class CliCommandAttribute : Attribute
-{
-    public string Name { get; }
-    public string? Description { get; set; }
-    
-    public CliCommandAttribute(string name)
-    {
-        Name = name;
-    }
-}
-```
+// ASP.NET Core ミドルウェア
+public delegate Task RequestDelegate(HttpContext context);
+RequestDelegate pipeline = ctx => /* 処理 */;
 
-**責務**:
-- コマンド名の定義
-- 説明文の設定
-
-**使用例**:
-```csharp
-[CliCommand("user", Description = "User management commands")]
-public sealed class UserCommand : ICommandGroup
-{
-}
-
-[CliCommand("add", Description = "Add a new user")]
-public sealed class UserAddCommand : ICommandDefinition
-{
-    // ...
-}
-```
-
----
-
-#### CliArgumentAttribute
-
-**ファイル**: `CliArgumentAttribute.cs`
-**役割**: コマンド引数の定義
-
-**ジェネリック版**:
-```csharp
-[AttributeUsage(AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
-public sealed class CliArgumentAttribute<T> : Attribute
-{
-    public const int AutoPosition = -1;
-    
-    public int Position { get; }
-    public string Name { get; }
-    public string? Description { get; set; }
-    public bool IsRequired { get; set; } = true;
-    public T? DefaultValue { get; set; }
-    
-    // Position省略可能
-    public CliArgumentAttribute(string name);
-    
-    // Position明示指定
-    public CliArgumentAttribute(int position, string name);
-}
-```
-
-**非ジェネリック版**:
-```csharp
-public sealed class CliArgumentAttribute : Attribute
-{
-    // ジェネリック版と同じ構造（DefaultValueなし）
-}
-```
-
-**責務**:
-1. **引数の識別**: Name、Position
-2. **型安全性**: ジェネリック `<T>` でデフォルト値の型チェック
-3. **必須/オプション**: IsRequired フラグ
-4. **デフォルト値**: DefaultValue（ジェネリック版のみ）
-
-**Position の動作**:
-- **明示指定**: `[CliArgument<string>(0, "name")]`
-- **自動決定**: `[CliArgument<string>("name")]` → AutoPosition (-1)
-- 自動決定時は、基底クラス→派生クラス、プロパティ定義順
-
-**使用パターン**:
-
-##### 1. 基本的な使用
-```csharp
-[CliArgument<string>(0, "username", Description = "User name")]
-public string Username { get; set; } = default!;
-
-[CliArgument<string>(1, "email", Description = "Email address")]
-public string Email { get; set; } = default!;
-```
-
-##### 2. Position省略（自動決定）
-```csharp
-[CliArgument<string>("key", Description = "Configuration key")]
-public string Key { get; set; } = default!;
-
-[CliArgument<string>("value", Description = "Configuration value")]
-public string Value { get; set; } = default!;
-```
-
-##### 3. デフォルト値
-```csharp
-[CliArgument<string>("greeting", DefaultValue = "Hello", IsRequired = false)]
-public string Greeting { get; set; } = default!;
-
-[CliArgument<int>("count", DefaultValue = 1, IsRequired = false)]
-public int Count { get; set; }
-```
-
-##### 4. 継承階層での使用
-```csharp
-// 基底クラス
-public abstract class UserCommandBase : ICommandDefinition
-{
-    [CliArgument<string>("username")]
-    public string Username { get; set; } = default!;
-    
-    public abstract ValueTask ExecuteAsync(CommandContext context);
-}
-
-// 派生クラス
-[CliCommand("add", Description = "Add user")]
-public sealed class UserAddCommand : UserCommandBase
-{
-    [CliArgument<string>("email")]
-    public string Email { get; set; } = default!;
-    
-    public override ValueTask ExecuteAsync(CommandContext context)
-    {
-        // Username（基底）、Email（派生）の順で引数が設定される
-        Console.WriteLine($"Adding {Username} ({Email})");
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
----
-
-#### CommandFilterAttribute
-
-**ファイル**: `CommandFilterAttribute.cs`
-**役割**: コマンドにフィルタを適用
-
-**抽象基底クラス**:
-```csharp
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
-public abstract class CommandFilterAttribute : Attribute
-{
-    public int Order { get; set; }
-    public abstract Type FilterType { get; }
-}
-```
-
-**ジェネリック版**:
-```csharp
-public sealed class CommandFilterAttribute<TFilter> : CommandFilterAttribute
-    where TFilter : ICommandFilter
-{
-    public override Type FilterType => typeof(TFilter);
-}
-```
-
-**責務**:
-- コマンド固有のフィルタ指定
-- フィルタ実行順序の指定
-- 型安全なフィルタ指定
-
-**使用例**:
-```csharp
-[CommandFilter<TimingFilter>(Order = -100)]
-[CommandFilter<LoggingFilter>]
-[CommandFilter<AuthorizationFilter>(Order = -1000)]
-[CliCommand("secure", Description = "Secure command")]
-public sealed class SecureCommand : ICommandDefinition
-{
-    // このコマンドには3つのフィルタが適用される
-}
-```
-
-**継承との関係**:
-```csharp
-[CommandFilter<BaseFilter>]
-public abstract class BaseCommand : ICommandDefinition
-{
-    // ...
-}
-
-[CommandFilter<DerivedFilter>]
-[CliCommand("derived", Description = "Derived command")]
-public sealed class DerivedCommand : BaseCommand
-{
-    // BaseFilter と DerivedFilter の両方が適用される
-}
-```
-
----
-
-#### CommandConfigurator
-
-**ファイル**: `CommandConfigurators.cs`
-**役割**: コマンド設定の内部実装クラス群
-
-**含まれるクラス** (6個):
-1. `CommandConfigurator` - メイン設定クラス
-2. `SubCommandConfigurator` - サブコマンド設定
-3. `RootCommandConfigurator` - ルートコマンド設定
-4. `CommandRegistration` - コマンド登録情報
-5. （その他内部用クラス）
-
-##### CommandConfigurator
-
-```csharp
-internal sealed class CommandConfigurator : ICommandConfigurator
-{
-    public ICommandConfigurator AddCommand<TCommand>(Action<ISubCommandConfigurator>? configure);
-    public ICommandConfigurator AddGlobalFilter<TFilter>(Action<TFilter> configure);
-    public ICommandConfigurator AddGlobalFilter(Type filterType, int order);
-    public ICommandConfigurator ConfigureRootCommand(Action<IRootCommandConfigurator> configure);
-    public ICommandConfigurator ConfigureFilterOptions(Action<CommandFilterOptions> configure);
-}
-```
-
-**責務**:
-- コマンドの登録
-- グローバルフィルタの登録
-- ルートコマンドの設定
-- フィルタオプションの設定
-
-**内部データ構造**:
-```csharp
-private readonly List<CommandRegistration> _commandRegistrations = new();
-private readonly CommandFilterOptions _filterOptions = new();
-private Action<RootCommand>? _rootCommandConfiguration;
-private RootCommand? _customRootCommand;
-```
-
-##### CommandRegistration
-
-```csharp
-internal sealed class CommandRegistration
-{
-    public Type CommandType { get; }
-    public List<CommandRegistration> SubCommands { get; }
-    
-    public CommandRegistration(Type commandType)
-    {
-        CommandType = commandType;
-        SubCommands = new List<CommandRegistration>();
-    }
-}
-```
-
-**責務**:
-- コマンドの階層構造を表現
-- 再帰的なサブコマンド管理
-
-**データ構造の例**:
-```
-CommandRegistration (UserCommand)
-  ├─ SubCommands[0]: CommandRegistration (UserListCommand)
-  ├─ SubCommands[1]: CommandRegistration (UserAddCommand)
-  └─ SubCommands[2]: CommandRegistration (UserRoleCommand)
-       ├─ SubCommands[0]: CommandRegistration (UserRoleAssignCommand)
-       └─ SubCommands[1]: CommandRegistration (UserRoleRemoveCommand)
-```
-
----
-
-#### ServiceCollectionExtensions
-
-**ファイル**: `ServiceCollectionExtensions.cs`
-**役割**: 非推奨の拡張メソッド（後方互換性）
-
-```csharp
-public static class ServiceCollectionExtensions
-{
-    // 注: AddCliCommandとAddGlobalCommandFilterは削除されました
-    // 新しいAPIでは、ICommandConfigurator経由でコマンドとフィルタを追加します
-}
-```
-
-**現在の状態**:
-- 空のクラス
-- コメントで新しいAPIへの移行方法を記載
-- 後方互換性のために残存
-
-**旧API（削除済み）**:
-```csharp
-// 旧方式（削除済み）
-services.AddCliCommand<MyCommand>();
-services.AddGlobalCommandFilter<MyFilter>();
-```
-
-**新API**:
-```csharp
-// 新方式
-builder.ConfigureCommands(commands =>
-{
-    commands.AddCommand<MyCommand>();
-    commands.AddGlobalFilter<MyFilter>();
-});
-```
-
----
-
-## 付録
-
-### ステップ数詳細
-
-| ファイル | 行数（概算） | 備考 |
-|---------|-------------|------|
-| CliHost.cs | 20 | ファクトリメソッドのみ |
-| ICliHostBuilder.cs | 95 | インターフェース定義 + コメント |
-| CliHostBuilder.cs | 350 | 最大のクラス、リフレクション処理含む |
-| ICliHost.cs | 5 | シンプルなインターフェース |
-| CliHostBuilderExtensions.cs | 130 | 9つの拡張メソッド |
-| ICommandDefinition.cs | 5 | シンプルなインターフェース |
-| CommandContext.cs | 35 | データクラス + コンストラクタ |
-| CliCommandAttribute.cs | 10 | シンプルな属性 |
-| CliArgumentAttribute.cs | 50 | 2つのバージョン（ジェネリック/非ジェネリック） |
-| ICommandFilter.cs | 60 | 5つのインターフェース定義 |
-| CommandFilterAttribute.cs | 20 | 抽象 + ジェネリック版 |
-| CommandFilterOptions.cs | 30 | オプションクラス + 記述子 |
-| FilterPipeline.cs | 200 | フィルタ実行ロジック |
-| CommandConfigurators.cs | 250 | 複数の設定クラス |
-| **合計** | **~1,275行** | |
-
-### パフォーマンス特性
-
-| 処理 | タイミング | コスト | 備考 |
-|------|-----------|--------|------|
-| ビルダー生成 | 起動時 | O(1) | 軽量 |
-| コマンド登録 | 起動時 | O(n) | n = コマンド数 |
-| フィルタ収集 | 起動時 | O(m) | m = フィルタ数 |
-| リフレクション | 起動時 | O(n×p) | p = プロパティ数/コマンド |
-| DI登録 | 起動時 | O(n+m) | |
-| System.CommandLine構築 | 起動時 | O(n) | |
-| **起動時合計** | | **O(n×p + m)** | 通常は数十ms |
-| コマンド実行 | 実行時 | O(f) | f = アクティブフィルタ数 |
-| フィルタ実行 | 実行時 | O(f) | パイプライン構築済み |
-| **実行時合計** | | **O(f)** | 通常は数ms |
-
-### メモリ使用量
-
-| データ | サイズ（概算） | 備考 |
-|-------|---------------|------|
-| ビルダーインスタンス | 1KB | ServiceCollection含む |
-| コマンド登録情報 | 100B × n | n = コマンド数 |
-| フィルタ記述子 | 50B × m | m = フィルタ数 |
-| System.CommandLine構造 | 1KB × n | コマンドツリー |
-| **起動時合計** | **~数KB** | 小規模アプリ想定 |
-
----
-
-## まとめ
-
-WorkCliHost.Core は以下の特徴を持つ、堅牢で拡張性の高いCLIフレームワークです：
-
-### 設計原則
-1. **型安全性**: ジェネリック属性による型チェック
-2. **分離**: ビルダーパターンによる設定の分離
-3. **拡張性**: フィルタパイプラインによる横断的関心事の実装
-4. **パフォーマンス**: リフレクションは起動時のみ、実行時はデリゲート使用
-5. **DI統合**: Microsoft.Extensions.DependencyInjection との完全な統合
-
-### 実装の特徴
-- 約1,200行のコンパクトな実装
-- 20以上の型で機能を提供
-- System.CommandLine との薄いラッパー
-- ASP.NET Core の設計思想を踏襲
-
-### 利用シーン
-- 小〜中規模のCLIツール
-- エンタープライズCLIアプリケーション
-- マイクロサービスの管理ツール
-- DevOpsスクリプト
-
-このフレームワークは、.NET開発者にとって馴染みのあるパターンを採用し、学習コストを最小限に抑えながら、強力な機能を提供します。
+// WorkCliHost.Core フィルタ
+public delegate ValueTask CommandExecutionDelegate(CommandContext context);
+CommandExecutionDelegate pipeline = ctx => commandInstance.ExecuteAsync(ctx);

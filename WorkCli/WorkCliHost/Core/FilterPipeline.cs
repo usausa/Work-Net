@@ -138,18 +138,18 @@ internal sealed class FilterPipeline
         }
         
         // パイプラインの中心: コマンド実行
-        CommandExecutionDelegate pipeline = () => commandInstance.ExecuteAsync(context);
+        CommandExecutionDelegate pipeline = ctx => commandInstance.ExecuteAsync(ctx);
         
         // Execution filtersでラップ（逆順でラップして正順で実行）
         for (int i = executionFilters.Count - 1; i >= 0; i--)
         {
             var filter = executionFilters[i];
             var next = pipeline;
-            pipeline = () => filter.ExecuteAsync(context, next);
+            pipeline = ctx => filter.ExecuteAsync(ctx, next);
         }
         
         // パイプライン実行
-        await pipeline();
+        await pipeline(context);
     }
 
     private async ValueTask ExecutePipelineWithActionAsync(
@@ -170,18 +170,18 @@ internal sealed class FilterPipeline
         }
         
         // パイプラインの中心: カスタムアクション
-        CommandExecutionDelegate pipeline = () => action();
+        CommandExecutionDelegate pipeline = ctx => action();
         
         // Execution filtersでラップ（逆順でラップして正順で実行）
         for (int i = executionFilters.Count - 1; i >= 0; i--)
         {
             var filter = executionFilters[i];
             var next = pipeline;
-            pipeline = () => filter.ExecuteAsync(context, next);
+            pipeline = ctx => filter.ExecuteAsync(ctx, next);
         }
         
         // パイプライン実行
-        await pipeline();
+        await pipeline(context);
     }
 
     private sealed class FilterDescriptor

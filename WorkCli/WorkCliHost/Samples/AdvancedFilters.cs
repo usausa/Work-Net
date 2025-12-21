@@ -37,7 +37,7 @@ public sealed class AuthorizationFilter : ICommandExecutionFilter
             return; // Short-circuit: don't call next()
         }
 
-        await next(); // Proceed to next filter or command
+        await next(context); // Proceed to next filter or command
     }
 }
 
@@ -72,7 +72,7 @@ public sealed class ValidationFilter : ICommandExecutionFilter
             return; // Short-circuit
         }
 
-        await next(); // Proceed if valid
+        await next(context); // Proceed if valid
     }
 }
 
@@ -93,7 +93,7 @@ public sealed class CleanupFilter : ICommandExecutionFilter
 
     public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
-        await next(); // Execute command first
+        await next(context); // Execute command first
 
         // After: Cleanup
         _logger.LogInformation("Cleaning up after command: {CommandType}", context.CommandType.Name);
@@ -131,7 +131,7 @@ public sealed class TransactionFilter : ICommandExecutionFilter
 
         try
         {
-            await next();
+            await next(context);
 
             // Commit transaction if successful
             _logger.LogInformation("Committing transaction for command: {CommandType}", context.CommandType.Name);
