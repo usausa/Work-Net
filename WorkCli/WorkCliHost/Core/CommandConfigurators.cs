@@ -1,16 +1,57 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WorkCliHost.Core;
 
 /// <summary>
-/// Delegate for building a command from a command type.
-/// This allows for custom command construction logic, including Source Generator support.
+/// Builder context containing information needed to build a command action.
 /// </summary>
-/// <param name="commandType">The type of the command to build.</param>
-/// <param name="serviceProvider">The service provider for dependency resolution.</param>
-/// <returns>A configured System.CommandLine.Command instance.</returns>
-public delegate Command CommandBuilder(Type commandType, IServiceProvider serviceProvider);
+public sealed class CommandActionBuilderContext
+{
+    /// <summary>
+    /// The command type being built.
+    /// </summary>
+    public Type CommandType { get; init; } = default!;
+    
+    /// <summary>
+    /// The System.CommandLine.Command instance.
+    /// </summary>
+    public Command Command { get; init; } = default!;
+    
+    /// <summary>
+    /// The service provider for dependency resolution.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; init; } = default!;
+}
+
+/// <summary>
+/// Delegate for the core command action that sets argument values and executes the command.
+/// The command instance is provided as a parameter (created by the caller).
+/// </summary>
+/// <param name="commandInstance">The command instance to configure and execute.</param>
+/// <param name="parseResult">The parse result containing argument values.</param>
+/// <param name="commandContext">The command context for execution.</param>
+/// <returns>A task representing the asynchronous operation.</returns>
+public delegate ValueTask CommandActionDelegate(
+    ICommandDefinition commandInstance,
+    ParseResult parseResult, 
+    CommandContext commandContext);
+
+/// <summary>
+/// Delegate for building command arguments and action logic.
+/// Returns a list of arguments to add and the core action delegate.
+/// </summary>
+/// <param name="context">The builder context.</param>
+/// <returns>
+/// A tuple containing:
+/// - Arguments: List of System.CommandLine.Argument to add to the command
+/// - Action: Core action delegate that sets argument values and executes the command
+/// </returns>
+public delegate (
+    IReadOnlyList<Argument> Arguments,
+    CommandActionDelegate Action
+) CommandActionBuilder(CommandActionBuilderContext context);
 
 /// <summary>
 /// Implementation of ICommandConfigurator for configuring commands and filters.
@@ -31,11 +72,11 @@ internal sealed class CommandConfigurator : ICommandConfigurator
     public ICommandConfigurator AddCommand<TCommand>(Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
-        return AddCommand<TCommand>(builder: null, configure);
+        return AddCommand<TCommand>(actionBuilder: null, configure);
     }
 
     public ICommandConfigurator AddCommand<TCommand>(
-        CommandBuilder? builder,
+        CommandActionBuilder? actionBuilder,
         Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
@@ -45,7 +86,7 @@ internal sealed class CommandConfigurator : ICommandConfigurator
             _services.AddTransient<TCommand>();
         }
 
-        var registration = new CommandRegistration(typeof(TCommand), builder);
+        var registration = new CommandRegistration(typeof(TCommand), actionBuilder);
 
         if (configure != null)
         {
@@ -117,11 +158,11 @@ internal sealed class SubCommandConfigurator : ISubCommandConfigurator
     public ISubCommandConfigurator AddSubCommand<TCommand>(Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
-        return AddSubCommand<TCommand>(builder: null, configure);
+        return AddSubCommand<TCommand>(actionBuilder: null, configure);
     }
 
     public ISubCommandConfigurator AddSubCommand<TCommand>(
-        CommandBuilder? builder,
+        CommandActionBuilder? actionBuilder,
         Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
@@ -131,7 +172,7 @@ internal sealed class SubCommandConfigurator : ISubCommandConfigurator
             _services.AddTransient<TCommand>();
         }
 
-        var registration = new CommandRegistration(typeof(TCommand), builder);
+        var registration = new CommandRegistration(typeof(TCommand), actionBuilder);
 
         if (configure != null)
         {
@@ -229,14 +270,14 @@ internal sealed class CommandRegistration
     public List<CommandRegistration> SubCommands { get; } = new();
     
     /// <summary>
-    /// Custom builder for creating the command.
+    /// Custom action builder for creating the command action.
     /// If null, reflection-based builder will be used.
     /// </summary>
-    public CommandBuilder? Builder { get; }
+    public CommandActionBuilder? ActionBuilder { get; }
 
-    public CommandRegistration(Type commandType, CommandBuilder? builder = null)
+    public CommandRegistration(Type commandType, CommandActionBuilder? actionBuilder = null)
     {
         CommandType = commandType;
-        Builder = builder;
+        ActionBuilder = actionBuilder;
     }
 }

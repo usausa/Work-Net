@@ -181,19 +181,71 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
     private Command CreateCommandWithSubCommands(CommandRegistration registration, IServiceProvider serviceProvider)
     {
-        // カスタムビルダーが指定されている場合はそれを使用
-        Command command;
-        if (registration.Builder != null)
+        // 1. 基本的なCommand生成
+        var attribute = registration.CommandType.GetCustomAttribute<CliCommandAttribute>()
+            ?? throw new InvalidOperationException($"Type {registration.CommandType.Name} must have CliCommandAttribute");
+        
+        var command = new Command(attribute.Name, attribute.Description);
+        
+        // 2. 実行可能コマンドの場合
+        if (typeof(ICommandDefinition).IsAssignableFrom(registration.CommandType))
         {
-            command = registration.Builder(registration.CommandType, serviceProvider);
-        }
-        else
-        {
-            // リフレクションベースのビルダーを使用
-            command = CreateCommand(registration.CommandType, serviceProvider);
+            // ビルダーコンテキストを作成
+            var builderContext = new CommandActionBuilderContext
+            {
+                CommandType = registration.CommandType,
+                Command = command,
+                ServiceProvider = serviceProvider
+            };
+
+            // アクションビルダーを取得
+            var actionBuilder = registration.ActionBuilder 
+                ?? CommandBuilderHelpers.CreateReflectionBasedActionBuilder(registration.CommandType);
+
+            // ビルダーを実行
+            var (arguments, coreAction) = actionBuilder(builderContext);
+
+            // 3. 引数をCommandに追加
+            foreach (var argument in arguments)
+            {
+                command.Arguments.Add(argument);
+            }
+
+            // 4. SetActionでラッパーを設定
+            var filterPipeline = serviceProvider.GetRequiredService<FilterPipeline>();
+            
+            command.SetAction(async parseResult =>
+            {
+                // a. CommandContextを生成（呼び出し側で統一的に生成）
+                var commandContext = new CommandContext
+                {
+                    CommandType = registration.CommandType,
+                    CancellationToken = CancellationToken.None
+                };
+
+                // b. コマンドインスタンスを生成（呼び出し側で統一的に生成）
+                var commandInstance = (ICommandDefinition)ActivatorUtilities
+                    .CreateInstance(serviceProvider, registration.CommandType);
+
+                // c. CommandContextに設定
+                commandContext.Command = commandInstance;
+
+                // d. FilterPipelineでコアアクションをラップして実行
+                await filterPipeline.ExecuteAsync(
+                    registration.CommandType,
+                    commandInstance,
+                    async () =>
+                    {
+                        // コアアクションを実行
+                        await coreAction(commandInstance, parseResult, commandContext);
+                    },
+                    commandContext.CancellationToken);
+
+                return commandContext.ExitCode;
+            });
         }
         
-        // サブコマンドを再帰的に追加
+        // 5. サブコマンド追加
         foreach (var subRegistration in registration.SubCommands)
         {
             var subCommand = CreateCommandWithSubCommands(subRegistration, serviceProvider);
@@ -201,13 +253,6 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         }
         
         return command;
-    }
-
-    private Command CreateCommand(Type commandType, IServiceProvider serviceProvider)
-    {
-        // リフレクションベースのビルダーを使用
-        var builder = CommandBuilderHelpers.CreateReflectionBasedBuilder();
-        return builder(commandType, serviceProvider);
     }
 
     private static void CollectFilterTypes(Type commandType, HashSet<Type> filterTypes)

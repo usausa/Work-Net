@@ -69,14 +69,14 @@ public interface ICommandConfigurator
         where TCommand : class;
 
     /// <summary>
-    /// Adds a CLI command to the application with a custom builder.
+    /// Adds a CLI command to the application with a custom action builder.
     /// This allows for AOT-friendly command construction.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <param name="builder">Custom command builder function.</param>
+    /// <param name="actionBuilder">Custom action builder function.</param>
     /// <param name="configure">Optional sub-command configuration.</param>
     ICommandConfigurator AddCommand<TCommand>(
-        CommandBuilder builder,
+        CommandActionBuilder actionBuilder,
         Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class;
 
@@ -114,14 +114,14 @@ public interface ISubCommandConfigurator
         where TCommand : class;
 
     /// <summary>
-    /// Adds a sub-command with a custom builder.
+    /// Adds a sub-command with a custom action builder.
     /// This allows for AOT-friendly command construction.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <param name="builder">Custom command builder function.</param>
+    /// <param name="actionBuilder">Custom action builder function.</param>
     /// <param name="configure">Optional sub-command configuration.</param>
     ISubCommandConfigurator AddSubCommand<TCommand>(
-        CommandBuilder builder,
+        CommandActionBuilder actionBuilder,
         Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class;
 }

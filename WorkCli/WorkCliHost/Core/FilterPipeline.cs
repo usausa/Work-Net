@@ -25,14 +25,45 @@ internal sealed class FilterPipeline
         {
             Command = commandInstance,
             CommandType = commandType,
-            CancellationToken = cancellationToken,
-            ExitCode = 0
+            CancellationToken = cancellationToken
         };
 
+        // フィルタを収集・ソート
         var filters = CollectFilters(commandType);
-        
-        await ExecutePipelineAsync(context, filters, commandInstance);
 
+        // フィルタパイプラインを構築して実行
+        await ExecutePipelineAsync(context, filters, commandInstance);
+        
+        return context.ExitCode;
+    }
+
+    /// <summary>
+    /// Executes a command through the filter pipeline with a custom action delegate.
+    /// </summary>
+    /// <param name="commandType">The type of the command being executed.</param>
+    /// <param name="commandInstance">The command instance.</param>
+    /// <param name="action">The action to execute within the filter pipeline.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The exit code from the command execution.</returns>
+    public async ValueTask<int> ExecuteAsync(
+        Type commandType,
+        ICommandDefinition commandInstance,
+        Func<ValueTask> action,
+        CancellationToken cancellationToken)
+    {
+        var context = new CommandContext
+        {
+            Command = commandInstance,
+            CommandType = commandType,
+            CancellationToken = cancellationToken
+        };
+
+        // フィルタを収集・ソート
+        var filters = CollectFilters(commandType);
+
+        // フィルタパイプラインを構築して実行
+        await ExecutePipelineWithActionAsync(context, filters, action);
+        
         return context.ExitCode;
     }
 
@@ -95,25 +126,20 @@ internal sealed class FilterPipeline
         ICommandDefinition commandInstance)
     {
         var executionFilters = new List<ICommandExecutionFilter>();
-
+        
         // フィルタインスタンスを作成
         foreach (var descriptor in filters)
         {
             var filterInstance = _serviceProvider.GetService(descriptor.FilterType);
-            if (filterInstance == null)
-            {
-                throw new InvalidOperationException($"Filter {descriptor.FilterType.Name} is not registered in DI container.");
-            }
-
             if (filterInstance is ICommandExecutionFilter execFilter)
             {
                 executionFilters.Add(execFilter);
             }
         }
-
-        // パイプラインを構築: 最初はコマンド実行
+        
+        // パイプラインの中心: コマンド実行
         CommandExecutionDelegate pipeline = () => commandInstance.ExecuteAsync(context);
-
+        
         // Execution filtersでラップ（逆順でラップして正順で実行）
         for (int i = executionFilters.Count - 1; i >= 0; i--)
         {
@@ -121,7 +147,39 @@ internal sealed class FilterPipeline
             var next = pipeline;
             pipeline = () => filter.ExecuteAsync(context, next);
         }
+        
+        // パイプライン実行
+        await pipeline();
+    }
 
+    private async ValueTask ExecutePipelineWithActionAsync(
+        CommandContext context,
+        List<FilterDescriptor> filters,
+        Func<ValueTask> action)
+    {
+        var executionFilters = new List<ICommandExecutionFilter>();
+        
+        // フィルタインスタンスを作成
+        foreach (var descriptor in filters)
+        {
+            var filterInstance = _serviceProvider.GetService(descriptor.FilterType);
+            if (filterInstance is ICommandExecutionFilter execFilter)
+            {
+                executionFilters.Add(execFilter);
+            }
+        }
+        
+        // パイプラインの中心: カスタムアクション
+        CommandExecutionDelegate pipeline = () => action();
+        
+        // Execution filtersでラップ（逆順でラップして正順で実行）
+        for (int i = executionFilters.Count - 1; i >= 0; i--)
+        {
+            var filter = executionFilters[i];
+            var next = pipeline;
+            pipeline = () => filter.ExecuteAsync(context, next);
+        }
+        
         // パイプライン実行
         await pipeline();
     }

@@ -12,82 +12,62 @@ namespace WorkCliHost.Core;
 public static class CommandBuilderHelpers
 {
     /// <summary>
-    /// Creates a command builder delegate using reflection.
+    /// Creates a command action builder using reflection.
     /// This is the default builder when no custom builder is specified.
     /// </summary>
-    public static CommandBuilder CreateReflectionBasedBuilder()
+    public static CommandActionBuilder CreateReflectionBasedActionBuilder(Type commandType)
     {
-        return (commandType, serviceProvider) =>
+        return context =>
         {
-            var attribute = commandType.GetCustomAttribute<CliCommandAttribute>()
-                ?? throw new InvalidOperationException($"Type {commandType.Name} must have CliCommandAttribute");
+            // 1. 属性からプロパティと引数情報を収集
+            var propertyInfos = CollectPropertiesWithArguments(commandType);
+            var argumentList = new List<Argument>();
+            var propertyArgumentMap = new List<(PropertyInfo Property, Argument Argument)>();
 
-            var command = new Command(attribute.Name, attribute.Description);
-
-            // ICommandDefinitionを実装していない場合はグループコマンド
-            var isExecutableCommand = typeof(ICommandDefinition).IsAssignableFrom(commandType);
-            
-            if (isExecutableCommand)
+            // 2. 引数を作成
+            foreach (var (property, argAttr) in propertyInfos)
             {
-                ConfigureExecutableCommand(command, commandType, serviceProvider);
+                var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
+                var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
+                
+                // Description設定
+                if (argAttr.Description != null)
+                {
+                    var descriptionProperty = argumentType.GetProperty("Description");
+                    descriptionProperty?.SetValue(argument, argAttr.Description);
+                }
+
+                // デフォルト値設定
+                var defaultValue = GetDefaultValue(property, argAttr);
+                if (defaultValue.HasValue)
+                {
+                    SetDefaultValue(argument, argumentType, property.PropertyType, defaultValue.Value);
+                }
+
+                argumentList.Add(argument);
+                propertyArgumentMap.Add((property, argument));
             }
 
-            return command;
+            // 3. コアアクションを作成
+            CommandActionDelegate coreAction = async (commandInstance, parseResult, commandContext) =>
+            {
+                // インスタンスは既に生成済み（呼び出し側が生成）
+                
+                // 引数値を設定（リフレクション）
+                foreach (var (property, argument) in propertyArgumentMap)
+                {
+                    var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
+                    var value = GetArgumentValue(parseResult, argument, argumentType, property.PropertyType);
+                    property.SetValue(commandInstance, value);
+                }
+
+                // コマンド実行
+                await commandInstance.ExecuteAsync(commandContext);
+            };
+
+            // 4. 引数リストとコアアクションを返す
+            return (argumentList, coreAction);
         };
-    }
-
-    /// <summary>
-    /// Configures an executable command with arguments and action.
-    /// This method can be used by Source Generators to create custom builders.
-    /// </summary>
-    public static void ConfigureExecutableCommand(Command command, Type commandType, IServiceProvider serviceProvider)
-    {
-        // プロパティと属性を収集（継承階層を考慮）
-        var propertyInfos = CollectPropertiesWithArguments(commandType);
-
-        var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
-        
-        foreach (var (property, argAttr) in propertyInfos)
-        {
-            var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
-            
-            // Argument<T>のコンストラクタ: Argument(string name)
-            var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
-            
-            // Descriptionプロパティを設定
-            var descriptionProperty = argumentType.GetProperty("Description");
-            if (descriptionProperty != null && argAttr.Description != null)
-            {
-                descriptionProperty.SetValue(argument, argAttr.Description);
-            }
-
-            // デフォルト値を設定
-            var defaultValue = GetDefaultValue(property, argAttr);
-            if (defaultValue.HasValue)
-            {
-                SetDefaultValue(argument, argumentType, property.PropertyType, defaultValue.Value);
-            }
-
-            arguments.Add((argument, property, argumentType));
-            command.Arguments.Add(argument);
-        }
-
-        command.SetAction(async parseResult =>
-        {
-            var instance = (ICommandDefinition)ActivatorUtilities.CreateInstance(serviceProvider, commandType);
-
-            foreach (var (argument, property, argumentType) in arguments)
-            {
-                var value = GetArgumentValue(parseResult, argument, argumentType, property.PropertyType);
-                property.SetValue(instance, value);
-            }
-
-            // フィルタパイプラインを通してコマンドを実行
-            var filterPipeline = serviceProvider.GetRequiredService<FilterPipeline>();
-            var exitCode = await filterPipeline.ExecuteAsync(commandType, instance, CancellationToken.None);
-            
-            return exitCode;
-        });
     }
 
     /// <summary>
