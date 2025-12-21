@@ -181,8 +181,19 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
     private Command CreateCommandWithSubCommands(CommandRegistration registration, IServiceProvider serviceProvider)
     {
-        var command = CreateCommand(registration.CommandType, serviceProvider);
+        // カスタムビルダーが指定されている場合はそれを使用
+        Command command;
+        if (registration.Builder != null)
+        {
+            command = registration.Builder(registration.CommandType, serviceProvider);
+        }
+        else
+        {
+            // リフレクションベースのビルダーを使用
+            command = CreateCommand(registration.CommandType, serviceProvider);
+        }
         
+        // サブコマンドを再帰的に追加
         foreach (var subRegistration in registration.SubCommands)
         {
             var subCommand = CreateCommandWithSubCommands(subRegistration, serviceProvider);
@@ -194,106 +205,9 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
     private Command CreateCommand(Type commandType, IServiceProvider serviceProvider)
     {
-        var attribute = commandType.GetCustomAttribute<CliCommandAttribute>()
-            ?? throw new InvalidOperationException($"Type {commandType.Name} must have CliCommandAttribute");
-
-        var command = new Command(attribute.Name, attribute.Description);
-
-        // ICommandDefinitionを実装していない場合はグループコマンド
-        var isExecutableCommand = typeof(ICommandDefinition).IsAssignableFrom(commandType);
-        
-        if (isExecutableCommand)
-        {
-            // 実行可能コマンドの処理
-            // プロパティと属性を収集（継承階層を考慮）
-            var propertyInfos = CollectPropertiesWithArguments(commandType);
-
-            var arguments = new List<(Argument Argument, PropertyInfo Property, Type ArgumentType)>();
-            
-            foreach (var (property, argAttr) in propertyInfos)
-            {
-                var argumentType = typeof(Argument<>).MakeGenericType(property.PropertyType);
-                
-                // Argument<T>のコンストラクタ: Argument(string name)
-                var argument = (Argument)Activator.CreateInstance(argumentType, argAttr.Name)!;
-                
-                // Descriptionプロパティを設定
-                var descriptionProperty = argumentType.GetProperty("Description");
-                if (descriptionProperty != null && argAttr.Description != null)
-                {
-                    descriptionProperty.SetValue(argument, argAttr.Description);
-                }
-
-                // デフォルト値を設定
-                var defaultValue = GetDefaultValue(property, argAttr);
-                if (defaultValue.HasValue)
-                {
-                    var defaultValueFactoryProperty = argumentType.GetProperty("DefaultValueFactory");
-                    if (defaultValueFactoryProperty != null)
-                    {
-                        // Func<ArgumentResult, T>のデリゲートを作成
-                        var argumentResultType = typeof(ArgumentResult);
-                        var funcType = typeof(Func<,>).MakeGenericType(argumentResultType, property.PropertyType);
-                        
-                        var capturedValue = defaultValue.Value;
-                        var lambdaMethod = GetType().GetMethod(nameof(CreateDefaultValueFactory), BindingFlags.NonPublic | BindingFlags.Static)!
-                            .MakeGenericMethod(property.PropertyType);
-                        
-                        var factoryDelegate = lambdaMethod.Invoke(null, [capturedValue]);
-                        defaultValueFactoryProperty.SetValue(argument, factoryDelegate);
-                    }
-                }
-
-                arguments.Add((argument, property, argumentType));
-                command.Arguments.Add(argument);
-            }
-
-            command.SetAction(async parseResult =>
-            {
-                var instance = (ICommandDefinition)ActivatorUtilities.CreateInstance(serviceProvider, commandType);
-
-                foreach (var (argument, property, argumentType) in arguments)
-                {
-                    // GetValueメソッドを呼び出す
-                    var getValueMethod = typeof(ParseResult).GetMethod("GetValue", [argumentType])
-                        ?? typeof(ParseResult).GetMethod("GetValue", 1, [argumentType]);
-                    
-                    if (getValueMethod == null)
-                    {
-                        // 汎用的なGetValueメソッドを取得
-                        var methods = typeof(ParseResult).GetMethods()
-                            .Where(m => m.Name == "GetValue" && m.IsGenericMethod && m.GetParameters().Length == 1);
-                        
-                        foreach (var method in methods)
-                        {
-                            var parameters = method.GetParameters();
-                            if (parameters[0].ParameterType.IsGenericType && 
-                                parameters[0].ParameterType.GetGenericTypeDefinition() == typeof(Argument<>))
-                            {
-                                getValueMethod = method.MakeGenericMethod(property.PropertyType);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (getValueMethod != null)
-                    {
-                        var value = getValueMethod.Invoke(parseResult, [argument]);
-                        property.SetValue(instance, value);
-                    }
-                }
-
-                // フィルタパイプラインを通してコマンドを実行
-                var filterPipeline = serviceProvider.GetRequiredService<FilterPipeline>();
-                var exitCode = await filterPipeline.ExecuteAsync(commandType, instance, CancellationToken.None);
-                
-                return exitCode;
-            });
-        }
-        // ICommandGroupまたはサブコマンドのみの場合は、アクションを設定しない
-        // System.CommandLineはアクションがない場合、自動的にヘルプを表示する
-
-        return command;
+        // リフレクションベースのビルダーを使用
+        var builder = CommandBuilderHelpers.CreateReflectionBasedBuilder();
+        return builder(commandType, serviceProvider);
     }
 
     private static void CollectFilterTypes(Type commandType, HashSet<Type> filterTypes)
@@ -312,119 +226,6 @@ internal sealed class CliHostBuilder : ICliHostBuilder
             
             currentType = currentType.BaseType;
         }
-    }
-
-    /// <summary>
-    /// 継承階層を考慮してプロパティと引数属性を収集し、適切な順序でソートします。
-    /// </summary>
-    private static List<(PropertyInfo Property, CliArgumentInfo Attribute)> CollectPropertiesWithArguments(Type commandType)
-    {
-        var typeHierarchy = new List<Type>();
-        var currentType = commandType;
-        
-        // 継承階層を収集（派生→基底の順）
-        while (currentType != null && currentType != typeof(object))
-        {
-            typeHierarchy.Add(currentType);
-            currentType = currentType.BaseType;
-        }
-        
-        // 基底→派生の順に反転
-        typeHierarchy.Reverse();
-
-        var allProperties = new List<(PropertyInfo Property, CliArgumentInfo Attribute, int TypeLevel, int PropertyIndex)>();
-        
-        for (int typeLevel = 0; typeLevel < typeHierarchy.Count; typeLevel++)
-        {
-            var type = typeHierarchy[typeLevel];
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            
-            for (int propIndex = 0; propIndex < properties.Length; propIndex++)
-            {
-                var property = properties[propIndex];
-                var argAttr = GetCliArgumentAttribute(property);
-                
-                if (argAttr != null)
-                {
-                    allProperties.Add((property, argAttr, typeLevel, propIndex));
-                }
-            }
-        }
-
-        // ソート順序:
-        // 1. Position指定がある場合は、そのPositionで優先
-        // 2. Position指定がない場合（AutoPosition）は、TypeLevel（基底クラスが先）→ PropertyIndex
-        var sortedProperties = allProperties
-            .OrderBy(p =>
-            {
-                if (p.Attribute.Position != CliArgumentAttribute<object>.AutoPosition)
-                {
-                    // 明示的なPositionがある場合は、それを最優先（負でない値として扱う）
-                    return (0, p.Attribute.Position, 0, 0);
-                }
-                else
-                {
-                    // AutoPositionの場合は、TypeLevel → PropertyIndexでソート
-                    // 明示的なPositionより後になるように、第1キーを1にする
-                    return (1, 0, p.TypeLevel, p.PropertyIndex);
-                }
-            })
-            .Select(p => (p.Property, p.Attribute))
-            .ToList();
-
-        return sortedProperties;
-    }
-
-    private static Func<ArgumentResult, T> CreateDefaultValueFactory<T>(object? value)
-    {
-        return _ => (T)value!;
-    }
-
-    private static CliArgumentInfo? GetCliArgumentAttribute(PropertyInfo property)
-    {
-        // ジェネリック版の属性を検索
-        var genericAttr = property.GetCustomAttributes(true)
-            .FirstOrDefault(a => a.GetType().IsGenericType &&
-                                 a.GetType().GetGenericTypeDefinition() == typeof(CliArgumentAttribute<>));
-
-        if (genericAttr != null)
-        {
-            var attrType = genericAttr.GetType();
-            var position = (int)attrType.GetProperty("Position")!.GetValue(genericAttr)!;
-            var name = (string)attrType.GetProperty("Name")!.GetValue(genericAttr)!;
-            var description = (string?)attrType.GetProperty("Description")?.GetValue(genericAttr);
-            var isRequired = (bool)attrType.GetProperty("IsRequired")!.GetValue(genericAttr)!;
-            var defaultValue = attrType.GetProperty("DefaultValue")?.GetValue(genericAttr);
-
-            return new CliArgumentInfo(position, name, description, isRequired, defaultValue);
-        }
-
-        // 非ジェネリック版の属性を検索
-        var attr = property.GetCustomAttribute<CliArgumentAttribute>();
-        if (attr != null)
-        {
-            return new CliArgumentInfo(attr.Position, attr.Name, attr.Description, attr.IsRequired, null);
-        }
-
-        return null;
-    }
-
-    private static (bool HasValue, object? Value) GetDefaultValue(PropertyInfo property, CliArgumentInfo argInfo)
-    {
-        if (argInfo.DefaultValue != null)
-        {
-            return (true, argInfo.DefaultValue);
-        }
-
-        if (!argInfo.IsRequired)
-        {
-            var defaultValue = property.PropertyType.IsValueType
-                ? Activator.CreateInstance(property.PropertyType)
-                : null;
-            return (true, defaultValue);
-        }
-
-        return (false, null);
     }
 }
 
@@ -482,10 +283,3 @@ internal sealed class CliHostImplementation : ICliHost
         }
     }
 }
-
-internal sealed record CliArgumentInfo(
-    int Position,
-    string Name,
-    string? Description,
-    bool IsRequired,
-    object? DefaultValue);

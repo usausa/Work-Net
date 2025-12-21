@@ -4,6 +4,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace WorkCliHost.Core;
 
 /// <summary>
+/// Delegate for building a command from a command type.
+/// This allows for custom command construction logic, including Source Generator support.
+/// </summary>
+/// <param name="commandType">The type of the command to build.</param>
+/// <param name="serviceProvider">The service provider for dependency resolution.</param>
+/// <returns>A configured System.CommandLine.Command instance.</returns>
+public delegate Command CommandBuilder(Type commandType, IServiceProvider serviceProvider);
+
+/// <summary>
 /// Implementation of ICommandConfigurator for configuring commands and filters.
 /// </summary>
 internal sealed class CommandConfigurator : ICommandConfigurator
@@ -22,13 +31,21 @@ internal sealed class CommandConfigurator : ICommandConfigurator
     public ICommandConfigurator AddCommand<TCommand>(Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
+        return AddCommand<TCommand>(builder: null, configure);
+    }
+
+    public ICommandConfigurator AddCommand<TCommand>(
+        CommandBuilder? builder,
+        Action<ISubCommandConfigurator>? configure = null)
+        where TCommand : class
+    {
         // ICommandDefinitionを実装している場合のみ、DIコンテナに登録
         if (typeof(ICommandDefinition).IsAssignableFrom(typeof(TCommand)))
         {
             _services.AddTransient<TCommand>();
         }
 
-        var registration = new CommandRegistration(typeof(TCommand));
+        var registration = new CommandRegistration(typeof(TCommand), builder);
 
         if (configure != null)
         {
@@ -100,13 +117,21 @@ internal sealed class SubCommandConfigurator : ISubCommandConfigurator
     public ISubCommandConfigurator AddSubCommand<TCommand>(Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class
     {
+        return AddSubCommand<TCommand>(builder: null, configure);
+    }
+
+    public ISubCommandConfigurator AddSubCommand<TCommand>(
+        CommandBuilder? builder,
+        Action<ISubCommandConfigurator>? configure = null)
+        where TCommand : class
+    {
         // ICommandDefinitionを実装している場合のみ、DIコンテナに登録
         if (typeof(ICommandDefinition).IsAssignableFrom(typeof(TCommand)))
         {
             _services.AddTransient<TCommand>();
         }
 
-        var registration = new CommandRegistration(typeof(TCommand));
+        var registration = new CommandRegistration(typeof(TCommand), builder);
 
         if (configure != null)
         {
@@ -202,9 +227,16 @@ internal sealed class CommandRegistration
 {
     public Type CommandType { get; }
     public List<CommandRegistration> SubCommands { get; } = new();
+    
+    /// <summary>
+    /// Custom builder for creating the command.
+    /// If null, reflection-based builder will be used.
+    /// </summary>
+    public CommandBuilder? Builder { get; }
 
-    public CommandRegistration(Type commandType)
+    public CommandRegistration(Type commandType, CommandBuilder? builder = null)
     {
         CommandType = commandType;
+        Builder = builder;
     }
 }

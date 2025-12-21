@@ -69,6 +69,18 @@ public interface ICommandConfigurator
         where TCommand : class;
 
     /// <summary>
+    /// Adds a CLI command to the application with a custom builder.
+    /// This allows for AOT-friendly command construction.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="builder">Custom command builder function.</param>
+    /// <param name="configure">Optional sub-command configuration.</param>
+    ICommandConfigurator AddCommand<TCommand>(
+        CommandBuilder builder,
+        Action<ISubCommandConfigurator>? configure = null)
+        where TCommand : class;
+
+    /// <summary>
     /// Adds a global filter that applies to all commands.
     /// </summary>
     ICommandConfigurator AddGlobalFilter<TFilter>(int order = 0)
@@ -99,6 +111,18 @@ public interface ISubCommandConfigurator
     /// Adds a sub-command.
     /// </summary>
     ISubCommandConfigurator AddSubCommand<TCommand>(Action<ISubCommandConfigurator>? configure = null)
+        where TCommand : class;
+
+    /// <summary>
+    /// Adds a sub-command with a custom builder.
+    /// This allows for AOT-friendly command construction.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="builder">Custom command builder function.</param>
+    /// <param name="configure">Optional sub-command configuration.</param>
+    ISubCommandConfigurator AddSubCommand<TCommand>(
+        CommandBuilder builder,
+        Action<ISubCommandConfigurator>? configure = null)
         where TCommand : class;
 }
 
