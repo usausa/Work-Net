@@ -46,9 +46,6 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 | **フィルター機構** | | | | | | |
 | | ICommandFilter.cs | ICommandFilter | interface | 1 | 5 | フィルター基底 |
 | | | ICommandExecutionFilter | interface | 1 | 5 | 実行フィルター |
-| | | IBeforeCommandFilter | interface | 1 | 5 | 実行前フィルター |
-| | | IAfterCommandFilter | interface | 1 | 5 | 実行後フィルター |
-| | | IExceptionFilter | interface | 1 | 5 | 例外フィルター |
 | | | CommandExecutionDelegate | delegate | - | 1 | パイプラインデリゲート |
 | | CommandFilterAttribute.cs | CommandFilterAttribute | abstract class | 2 | 10 | フィルター属性（抽象） |
 | | | CommandFilterAttribute<TFilter> | class (generic) | 1 | 5 | フィルター属性（ジェネリック） |
@@ -72,9 +69,6 @@ WorkCliHost.Core は、System.CommandLine をベースにした、属性ベー�
 - `ICommandDefinition` - 実行可能コマンド
 - `ICommandFilter` - フィルター基底
 - `ICommandExecutionFilter` - 実行フィルター
-- `IBeforeCommandFilter` - 実行前フィルター
-- `IAfterCommandFilter` - 実行後フィルター
-- `IExceptionFilter` - 例外フィルター
 - `ICommandConfigurator` - コマンド設定
 - `ISubCommandConfigurator` - サブコマンド設定
 - `IRootCommandConfigurator` - ルートコマンド設定
@@ -632,7 +626,6 @@ public sealed class CommandContext
     public ICommandDefinition Command { get; }
     public int ExitCode { get; set; }
     public Dictionary<string, object?> Items { get; }
-    public bool IsShortCircuited { get; set; }
     public CancellationToken CancellationToken { get; set; }
 }
 ```
@@ -645,12 +638,11 @@ public sealed class CommandContext
 | `Command` | `ICommandDefinition` | コマンドインスタンス | プロパティアクセス |
 | `ExitCode` | `int` | 終了コード | フィルタでの制御 |
 | `Items` | `Dictionary` | データ共有用 | フィルタ間通信 |
-| `IsShortCircuited` | `bool` | 処理中断フラグ | フィルタでの早期終了 |
 | `CancellationToken` | `CancellationToken` | キャンセル通知 | 非同期処理制御 |
 
 **責務**:
 1. **実行情報の保持**: コマンド型とインスタンス
-2. **終了制御**: ExitCode、IsShortCircuited
+2. **終了制御**: ExitCode
 3. **データ共有**: Items ディクショナリ
 4. **キャンセル対応**: CancellationToken
 
@@ -667,26 +659,28 @@ public ValueTask OnBeforeExecutionAsync(CommandContext context)
 }
 
 // Filter 2: データ取得
-public ValueTask OnAfterExecutionAsync(CommandContext context)
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
 {
+    await next();
+    
     var startTime = (DateTime)context.Items["StartTime"]!;
     var elapsed = DateTime.UtcNow - startTime;
     Console.WriteLine($"Elapsed: {elapsed.TotalMilliseconds}ms");
-    return ValueTask.CompletedTask;
 }
 ```
 
-##### 2. 早期終了制御
+##### 2. ショートサーキット（早期終了）
 ```csharp
-public ValueTask OnBeforeExecutionAsync(CommandContext context)
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
 {
     if (!IsAuthorized())
     {
-        context.IsShortCircuited = true;
         context.ExitCode = 403;
         Console.Error.WriteLine("Access denied");
+        return; // next()を呼ばない = ショートサーキット
     }
-    return ValueTask.CompletedTask;
+    
+    await next();
 }
 ```
 
@@ -721,7 +715,7 @@ public interface ICommandFilter
 #### ICommandExecutionFilter
 
 **ファイル**: `ICommandFilter.cs`
-**役割**: コマンド実行の前後で処理を行うフィルタ
+**役割**: コマンド実行の完全な制御を提供する統一フィルター
 
 ```csharp
 public interface ICommandExecutionFilter : ICommandFilter
@@ -734,164 +728,90 @@ public delegate ValueTask CommandExecutionDelegate();
 
 **責務**:
 - コマンド実行をラップする処理
-- ASP.NET Core の `IAsyncActionFilter` 相当
+- 実行前処理、実行後処理、例外処理の全てを実現
+
+**設計思想**:
+- 単一のフィルターインターフェースで全ての処理パターンをカバー
+- `next()`デリゲートの呼び出し位置で動作を制御
+- ASP.NET Core の `IAsyncActionFilter` に相当
 
 **実装パターン**:
+
+##### 1. 実行前処理
 ```csharp
-public sealed class TimingFilter : ICommandExecutionFilter
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
 {
-    public int Order => -100; // 早めに実行
-    
-    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+    // Before: 実行前処理
+    if (!IsAuthorized())
     {
-        var sw = Stopwatch.StartNew();
-        
-        await next(); // 次のフィルタまたはコマンド実行
-        
-        sw.Stop();
-        Console.WriteLine($"⏱  {sw.ElapsedMilliseconds}ms");
+        context.ExitCode = 403;
+        return; // ショートサーキット
+    }
+    
+    await next(); // コマンド実行
+}
+```
+
+##### 2. 実行後処理
+```csharp
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+{
+    await next(); // コマンド実行
+    
+    // After: 実行後処理
+    if (context.Items.TryGetValue("TempFiles", out var files))
+    {
+        DeleteTempFiles((List<string>)files!);
+    }
+}
+```
+
+##### 3. 実行前後の処理
+```csharp
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+{
+    var sw = Stopwatch.StartNew();
+    
+    await next(); // コマンド実行
+    
+    sw.Stop();
+    Console.WriteLine($"⏱  {sw.ElapsedMilliseconds}ms");
+}
+```
+
+##### 4. 例外処理
+```csharp
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        context.ExitCode = 500;
+        Console.Error.WriteLine($"❌ {ex.Message}");
     }
 }
 ```
 
 **`next` デリゲートの役割**:
-- パイプライン内の次の処理を呼び出す
-- 呼び出さなければ、以降の処理はスキップされる
-- 例外ハンドリング、リトライ、キャッシングなどに利用
-
----
-
-#### IBeforeCommandFilter
-
-**ファイル**: `ICommandFilter.cs`
-**役割**: コマンド実行前の処理
-
-```csharp
-public interface IBeforeCommandFilter : ICommandFilter
-{
-    ValueTask OnBeforeExecutionAsync(CommandContext context);
-}
-```
-
-**責務**:
-- 実行前の検証、ロギング、準備処理
-
-**実装例**:
-```csharp
-public sealed class ValidationFilter : IBeforeCommandFilter
-{
-    public int Order => -500;
-    
-    public ValueTask OnBeforeExecutionAsync(CommandContext context)
-    {
-        if (!IsValid(context.Command))
-        {
-            context.IsShortCircuited = true;
-            context.ExitCode = 400;
-            Console.Error.WriteLine("Validation failed");
-        }
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
----
-
-#### IAfterCommandFilter
-
-**ファイル**: `ICommandFilter.cs`
-**役割**: コマンド実行後の処理
-
-```csharp
-public interface IAfterCommandFilter : ICommandFilter
-{
-    ValueTask OnAfterExecutionAsync(CommandContext context);
-}
-```
-
-**責務**:
-- 実行後のクリーンアップ、ロギング、集計処理
-
-**実装例**:
-```csharp
-public sealed class CleanupFilter : IAfterCommandFilter
-{
-    public int Order => 1000; // 遅めに実行
-    
-    public ValueTask OnAfterExecutionAsync(CommandContext context)
-    {
-        if (context.Items.TryGetValue("TempFiles", out var files))
-        {
-            // クリーンアップ処理
-            DeleteTempFiles((List<string>)files!);
-        }
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
----
-
-#### IExceptionFilter
-
-**ファイル**: `ICommandFilter.cs`
-**役割**: 例外ハンドリング
-
-```csharp
-public interface IExceptionFilter : ICommandFilter
-{
-    ValueTask OnExceptionAsync(CommandContext context, Exception exception);
-}
-```
-
-**責務**:
-- 例外のログ記録、変換、エラーメッセージ表示
-
-**実装例**:
-```csharp
-public sealed class ExceptionHandlingFilter : IExceptionFilter
-{
-    public int Order => int.MaxValue; // 最後に実行
-    
-    public ValueTask OnExceptionAsync(CommandContext context, Exception exception)
-    {
-        context.ExitCode = exception switch
-        {
-            ArgumentException => 400,
-            FileNotFoundException => 404,
-            UnauthorizedAccessException => 403,
-            _ => 500
-        };
-        
-        Console.Error.WriteLine($"❌ {exception.Message}");
-        return ValueTask.CompletedTask;
-    }
-}
-```
+- パイプライン内の次の処理（次のフィルタまたはコマンド）を呼び出す
+- 呼び出さなければ、以降の処理はスキップされる（ショートサーキット）
+- 例外ハンドリング、リトライ、キャッシングなどに利用可能
 
 ---
 
 #### FilterPipeline
 
 **ファイル**: `FilterPipeline.cs`
-**役割**: フィルタパイプラインの実行エンジン
-
-**主要メソッド** (4個):
-```csharp
-internal sealed class FilterPipeline
-{
-    public ValueTask<int> ExecuteAsync(Type commandType, ICommandDefinition commandInstance, CancellationToken);
-    private List<FilterDescriptor> CollectFilters(Type commandType);
-    private ValueTask ExecutePipelineAsync(CommandContext, List<FilterDescriptor>, ICommandDefinition);
-    private ValueTask HandleExceptionAsync(CommandContext, List<FilterDescriptor>, Exception);
-}
-```
+**役割**: フィルター実行エンジン
 
 **責務**:
 1. **フィルタ収集**: グローバル + コマンド属性フィルタ
 2. **順序決定**: Order プロパティに基づくソート
-3. **パイプライン構築**: Execution → Before → Command → After の順
-4. **例外処理**: Exception フィルタの実行
+3. **パイプライン構築**: フィルタのネストされたデリゲート構造を構築
+4. **実行**: パイプラインの実行
 
 **実装の詳細**:
 
@@ -929,45 +849,24 @@ private List<FilterDescriptor> CollectFilters(Type commandType)
 ##### 2. パイプライン構築
 
 ```csharp
-private async ValueTask ExecutePipelineAsync(/* ... */)
+private async ValueTask ExecutePipelineAsync(CommandContext context, List<FilterDescriptor> filters, ICommandDefinition commandInstance)
 {
-    // フィルタをタイプ別に分類
     var executionFilters = new List<ICommandExecutionFilter>();
-    var beforeFilters = new List<IBeforeCommandFilter>();
-    var afterFilters = new List<IAfterCommandFilter>();
     
+    // フィルタインスタンスを作成
     foreach (var descriptor in filters)
     {
         var filterInstance = _serviceProvider.GetService(descriptor.FilterType);
-        
         if (filterInstance is ICommandExecutionFilter execFilter)
+        {
             executionFilters.Add(execFilter);
-        if (filterInstance is IBeforeCommandFilter beforeFilter)
-            beforeFilters.Add(beforeFilter);
-        if (filterInstance is IAfterCommandFilter afterFilter)
-            afterFilters.Add(afterFilter);
+        }
     }
     
-    // コアパイプライン: Before → Command → After
-    CommandExecutionDelegate pipeline = async () =>
-    {
-        // Before filters
-        foreach (var filter in beforeFilters)
-        {
-            if (context.IsShortCircuited) break;
-            await filter.OnBeforeExecutionAsync(context);
-        }
-        
-        // Command execution
-        if (!context.IsShortCircuited)
-            await commandInstance.ExecuteAsync(context);
-        
-        // After filters（逆順）
-        for (int i = afterFilters.Count - 1; i >= 0; i--)
-            await afterFilters[i].OnAfterExecutionAsync(context);
-    };
+    // パイプラインの中心: コマンド実行
+    CommandExecutionDelegate pipeline = () => commandInstance.ExecuteAsync(context);
     
-    // Execution filtersでラップ（逆順）
+    // Execution filtersでラップ（逆順でラップして正順で実行）
     for (int i = executionFilters.Count - 1; i >= 0; i--)
     {
         var filter = executionFilters[i];
@@ -975,7 +874,7 @@ private async ValueTask ExecutePipelineAsync(/* ... */)
         pipeline = () => filter.ExecuteAsync(context, next);
     }
     
-    // 実行
+    // パイプライン実行
     await pipeline();
 }
 ```
@@ -984,42 +883,31 @@ private async ValueTask ExecutePipelineAsync(/* ... */)
 
 ```
 登録されたフィルタ:
+  - AuthFilter (Order: -1000, ICommandExecutionFilter)
+  - ValidationFilter (Order: -500, ICommandExecutionFilter)
   - TimingFilter (Order: -100, ICommandExecutionFilter)
-  - AuthFilter (Order: -50, IBeforeCommandFilter)
   - LoggingFilter (Order: 0, ICommandExecutionFilter)
-  - CleanupFilter (Order: 100, IAfterCommandFilter)
+  - ExceptionHandlingFilter (Order: int.MaxValue, ICommandExecutionFilter)
 
 実行順序:
-  1. TimingFilter.ExecuteAsync() 開始
+  1. ExceptionHandlingFilter.ExecuteAsync() 開始 (try)
   2.   LoggingFilter.ExecuteAsync() 開始
-  3.     AuthFilter.OnBeforeExecutionAsync()
-  4.     Command.ExecuteAsync()
-  5.     CleanupFilter.OnAfterExecutionAsync()
-  6.   LoggingFilter.ExecuteAsync() 終了
-  7. TimingFilter.ExecuteAsync() 終了
+  3.     TimingFilter.ExecuteAsync() 開始
+  4.       ValidationFilter.ExecuteAsync() 開始
+  5.         AuthFilter.ExecuteAsync() 開始
+  6.           Command.ExecuteAsync()
+  7.         AuthFilter.ExecuteAsync() 終了
+  8.       ValidationFilter.ExecuteAsync() 終了
+  9.     TimingFilter.ExecuteAsync() 終了
+  10.   LoggingFilter.ExecuteAsync() 終了
+  11. ExceptionHandlingFilter.ExecuteAsync() 終了 (catch if exception)
 ```
 
-##### 3. 例外ハンドリング
-
-```csharp
-private async ValueTask HandleExceptionAsync(/* ... */)
-{
-    // Exception filtersを収集
-    var exceptionFilters = filters
-        .Select(d => _serviceProvider.GetService(d.FilterType))
-        .OfType<IExceptionFilter>()
-        .OrderByDescending(f => f.Order) // Order降順
-        .ToList();
-    
-    // Exception filtersを実行
-    foreach (var filter in exceptionFilters)
-        await filter.OnExceptionAsync(context, exception);
-    
-    // ExitCodeが設定されていなければデフォルト値
-    if (context.ExitCode == 0)
-        context.ExitCode = 1;
-}
-```
+**パイプライン構築のメカニズム**:
+1. 最初に `pipeline = () => commandInstance.ExecuteAsync(context)` を設定
+2. フィルタを**逆順**でラップ: 最後のフィルタ → 最初のフィルタ
+3. 各フィルタが前のデリゲートを `next` として受け取る
+4. 結果として、実行時は**正順**で実行される
 
 ---
 
@@ -1226,9 +1114,7 @@ public sealed class DerivedCommand : BaseCommand
 
 ---
 
-### 内部実装
-
-#### CommandConfigurators
+#### CommandConfigurator
 
 **ファイル**: `CommandConfigurators.cs`
 **役割**: コマンド設定の内部実装クラス群

@@ -8,9 +8,10 @@ namespace WorkCliHost.Samples;
 // ============================================================================
 
 /// <summary>
-/// Example: Authorization filter that checks user permissions.
+/// Example: Authorization filter that checks user permissions before command execution.
+/// Demonstrates how to implement before-execution logic with short-circuiting.
 /// </summary>
-public sealed class AuthorizationFilter : IBeforeCommandFilter
+public sealed class AuthorizationFilter : ICommandExecutionFilter
 {
     private readonly ILogger<AuthorizationFilter> _logger;
 
@@ -21,9 +22,9 @@ public sealed class AuthorizationFilter : IBeforeCommandFilter
 
     public int Order => -1000; // Execute very early
 
-    public ValueTask OnBeforeExecutionAsync(CommandContext context)
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
-        // Example: Check if user has required permissions
+        // Before: Check authorization
         _logger.LogInformation("Checking authorization for command: {CommandType}", context.CommandType.Name);
 
         // In real implementation, you would check actual permissions here
@@ -32,18 +33,19 @@ public sealed class AuthorizationFilter : IBeforeCommandFilter
         if (!isAuthorized)
         {
             _logger.LogWarning("User is not authorized to execute {CommandType}", context.CommandType.Name);
-            context.IsShortCircuited = true;
             context.ExitCode = 403; // Forbidden
+            return; // Short-circuit: don't call next()
         }
 
-        return ValueTask.CompletedTask;
+        await next(); // Proceed to next filter or command
     }
 }
 
 /// <summary>
 /// Example: Validation filter that validates command arguments before execution.
+/// Demonstrates validation logic with short-circuiting.
 /// </summary>
-public sealed class ValidationFilter : IBeforeCommandFilter
+public sealed class ValidationFilter : ICommandExecutionFilter
 {
     private readonly ILogger<ValidationFilter> _logger;
 
@@ -54,8 +56,9 @@ public sealed class ValidationFilter : IBeforeCommandFilter
 
     public int Order => -500; // Execute after authorization but before other filters
 
-    public ValueTask OnBeforeExecutionAsync(CommandContext context)
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
+        // Before: Validate arguments
         _logger.LogInformation("Validating command arguments for: {CommandType}", context.CommandType.Name);
 
         // Example: Validate command properties
@@ -65,18 +68,19 @@ public sealed class ValidationFilter : IBeforeCommandFilter
         if (!isValid)
         {
             _logger.LogError("Validation failed for {CommandType}", context.CommandType.Name);
-            context.IsShortCircuited = true;
             context.ExitCode = 400; // Bad Request
+            return; // Short-circuit
         }
 
-        return ValueTask.CompletedTask;
+        await next(); // Proceed if valid
     }
 }
 
 /// <summary>
 /// Example: Cleanup filter that runs after command execution.
+/// Demonstrates after-execution logic.
 /// </summary>
-public sealed class CleanupFilter : IAfterCommandFilter
+public sealed class CleanupFilter : ICommandExecutionFilter
 {
     private readonly ILogger<CleanupFilter> _logger;
 
@@ -87,8 +91,11 @@ public sealed class CleanupFilter : IAfterCommandFilter
 
     public int Order => 1000; // Execute late
 
-    public ValueTask OnAfterExecutionAsync(CommandContext context)
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
+        await next(); // Execute command first
+
+        // After: Cleanup
         _logger.LogInformation("Cleaning up after command: {CommandType}", context.CommandType.Name);
 
         // Example: Clean up temporary files, close connections, etc.
@@ -96,13 +103,12 @@ public sealed class CleanupFilter : IAfterCommandFilter
         {
             // Delete temp files
         }
-
-        return ValueTask.CompletedTask;
     }
 }
 
 /// <summary>
 /// Example: Transaction filter that wraps command execution in a transaction.
+/// Demonstrates wrapping logic with exception handling.
 /// </summary>
 public sealed class TransactionFilter : ICommandExecutionFilter
 {

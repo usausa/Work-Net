@@ -52,7 +52,7 @@ WorkCliHost.Core のドキュメント一覧です。
 - 基本設計思想（責任分離、型安全性、プロパティベースAPI）
 - ファクトリメソッド（CreateBuilder vs CreateDefaultBuilder）
 - コマンド定義（グループ vs 実行可能）
-- フィルター機構（4種類のフィルター + CommandContext）
+- フィルター機構（ICommandExecutionFilterによる統一的な実装）
 - Position自動決定機能
 - 実用例（シンプル、エンタープライズ、カスタム）
 

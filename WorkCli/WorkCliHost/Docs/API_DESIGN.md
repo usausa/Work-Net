@@ -109,7 +109,7 @@ public interface ICliHostBuilder
     ILoggingBuilder Logging { get; }
     
     ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configure);
-    ICliHost Build();
+    ICliHostBuilder Build();
 }
 ```
 
@@ -338,11 +338,9 @@ commands.ConfigureRootCommand(root =>
 
 ## フィルター機構
 
-### フィルターの種類
+### ICommandExecutionFilter
 
-#### 1. ICommandExecutionFilter（実行前後）
-
-コマンド実行の前後で処理を行う最も柔軟なフィルター。
+コマンド実行の完全な制御を提供する統一フィルターインターフェース。
 
 ```csharp
 public interface ICommandExecutionFilter : ICommandFilter
@@ -351,7 +349,88 @@ public interface ICommandExecutionFilter : ICommandFilter
 }
 ```
 
-**使用例**:
+このフィルターは以下の全ての機能を提供します：
+- **実行前処理**: `next()`呼び出し前のコードで実現
+- **実行後処理**: `next()`呼び出し後のコードで実現
+- **例外処理**: `try-catch`で`next()`をラップ
+- **ショートサーキット**: `next()`を呼ば ずにreturn
+
+#### 実行前処理の例
+
+```csharp
+public sealed class AuthorizationFilter : ICommandExecutionFilter
+{
+    public int Order => -1000;
+
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+    {
+        // 実行前: 認可チェック
+        if (!IsAuthorized())
+        {
+            context.ExitCode = 403;
+            return; // next()を呼ばない = ショートサーキット
+        }
+
+        await next(); // 認可OKなら次へ
+    }
+}
+```
+
+#### 実行後処理の例
+
+```csharp
+public sealed class CleanupFilter : ICommandExecutionFilter
+{
+    public int Order => 1000;
+
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+    {
+        await next(); // コマンド実行
+
+        // 実行後: クリーンアップ
+        if (context.Items.TryGetValue("TempFiles", out var files))
+        {
+            DeleteTempFiles((List<string>)files!);
+        }
+    }
+}
+```
+
+#### 例外処理の例
+
+```csharp
+public sealed class ExceptionHandlingFilter : ICommandExecutionFilter
+{
+    private readonly ILogger _logger;
+
+    public int Order => int.MaxValue;
+
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
+    {
+        try
+        {
+            await next();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Command failed");
+            
+            context.ExitCode = exception switch
+            {
+                ArgumentException => 400,
+                FileNotFoundException => 404,
+                UnauthorizedAccessException => 403,
+                _ => 500
+            };
+            
+            Console.Error.WriteLine($"❌ {exception.Message}");
+        }
+    }
+}
+```
+
+#### 実行時間計測の例
+
 ```csharp
 public sealed class TimingFilter : ICommandExecutionFilter
 {
@@ -361,101 +440,10 @@ public sealed class TimingFilter : ICommandExecutionFilter
     {
         var sw = Stopwatch.StartNew();
         
-        await next(); // 次のフィルタまたはコマンド実行
+        await next(); // 実行前後でラップ
         
         sw.Stop();
         Console.WriteLine($"⏱  {sw.ElapsedMilliseconds}ms");
-    }
-}
-```
-
-#### 2. IBeforeCommandFilter（実行前）
-
-コマンド実行前のみ処理を行うフィルター。
-
-```csharp
-public interface IBeforeCommandFilter : ICommandFilter
-{
-    ValueTask OnBeforeExecutionAsync(CommandContext context);
-}
-```
-
-**使用例**:
-```csharp
-public sealed class ValidationFilter : IBeforeCommandFilter
-{
-    public int Order => -500;
-
-    public ValueTask OnBeforeExecutionAsync(CommandContext context)
-    {
-        if (!IsValid(context.Command))
-        {
-            context.IsShortCircuited = true;
-            context.ExitCode = 400;
-            Console.Error.WriteLine("Validation failed");
-        }
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-#### 3. IAfterCommandFilter（実行後）
-
-コマンド実行後のみ処理を行うフィルター。
-
-```csharp
-public interface IAfterCommandFilter : ICommandFilter
-{
-    ValueTask OnAfterExecutionAsync(CommandContext context);
-}
-```
-
-**使用例**:
-```csharp
-public sealed class CleanupFilter : IAfterCommandFilter
-{
-    public int Order => 1000;
-
-    public ValueTask OnAfterExecutionAsync(CommandContext context)
-    {
-        if (context.Items.TryGetValue("TempFiles", out var files))
-        {
-            DeleteTempFiles((List<string>)files!);
-        }
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-#### 4. IExceptionFilter（例外処理）
-
-例外発生時に処理を行うフィルター。
-
-```csharp
-public interface IExceptionFilter : ICommandFilter
-{
-    ValueTask OnExceptionAsync(CommandContext context, Exception exception);
-}
-```
-
-**使用例**:
-```csharp
-public sealed class ExceptionHandlingFilter : IExceptionFilter
-{
-    public int Order => int.MaxValue;
-
-    public ValueTask OnExceptionAsync(CommandContext context, Exception exception)
-    {
-        context.ExitCode = exception switch
-        {
-            ArgumentException => 400,
-            FileNotFoundException => 404,
-            UnauthorizedAccessException => 403,
-            _ => 500
-        };
-        
-        Console.Error.WriteLine($"❌ {exception.Message}");
-        return ValueTask.CompletedTask;
     }
 }
 ```
@@ -476,8 +464,8 @@ builder.ConfigureCommands(commands =>
 #### コマンド固有のフィルタ
 
 ```csharp
-[CommandFilter<ValidationFilter>(Order = -500)]
 [CommandFilter<AuthorizationFilter>(Order = -1000)]
+[CommandFilter<ValidationFilter>(Order = -500)]
 [CliCommand("secure", Description = "Secure command")]
 public sealed class SecureCommand : ICommandDefinition
 {
@@ -503,6 +491,7 @@ public sealed class UpdateCommand : AuditedCommandBase
     public override ValueTask ExecuteAsync(CommandContext context)
     {
         // ...
+        return ValueTask.CompletedTask;
     }
 }
 ```
@@ -518,7 +507,6 @@ public sealed class CommandContext
     public ICommandDefinition Command { get; }          // コマンドインスタンス
     public int ExitCode { get; set; }                   // 終了コード
     public Dictionary<string, object?> Items { get; }   // データ共有用
-    public bool IsShortCircuited { get; set; }          // 処理中断フラグ
     public CancellationToken CancellationToken { get; set; } // キャンセル通知
 }
 ```
@@ -578,25 +566,29 @@ commands.AddGlobalFilter<ExceptionHandlingFilter>(order: int.MaxValue);  // 最�
 
 ### ショートサーキット
 
-`context.IsShortCircuited = true`を設定すると、以降の処理をスキップできます。
+`next()`を呼ばずにreturnすることで、以降の処理をスキップできます。
 
 ```csharp
-public ValueTask OnBeforeExecutionAsync(CommandContext context)
+public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
 {
     if (!IsAuthorized())
     {
-        context.IsShortCircuited = true;
         context.ExitCode = 403;
         Console.Error.WriteLine("Access denied");
+        return; // next()を呼ばない = ショートサーキット
     }
-    return ValueTask.CompletedTask;
+    
+    await next(); // 認可OKなら続行
 }
 ```
 
 **動作**:
-1. AuthorizationFilter が `IsShortCircuited = true` を設定
-2. 以降のBeforeフィルタとコマンド実行はスキップ
-3. Afterフィルタは実行される（クリーンアップのため）
+- AuthorizationFilterが`next()`を呼ばずにreturn
+- コマンド実行とそれ以降のフィルタはスキップされる
+
+**ポイント**:
+- フラグ不要: `next()`を呼ぶか呼ばないかで制御
+- ASP.NET Coreミドルウェアと同じパターン
 
 ---
 
@@ -894,7 +886,7 @@ WorkCliHost.Core のAPI設計により:
 - ✅ **プロパティベースAPI**: Configuration/Services/Loggingへの直接アクセス
 - ✅ **オプトイン方式**: 最小構成から開始、必要な機能のみ追加
 - ✅ **Position自動決定**: シンプルで保守性の高いコード
-- ✅ **フィルター機構**: ASP.NET Coreライクな横断的関心事の実装
+- ✅ **統一フィルター機構**: ICommandExecutionFilterによる柔軟な実装
 - ✅ **発見可能性**: IntelliSenseによる優れた開発体験
 - ✅ **拡張性**: 新機能の追加が容易
 

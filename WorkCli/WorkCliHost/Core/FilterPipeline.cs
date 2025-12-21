@@ -31,14 +31,7 @@ internal sealed class FilterPipeline
 
         var filters = CollectFilters(commandType);
         
-        try
-        {
-            await ExecutePipelineAsync(context, filters, commandInstance);
-        }
-        catch (Exception ex)
-        {
-            await HandleExceptionAsync(context, filters, ex);
-        }
+        await ExecutePipelineAsync(context, filters, commandInstance);
 
         return context.ExitCode;
     }
@@ -102,10 +95,8 @@ internal sealed class FilterPipeline
         ICommandDefinition commandInstance)
     {
         var executionFilters = new List<ICommandExecutionFilter>();
-        var beforeFilters = new List<IBeforeCommandFilter>();
-        var afterFilters = new List<IAfterCommandFilter>();
 
-        // フィルタインスタンスを作成して分類
+        // フィルタインスタンスを作成
         foreach (var descriptor in filters)
         {
             var filterInstance = _serviceProvider.GetService(descriptor.FilterType);
@@ -118,40 +109,10 @@ internal sealed class FilterPipeline
             {
                 executionFilters.Add(execFilter);
             }
-            if (filterInstance is IBeforeCommandFilter beforeFilter)
-            {
-                beforeFilters.Add(beforeFilter);
-            }
-            if (filterInstance is IAfterCommandFilter afterFilter)
-            {
-                afterFilters.Add(afterFilter);
-            }
         }
 
-        // パイプラインを構築
-        CommandExecutionDelegate pipeline = async () =>
-        {
-            // Before filters
-            foreach (var filter in beforeFilters)
-            {
-                if (context.IsShortCircuited)
-                    break;
-
-                await filter.OnBeforeExecutionAsync(context);
-            }
-
-            // Command execution
-            if (!context.IsShortCircuited)
-            {
-                await commandInstance.ExecuteAsync(context);
-            }
-
-            // After filters (逆順)
-            for (int i = afterFilters.Count - 1; i >= 0; i--)
-            {
-                await afterFilters[i].OnAfterExecutionAsync(context);
-            }
-        };
+        // パイプラインを構築: 最初はコマンド実行
+        CommandExecutionDelegate pipeline = () => commandInstance.ExecuteAsync(context);
 
         // Execution filtersでラップ（逆順でラップして正順で実行）
         for (int i = executionFilters.Count - 1; i >= 0; i--)
@@ -163,39 +124,6 @@ internal sealed class FilterPipeline
 
         // パイプライン実行
         await pipeline();
-    }
-
-    private async ValueTask HandleExceptionAsync(
-        CommandContext context,
-        List<FilterDescriptor> filters,
-        Exception exception)
-    {
-        var exceptionFilters = new List<IExceptionFilter>();
-
-        // Exception filtersを収集
-        foreach (var descriptor in filters)
-        {
-            var filterInstance = _serviceProvider.GetService(descriptor.FilterType);
-            if (filterInstance is IExceptionFilter exFilter)
-            {
-                exceptionFilters.Add(exFilter);
-            }
-        }
-
-        // Exception filtersを実行（Order降順）
-        exceptionFilters.Sort((a, b) => b.Order.CompareTo(a.Order));
-
-        foreach (var filter in exceptionFilters)
-        {
-            await filter.OnExceptionAsync(context, exception);
-        }
-
-        // 例外フィルタで処理されなかった場合（ExitCodeが0のまま）は再スロー
-        if (context.ExitCode == 0)
-        {
-            // ExitCodeを設定してから再スロー
-            context.ExitCode = 1;
-        }
     }
 
     private sealed class FilterDescriptor

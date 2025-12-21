@@ -30,9 +30,4 @@ public sealed class CommandContext
     /// Gets or sets the exit code for the command execution.
     /// </summary>
     public int ExitCode { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the command execution should be short-circuited.
-    /// </summary>
-    public bool IsShortCircuited { get; set; }
 }

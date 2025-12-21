@@ -18,51 +18,21 @@ public delegate ValueTask CommandExecutionDelegate();
 
 /// <summary>
 /// Filter that runs around command execution.
-/// Similar to IAsyncActionFilter in ASP.NET Core.
+/// Provides full control over the command execution pipeline with before, after, and exception handling.
 /// </summary>
 public interface ICommandExecutionFilter : ICommandFilter
 {
     /// <summary>
-    /// Called before and after command execution.
+    /// Called to execute the filter logic around the command execution.
     /// </summary>
     /// <param name="context">The command execution context.</param>
     /// <param name="next">The delegate representing the next filter or the command execution.</param>
+    /// <remarks>
+    /// This filter provides full control over command execution:
+    /// - Execute code before the command by placing it before <paramref name="next"/>()
+    /// - Execute code after the command by placing it after <paramref name="next"/>()
+    /// - Handle exceptions by wrapping <paramref name="next"/>() in try-catch
+    /// - Short-circuit execution by not calling <paramref name="next"/>()
+    /// </remarks>
     ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next);
-}
-
-/// <summary>
-/// Filter that runs before command execution.
-/// </summary>
-public interface IBeforeCommandFilter : ICommandFilter
-{
-    /// <summary>
-    /// Called before command execution.
-    /// </summary>
-    /// <param name="context">The command execution context.</param>
-    ValueTask OnBeforeExecutionAsync(CommandContext context);
-}
-
-/// <summary>
-/// Filter that runs after command execution.
-/// </summary>
-public interface IAfterCommandFilter : ICommandFilter
-{
-    /// <summary>
-    /// Called after command execution.
-    /// </summary>
-    /// <param name="context">The command execution context.</param>
-    ValueTask OnAfterExecutionAsync(CommandContext context);
-}
-
-/// <summary>
-/// Filter that can handle exceptions during command execution.
-/// </summary>
-public interface IExceptionFilter : ICommandFilter
-{
-    /// <summary>
-    /// Called when an exception occurs during command execution.
-    /// </summary>
-    /// <param name="context">The command execution context.</param>
-    /// <param name="exception">The exception that occurred.</param>
-    ValueTask OnExceptionAsync(CommandContext context, Exception exception);
 }

@@ -58,8 +58,9 @@ public sealed class TimingFilter : ICommandExecutionFilter
 
 /// <summary>
 /// Example: Exception handling filter that catches and logs exceptions.
+/// Demonstrates how to handle exceptions in ICommandExecutionFilter.
 /// </summary>
-public sealed class ExceptionHandlingFilter : IExceptionFilter
+public sealed class ExceptionHandlingFilter : ICommandExecutionFilter
 {
     private readonly ILogger<ExceptionHandlingFilter> _logger;
 
@@ -70,23 +71,28 @@ public sealed class ExceptionHandlingFilter : IExceptionFilter
 
     public int Order => int.MaxValue; // Execute last to catch all exceptions
 
-    public ValueTask OnExceptionAsync(CommandContext context, Exception exception)
+    public async ValueTask ExecuteAsync(CommandContext context, CommandExecutionDelegate next)
     {
-        _logger.LogError(exception, "Unhandled exception in command {CommandType}: {Message}",
-            context.CommandType.Name,
-            exception.Message);
-        
-        // Set exit code based on exception type
-        context.ExitCode = exception switch
+        try
         {
-            ArgumentException => 400,
-            UnauthorizedAccessException => 403,
-            FileNotFoundException => 404,
-            _ => 500
-        };
-        
-        Console.Error.WriteLine($"❌ Error: {exception.Message}");
-        
-        return ValueTask.CompletedTask;
+            await next();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Unhandled exception in command {CommandType}: {Message}",
+                context.CommandType.Name,
+                exception.Message);
+            
+            // Set exit code based on exception type
+            context.ExitCode = exception switch
+            {
+                ArgumentException => 400,
+                UnauthorizedAccessException => 403,
+                FileNotFoundException => 404,
+                _ => 500
+            };
+            
+            Console.Error.WriteLine($"❌ Error: {exception.Message}");
+        }
     }
 }

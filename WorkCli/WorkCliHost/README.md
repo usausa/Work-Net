@@ -216,12 +216,9 @@ builder
 
 ## フィルター機構
 
-#### 利用可能なフィルター（WorkCliHost.Core）
+### 利用可能なフィルター（WorkCliHost.Core）
 
-- `ICommandExecutionFilter` - コマンド実行の前後で処理
-- `IBeforeCommandFilter` - コマンド実行前に処理
-- `IAfterCommandFilter` - コマンド実行後に処理
-- `IExceptionFilter` - 例外発生時に処理
+- `ICommandExecutionFilter` - コマンド実行の完全な制御（実行前後、例外処理）
 
 ### サンプル実装（WorkCliHost.Samples）
 
