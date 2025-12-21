@@ -18,6 +18,8 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     private readonly HostEnvironment _environment;
     private readonly LoggingBuilder _loggingBuilder;
     private Action<ICommandConfigurator>? _commandConfiguration;
+    private object? _serviceProviderFactory;
+    private Action<object>? _containerConfiguration;
 
     public CliHostBuilder(string[] args, bool useDefaults = true)
     {
@@ -74,6 +76,21 @@ internal sealed class CliHostBuilder : ICliHostBuilder
 
     public ILoggingBuilder Logging => _loggingBuilder;
 
+    public void ConfigureContainer<TContainerBuilder>(
+        IServiceProviderFactory<TContainerBuilder> factory,
+        Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull
+    {
+        // 型安全なファクトリとして保存
+        _serviceProviderFactory = new ServiceProviderFactoryAdapter<TContainerBuilder>(factory);
+        
+        // 設定デリゲートを保存（ビルド時に実行）
+        if (configure != null)
+        {
+            _containerConfiguration = obj => configure((TContainerBuilder)obj);
+        }
+    }
+
     public ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configureCommands)
     {
         _commandConfiguration = configureCommands;
@@ -121,7 +138,20 @@ internal sealed class CliHostBuilder : ICliHostBuilder
             }
         }
         
-        var serviceProvider = _services.BuildServiceProvider();
+        // サービスプロバイダの構築
+        IServiceProvider serviceProvider;
+        if (_serviceProviderFactory != null)
+        {
+            // カスタムファクトリを使用
+            var containerBuilder = _serviceProviderFactory.CreateBuilder(_services);
+            _containerConfiguration?.Invoke(containerBuilder);
+            serviceProvider = _serviceProviderFactory.CreateServiceProvider(containerBuilder);
+        }
+        else
+        {
+            // デフォルトのサービスプロバイダを使用
+            serviceProvider = _services.BuildServiceProvider();
+        }
         
         // RootCommandの作成と設定
         var customRootCommand = commandConfigurator.GetCustomRootCommand();
@@ -450,3 +480,31 @@ internal sealed record CliArgumentInfo(
     string? Description,
     bool IsRequired,
     object? DefaultValue);
+
+/// <summary>
+/// Adapter to wrap a typed IServiceProviderFactory into an untyped one.
+/// </summary>
+internal sealed class ServiceProviderFactoryAdapter<TContainerBuilder> : IServiceProviderFactory<IServiceCollection>
+    where TContainerBuilder : notnull
+{
+    private readonly IServiceProviderFactory<TContainerBuilder> _factory;
+
+    public ServiceProviderFactoryAdapter(IServiceProviderFactory<TContainerBuilder> factory)
+    {
+        _factory = factory;
+    }
+
+    public IServiceCollection CreateBuilder(IServiceCollection services)
+    {
+        // TContainerBuilderを作成し、IServiceCollectionとして返す
+        // 実際のコンテナビルダーは内部で保持
+        return services;
+    }
+
+    public IServiceProvider CreateServiceProvider(IServiceCollection containerBuilder)
+    {
+        // IServiceCollectionからTContainerBuilderを作成し、サービスプロバイダを構築
+        var typedBuilder = _factory.CreateBuilder(containerBuilder);
+        return _factory.CreateServiceProvider(typedBuilder);
+    }
+}

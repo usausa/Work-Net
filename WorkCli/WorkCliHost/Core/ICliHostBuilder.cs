@@ -34,6 +34,17 @@ public interface ICliHostBuilder
     ILoggingBuilder Logging { get; }
 
     /// <summary>
+    /// Configures an alternate service provider.
+    /// </summary>
+    /// <typeparam name="TContainerBuilder">The type of the service provider builder.</typeparam>
+    /// <param name="factory">The factory that will create the service provider.</param>
+    /// <param name="configure">An optional delegate to configure the container builder.</param>
+    void ConfigureContainer<TContainerBuilder>(
+        IServiceProviderFactory<TContainerBuilder> factory,
+        Action<TContainerBuilder>? configure = null)
+        where TContainerBuilder : notnull;
+
+    /// <summary>
     /// Configures CLI commands and related settings.
     /// Use this for registering commands, filters, and root command configuration.
     /// </summary>
