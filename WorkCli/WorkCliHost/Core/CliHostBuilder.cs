@@ -18,8 +18,8 @@ internal sealed class CliHostBuilder : ICliHostBuilder
     private readonly HostEnvironment _environment;
     private readonly LoggingBuilder _loggingBuilder;
     private Action<ICommandConfigurator>? _commandConfiguration;
-    private object? _serviceProviderFactory;
-    private Action<object>? _containerConfiguration;
+    private Func<IServiceProvider>? _createServiceProvider;
+    private Action<object>? _configureContainer;
 
     public CliHostBuilder(string[] args, bool useDefaults = true)
     {
@@ -81,14 +81,14 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         Action<TContainerBuilder>? configure = null)
         where TContainerBuilder : notnull
     {
-        // ジェネリックファクトリをそのまま保存
-        _serviceProviderFactory = factory;
-        
-        // 設定デリゲートを保存（ビルド時に実行）
-        if (configure != null)
+        _createServiceProvider = () =>
         {
-            _containerConfiguration = obj => configure((TContainerBuilder)obj);
-        }
+            var containerBuilder = factory.CreateBuilder(_services);
+            _configureContainer?.Invoke(containerBuilder);
+            return factory.CreateServiceProvider(containerBuilder);
+        };
+
+        _configureContainer = containerBuilder => configure?.Invoke((TContainerBuilder)containerBuilder);
     }
 
     public ICliHostBuilder ConfigureCommands(Action<ICommandConfigurator> configureCommands)
@@ -140,21 +140,10 @@ internal sealed class CliHostBuilder : ICliHostBuilder
         
         // サービスプロバイダの構築
         IServiceProvider serviceProvider;
-        if (_serviceProviderFactory != null)
+        if (_createServiceProvider != null)
         {
-            // カスタムファクトリを使用（リフレクション経由）
-            var factoryType = _serviceProviderFactory.GetType();
-            var createBuilderMethod = factoryType.GetMethod(nameof(IServiceProviderFactory<object>.CreateBuilder));
-            var createServiceProviderMethod = factoryType.GetMethod(nameof(IServiceProviderFactory<object>.CreateServiceProvider));
-            
-            if (createBuilderMethod == null || createServiceProviderMethod == null)
-            {
-                throw new InvalidOperationException("Invalid service provider factory.");
-            }
-            
-            var containerBuilder = createBuilderMethod.Invoke(_serviceProviderFactory, new object[] { _services });
-            _containerConfiguration?.Invoke(containerBuilder!);
-            serviceProvider = (IServiceProvider)createServiceProviderMethod.Invoke(_serviceProviderFactory, new[] { containerBuilder })!;
+            // カスタムファクトリを使用（リフレクション不要）
+            serviceProvider = _createServiceProvider();
         }
         else
         {
