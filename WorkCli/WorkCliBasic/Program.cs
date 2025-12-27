@@ -55,6 +55,8 @@ namespace WorkCliBasic
                 Description = "テキストの色",
                 DefaultValueFactory = parseResult => ConsoleColor.White
             };
+            colorOption.CompletionSources.Clear();
+            colorOption.CompletionSources.Add("White", "Red", "Blue");
 
             Command messageCommand = new("message", "メッセージを指定回数表示します")
             {
