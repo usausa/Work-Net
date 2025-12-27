@@ -435,6 +435,8 @@ public sealed class FaceDetector : IDisposable
             _boxes.Add(box);
         }
 
+        var s = (outputList[0].Value as DenseTensor<float>)?.Dimensions[1];
+
         var scoresDims = (outputList[0].Value as DenseTensor<float>)?.Dimensions.ToArray();
         var numBoxes = scoresDims?[1] ?? 0;
 

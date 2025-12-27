@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Aspire/" />
   <Folder Name="/Face/">
+    <Project Path="WorkImageAlloc/WorkImageAlloc.csproj" Id="5262bc8a-9590-43a7-9755-c16bb23cc1ca" />
     <Project Path="WorkImageOnyx/WorkImageOnyx.csproj" Id="488405a7-6e6e-4588-be4b-69f664b05168" />
     <Project Path="WorkImageResize/WorkImageResize.csproj" Id="9d51d088-7562-4df2-b294-d8f6008b74f9" />
   </Folder>
