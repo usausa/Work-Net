@@ -107,12 +107,12 @@ public static class Program
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var faces = detector.Detect(imageBytes, bitmap.Width, bitmap.Height, confidenceThreshold, iouThreshold);
+        detector.Detect(imageBytes, bitmap.Width, bitmap.Height, confidenceThreshold, iouThreshold);
         stopwatch.Stop();
 
         Console.WriteLine($"\n検出処理時間: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.Elapsed.TotalSeconds:F3} 秒)");
-        Console.WriteLine($"検出された顔の数: {faces.Count}");
-        foreach (var face in faces)
+        Console.WriteLine($"検出された顔の数: {detector.DetectedFaceBoxes.Count}");
+        foreach (var face in detector.DetectedFaceBoxes)
         {
             Console.WriteLine(face);
         }
@@ -121,7 +121,7 @@ public static class Program
         var canvas = surface.Canvas;
         canvas.DrawBitmap(bitmap, 0, 0);
 
-        foreach (var face in faces)
+        foreach (var face in detector.DetectedFaceBoxes)
         {
             // 正規化座標から画像座標に変換
             var left = face.Left * bitmap.Width;
@@ -322,174 +322,159 @@ public class FaceDetectionBenchmark
     //}
 }
 
+#pragma warning disable CA1815
+public readonly struct FaceBox
+{
+    public float Left { get; init; }
+
+    public float Top { get; init; }
+
+    public float Right { get; init; }
+
+    public float Bottom { get; init; }
+
+    public float Confidence { get; init; }
+}
+#pragma warning restore CA1815
+
 public sealed class FaceDetector : IDisposable
 {
-    private readonly InferenceSession _session;
-    private readonly DenseTensor<float> _inputTensor;
-    private readonly List<float> _scores;
-    private readonly List<float> _boxes;
-    private readonly List<FaceBox> _detectionBuffer;
+    private static readonly ConfidenceDescendingComparer Comparer = new();
+
+    private readonly InferenceSession session;
+
+    private readonly int[] dimensions;
+
+    private readonly int bufferSize;
+
+    private readonly float[] inputBuffer;
+
+    //private readonly DenseTensor<float> inputTensor;
+
+#pragma warning disable CA1002
+    public List<FaceBox> DetectedFaceBoxes { get; } = new();
+#pragma warning restore CA1002
 
     public int ModelWidth { get; }
+
     public int ModelHeight { get; }
 
     public FaceDetector(string modelPath, bool useGpu = false, int intraOpNumThreads = 0, int interOpNumThreads = 0)
     {
-        var options = new SessionOptions
+#pragma warning disable CA2000
+        session = new InferenceSession(modelPath, new SessionOptions
         {
             LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR,
             EnableCpuMemArena = true,
             EnableMemoryPattern = true,
             GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
-        };
+        });
+#pragma warning restore CA2000
 
-        // パラレル実行のスレッド数設定
-        if (intraOpNumThreads > 0)
+        // Get input tensor shape
+        var inputMetadata = session.InputMetadata.First().Value;
+
+        // [batch, channels, height, width]
+        if (inputMetadata.Dimensions.Length >= 4)
         {
-            options.IntraOpNumThreads = intraOpNumThreads;
-        }
-        if (interOpNumThreads > 0)
-        {
-            options.InterOpNumThreads = interOpNumThreads;
-        }
-
-        // GPU使用設定
-        if (useGpu)
-        {
-            try
-            {
-                options.AppendExecutionProvider_CUDA(0);
-                Console.WriteLine("GPU (CUDA) を使用します。");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"GPU (CUDA) の初期化に失敗しました: {ex.Message}");
-                Console.WriteLine("CPUで実行します。");
-            }
-        }
-
-        _session = new InferenceSession(modelPath, options);
-
-        // ONNXモデルから入力サイズを取得
-        var inputMetadata = _session.InputMetadata.First().Value;
-        var dimensions = inputMetadata.Dimensions;
-
-        // 入力テンソルの形状は [batch, channels, height, width] を想定
-        if (dimensions.Length >= 4)
-        {
-            ModelHeight = dimensions[2];
-            ModelWidth = dimensions[3];
+            ModelHeight = inputMetadata.Dimensions[2];
+            ModelWidth = inputMetadata.Dimensions[3];
         }
         else
         {
-            throw new InvalidOperationException("モデルの入力テンソルの形状が想定と異なります。");
+            throw new ArgumentException("Invalid model type");
         }
 
-        _inputTensor = new DenseTensor<float>(new[] { 1, 3, ModelHeight, ModelWidth });
-
-        // 再利用するListを初期化（十分な容量を確保）
-        _scores = new List<float>(10000);
-        _boxes = new List<float>(10000);
-        _detectionBuffer = new List<FaceBox>(100);
+        dimensions = [1, 3, ModelHeight, ModelWidth];
+        bufferSize = 3 * ModelHeight * ModelWidth;
+        inputBuffer = ArrayPool<float>.Shared.Rent(bufferSize);
     }
 
     public void Dispose()
     {
-        _session?.Dispose();
+        session.Dispose();
     }
 
-    public List<FaceBox> Detect(ReadOnlySpan<byte> image, int width, int height, float confidenceThreshold, float iouThreshold)
+    public void Detect(ReadOnlySpan<byte> image, int width, int height, float confidenceThreshold = 0.7f, float iouThreshold = 0.3f)
     {
-        var mean = new[] { 127f, 127f, 127f };
-        var scale = 128f;
-
-        // サイズが一致する場合はリサイズ不要
-        if (width == ModelWidth && height == ModelHeight)
+        // Resize and normalize
+        if ((width == ModelWidth) && (height == ModelHeight))
         {
-            CopyDirectToTensor(image, _inputTensor, width, height, mean, scale);
+            CopyDirectToTensor(image, width, height);
         }
         else
         {
-            ResizeBilinearDirectToTensor(image, _inputTensor, width, height, ModelWidth, ModelHeight, mean, scale);
+            ResizeBilinearDirectToTensor(image, width, height, ModelWidth, ModelHeight);
         }
 
+        var inputTensor = new DenseTensor<float>(inputBuffer.AsMemory(0, bufferSize), dimensions);
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor(_session.InputMetadata.First().Key, _inputTensor)
+            NamedOnnxValue.CreateFromTensor(session.InputMetadata.First().Key, inputTensor)
         };
 
-        using var results = _session.Run(inputs);
+        using var results = session.Run(inputs);
         var outputList = results.ToList();
 
-        // 再利用するListをクリアしてからデータをコピー
-        _scores.Clear();
-        _boxes.Clear();
+        var scoresTensor = outputList[0].AsTensor<float>();
+        var boxesTensor = outputList[1].AsTensor<float>();
+        var numBoxes = scoresTensor.Dimensions[1];
 
-        foreach (var score in outputList[0].AsEnumerable<float>())
+        DetectedFaceBoxes.Clear();
+        if (numBoxes == 0)
         {
-            _scores.Add(score);
+            return;
         }
 
-        foreach (var box in outputList[1].AsEnumerable<float>())
-        {
-            _boxes.Add(box);
-        }
-
-        var s = (outputList[0].Value as DenseTensor<float>)?.Dimensions[1];
-
-        var scoresDims = (outputList[0].Value as DenseTensor<float>)?.Dimensions.ToArray();
-        var numBoxes = scoresDims?[1] ?? 0;
-
-        _detectionBuffer.Clear();
-
-        for (var i = 0; i < numBoxes; i++)
-        {
-            var faceScore = _scores[i * 2 + 1];
-
-            if (faceScore > confidenceThreshold)
-            {
-                _detectionBuffer.Add(new FaceBox
-                {
-                    Left = _boxes[i * 4],
-                    Top = _boxes[i * 4 + 1],
-                    Right = _boxes[i * 4 + 2],
-                    Bottom = _boxes[i * 4 + 3],
-                    Confidence = faceScore
-                });
-            }
-        }
-
-        var nmsResults = ApplyNMS(_detectionBuffer, iouThreshold);
-
-        return nmsResults;
-    }
-
-    private static List<FaceBox> ApplyNMS(List<FaceBox> boxes, float iouThreshold)
-    {
-        if (boxes.Count == 0)
-        {
-            return new List<FaceBox>();
-        }
-
-        var count = boxes.Count;
-
-        // FaceBox配列を直接ソート（インプレース）
-        var boxArray = ArrayPool<FaceBox>.Shared.Rent(count);
-        var suppressed = ArrayPool<bool>.Shared.Rent(count);
-
+        var detectionBuffer = ArrayPool<FaceBox>.Shared.Rent(numBoxes);
         try
         {
-            // Listから配列にコピー
+            var detectionCount = 0;
+            for (var i = 0; i < numBoxes; i++)
+            {
+                var faceScore = scoresTensor[0, i, 1];
+                if (faceScore > confidenceThreshold)
+                {
+                    detectionBuffer[detectionCount++] = new FaceBox
+                    {
+                        Left = boxesTensor[0, i, 0],
+                        Top = boxesTensor[0, i, 1],
+                        Right = boxesTensor[0, i, 2],
+                        Bottom = boxesTensor[0, i, 3],
+                        Confidence = faceScore
+                    };
+                }
+            }
+
+            ApplyNMS(detectionBuffer.AsSpan(0, detectionCount), iouThreshold);
+        }
+        finally
+        {
+            ArrayPool<FaceBox>.Shared.Return(detectionBuffer);
+        }
+    }
+
+    private void ApplyNMS(ReadOnlySpan<FaceBox> boxes, float iouThreshold)
+    {
+        if (boxes.IsEmpty)
+        {
+            return;
+        }
+
+        var count = boxes.Length;
+
+        var boxArray = ArrayPool<FaceBox>.Shared.Rent(count);
+        var suppressed = ArrayPool<bool>.Shared.Rent(count);
+        try
+        {
             for (var i = 0; i < count; i++)
             {
                 boxArray[i] = boxes[i];
                 suppressed[i] = false;
             }
 
-            // FaceBox配列をConfidence降順でソート
-            Array.Sort(boxArray, 0, count, FaceBox.ConfidenceComparer);
-
-            var results = new List<FaceBox>();
+            // Sort boxes by confidence in descending order
+            Array.Sort(boxArray, 0, count, Comparer);
 
             for (var i = 0; i < count; i++)
             {
@@ -499,9 +484,9 @@ public sealed class FaceDetector : IDisposable
                 }
 
                 ref readonly var currentBox = ref boxArray[i];
-                results.Add(currentBox);
+                DetectedFaceBoxes.Add(currentBox);
 
-                // 残りのボックスとのIOUをチェック
+                // Calculate IOU and suppress boxes
                 for (var j = i + 1; j < count; j++)
                 {
                     if (suppressed[j])
@@ -515,8 +500,6 @@ public sealed class FaceDetector : IDisposable
                     }
                 }
             }
-
-            return results;
         }
         finally
         {
@@ -537,53 +520,43 @@ public sealed class FaceDetector : IDisposable
         var box2Area = (box2.Right - box2.Left) * (box2.Bottom - box2.Top);
         var unionArea = box1Area + box2Area - intersectionArea;
 
-        return unionArea > 0 ? (float)intersectionArea / unionArea : 0;
+        return (unionArea > 0) ? (intersectionArea / unionArea) : 0;
     }
 
     //--------------------------------------------------------------------------------
-    // ヘルパー
+    // Helper
     //--------------------------------------------------------------------------------
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int Min(int a, int b) => a < b ? a : b;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static byte Clamp(float value)
-    {
-        if (value < 0)
-        {
-            return 0;
-        }
-        if (value > 255)
-        {
-            return 255;
-        }
-        return (byte)value;
-    }
-
     //--------------------------------------------------------------------------------
-    // スカラー処理
+    // Copy & Resize
     //--------------------------------------------------------------------------------
 
-    private static void CopyDirectToTensor(ReadOnlySpan<byte> source, DenseTensor<float> tensor, int width, int height, float[] mean, float scale)
+    private void CopyDirectToTensor(ReadOnlySpan<byte> source, int width, int height)
     {
+        var channelSize = width * height;
+        
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
             {
-                var idx = (y * width + x) * 3;
+                var srcIdx = ((y * width) + x) * 3;
+                var dstIdx = y * width + x;
 
-                tensor[0, 0, y, x] = (source[idx] - mean[0]) / scale;
-                tensor[0, 1, y, x] = (source[idx + 1] - mean[1]) / scale;
-                tensor[0, 2, y, x] = (source[idx + 2] - mean[2]) / scale;
+                inputBuffer[dstIdx] = (source[srcIdx] - 127f) / 128f;                           // R channel
+                inputBuffer[channelSize + dstIdx] = (source[srcIdx + 1] - 127f) / 128f;          // G channel
+                inputBuffer[channelSize * 2 + dstIdx] = (source[srcIdx + 2] - 127f) / 128f;      // B channel
             }
         }
     }
 
-    private static void ResizeBilinearDirectToTensor(ReadOnlySpan<byte> source, DenseTensor<float> tensor, int srcWidth, int srcHeight, int dstWidth, int dstHeight, float[] mean, float scale)
+    private void ResizeBilinearDirectToTensor(ReadOnlySpan<byte> source, int srcWidth, int srcHeight, int dstWidth, int dstHeight)
     {
         var xRatio = (float)(srcWidth - 1) / dstWidth;
         var yRatio = (float)(srcHeight - 1) / dstHeight;
+        var channelSize = dstWidth * dstHeight;
 
         for (var y = 0; y < dstHeight; y++)
         {
@@ -617,58 +590,26 @@ public sealed class FaceDetector : IDisposable
                 var w01 = xDiffInv * yDiff;
                 var w11 = xDiff * yDiff;
 
+                var dstIdx = y * dstWidth + x;
+
                 // R channel
-                var valR =
-                    source[idx00] * w00 +
-                    source[idx10] * w10 +
-                    source[idx01] * w01 +
-                    source[idx11] * w11;
-                tensor[0, 0, y, x] = (valR - mean[0]) / scale;
-
+                var r = (source[idx00] * w00) + (source[idx10] * w10) + (source[idx01] * w01) + (source[idx11] * w11);
+                inputBuffer[dstIdx] = (r - 127f) / 128f;
                 // G channel
-                var valG =
-                    source[idx00 + 1] * w00 +
-                    source[idx10 + 1] * w10 +
-                    source[idx01 + 1] * w01 +
-                    source[idx11 + 1] * w11;
-                tensor[0, 1, y, x] = (valG - mean[1]) / scale;
-
+                var g = (source[idx00 + 1] * w00) + (source[idx10 + 1] * w10) + (source[idx01 + 1] * w01) + (source[idx11 + 1] * w11);
+                inputBuffer[channelSize + dstIdx] = (g - 127f) / 128f;
                 // B channel
-                var valB =
-                    source[idx00 + 2] * w00 +
-                    source[idx10 + 2] * w10 +
-                    source[idx01 + 2] * w01 +
-                    source[idx11 + 2] * w11;
-                tensor[0, 2, y, x] = (valB - mean[2]) / scale;
+                var b = (source[idx00 + 2] * w00) + (source[idx10 + 2] * w10) + (source[idx01 + 2] * w01) + (source[idx11 + 2] * w11);
+                inputBuffer[channelSize * 2 + dstIdx] = (b - 127f) / 128f;
             }
         }
     }
-}
 
-public readonly struct FaceBox
-{
-    public float Left { get; init; }
-    public float Top { get; init; }
-    public float Right { get; init; }
-    public float Bottom { get; init; }
-    public float Confidence { get; init; }
-
-    public override string ToString()
-    {
-        return $"Face at ({Left:F4}, {Top:F4}) to ({Right:F4}, {Bottom:F4}) - Confidence: {Confidence:F2}";
-    }
-
-    // FaceBox専用のConfidence降順Comparer
     private sealed class ConfidenceDescendingComparer : IComparer<FaceBox>
     {
         public int Compare(FaceBox x, FaceBox y)
         {
-            // FaceBoxはstructなので参照比較は不要
             return y.Confidence.CompareTo(x.Confidence);
         }
     }
-
-    private static readonly ConfidenceDescendingComparer s_confidenceComparer = new();
-
-    public static IComparer<FaceBox> ConfidenceComparer => s_confidenceComparer;
 }
