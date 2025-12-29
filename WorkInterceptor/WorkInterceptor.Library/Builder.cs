@@ -120,12 +120,34 @@ public sealed class OptionAttribute<T> : BaseOptionAttribute
         Completions is { Length: > 0 } ? Completions.Select(c => c?.ToString() ?? string.Empty).ToArray() : [];
 }
 
-
 public interface IBuilder
 {
     void Execute<T>();
 
     void Execute<T>(Action action);
+
+    void AddSub(Action<ISubBuilder> action);
+}
+
+public interface ISubBuilder
+{
+    void ExecuteSub<T>();
+
+    void ExecuteSub<T>(Action action);
+}
+
+public sealed class SubBuilder : ISubBuilder
+{
+    public void ExecuteSub<T>()
+    {
+        Console.WriteLine("ExecuteSub");
+    }
+
+    public void ExecuteSub<T>(Action action)
+    {
+        Console.WriteLine("ExecuteSub");
+        action();
+    }
 }
 
 #pragma warning disable CA1822
@@ -140,6 +162,12 @@ public sealed class Builder : IBuilder
     {
         Console.WriteLine("Execute");
         action();
+    }
+
+    public void AddSub(Action<ISubBuilder> action)
+    {
+        var sub = new SubBuilder();
+        action(sub);
     }
 }
 #pragma warning restore CA1822

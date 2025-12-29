@@ -10,6 +10,13 @@ internal static class Program
         builder.Execute<TestCommand>();
         builder.Execute<SampleCommand>();
         builder.AddCommands();
+
+        // ISubBuilder test
+        builder.AddSub(sub =>
+        {
+            sub.ExecuteSub<SubCommand>();
+            sub.ExecuteSub<AnotherSubCommand>();
+        });
     }
 }
 
@@ -21,52 +28,66 @@ public static class Extensions
     }
 }
 
-[Command("test")]
+[Command("test", "Test command for demonstration")]
 public sealed class TestCommand
 {
-    [Option(1, "name")]
+    [Option(1, "name", "n", Description = "User name", Required = true)]
     public string? Name { get; set; }
 
-    [Option(2, "count")]
+    [Option(2, "count", "c", Description = "Number of items")]
     public int Count { get; set; }
 
-    [Option("verbose")]
+    [Option("verbose", "v")]
     public bool Verbose { get; set; }
 }
 
 [Command("sample")]
 public sealed class SampleCommand
 {
-    [Option("input", Completions = new[] { "file1.txt", "file2.txt" })]
+    [Option("input", "i", Description = "Input file path", Completions = ["file1.txt", "file2.txt", "file3.txt"])]
     public string? InputFile { get; set; }
 
-    [Option("output")]
+    [Option("output", "o", Description = "Output file path")]
     public string? OutputFile { get; set; }
 }
 
-[Command("advanced")]
+[Command("advanced", "Advanced command with typed options")]
 public sealed class AdvancedCommand
 {
-    [Option<int>(1, "port", Completions = new[] { 8080, 8443, 3000 })]
+    [Option<int>(1, "port", "p", Description = "Port number", Completions = [8080, 8443, 3000])]
     public int Port { get; set; }
 
-    [Option<string>("mode", Completions = ["debug", "release", "test"])]
+    [Option<string>("mode", "m", Description = "Operation mode", Required = true, Completions = ["debug", "release", "test"])]
     public string? Mode { get; set; }
 
-    [Option<double>("threshold", Completions = new[] { 0.5, 0.75, 1.0 })]
+    [Option<double>("threshold", "t", Description = "Threshold value", Completions = [0.5, 0.75, 1.0])]
     public double Threshold { get; set; }
 
-    [Option<float>("score", Completions = new[] { 0.5f, 0.75f, 1.0f })]
+    [Option<float>("score", "s", Completions = [0.5f, 0.75f, 1.0f])]
     public float Score { get; set; }
 
-    [Option("enabled")]
+    [Option("enabled", "e", Description = "Enable feature")]
     public bool Enabled { get; set; }
+}
+
+[Command("sub", "Sub command")]
+public sealed class SubCommand
+{
+    [Option("path", "p", Description = "Path to file", Required = true)]
+    public string? Path { get; set; }
+}
+
+[Command("another-sub", "Another sub command")]
+public sealed class AnotherSubCommand
+{
+    [Option<int>("level", "l", Description = "Level value", Completions = [1, 2, 3])]
+    public int Level { get; set; }
 }
 
 [Command("data1")]
 public sealed class Data1
 {
-    [Option("value")]
+    [Option("value", Description = "Value")]
     public int Value { get; set; }
 }
 
