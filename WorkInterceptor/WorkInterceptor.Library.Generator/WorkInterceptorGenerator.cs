@@ -1,198 +1,211 @@
 namespace WorkInterceptor.Library.Generator;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
-using WorkInterceptor.Library.Generator.Models;
-
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
-
-using SourceGenerateHelper;
 
 [Generator]
 public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 {
+    private const string IBuilderFullName = "WorkInterceptor.Library.IBuilder";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // TODO Interceptorを使ったSource Generatorの実装
+        // Generate InterceptsLocationAttribute
+        context.RegisterPostInitializationOutput(static context =>
+        {
+            context.AddSource("InterceptsLocationAttribute.g.cs", SourceText.From(InterceptsLocationAttributeSource, Encoding.UTF8));
+        });
+
+        // Find all invocations of IBuilder.Execute<T>()
+        var invocationProvider = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => IsTargetInvocation(node),
+                transform: static (context, _) => GetInvocationInfo(context))
+            .Where(static x => x is not null)
+            .Collect();
+
+        context.RegisterSourceOutput(invocationProvider, static (context, invocations) =>
+        {
+            if (invocations.IsEmpty)
+            {
+                return;
+            }
+
+            GenerateInterceptors(context, invocations!);
+        });
     }
 
-    //private const string AttributeName = "WorkInterceptor.Library.CustomMethodAttribute";
+    private static bool IsTargetInvocation(SyntaxNode node)
+    {
+        // Check if it's an invocation expression
+        if (node is not InvocationExpressionSyntax invocation)
+        {
+            return false;
+        }
 
-    // ------------------------------------------------------------
-    // Initialize
-    // ------------------------------------------------------------
+        // Check if it's a member access (e.g., builder.Execute<T>())
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+        {
+            return false;
+        }
 
-    //public void Initialize(IncrementalGeneratorInitializationContext context)
-    //{
-    //    var optionProvider = context.AnalyzerConfigOptionsProvider
-    //        .Select(SelectOption);
+        // Check if method name is Execute and has no arguments
+        if (memberAccess.Name is not GenericNameSyntax genericName)
+        {
+            return false;
+        }
 
-    //    var methodProvider = context.SyntaxProvider
-    //        .ForAttributeWithMetadataName(
-    //            AttributeName,
-    //            static (syntax, _) => IsMethodSyntax(syntax),
-    //            static (context, _) => GetMethodModel(context))
-    //        .Collect();
+        return genericName.Identifier.Text == "Execute" &&
+               invocation.ArgumentList.Arguments.Count == 0;
+    }
 
-    //    context.RegisterImplementationSourceOutput(
-    //        optionProvider.Combine(methodProvider),
-    //        static (context, provider) => Execute(context, provider.Left, provider.Right));
-    //}
+    private static InvocationInfo? GetInvocationInfo(GeneratorSyntaxContext context)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
 
-    // ------------------------------------------------------------
-    // Parser
-    // ------------------------------------------------------------
+        if (context.SemanticModel.GetOperation(invocation) is not IInvocationOperation operation)
+        {
+            return null;
+        }
 
-    //private static OptionModel SelectOption(AnalyzerConfigOptionsProvider provider, CancellationToken token)
-    //{
-    //    var value = provider.GlobalOptions.GetValue<string>("WorkInterceptorLibraryGeneratorValue");
-    //    return new OptionModel(value);
-    //}
+        var method = operation.TargetMethod;
 
-    //private static bool IsMethodSyntax(SyntaxNode syntax) =>
-    //    syntax is MethodDeclarationSyntax;
+        // Check if it's the Execute<T> method
+        if (method.Name != "Execute" || method.Parameters.Length != 0 || !method.IsGenericMethod)
+        {
+            return null;
+        }
 
-    //private static Result<MethodModel> GetMethodModel(GeneratorAttributeSyntaxContext context)
-    //{
-    //    var syntax = (MethodDeclarationSyntax)context.TargetNode;
-    //    if (context.SemanticModel.GetDeclaredSymbol(syntax) is not IMethodSymbol symbol)
-    //    {
-    //        return Results.Error<MethodModel>(null);
-    //    }
+        // Check if the method's original definition belongs to IBuilder interface
+        var originalDefinition = method.OriginalDefinition;
+        var containingType = originalDefinition.ContainingType;
 
-    //    // Validate method definition
-    //    if (!symbol.IsStatic || !symbol.IsPartialDefinition)
-    //    {
-    //        return Results.Error<MethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodDefinition, syntax.GetLocation(), symbol.Name));
-    //    }
+        // Check if containing type is IBuilder or implements IBuilder
+        var isIBuilder = false;
+        if (containingType.ToDisplayString() == IBuilderFullName)
+        {
+            isIBuilder = true;
+        }
+        else
+        {
+            // Check if the type implements IBuilder
+            foreach (var iface in containingType.AllInterfaces)
+            {
+                if (iface.ToDisplayString() == IBuilderFullName)
+                {
+                    isIBuilder = true;
+                    break;
+                }
+            }
+        }
 
-    //    // Validate parameter
-    //    if (symbol.Parameters.Length != 0)
-    //    {
-    //        return Results.Error<MethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
-    //    }
+        if (!isIBuilder)
+        {
+            return null;
+        }
 
-    //    var containingType = symbol.ContainingType;
-    //    var ns = String.IsNullOrEmpty(containingType.ContainingNamespace.Name)
-    //        ? string.Empty
-    //        : containingType.ContainingNamespace.ToDisplayString();
+        // Get type argument
+        var typeArgument = method.TypeArguments.FirstOrDefault();
+        if (typeArgument is null)
+        {
+            return null;
+        }
 
-    //    return Results.Success(new MethodModel(
-    //        ns,
-    //        containingType.GetClassName(),
-    //        containingType.IsValueType,
-    //        symbol.DeclaredAccessibility,
-    //        symbol.Name));
-    //}
+        // Get the receiver type (the type on which the method is called)
+        var receiverType = operation.Instance?.Type;
+        if (receiverType is null)
+        {
+            return null;
+        }
 
-    //// ------------------------------------------------------------
-    //// Generator
-    //// ------------------------------------------------------------
+        // Get the method name location (e.g., "Execute" in "builder.Execute<T>()")
+        var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
+        var genericName = (GenericNameSyntax)memberAccess.Name;
+        var methodNameToken = genericName.Identifier;
+        var location = methodNameToken.GetLocation();
 
-    //private static void Execute(SourceProductionContext context, OptionModel option, ImmutableArray<Result<MethodModel>> methods)
-    //{
-    //    foreach (var info in methods.SelectError())
-    //    {
-    //        context.ReportDiagnostic(info);
-    //    }
+        if (location.SourceTree is null)
+        {
+            return null;
+        }
 
-    //    var builder = new SourceBuilder();
-    //    foreach (var group in methods.SelectValue().GroupBy(static x => new { x.Namespace, x.ClassName }))
-    //    {
-    //        context.CancellationToken.ThrowIfCancellationRequested();
+        var lineSpan = location.GetLineSpan();
+        var filePath = lineSpan.Path;
+        var line = lineSpan.StartLinePosition.Line + 1;
+        var character = lineSpan.StartLinePosition.Character + 1;
 
-    //        builder.Clear();
-    //        BuildSource(builder, option, group.ToList());
+        return new InvocationInfo(
+            filePath,
+            line,
+            character,
+            typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            receiverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+    }
 
-    //        var filename = MakeFilename(group.Key.Namespace, group.Key.ClassName);
-    //        var source = builder.ToString();
-    //        context.AddSource(filename, SourceText.From(source, Encoding.UTF8));
-    //    }
-    //}
+    private static void GenerateInterceptors(SourceProductionContext context, ImmutableArray<InvocationInfo> invocations)
+    {
+        var builder = new StringBuilder();
 
-    //private static void BuildSource(SourceBuilder builder, OptionModel option, List<MethodModel> methods)
-    //{
-    //    var ns = methods[0].Namespace;
-    //    var className = methods[0].ClassName;
-    //    var isValueType = methods[0].IsValueType;
+        builder.AppendLine("#nullable enable");
+        builder.AppendLine();
+        builder.AppendLine("using System.Runtime.CompilerServices;");
+        builder.AppendLine("using WorkInterceptor.Library;");
+        builder.AppendLine();
+        builder.AppendLine("namespace WorkInterceptor.Library.Generated;");
+        builder.AppendLine();
+        builder.AppendLine("internal static class BuilderInterceptors");
+        builder.AppendLine("{");
 
-    //    builder.AutoGenerated();
-    //    builder.EnableNullable();
-    //    builder.NewLine();
+        for (int i = 0; i < invocations.Length; i++)
+        {
+            var invocation = invocations[i];
+            var methodName = $"Execute_Interceptor_{i}";
 
-    //    // namespace
-    //    if (!String.IsNullOrEmpty(ns))
-    //    {
-    //        builder.Namespace(ns);
-    //        builder.NewLine();
-    //    }
+            builder.AppendLine($"    [InterceptsLocation(@\"{invocation.FilePath}\", {invocation.Line}, {invocation.Character})]");
+            builder.AppendLine($"    internal static void {methodName}<T>(this {invocation.ReceiverType} builder)");
+            builder.AppendLine("    {");
+            builder.AppendLine("        builder.Execute<T>(typeof(T));");
+            builder.AppendLine("    }");
 
-    //    // class
-    //    builder
-    //        .Indent()
-    //        .Append("partial ")
-    //        .Append(isValueType ? "struct " : "class ")
-    //        .Append(className)
-    //        .NewLine();
-    //    builder.BeginScope();
+            if (i < invocations.Length - 1)
+            {
+                builder.AppendLine();
+            }
+        }
 
-    //    builder.Indent().Append("// Option: ").Append(option.Value).NewLine();
+        builder.AppendLine("}");
 
-    //    var first = true;
-    //    foreach (var method in methods)
-    //    {
-    //        if (first)
-    //        {
-    //            first = false;
-    //        }
-    //        else
-    //        {
-    //            builder.NewLine();
-    //        }
+        context.AddSource("BuilderInterceptors.g.cs", SourceText.From(builder.ToString(), Encoding.UTF8));
+    }
 
-    //        // method
-    //        builder
-    //            .Indent()
-    //            .Append(method.MethodAccessibility.ToText())
-    //            .Append(" static partial void ")
-    //            .Append(method.MethodName)
-    //            .Append("()")
-    //            .NewLine();
-    //        builder.BeginScope();
+    private const string InterceptsLocationAttributeSource = @"#nullable enable
 
-    //        builder
-    //            .Indent()
-    //            .Append("Console.WriteLine(\"Hello world.\");")
-    //            .NewLine();
+namespace System.Runtime.CompilerServices;
 
-    //        builder.EndScope();
-    //    }
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+internal sealed class InterceptsLocationAttribute : Attribute
+{
+    public InterceptsLocationAttribute(string filePath, int line, int character)
+    {
+        FilePath = filePath;
+        Line = line;
+        Character = character;
+    }
 
-    //    builder.EndScope();
-    //}
+    public string FilePath { get; }
+    public int Line { get; }
+    public int Character { get; }
+}
+";
 
-    //// ------------------------------------------------------------
-    //// Helper
-    //// ------------------------------------------------------------
-
-    //private static string MakeFilename(string ns, string className)
-    //{
-    //    var buffer = new StringBuilder();
-
-    //    if (!String.IsNullOrEmpty(ns))
-    //    {
-    //        buffer.Append(ns.Replace('.', '_'));
-    //        buffer.Append('_');
-    //    }
-
-    //    buffer.Append(className.Replace('<', '[').Replace('>', ']'));
-    //    buffer.Append(".g.cs");
-
-    //    return buffer.ToString();
-    //}
+    private sealed record InvocationInfo(string FilePath, int Line, int Character, string TypeArgument, string ReceiverType);
 }
