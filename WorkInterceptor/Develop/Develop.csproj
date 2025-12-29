@@ -6,6 +6,7 @@
     <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <EnableWorkInterceptor>true</EnableWorkInterceptor>
   </PropertyGroup>
 
   <PropertyGroup>

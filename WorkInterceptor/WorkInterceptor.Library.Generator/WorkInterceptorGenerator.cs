@@ -16,6 +16,7 @@ using Microsoft.CodeAnalysis.Text;
 public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 {
     private const string IBuilderFullName = "WorkInterceptor.Library.IBuilder";
+    private const string EnableInterceptorOptionName = "build_property.EnableWorkInterceptor";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -25,6 +26,15 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             context.AddSource("InterceptsLocationAttribute.g.cs", SourceText.From(InterceptsLocationAttributeSource, Encoding.UTF8));
         });
 
+        // Read option from MSBuild property
+        var enableInterceptorProvider = context.AnalyzerConfigOptionsProvider
+            .Select(static (provider, _) =>
+            {
+                var hasValue = provider.GlobalOptions.TryGetValue(EnableInterceptorOptionName, out var value);
+                var enabled = hasValue && bool.TryParse(value, out var result) && result;
+                return enabled;
+            });
+
         // Find all invocations of IBuilder.Execute<T>()
         var invocationProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
@@ -33,8 +43,19 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             .Where(static x => x is not null)
             .Collect();
 
-        context.RegisterSourceOutput(invocationProvider, static (context, invocations) =>
+        // Combine option and invocations
+        var combined = enableInterceptorProvider.Combine(invocationProvider);
+
+        context.RegisterSourceOutput(combined, static (context, source) =>
         {
+            var (enableInterceptor, invocations) = source;
+
+            // Only generate interceptors if option is enabled
+            if (!enableInterceptor)
+            {
+                return;
+            }
+
             if (invocations.IsEmpty)
             {
                 return;
