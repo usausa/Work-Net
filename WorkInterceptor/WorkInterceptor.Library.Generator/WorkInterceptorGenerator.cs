@@ -268,20 +268,30 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            // Get the expression for the Values argument
-            if (argument.Expression is not ImplicitArrayCreationExpressionSyntax arrayCreation)
-            {
-                continue;
-            }
-
-            // Extract the literal values from the array initializer
             var values = new List<string>();
-            if (arrayCreation.Initializer is not null)
+
+            // Check for implicit array creation: new[] { ... }
+            if (argument.Expression is ImplicitArrayCreationExpressionSyntax arrayCreation)
             {
-                foreach (var element in arrayCreation.Initializer.Expressions)
+                if (arrayCreation.Initializer is not null)
                 {
-                    // Get the text of the element as written in source
-                    values.Add(element.ToString());
+                    foreach (var element in arrayCreation.Initializer.Expressions)
+                    {
+                        // Get the text of the element as written in source
+                        values.Add(element.ToString());
+                    }
+                }
+            }
+            // Check for collection expression: [ ... ] (C# 12+)
+            else if (argument.Expression is CollectionExpressionSyntax collectionExpression)
+            {
+                foreach (var element in collectionExpression.Elements)
+                {
+                    if (element is ExpressionElementSyntax expressionElement)
+                    {
+                        // Get the text of the element as written in source
+                        values.Add(expressionElement.Expression.ToString());
+                    }
                 }
             }
 

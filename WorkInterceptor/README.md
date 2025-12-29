@@ -53,8 +53,13 @@ public sealed class AdvancedCommand
     [Option<int>(1, "port", Values = new[] { 8080, 8443, 3000 })]
     public int Port { get; set; }
 
-    [Option<string>("mode", Values = new[] { "debug", "release", "test" })]
+    // C# 12のコレクション式もサポート
+    [Option<string>("mode", Values = ["debug", "release", "test"])]
     public string? Mode { get; set; }
+
+    // float値のサフィックスも保持される
+    [Option<float>("score", Values = [0.5f, 0.75f, 1.0f])]
+    public float Score { get; set; }
 
     // 非ジェネリック版でもValuesを指定可能
     [Option("input", Values = new[] { "file1.txt", "file2.txt" })]
@@ -89,8 +94,9 @@ Type: AdvancedCommand
 Command: advanced
 Options:
   Property: Port, Type: int, Order: 1, Name: port, Attribute: OptionAttribute<int>, Values (int[]): [8080, 8443, 3000]
-  Property: Mode, Type: string, Order: 2147483647, Name: mode, Attribute: OptionAttribute<string>, Values (string[]): [debug, release, test]
-  Property: InputFile, Type: string, Order: 2147483647, Name: input, Attribute: OptionAttribute, Values (string[]): [file1.txt, file2.txt]
+  Property: Mode, Type: string, Order: 2147483647, Name: mode, Attribute: OptionAttribute<string>, Values (string[]): ["debug", "release", "test"]
+  Property: Score, Type: float, Order: 2147483647, Name: score, Attribute: OptionAttribute<float>, Values (float[]): [0.5f, 0.75f, 1.0f]
+  Property: InputFile, Type: string, Order: 2147483647, Name: input, Attribute: OptionAttribute, Values (string[]): ["file1.txt", "file2.txt"]
 ```
 
 **EnableWorkInterceptor=false の場合:**
@@ -186,17 +192,31 @@ public sealed class OptionAttribute<T> : Attribute
 `OptionAttribute`と`OptionAttribute<T>`の両方で、`Values`プロパティを使用して選択可能な値のリストを指定できます：
 
 ```csharp
-// 非ジェネリック版（string[]）
+// 非ジェネリック版（string[]）- 従来の配列初期化構文
 [Option("mode", Values = new[] { "debug", "release", "test" })]
 public string? Mode { get; set; }
 
-// ジェネリック版（T[]で型安全）
-[Option<int>("port", Values = new[] { 8080, 8443, 3000 })]
+// ジェネリック版（T[]）- C# 12のコレクション式
+[Option<string>("mode", Values = ["debug", "release", "test"])]
+public string? Mode { get; set; }
+
+// ジェネリック版（int[]）
+[Option<int>("port", Values = [8080, 8443, 3000])]
 public int Port { get; set; }
 
-[Option<double>("threshold", Values = new[] { 0.5, 0.75, 1.0 })]
-public double Threshold { get; set; }
+// float値のサフィックスも保持
+[Option<float>("score", Values = [0.5f, 0.75f, 1.0f])]
+public float Score { get; set; }
 ```
+
+**サポートされる配列記法:**
+- `new[] { ... }` - 従来の暗黙的型付き配列初期化
+- `[ ... ]` - C# 12のコレクション式
+
+**値の表示形式:**
+- string値: ダブルクォーテーション付き（`"debug"`, `"file.txt"`）
+- 数値のサフィックス: 元のまま保持（`0.5f`, `1.0d`）
+- その他の値: ソースコードに記述された通りに表示
 
 ## 技術詳細
 
@@ -208,10 +228,20 @@ public double Threshold { get; set; }
 2. **属性の解析**: `GetAttributes()`でCommandAttributeを検索
 3. **プロパティの解析**: `GetMembers()`でOptionAttribute/OptionAttribute<T>付きプロパティを検索
 4. **ジェネリック型の判定**: `OriginalDefinition.ToDisplayString()`でジェネリック版を識別
-5. **Valuesプロパティの抽出**: `NamedArguments`からValues配列を取得
+5. **Valuesプロパティの抽出**: `AttributeSyntax`から元のソースコードの構文をそのまま取得
+   - `ImplicitArrayCreationExpressionSyntax`（`new[] { ... }`）
+   - `CollectionExpressionSyntax`（`[ ... ]`）
 6. **コード生成**: 解析した情報をConsole出力するActionを生成
 
 これにより、実行時のリフレクションコストを削減し、パフォーマンスを向上させることができます。
+
+### 構文の保持
+
+Values配列の各要素は、`Expression.ToString()`を使用してソースコードに記述された通りの形式で保持されます：
+
+- string値: `"debug"` → ダブルクォーテーション付きで表示
+- float値: `0.5f` → サフィックス付きで表示
+- double値: `1.0` → そのまま表示
 
 ### ジェネリック属性のサポート
 
@@ -265,3 +295,4 @@ C# 11で導入されたジェネリック属性をサポートしており、以
 - .NET 8.0 以上
 - C# 12 以上（Interceptors機能を使用）
 - C# 11 以上推奨（ジェネリック属性のサポート）
+- C# 12 以上推奨（コレクション式のサポート）
