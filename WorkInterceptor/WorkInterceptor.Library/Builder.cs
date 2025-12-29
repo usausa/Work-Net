@@ -1,10 +1,43 @@
 namespace WorkInterceptor.Library;
 
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class CommandAttribute : Attribute
+{
+    public string Name { get; }
+
+    public CommandAttribute(string name)
+    {
+        Name = name;
+    }
+}
+
+// TODO T, array*2
+
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class OptionAttribute : Attribute
+{
+    public int Order { get; }
+
+    public string Name { get; }
+
+    public OptionAttribute(string name)
+    {
+        Order = int.MaxValue;
+        Name = name;
+    }
+
+    public OptionAttribute(int order, string name)
+    {
+        Order = order;
+        Name = name;
+    }
+}
+
 public interface IBuilder
 {
     void Execute<T>();
 
-    void Execute<T>(Type t);
+    void Execute<T>(Action action);
 }
 
 #pragma warning disable CA1822
@@ -15,9 +48,10 @@ public sealed class Builder : IBuilder
         Console.WriteLine("Execute");
     }
 
-    public void Execute<T>(Type t)
+    public void Execute<T>(Action action)
     {
-        Console.WriteLine($"Execute {t.FullName}");
+        Console.WriteLine("Execute");
+        action();
     }
 }
 #pragma warning restore CA1822
