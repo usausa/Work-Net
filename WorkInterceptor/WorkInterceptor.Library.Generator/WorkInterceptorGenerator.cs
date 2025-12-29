@@ -127,26 +127,15 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             return null;
         }
 
-        // Get the method name location (e.g., "Execute" in "builder.Execute<T>()")
-        var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
-        var genericName = (GenericNameSyntax)memberAccess.Name;
-        var methodNameToken = genericName.Identifier;
-        var location = methodNameToken.GetLocation();
-
-        if (location.SourceTree is null)
+        // Get InterceptableLocation
+        var interceptableLocation = context.SemanticModel.GetInterceptableLocation(invocation);
+        if (interceptableLocation is null)
         {
             return null;
         }
 
-        var lineSpan = location.GetLineSpan();
-        var filePath = lineSpan.Path;
-        var line = lineSpan.StartLinePosition.Line + 1;
-        var character = lineSpan.StartLinePosition.Character + 1;
-
         return new InvocationInfo(
-            filePath,
-            line,
-            character,
+            interceptableLocation,
             typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             receiverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
     }
@@ -170,7 +159,8 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             var invocation = invocations[i];
             var methodName = $"Execute_Interceptor_{i}";
 
-            builder.AppendLine($"    [InterceptsLocation(@\"{invocation.FilePath}\", {invocation.Line}, {invocation.Character})]");
+            builder.AppendLine($"    // {invocation.InterceptableLocation.GetDisplayLocation()}");
+            builder.AppendLine($"    [InterceptsLocation({invocation.InterceptableLocation.Version}, @\"{invocation.InterceptableLocation.Data}\")]");
             builder.AppendLine($"    internal static void {methodName}<T>(this {invocation.ReceiverType} builder)");
             builder.AppendLine("    {");
             builder.AppendLine("        builder.Execute<T>(typeof(T));");
@@ -194,18 +184,16 @@ namespace System.Runtime.CompilerServices;
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 internal sealed class InterceptsLocationAttribute : Attribute
 {
-    public InterceptsLocationAttribute(string filePath, int line, int character)
+    public InterceptsLocationAttribute(int version, string data)
     {
-        FilePath = filePath;
-        Line = line;
-        Character = character;
+        Version = version;
+        Data = data;
     }
 
-    public string FilePath { get; }
-    public int Line { get; }
-    public int Character { get; }
+    public int Version { get; }
+    public string Data { get; }
 }
 ";
 
-    private sealed record InvocationInfo(string FilePath, int Line, int Character, string TypeArgument, string ReceiverType);
+    private sealed record InvocationInfo(InterceptableLocation InterceptableLocation, string TypeArgument, string ReceiverType);
 }
