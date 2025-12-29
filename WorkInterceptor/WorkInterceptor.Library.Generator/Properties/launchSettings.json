@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "WorkInterceptor.Library.Generator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\Develop\\Develop.csproj"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Analyzers.ruleset" />
+    <File Path="CodeCoverage.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <File Path="WorkInterceptor.Library.props" />
+    <File Path="WorkInterceptor.Library.sln.DotSettings" />
+  </Folder>
+  <Project Path="Develop/Develop.csproj" DefaultStartup="true" />
+  <Project Path="WorkInterceptor.Library/WorkInterceptor.Library.csproj">
+    <BuildDependency Project="WorkInterceptor.Library.Generator/WorkInterceptor.Library.Generator.csproj" />
+  </Project>
+  <Project Path="WorkInterceptor.Library.Generator/WorkInterceptor.Library.Generator.csproj" />
+  <Project Path="WorkInterceptor.Library.Tests/WorkInterceptor.Library.Tests.csproj" />
+</Solution>
