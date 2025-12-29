@@ -140,13 +140,13 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
                 if (ifaceFullName == IBuilderFullName)
                 {
                     isTargetInterface = true;
-                    targetInterfaceName = "IBuilder";
+                    //targetInterfaceName = "IBuilder";
                     break;
                 }
                 else if (ifaceFullName == ISubBuilderFullName)
                 {
                     isTargetInterface = true;
-                    targetInterfaceName = "ISubBuilder";
+                    //targetInterfaceName = "ISubBuilder";
                     break;
                 }
             }
@@ -187,7 +187,6 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             typeArgument.Name,
             receiverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             method.Name,
-            targetInterfaceName,
             commandInfo);
     }
 
@@ -467,7 +466,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 
             builder.AppendLine($"    // {invocation.InterceptableLocation.GetDisplayLocation()}");
             builder.AppendLine($"    [InterceptsLocation({invocation.InterceptableLocation.Version}, @\"{invocation.InterceptableLocation.Data}\")]");
-            builder.AppendLine($"    internal static void {methodName}<T>(this {invocation.ReceiverType} builder)");
+            builder.AppendLine($"    internal static void {methodName}(this {invocation.ReceiverType} builder)");
             builder.AppendLine("    {");
 
             // Generate local function
@@ -536,8 +535,8 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             builder.AppendLine("        }");
             builder.AppendLine();
 
-            // Call Execute or ExecuteSub with action
-            builder.AppendLine($"        builder.{invocation.MethodName}<T>({localFunctionName});");
+            // Call Execute or ExecuteSub with the concrete type and action
+            builder.AppendLine($"        builder.{invocation.MethodName}<{invocation.TypeArgument}>({localFunctionName});");
             builder.AppendLine("    }");
 
             if (i < invocations.Length - 1)
@@ -585,7 +584,6 @@ internal sealed class InterceptsLocationAttribute : Attribute
         string TypeName,
         string ReceiverType,
         string MethodName,
-        string InterfaceName,
         CommandInfo? CommandInfo);
 
     /// <summary>
