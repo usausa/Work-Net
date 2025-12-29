@@ -13,5 +13,21 @@ internal static class Program
 
         var builder2 = new Builder();
         builder2.Execute<object>();
+
+        // Extension method test
+        builder.AddExecutes();
     }
+}
+
+public static class Extensions
+{
+    public static void AddExecutes(this IBuilder builder)
+    {
+        builder.Execute<DateTime>();
+        builder.Execute<Data>();
+    }
+}
+
+public sealed class Data
+{
 }

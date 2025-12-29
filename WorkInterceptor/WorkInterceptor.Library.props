@@ -1,5 +1,9 @@
 <Project>
 
+  <PropertyGroup>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);WorkInterceptor.Library.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
   <ItemGroup>
   </ItemGroup>
 
