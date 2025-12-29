@@ -6,12 +6,8 @@ internal static class Program
 {
     public static void Main()
     {
-        Target.Method();
+        var builder = new Builder();
+        builder.Execute();
+        builder.Execute();
     }
-}
-
-internal static partial class Target
-{
-    [CustomMethod]
-    public static partial void Method();
 }
