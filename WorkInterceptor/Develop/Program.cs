@@ -37,7 +37,7 @@ public sealed class TestCommand
 [Command("sample")]
 public sealed class SampleCommand
 {
-    [Option("input", Values = new[] { "file1.txt", "file2.txt" })]
+    [Option("input", Completions = new[] { "file1.txt", "file2.txt" })]
     public string? InputFile { get; set; }
 
     [Option("output")]
@@ -47,16 +47,16 @@ public sealed class SampleCommand
 [Command("advanced")]
 public sealed class AdvancedCommand
 {
-    [Option<int>(1, "port", Values = new[] { 8080, 8443, 3000 })]
+    [Option<int>(1, "port", Completions = new[] { 8080, 8443, 3000 })]
     public int Port { get; set; }
 
-    [Option<string>("mode", Values = ["debug", "release", "test"])]
+    [Option<string>("mode", Completions = ["debug", "release", "test"])]
     public string? Mode { get; set; }
 
-    [Option<double>("threshold", Values = new[] { 0.5, 0.75, 1.0 })]
+    [Option<double>("threshold", Completions = new[] { 0.5, 0.75, 1.0 })]
     public double Threshold { get; set; }
 
-    [Option<float>("score", Values = new[] { 0.5f, 0.75f, 1.0f })]
+    [Option<float>("score", Completions = new[] { 0.5f, 0.75f, 1.0f })]
     public float Score { get; set; }
 
     [Option("enabled")]
