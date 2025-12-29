@@ -11,14 +11,36 @@ public sealed class CommandAttribute : Attribute
     }
 }
 
-// TODO T, array*2
-
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class OptionAttribute : Attribute
 {
     public int Order { get; }
 
     public string Name { get; }
+
+    public string[] Values { get; set; } = [];
+
+    public OptionAttribute(string name)
+    {
+        Order = int.MaxValue;
+        Name = name;
+    }
+
+    public OptionAttribute(int order, string name)
+    {
+        Order = order;
+        Name = name;
+    }
+}
+
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class OptionAttribute<T> : Attribute
+{
+    public int Order { get; }
+
+    public string Name { get; }
+
+    public T[] Values { get; set; } = [];
 
     public OptionAttribute(string name)
     {

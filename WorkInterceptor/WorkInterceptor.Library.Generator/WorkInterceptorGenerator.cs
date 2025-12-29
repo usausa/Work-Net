@@ -183,7 +183,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             ? commandAttr.ConstructorArguments[0].Value?.ToString() ?? string.Empty
             : string.Empty;
 
-        // Get properties with OptionAttribute
+        // Get properties with OptionAttribute or OptionAttribute<T>
         var options = new List<OptionInfo>();
         foreach (var member in typeSymbol.GetMembers())
         {
@@ -192,38 +192,109 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var optionAttr = property.GetAttributes()
-                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == OptionAttributeFullName);
+            foreach (var attr in property.GetAttributes())
+            {
+                var attrClass = attr.AttributeClass;
+                if (attrClass is null)
+                {
+                    continue;
+                }
 
-            if (optionAttr is null)
+                // Check for OptionAttribute (non-generic)
+                var isNonGenericOption = attrClass.ToDisplayString() == OptionAttributeFullName;
+
+                // Check for OptionAttribute<T> (generic)
+                var isGenericOption = attrClass.OriginalDefinition.ToDisplayString() == $"{OptionAttributeFullName}<T>";
+
+                if (!isNonGenericOption && !isGenericOption)
+                {
+                    continue;
+                }
+
+                var order = int.MaxValue;
+                var name = string.Empty;
+
+                // Parse constructor arguments
+                if (attr.ConstructorArguments.Length == 1)
+                {
+                    // OptionAttribute(string name)
+                    name = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                }
+                else if (attr.ConstructorArguments.Length == 2)
+                {
+                    // OptionAttribute(int order, string name)
+                    order = (int)(attr.ConstructorArguments[0].Value ?? int.MaxValue);
+                    name = attr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+                }
+
+                // Get Values property from syntax
+                var valuesInfo = ExtractValuesPropertyFromSyntax(attr, isGenericOption ? attrClass.TypeArguments.FirstOrDefault() : null);
+
+                options.Add(new OptionInfo(
+                    property.Name,
+                    property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    order,
+                    name,
+                    isGenericOption,
+                    isGenericOption ? attrClass.TypeArguments.FirstOrDefault()?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) : null,
+                    valuesInfo));
+
+                break; // Only process the first OptionAttribute found
+            }
+        }
+
+        return new CommandInfo(commandName, options.ToImmutableArray());
+    }
+
+    private static ValuesInfo? ExtractValuesPropertyFromSyntax(AttributeData attr, ITypeSymbol? genericTypeArgument)
+    {
+        // Get the syntax node for the attribute
+        if (attr.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax attributeSyntax)
+        {
+            return null;
+        }
+
+        // Find the Values argument in the attribute syntax
+        if (attributeSyntax.ArgumentList is null)
+        {
+            return null;
+        }
+
+        foreach (var argument in attributeSyntax.ArgumentList.Arguments)
+        {
+            // Check if this is a named argument with name "Values"
+            if (argument.NameEquals?.Name.Identifier.Text != "Values")
             {
                 continue;
             }
 
-            var order = int.MaxValue;
-            var name = string.Empty;
-
-            // Parse constructor arguments
-            if (optionAttr.ConstructorArguments.Length == 1)
+            // Get the expression for the Values argument
+            if (argument.Expression is not ImplicitArrayCreationExpressionSyntax arrayCreation)
             {
-                // OptionAttribute(string name)
-                name = optionAttr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
-            }
-            else if (optionAttr.ConstructorArguments.Length == 2)
-            {
-                // OptionAttribute(int order, string name)
-                order = (int)(optionAttr.ConstructorArguments[0].Value ?? int.MaxValue);
-                name = optionAttr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+                continue;
             }
 
-            options.Add(new OptionInfo(
-                property.Name,
-                property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                order,
-                name));
+            // Extract the literal values from the array initializer
+            var values = new List<string>();
+            if (arrayCreation.Initializer is not null)
+            {
+                foreach (var element in arrayCreation.Initializer.Expressions)
+                {
+                    // Get the text of the element as written in source
+                    values.Add(element.ToString());
+                }
+            }
+
+            if (values.Count == 0)
+            {
+                return null;
+            }
+
+            var elementType = genericTypeArgument?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "string";
+            return new ValuesInfo(elementType, values.ToImmutableArray());
         }
 
-        return new CommandInfo(commandName, options.ToImmutableArray());
+        return null;
     }
 
     private static void GenerateInterceptors(SourceProductionContext context, ImmutableArray<InvocationInfo> invocations)
@@ -251,11 +322,11 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             builder.AppendLine($"    [InterceptsLocation({invocation.InterceptableLocation.Version}, @\"{invocation.InterceptableLocation.Data}\")]");
             builder.AppendLine($"    internal static void {methodName}<T>(this {invocation.ReceiverType} builder)");
             builder.AppendLine("    {");
-            
+
             // Generate local function
             builder.AppendLine($"        void {localFunctionName}()");
             builder.AppendLine("        {");
-            
+
             if (invocation.CommandInfo is not null)
             {
                 var cmdInfo = invocation.CommandInfo;
@@ -265,7 +336,21 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 
                 foreach (var option in cmdInfo.Options.OrderBy(o => o.Order))
                 {
-                    builder.AppendLine($"            Console.WriteLine(\"  Property: {option.PropertyName}, Type: {option.PropertyType}, Order: {option.Order}, Name: {option.Name}\");");
+                    var attributeType = option.IsGeneric
+                        ? $"OptionAttribute<{option.GenericTypeArgument}>"
+                        : "OptionAttribute";
+
+                    builder.Append($"            Console.WriteLine(\"  Property: {option.PropertyName}, Type: {option.PropertyType}, Order: {option.Order}, Name: {option.Name}, Attribute: {attributeType}");
+
+                    if (option.ValuesInfo is not null)
+                    {
+                        // Escape double quotes in the values for embedding in a string literal
+                        var escapedValues = option.ValuesInfo.Values.Select(v => v.Replace("\"", "\\\""));
+                        var valuesString = string.Join(", ", escapedValues);
+                        builder.Append($", Values ({option.ValuesInfo.ElementType}[]): [{valuesString}]");
+                    }
+
+                    builder.AppendLine("\");");
                 }
             }
             else
@@ -275,7 +360,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 
             builder.AppendLine("        }");
             builder.AppendLine();
-            
+
             // Call Execute with action
             builder.AppendLine($"        builder.Execute<T>({localFunctionName});");
             builder.AppendLine("    }");
@@ -324,5 +409,12 @@ internal sealed class InterceptsLocationAttribute : Attribute
         string PropertyName,
         string PropertyType,
         int Order,
-        string Name);
+        string Name,
+        bool IsGeneric,
+        string? GenericTypeArgument,
+        ValuesInfo? ValuesInfo);
+
+    private sealed record ValuesInfo(
+        string ElementType,
+        ImmutableArray<string> Values);
 }

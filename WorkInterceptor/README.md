@@ -45,6 +45,21 @@ public sealed class TestCommand
     [Option("verbose")]
     public bool Verbose { get; set; }
 }
+
+[Command("advanced")]
+public sealed class AdvancedCommand
+{
+    // ジェネリック版のOptionAttribute<T>を使用
+    [Option<int>(1, "port", Values = new[] { 8080, 8443, 3000 })]
+    public int Port { get; set; }
+
+    [Option<string>("mode", Values = new[] { "debug", "release", "test" })]
+    public string? Mode { get; set; }
+
+    // 非ジェネリック版でもValuesを指定可能
+    [Option("input", Values = new[] { "file1.txt", "file2.txt" })]
+    public string? InputFile { get; set; }
+}
 ```
 
 ### 3. コードを記述
@@ -54,6 +69,7 @@ var builder = new Builder();
 
 // このメソッド呼び出しが自動的にinterceptされます
 builder.Execute<TestCommand>();
+builder.Execute<AdvancedCommand>();
 ```
 
 ### 4. 実行結果
@@ -64,28 +80,17 @@ Execute
 Type: TestCommand
 Command: test
 Options:
-  Property: Name, Type: string, Order: 1, Name: name
-  Property: Count, Type: int, Order: 2, Name: count
-  Property: Verbose, Type: bool, Order: 2147483647, Name: verbose
-```
+  Property: Name, Type: string, Order: 1, Name: name, Attribute: OptionAttribute
+  Property: Count, Type: int, Order: 2, Name: count, Attribute: OptionAttribute
+  Property: Verbose, Type: bool, Order: 2147483647, Name: verbose, Attribute: OptionAttribute
 
-生成されるコード（イメージ）:
-```csharp
-[InterceptsLocation(1, @"...")]
-internal static void Execute_Interceptor_0<T>(this Builder builder)
-{
-    void Action_0()
-    {
-        Console.WriteLine("Type: TestCommand");
-        Console.WriteLine("Command: test");
-        Console.WriteLine("Options:");
-        Console.WriteLine("  Property: Name, Type: string, Order: 1, Name: name");
-        Console.WriteLine("  Property: Count, Type: int, Order: 2, Name: count");
-        Console.WriteLine("  Property: Verbose, Type: bool, Order: 2147483647, Name: verbose");
-    }
-
-    builder.Execute<T>(Action_0);
-}
+Execute
+Type: AdvancedCommand
+Command: advanced
+Options:
+  Property: Port, Type: int, Order: 1, Name: port, Attribute: OptionAttribute<int>, Values (int[]): [8080, 8443, 3000]
+  Property: Mode, Type: string, Order: 2147483647, Name: mode, Attribute: OptionAttribute<string>, Values (string[]): [debug, release, test]
+  Property: InputFile, Type: string, Order: 2147483647, Name: input, Attribute: OptionAttribute, Values (string[]): [file1.txt, file2.txt]
 ```
 
 **EnableWorkInterceptor=false の場合:**
@@ -122,7 +127,7 @@ public sealed class CommandAttribute : Attribute
 }
 ```
 
-### OptionAttribute
+### OptionAttribute（非ジェネリック版）
 
 プロパティに適用して、オプション情報を定義します。
 
@@ -132,6 +137,7 @@ public sealed class OptionAttribute : Attribute
 {
     public int Order { get; }
     public string Name { get; }
+    public string[] Values { get; set; } = [];
     
     // Orderを省略（int.MaxValueになります）
     public OptionAttribute(string name)
@@ -149,6 +155,49 @@ public sealed class OptionAttribute : Attribute
 }
 ```
 
+### OptionAttribute<T>（ジェネリック版）
+
+型安全な値を持つオプションを定義できます。
+
+```csharp
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class OptionAttribute<T> : Attribute
+{
+    public int Order { get; }
+    public string Name { get; }
+    public T[] Values { get; set; } = [];
+    
+    public OptionAttribute(string name)
+    {
+        Order = int.MaxValue;
+        Name = name;
+    }
+    
+    public OptionAttribute(int order, string name)
+    {
+        Order = order;
+        Name = name;
+    }
+}
+```
+
+### Valuesプロパティ
+
+`OptionAttribute`と`OptionAttribute<T>`の両方で、`Values`プロパティを使用して選択可能な値のリストを指定できます：
+
+```csharp
+// 非ジェネリック版（string[]）
+[Option("mode", Values = new[] { "debug", "release", "test" })]
+public string? Mode { get; set; }
+
+// ジェネリック版（T[]で型安全）
+[Option<int>("port", Values = new[] { 8080, 8443, 3000 })]
+public int Port { get; set; }
+
+[Option<double>("threshold", Values = new[] { 0.5, 0.75, 1.0 })]
+public double Threshold { get; set; }
+```
+
 ## 技術詳細
 
 ### ビルド時リフレクション
@@ -157,10 +206,20 @@ public sealed class OptionAttribute : Attribute
 
 1. **型情報の取得**: `ITypeSymbol`から型名を取得
 2. **属性の解析**: `GetAttributes()`でCommandAttributeを検索
-3. **プロパティの解析**: `GetMembers()`でOptionAttribute付きプロパティを検索
-4. **コード生成**: 解析した情報をConsole出力するActionを生成
+3. **プロパティの解析**: `GetMembers()`でOptionAttribute/OptionAttribute<T>付きプロパティを検索
+4. **ジェネリック型の判定**: `OriginalDefinition.ToDisplayString()`でジェネリック版を識別
+5. **Valuesプロパティの抽出**: `NamedArguments`からValues配列を取得
+6. **コード生成**: 解析した情報をConsole出力するActionを生成
 
 これにより、実行時のリフレクションコストを削減し、パフォーマンスを向上させることができます。
+
+### ジェネリック属性のサポート
+
+C# 11で導入されたジェネリック属性をサポートしており、以下の機能を提供します：
+
+- **型安全性**: `OptionAttribute<int>`のように型を指定することで、Valuesの型が保証される
+- **自動判別**: Source Generatorが非ジェネリック版とジェネリック版を自動的に判別
+- **情報出力**: 生成されたコードで`OptionAttribute`か`OptionAttribute<T>`かを明示
 
 ### InterceptableLocation API
 
@@ -196,7 +255,7 @@ public sealed class OptionAttribute : Attribute
 
 ## プロジェクト構成
 
-- `WorkInterceptor.Library`: IBuilderインターフェース、Builderクラス、CommandAttribute、OptionAttribute
+- `WorkInterceptor.Library`: IBuilderインターフェース、Builderクラス、CommandAttribute、OptionAttribute、OptionAttribute<T>
 - `WorkInterceptor.Library.Generator`: Source Generator実装
 - `WorkInterceptor.Library.props`: 共通の設定ファイル
 - `Develop`: サンプル使用例
@@ -205,3 +264,4 @@ public sealed class OptionAttribute : Attribute
 
 - .NET 8.0 以上
 - C# 12 以上（Interceptors機能を使用）
+- C# 11 以上推奨（ジェネリック属性のサポート）
