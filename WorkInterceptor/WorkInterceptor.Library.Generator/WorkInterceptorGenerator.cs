@@ -210,123 +210,155 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             ? commandAttr.ConstructorArguments[1].Value?.ToString()
             : null;
 
-        // Get properties with BaseOptionAttribute (OptionAttribute or OptionAttribute<T>)
+        // Get properties with BaseOptionAttribute from the entire class hierarchy
         var options = new List<OptionInfo>();
-        foreach (var member in typeSymbol.GetMembers())
+        var currentType = typeSymbol;
+        var hierarchyLevel = 0;
+
+        // Build a list of types in the hierarchy from most derived to base
+        var typeHierarchy = new List<(ITypeSymbol Type, int Level)>();
+        while (currentType is not null)
         {
-            if (member is not IPropertySymbol property)
-            {
-                continue;
-            }
+            typeHierarchy.Add((currentType, hierarchyLevel));
+            currentType = currentType.BaseType;
+            hierarchyLevel--;
+        }
 
-            foreach (var attr in property.GetAttributes())
+        // Reverse to process from base to derived, so we can track property order correctly
+        typeHierarchy.Reverse();
+
+        // Process each type in the hierarchy
+        foreach (var (type, level) in typeHierarchy)
+        {
+            var members = type.GetMembers();
+            var propertyIndex = 0;
+
+            foreach (var member in members)
             {
-                var attrClass = attr.AttributeClass;
-                if (attrClass is null)
+                if (member is not IPropertySymbol property)
                 {
                     continue;
                 }
 
-                // Check if it inherits from BaseOptionAttribute
-                var isOptionAttribute = false;
-                var isGenericOption = false;
-                var currentClass = attrClass;
-
-                while (currentClass is not null)
-                {
-                    if (currentClass.ToDisplayString() == BaseOptionAttributeFullName)
-                    {
-                        isOptionAttribute = true;
-                        break;
-                    }
-                    currentClass = currentClass.BaseType;
-                }
-
-                if (!isOptionAttribute)
+                // Only process properties declared in this specific type
+                if (!SymbolEqualityComparer.Default.Equals(property.ContainingType, type))
                 {
                     continue;
                 }
 
-                // Check if it's the generic version
-                isGenericOption = attrClass.OriginalDefinition.ToDisplayString() == $"{OptionAttributeFullName}<T>";
-
-                var order = int.MaxValue;
-                var name = string.Empty;
-                var aliases = ImmutableArray<string>.Empty;
-
-                // Parse constructor arguments
-                if (attr.ConstructorArguments.Length >= 1)
+                foreach (var attr in property.GetAttributes())
                 {
-                    // First argument is always name (or order in the 3-param version)
-                    if (attr.ConstructorArguments.Length == 1)
+                    var attrClass = attr.AttributeClass;
+                    if (attrClass is null)
                     {
-                        // OptionAttribute(string name)
-                        name = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                        continue;
                     }
-                    else if (attr.ConstructorArguments.Length >= 2)
+
+                    // Check if it inherits from BaseOptionAttribute
+                    var isOptionAttribute = false;
+                    var isGenericOption = false;
+                    var currentClass = attrClass;
+
+                    while (currentClass is not null)
                     {
-                        // Check if first arg is int (order) or string (name)
-                        if (attr.ConstructorArguments[0].Type?.SpecialType == SpecialType.System_Int32)
+                        if (currentClass.ToDisplayString() == BaseOptionAttributeFullName)
                         {
-                            // OptionAttribute(int order, string name, ...)
-                            order = (int)(attr.ConstructorArguments[0].Value ?? int.MaxValue);
-                            name = attr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
-
-                            // Get aliases from params array (3rd argument onwards)
-                            if (attr.ConstructorArguments.Length > 2 &&
-                                attr.ConstructorArguments[2].Kind == TypedConstantKind.Array)
-                            {
-                                aliases = ExtractStringArray(attr.ConstructorArguments[2]);
-                            }
+                            isOptionAttribute = true;
+                            break;
                         }
-                        else
+                        currentClass = currentClass.BaseType;
+                    }
+
+                    if (!isOptionAttribute)
+                    {
+                        continue;
+                    }
+
+                    // Check if it's the generic version
+                    isGenericOption = attrClass.OriginalDefinition.ToDisplayString() == $"{OptionAttributeFullName}<T>";
+
+                    var order = int.MaxValue;
+                    var name = string.Empty;
+                    var aliases = ImmutableArray<string>.Empty;
+
+                    // Parse constructor arguments
+                    if (attr.ConstructorArguments.Length >= 1)
+                    {
+                        // First argument is always name (or order in the 3-param version)
+                        if (attr.ConstructorArguments.Length == 1)
                         {
-                            // OptionAttribute(string name, params string[] aliases)
+                            // OptionAttribute(string name)
                             name = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
-
-                            // Get aliases from params array (2nd argument onwards)
-                            if (attr.ConstructorArguments.Length > 1 &&
-                                attr.ConstructorArguments[1].Kind == TypedConstantKind.Array)
+                        }
+                        else if (attr.ConstructorArguments.Length >= 2)
+                        {
+                            // Check if first arg is int (order) or string (name)
+                            if (attr.ConstructorArguments[0].Type?.SpecialType == SpecialType.System_Int32)
                             {
-                                aliases = ExtractStringArray(attr.ConstructorArguments[1]);
+                                // OptionAttribute(int order, string name, ...)
+                                order = (int)(attr.ConstructorArguments[0].Value ?? int.MaxValue);
+                                name = attr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+
+                                // Get aliases from params array (3rd argument onwards)
+                                if (attr.ConstructorArguments.Length > 2 &&
+                                    attr.ConstructorArguments[2].Kind == TypedConstantKind.Array)
+                                {
+                                    aliases = ExtractStringArray(attr.ConstructorArguments[2]);
+                                }
+                            }
+                            else
+                            {
+                                // OptionAttribute(string name, params string[] aliases)
+                                name = attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+
+                                // Get aliases from params array (2nd argument onwards)
+                                if (attr.ConstructorArguments.Length > 1 &&
+                                    attr.ConstructorArguments[1].Kind == TypedConstantKind.Array)
+                                {
+                                    aliases = ExtractStringArray(attr.ConstructorArguments[1]);
+                                }
                             }
                         }
                     }
-                }
 
-                // Get named properties
-                string? description = null;
-                bool required = false;
+                    // Get named properties
+                    string? description = null;
+                    bool required = false;
 
-                foreach (var namedArg in attr.NamedArguments)
-                {
-                    switch (namedArg.Key)
+                    foreach (var namedArg in attr.NamedArguments)
                     {
-                        case "Description":
-                            description = namedArg.Value.Value?.ToString();
-                            break;
-                        case "Required":
-                            required = namedArg.Value.Value is bool b && b;
-                            break;
+                        switch (namedArg.Key)
+                        {
+                            case "Description":
+                                description = namedArg.Value.Value?.ToString();
+                                break;
+                            case "Required":
+                                required = namedArg.Value.Value is bool b && b;
+                                break;
+                        }
                     }
+
+                    // Get Completions property from syntax
+                    var completionsInfo = ExtractCompletionsPropertyFromSyntax(attr, isGenericOption ? attrClass.TypeArguments.FirstOrDefault() : null);
+
+                    options.Add(new OptionInfo(
+                        property.Name,
+                        property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                        order,
+                        name,
+                        aliases,
+                        description,
+                        required,
+                        isGenericOption,
+                        isGenericOption ? attrClass.TypeArguments.FirstOrDefault()?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) : null,
+                        completionsInfo?.Item1,
+                        completionsInfo?.Item2,
+                        level,
+                        propertyIndex));
+
+                    propertyIndex++;
+                    break; // Only process the first OptionAttribute found
                 }
-
-                // Get Completions property from syntax
-                var completionsInfo = ExtractCompletionsPropertyFromSyntax(attr, isGenericOption ? attrClass.TypeArguments.FirstOrDefault() : null);
-
-                options.Add(new OptionInfo(
-                    property.Name,
-                    property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    order,
-                    name,
-                    aliases,
-                    description,
-                    required,
-                    isGenericOption,
-                    isGenericOption ? attrClass.TypeArguments.FirstOrDefault()?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) : null,
-                    completionsInfo));
-
-                break; // Only process the first OptionAttribute found
             }
         }
 
@@ -351,7 +383,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
         return result.ToImmutable();
     }
 
-    private static CompletionsInfo? ExtractCompletionsPropertyFromSyntax(AttributeData attr, ITypeSymbol? genericTypeArgument)
+    private static (string, ImmutableArray<string>)? ExtractCompletionsPropertyFromSyntax(AttributeData attr, ITypeSymbol? genericTypeArgument)
     {
         // Get the syntax node for the attribute
         if (attr.ApplicationSyntaxReference?.GetSyntax() is not AttributeSyntax attributeSyntax)
@@ -406,7 +438,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             }
 
             var elementType = genericTypeArgument?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "string";
-            return new CompletionsInfo(elementType, completions.ToImmutableArray());
+            return (elementType, completions.ToImmutableArray());
         }
 
         return null;
@@ -455,7 +487,11 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 
                 builder.AppendLine("            Console.WriteLine(\"Options:\");");
 
-                foreach (var option in cmdInfo.Options.OrderBy(o => o.Order))
+                // Sort by: 1) Order, 2) HierarchyLevel (base classes first), 3) PropertyIndex
+                foreach (var option in cmdInfo.Options
+                    .OrderBy(o => o.Order)
+                    .ThenBy(o => o.HierarchyLevel)
+                    .ThenBy(o => o.PropertyIndex))
                 {
                     var attributeType = option.IsGeneric
                         ? $"OptionAttribute<{option.GenericTypeArgument}>"
@@ -481,12 +517,12 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
                         builder.Append(", Required: true");
                     }
 
-                    if (option.CompletionsInfo is not null)
+                    if (option.Completions is not null && option.CompletionsElementType is not null)
                     {
                         // Escape double quotes in the completions for embedding in a string literal
-                        var escapedCompletions = option.CompletionsInfo.Completions.Select(c => c.Replace("\"", "\\\""));
+                        var escapedCompletions = option.Completions.Value.Select(c => c.Replace("\"", "\\\""));
                         var completionsString = string.Join(", ", escapedCompletions);
-                        builder.Append($", Completions ({option.CompletionsInfo.ElementType}[]): [{completionsString}]");
+                        builder.Append($", Completions ({option.CompletionsElementType}[]): [{completionsString}]");
                     }
 
                     builder.AppendLine("\");");
@@ -533,6 +569,16 @@ internal sealed class InterceptsLocationAttribute : Attribute
 }
 ";
 
+    /// <summary>
+    /// インターセプトされたメソッド呼び出しに関する情報を表します。
+    /// </summary>
+    /// <param name="InterceptableLocation">インターセプター属性のロケーション情報。</param>
+    /// <param name="TypeArgument">ジェネリック型引数の完全修飾型名（例: "global::Develop.TestCommand"）。</param>
+    /// <param name="TypeName">ジェネリック型引数の単純型名（例: "TestCommand"）。</param>
+    /// <param name="ReceiverType">メソッドが呼び出されるオブジェクトの完全修飾型（例: "global::WorkInterceptor.Library.Builder"）。</param>
+    /// <param name="MethodName">インターセプトされるメソッドの名前（例: "Execute" または "ExecuteSub"）。</param>
+    /// <param name="InterfaceName">メソッドを定義するインターフェースの名前（例: "IBuilder" または "ISubBuilder"）。</param>
+    /// <param name="CommandInfo">コマンド属性とオプションに関する情報。CommandAttributeが存在しない場合はnull。</param>
     private sealed record InvocationInfo(
         InterceptableLocation InterceptableLocation,
         string TypeArgument,
@@ -542,11 +588,33 @@ internal sealed class InterceptsLocationAttribute : Attribute
         string InterfaceName,
         CommandInfo? CommandInfo);
 
+    /// <summary>
+    /// CommandAttributeから抽出された情報を表します。
+    /// </summary>
+    /// <param name="CommandName">CommandAttributeで指定されたコマンド名（例: "test", "sample"）。</param>
+    /// <param name="CommandDescription">コマンドの説明。指定されていない場合はnull。</param>
+    /// <param name="Options">OptionAttributeが指定されたプロパティから抽出されたオプション情報のコレクション。</param>
     private sealed record CommandInfo(
         string CommandName,
         string? CommandDescription,
         ImmutableArray<OptionInfo> Options);
 
+    /// <summary>
+    /// プロパティのOptionAttributeから抽出された情報を表します。
+    /// </summary>
+    /// <param name="PropertyName">プロパティの名前（例: "Name", "Count"）。</param>
+    /// <param name="PropertyType">プロパティの完全修飾型（例: "string", "int"）。</param>
+    /// <param name="Order">オプションの表示順序。小さい値が先に表示される。デフォルトはint.MaxValue。</param>
+    /// <param name="Name">オプションの主要な名前（例: "name", "count"）。</param>
+    /// <param name="Aliases">オプションの別名（例: ["n"], ["c"]）。</param>
+    /// <param name="Description">オプションの説明。指定されていない場合はnull。</param>
+    /// <param name="Required">オプションが必須かどうか。デフォルトはfalse。</param>
+    /// <param name="IsGeneric">属性がOptionAttribute&lt;T&gt;（true）かOptionAttribute（false）か。</param>
+    /// <param name="GenericTypeArgument">OptionAttribute&lt;T&gt;の完全修飾型引数。非ジェネリックの場合はnull。</param>
+    /// <param name="CompletionsElementType">補完値配列の要素型（例: "string", "int", "float"）。補完値がない場合はnull。</param>
+    /// <param name="Completions">ソースコードに記述された通りの補完値の配列（例: ["\"debug\"", "8080", "0.5f"]）。指定されていない場合はnull。</param>
+    /// <param name="HierarchyLevel">プロパティの継承レベル。0 = 対象クラス、-1 = 親クラス、-2 = 祖父クラス、以降同様。</param>
+    /// <param name="PropertyIndex">宣言されたクラス内でのプロパティのインデックス。ソースコードの順序を維持するために使用される。</param>
     private sealed record OptionInfo(
         string PropertyName,
         string PropertyType,
@@ -557,9 +625,8 @@ internal sealed class InterceptsLocationAttribute : Attribute
         bool Required,
         bool IsGeneric,
         string? GenericTypeArgument,
-        CompletionsInfo? CompletionsInfo);
-
-    private sealed record CompletionsInfo(
-        string ElementType,
-        ImmutableArray<string> Completions);
+        string? CompletionsElementType,
+        ImmutableArray<string>? Completions,
+        int HierarchyLevel,
+        int PropertyIndex);
 }
