@@ -48,3 +48,30 @@ public sealed class Data3
     [Option(0, "text")]
     public string Name { get; set; } = default!;
 }
+
+[Command("test")]
+public sealed class TestCommand
+{
+    [Option(1, "name")]
+    public string? Name { get; set; }
+
+    [Option(2, "count")]
+    public int Count { get; set; }
+
+    [Option("verbose")]
+    public bool Verbose { get; set; }
+}
+
+[Command("sample")]
+public sealed class SampleCommand
+{
+    [Option("input")]
+    public string? InputFile { get; set; }
+
+    [Option("output")]
+    public string? OutputFile { get; set; }
+}
+
+public sealed class Data
+{
+}

@@ -4,7 +4,9 @@ C# Interceptorsを使用したSource Generatorライブラリのサンプル実�
 
 ## 機能
 
-このライブラリは、`IBuilder.Execute<T>()`メソッドの呼び出しを自動的にinterceptし、`IBuilder.Execute<T>(typeof(T))`の呼び出しに置き換えます。
+このライブラリは、`IBuilder.Execute<T>()`メソッドの呼び出しを自動的にinterceptし、`IBuilder.Execute<T>(Action action)`の呼び出しに置き換えます。Actionは、T型のCommandAttributeとOptionAttributeの情報をConsole出力するコードがビルド時に生成されます。
+
+これにより、**実行時のリフレクションではなく、ビルド時にコンパイラが持つ型情報を使用して属性情報を抽出**できます。
 
 ## 使用方法
 
@@ -26,47 +28,68 @@ C# Interceptorsを使用したSource Generatorライブラリのサンプル実�
 </ItemGroup>
 ```
 
-**注意:** `WorkInterceptor.Library.props`をインポートすることで、必要な設定（`InterceptorsNamespaces`と`CompilerVisibleProperty`）が自動的に適用されます。
-
-### 2. コードを記述
+### 2. コマンドクラスを定義
 
 ```csharp
 using WorkInterceptor.Library;
 
-var builder = new Builder();
-
-// このメソッド呼び出しが自動的にinterceptされます（EnableWorkInterceptor=trueの場合）
-builder.Execute<string>();  // → builder.Execute<string>(typeof(string)) に置き換えられる
-builder.Execute<int>();     // → builder.Execute<int>(typeof(int)) に置き換えられる
-
-// 拡張メソッド内の呼び出しもinterceptされます
-public static class Extensions
+[Command("test")]
+public sealed class TestCommand
 {
-    public static void AddExecutes(this IBuilder builder)
-    {
-        builder.Execute<DateTime>();  // → builder.Execute<DateTime>(typeof(DateTime)) に置き換えられる
-        builder.Execute<Data>();      // → builder.Execute<Data>(typeof(Data)) に置き換えられる
-    }
+    [Option(1, "name")]
+    public string? Name { get; set; }
+
+    [Option(2, "count")]
+    public int Count { get; set; }
+
+    [Option("verbose")]
+    public bool Verbose { get; set; }
 }
 ```
 
-### 3. 実行結果
+### 3. コードを記述
+
+```csharp
+var builder = new Builder();
+
+// このメソッド呼び出しが自動的にinterceptされます
+builder.Execute<TestCommand>();
+```
+
+### 4. 実行結果
 
 **EnableWorkInterceptor=true の場合:**
 ```
-Execute System.String
-Execute System.Int32
-Execute System.Object
-Execute System.DateTime
-Execute Develop.Data
+Execute
+Type: TestCommand
+Command: test
+Options:
+  Property: Name, Type: string, Order: 1, Name: name
+  Property: Count, Type: int, Order: 2, Name: count
+  Property: Verbose, Type: bool, Order: 2147483647, Name: verbose
+```
+
+生成されるコード（イメージ）:
+```csharp
+[InterceptsLocation(1, @"...")]
+internal static void Execute_Interceptor_0<T>(this Builder builder)
+{
+    void Action_0()
+    {
+        Console.WriteLine("Type: TestCommand");
+        Console.WriteLine("Command: test");
+        Console.WriteLine("Options:");
+        Console.WriteLine("  Property: Name, Type: string, Order: 1, Name: name");
+        Console.WriteLine("  Property: Count, Type: int, Order: 2, Name: count");
+        Console.WriteLine("  Property: Verbose, Type: bool, Order: 2147483647, Name: verbose");
+    }
+
+    builder.Execute<T>(Action_0);
+}
 ```
 
 **EnableWorkInterceptor=false の場合:**
 ```
-Execute
-Execute
-Execute
-Execute
 Execute
 ```
 
@@ -76,38 +99,68 @@ Execute
 
 Interceptor機能の有効/無効を制御します。
 
-- `true`: `IBuilder.Execute<T>()`の呼び出しが`Execute<T>(typeof(T))`に置き換えられます
+- `true`: `IBuilder.Execute<T>()`が`Execute<T>(Action)`に置き換えられ、属性情報が出力されます
 - `false`: Interceptorは生成されず、通常のメソッド呼び出しが行われます
 - デフォルト: `false`（設定されていない場合）
 
-**設定例:**
-```xml
-<PropertyGroup>
-  <EnableWorkInterceptor>true</EnableWorkInterceptor>
-</PropertyGroup>
+## 属性
+
+### CommandAttribute
+
+クラスに適用して、コマンド情報を定義します。
+
+```csharp
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class CommandAttribute : Attribute
+{
+    public string Name { get; }
+    
+    public CommandAttribute(string name)
+    {
+        Name = name;
+    }
+}
 ```
 
-このプロパティは`WorkInterceptor.Library.props`をインポートすることで、自動的にSource Generatorから読み取れるようになります。
+### OptionAttribute
+
+プロパティに適用して、オプション情報を定義します。
+
+```csharp
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class OptionAttribute : Attribute
+{
+    public int Order { get; }
+    public string Name { get; }
+    
+    // Orderを省略（int.MaxValueになります）
+    public OptionAttribute(string name)
+    {
+        Order = int.MaxValue;
+        Name = name;
+    }
+    
+    // Orderを指定
+    public OptionAttribute(int order, string name)
+    {
+        Order = order;
+        Name = name;
+    }
+}
+```
 
 ## 技術詳細
 
-### プロパティファイルの内容
+### ビルド時リフレクション
 
-`WorkInterceptor.Library.props`には以下の設定が含まれています：
+このSource Generatorは、コンパイル時にRoslynのセマンティックモデルを使用して型情報と属性情報を解析します：
 
-```xml
-<Project>
-  <PropertyGroup>
-    <!-- Interceptorの名前空間を有効化 -->
-    <InterceptorsNamespaces>$(InterceptorsNamespaces);WorkInterceptor.Library.Generated</InterceptorsNamespaces>
-  </PropertyGroup>
+1. **型情報の取得**: `ITypeSymbol`から型名を取得
+2. **属性の解析**: `GetAttributes()`でCommandAttributeを検索
+3. **プロパティの解析**: `GetMembers()`でOptionAttribute付きプロパティを検索
+4. **コード生成**: 解析した情報をConsole出力するActionを生成
 
-  <ItemGroup>
-    <!-- Source GeneratorからEnableWorkInterceptorプロパティを読み取れるようにする -->
-    <CompilerVisibleProperty Include="EnableWorkInterceptor" />
-  </ItemGroup>
-</Project>
-```
+これにより、実行時のリフレクションコストを削減し、パフォーマンスを向上させることができます。
 
 ### InterceptableLocation API
 
@@ -116,14 +169,21 @@ Interceptor機能の有効/無効を制御します。
 - `SemanticModel.GetInterceptableLocation()`: 呼び出し位置の正確な情報を取得
 - `InterceptsLocationAttribute(int version, string data)`: チェックサムベースの位置指定
 
-これにより、以下の利点があります：
-- 移植性の向上（異なるマシンでもコンパイル可能）
-- 将来のエンコーディング変更に対する透明性
-- 手動での行番号・文字位置計算が不要
+### プロパティファイルの内容
 
-### 名前空間の設定
+`WorkInterceptor.Library.props`には以下の設定が含まれています：
 
-Interceptorは`WorkInterceptor.Library.Generated`名前空間に生成されます。この名前空間は`WorkInterceptor.Library.props`ファイルで自動的に有効化されるため、個別のプロジェクトで設定する必要はありません。
+```xml
+<Project>
+  <PropertyGroup>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);WorkInterceptor.Library.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="EnableWorkInterceptor" />
+  </ItemGroup>
+</Project>
+```
 
 ### サポートされる呼び出しパターン
 
@@ -136,7 +196,7 @@ Interceptorは`WorkInterceptor.Library.Generated`名前空間に生成されま�
 
 ## プロジェクト構成
 
-- `WorkInterceptor.Library`: IBuilderインターフェースとBuilderクラス
+- `WorkInterceptor.Library`: IBuilderインターフェース、Builderクラス、CommandAttribute、OptionAttribute
 - `WorkInterceptor.Library.Generator`: Source Generator実装
 - `WorkInterceptor.Library.props`: 共通の設定ファイル
 - `Develop`: サンプル使用例

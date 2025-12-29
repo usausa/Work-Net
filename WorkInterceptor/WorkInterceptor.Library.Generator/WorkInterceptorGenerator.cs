@@ -16,6 +16,8 @@ using Microsoft.CodeAnalysis.Text;
 public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 {
     private const string IBuilderFullName = "WorkInterceptor.Library.IBuilder";
+    private const string CommandAttributeFullName = "WorkInterceptor.Library.CommandAttribute";
+    private const string OptionAttributeFullName = "WorkInterceptor.Library.OptionAttribute";
     private const string EnableInterceptorOptionName = "build_property.EnableWorkInterceptor";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -30,9 +32,9 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
         var enableInterceptorProvider = context.AnalyzerConfigOptionsProvider
             .Select(static (provider, _) =>
             {
-                var hasValue = provider.GlobalOptions.TryGetValue(EnableInterceptorOptionName, out var value);
-                var enabled = hasValue && bool.TryParse(value, out var result) && result;
-                return enabled;
+                return provider.GlobalOptions.TryGetValue(EnableInterceptorOptionName, out var value) &&
+                       bool.TryParse(value, out var enabled) &&
+                       enabled;
             });
 
         // Find all invocations of IBuilder.Execute<T>()
@@ -155,10 +157,73 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
             return null;
         }
 
+        // Extract CommandAttribute and OptionAttribute information
+        var commandInfo = ExtractCommandInfo(typeArgument);
+
         return new InvocationInfo(
             interceptableLocation,
             typeArgument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            receiverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            typeArgument.Name,
+            receiverType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            commandInfo);
+    }
+
+    private static CommandInfo? ExtractCommandInfo(ITypeSymbol typeSymbol)
+    {
+        // Get CommandAttribute
+        var commandAttr = typeSymbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == CommandAttributeFullName);
+
+        if (commandAttr is null)
+        {
+            return null;
+        }
+
+        var commandName = commandAttr.ConstructorArguments.Length > 0
+            ? commandAttr.ConstructorArguments[0].Value?.ToString() ?? string.Empty
+            : string.Empty;
+
+        // Get properties with OptionAttribute
+        var options = new List<OptionInfo>();
+        foreach (var member in typeSymbol.GetMembers())
+        {
+            if (member is not IPropertySymbol property)
+            {
+                continue;
+            }
+
+            var optionAttr = property.GetAttributes()
+                .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == OptionAttributeFullName);
+
+            if (optionAttr is null)
+            {
+                continue;
+            }
+
+            var order = int.MaxValue;
+            var name = string.Empty;
+
+            // Parse constructor arguments
+            if (optionAttr.ConstructorArguments.Length == 1)
+            {
+                // OptionAttribute(string name)
+                name = optionAttr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+            }
+            else if (optionAttr.ConstructorArguments.Length == 2)
+            {
+                // OptionAttribute(int order, string name)
+                order = (int)(optionAttr.ConstructorArguments[0].Value ?? int.MaxValue);
+                name = optionAttr.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+            }
+
+            options.Add(new OptionInfo(
+                property.Name,
+                property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                order,
+                name));
+        }
+
+        return new CommandInfo(commandName, options.ToImmutableArray());
     }
 
     private static void GenerateInterceptors(SourceProductionContext context, ImmutableArray<InvocationInfo> invocations)
@@ -167,6 +232,7 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
 
         builder.AppendLine("#nullable enable");
         builder.AppendLine();
+        builder.AppendLine("using System;");
         builder.AppendLine("using System.Runtime.CompilerServices;");
         builder.AppendLine("using WorkInterceptor.Library;");
         builder.AppendLine();
@@ -179,12 +245,39 @@ public sealed class WorkInterceptorGenerator : IIncrementalGenerator
         {
             var invocation = invocations[i];
             var methodName = $"Execute_Interceptor_{i}";
+            var localFunctionName = $"Action_{i}";
 
             builder.AppendLine($"    // {invocation.InterceptableLocation.GetDisplayLocation()}");
             builder.AppendLine($"    [InterceptsLocation({invocation.InterceptableLocation.Version}, @\"{invocation.InterceptableLocation.Data}\")]");
             builder.AppendLine($"    internal static void {methodName}<T>(this {invocation.ReceiverType} builder)");
             builder.AppendLine("    {");
-            builder.AppendLine("        builder.Execute<T>(typeof(T));");
+            
+            // Generate local function
+            builder.AppendLine($"        void {localFunctionName}()");
+            builder.AppendLine("        {");
+            
+            if (invocation.CommandInfo is not null)
+            {
+                var cmdInfo = invocation.CommandInfo;
+                builder.AppendLine($"            Console.WriteLine(\"Type: {invocation.TypeName}\");");
+                builder.AppendLine($"            Console.WriteLine(\"Command: {cmdInfo.CommandName}\");");
+                builder.AppendLine("            Console.WriteLine(\"Options:\");");
+
+                foreach (var option in cmdInfo.Options.OrderBy(o => o.Order))
+                {
+                    builder.AppendLine($"            Console.WriteLine(\"  Property: {option.PropertyName}, Type: {option.PropertyType}, Order: {option.Order}, Name: {option.Name}\");");
+                }
+            }
+            else
+            {
+                builder.AppendLine($"            Console.WriteLine(\"Type: {invocation.TypeName} (No CommandAttribute)\");");
+            }
+
+            builder.AppendLine("        }");
+            builder.AppendLine();
+            
+            // Call Execute with action
+            builder.AppendLine($"        builder.Execute<T>({localFunctionName});");
             builder.AppendLine("    }");
 
             if (i < invocations.Length - 1)
@@ -216,5 +309,20 @@ internal sealed class InterceptsLocationAttribute : Attribute
 }
 ";
 
-    private sealed record InvocationInfo(InterceptableLocation InterceptableLocation, string TypeArgument, string ReceiverType);
+    private sealed record InvocationInfo(
+        InterceptableLocation InterceptableLocation,
+        string TypeArgument,
+        string TypeName,
+        string ReceiverType,
+        CommandInfo? CommandInfo);
+
+    private sealed record CommandInfo(
+        string CommandName,
+        ImmutableArray<OptionInfo> Options);
+
+    private sealed record OptionInfo(
+        string PropertyName,
+        string PropertyType,
+        int Order,
+        string Name);
 }
