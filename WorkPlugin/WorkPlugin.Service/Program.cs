@@ -15,6 +15,10 @@ internal static class Program
         var pluginManager = new PluginManager();
 
         // 2) アセンブリから（単一ファイル publish 等：既にロード済みのものを対象）
+        foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            Console.WriteLine($"{a.GetName().Name} {a.FullName} {a.GetName().FullName}");
+        }
         var pluginAssembliesInProcess = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic)
             .Where(a => a.GetName().Name?.StartsWith("WorkPlugin.Plugin", StringComparison.Ordinal) == true)
