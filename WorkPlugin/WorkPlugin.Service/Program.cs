@@ -12,9 +12,33 @@ internal static class Program
 {
     public static void Main()
     {
-        var pluginFiles = Directory.GetFiles(AppContext.BaseDirectory, "WorkPlugin.Plugin*.dll");
-        var pluginManager = new PluginManager(pluginFiles);
-        pluginManager.Initialize();
+        var pluginManager = new PluginManager();
+
+        // 1) ファイルから（通常 publish）
+        var pluginAssembliesFromFiles = Directory
+            .GetFiles(AppContext.BaseDirectory, "WorkPlugin.Plugin*.dll")
+            .Select(path => (Path: path, Assembly: SafeLoadFrom(path)))
+            .Where(x => x.Assembly is not null)
+            .Select(x => (x.Path, Assembly: x.Assembly!));
+
+        foreach (var (path, assembly) in pluginAssembliesFromFiles)
+        {
+            pluginManager.LoadPluginsFromAssembly(assembly);
+            Console.WriteLine($"Loaded: {Path.GetFileName(path)}");
+        }
+
+        // 2) アセンブリから（単一ファイル publish 等：既にロード済みのものを対象）
+        var pluginAssembliesInProcess = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic)
+            .Where(a => a.GetName().Name?.StartsWith("WorkPlugin.Plugin", StringComparison.Ordinal) == true)
+            .OrderBy(a => a.GetName().Name, StringComparer.Ordinal);
+
+        foreach (var assembly in pluginAssembliesInProcess)
+        {
+            pluginManager.LoadPluginsFromAssembly(assembly);
+        }
+
+        pluginManager.Build();
 
 #if DEBUG
         Console.WriteLine("DEBUG");
@@ -38,62 +62,39 @@ internal static class Program
             plugin.Execute();
         }
     }
-}
 
-[RequiresUnreferencedCode("動的にアセンブリを読み込みます")]
-public class PluginManager : IDisposable
-{
-    private readonly IServiceCollection services;
-    private IServiceProvider? serviceProvider;
-    private readonly List<string> pluginAssemblyPaths;
-
-    public PluginManager(IEnumerable<string> pluginAssemblyPaths)
+    private static Assembly? SafeLoadFrom(string assemblyPath)
     {
-        services = new ServiceCollection();
-        this.pluginAssemblyPaths = pluginAssemblyPaths.ToList();
-    }
-
-    public PluginManager(string pluginAssemblyPath)
-        : this([pluginAssemblyPath])
-    {
-    }
-
-    public void Initialize()
-    {
-        if (serviceProvider is not null)
-        {
-            throw new InvalidOperationException("PluginManager is already initialized.");
-        }
-
-        foreach (var assemblyPath in pluginAssemblyPaths)
-        {
-            LoadPluginFromPath(assemblyPath);
-        }
-
-        serviceProvider = services.BuildServiceProvider();
-    }
-
-    private void LoadPluginFromPath(string assemblyPath)
-    {
-        if (!File.Exists(assemblyPath))
-        {
-            return;
-        }
-
         try
         {
-            var assembly = Assembly.LoadFrom(assemblyPath);
-            LoadPluginsFromAssembly(assembly);
-            Console.WriteLine($"Loaded: {Path.GetFileName(assemblyPath)}");
+            return Assembly.LoadFrom(assemblyPath);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to load {Path.GetFileName(assemblyPath)}: {ex.Message}");
+            return null;
         }
     }
+}
 
-    private void LoadPluginsFromAssembly(Assembly assembly)
+[RequiresUnreferencedCode("動的にアセンブリを読み込みます")]
+public sealed class PluginManager : IDisposable
+{
+    private readonly IServiceCollection services;
+    private IServiceProvider? serviceProvider;
+
+    public PluginManager()
     {
+        services = new ServiceCollection();
+    }
+
+    public void LoadPluginsFromAssembly(Assembly assembly)
+    {
+        if (serviceProvider is not null)
+        {
+            throw new InvalidOperationException("PluginManager is already built.");
+        }
+
         var loaderTypes = assembly.GetTypes()
             .Where(t => typeof(IPluginLoader).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false });
 
@@ -113,14 +114,24 @@ public class PluginManager : IDisposable
         }
     }
 
+    public void Build()
+    {
+        if (serviceProvider is not null)
+        {
+            throw new InvalidOperationException("PluginManager is already built.");
+        }
+
+        serviceProvider = services.BuildServiceProvider();
+    }
+
     public IEnumerable<IPlugin> GetPlugins()
     {
         if (serviceProvider is null)
         {
-            throw new InvalidOperationException("PluginManager is not initialized. Call Initialize() first.");
+            throw new InvalidOperationException("PluginManager is not built. Call Build() first.");
         }
 
-        return serviceProvider!.GetServices<IPlugin>();
+        return serviceProvider.GetServices<IPlugin>();
     }
 
     public void Dispose()
