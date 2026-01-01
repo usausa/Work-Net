@@ -2,27 +2,48 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net10.0-windows;net10.0-macos;net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;DebugLinux;DebugMac;DebugWindows;Release</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'DebugLinux' or '$(Configuration)' == 'DebugMac' or '$(Configuration)' == 'DebugWindows'">
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
     <IsWindowsPlatform>false</IsWindowsPlatform>
-    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows'))">true</IsWindowsPlatform>
+    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugWindows'">true</IsWindowsPlatform>
 
     <IsMacOSPlatform>false</IsMacOSPlatform>
-    <IsMacOSPlatform Condition="$(TargetFramework.Contains('macos'))">true</IsMacOSPlatform>
+    <IsMacOSPlatform Condition="!$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugMac'">true</IsMacOSPlatform>
 
     <IsLinuxPlatform>false</IsLinuxPlatform>
-    <IsLinuxPlatform Condition="!$(TargetFramework.Contains('windows')) AND !$(TargetFramework.Contains('macos'))">true</IsLinuxPlatform>
+    <IsLinuxPlatform Condition="!$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugLinux'">true</IsLinuxPlatform>
+
+    <IsAnyPlatform>false</IsAnyPlatform>
+    <IsAnyPlatform Condition="'$(IsWindowsPlatform)' == 'true' Or '$(IsMacOSPlatform)' == 'true' Or '$(IsLinuxPlatform)' == 'true'">true</IsAnyPlatform>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsWindowsPlatform)' == 'true')">
+    <DefineConstants>$(DefineConstants);ENABLE_WINDOWS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsMacOSPlatform)' == 'true')">
+    <DefineConstants>$(DefineConstants);ENABLE_MACOS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsLinuxPlatform)' == 'true')">
+    <DefineConstants>$(DefineConstants);ENABLE_LINUX</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WorkPlugin.Abstraction\WorkPlugin.Abstraction.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(IsAnyPlatform)' == 'true'">
     <ProjectReference Include="..\WorkPlugin.Plugin1\WorkPlugin.Plugin1.csproj" />
   </ItemGroup>
 

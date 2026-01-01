@@ -16,6 +16,19 @@ internal static class Program
         var pluginManager = new PluginManager(pluginFiles);
         pluginManager.Initialize();
 
+#if DEBUG
+        Console.WriteLine("DEBUG");
+#endif
+#if ENABLE_WINDOWS
+        Console.WriteLine("ENABLE_WINDOWS");
+#endif
+#if ENABLE_MACOS
+        Console.WriteLine("ENABLE_MACOS");
+#endif
+#if ENABLE_LINUX
+        Console.WriteLine("ENABLE_LINUX");
+#endif
+
         var plugins = pluginManager.GetPlugins().ToList();
         Console.WriteLine($"Total plugins loaded: {plugins.Count}");
         Console.WriteLine();
