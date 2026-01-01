@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,26 +16,29 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <IsWindowsPlatform>false</IsWindowsPlatform>
-    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugWindows'">true</IsWindowsPlatform>
+    <_IsWindowsTFM>false</_IsWindowsTFM>
+    <_IsWindowsTFM Condition="$(TargetFramework.Contains('windows'))">true</_IsWindowsTFM>
 
-    <IsMacOSPlatform>false</IsMacOSPlatform>
-    <IsMacOSPlatform Condition="!$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugMac'">true</IsMacOSPlatform>
+    <IsWindowsPlatform Condition="'$(IsWindowsPlatform)' == ''">false</IsWindowsPlatform>
+    <IsWindowsPlatform Condition="'$(_IsWindowsTFM)' == 'true' and '$(Configuration)' == 'DebugWindows'">true</IsWindowsPlatform>
 
-    <IsLinuxPlatform>false</IsLinuxPlatform>
-    <IsLinuxPlatform Condition="!$(TargetFramework.Contains('windows')) and '$(Configuration)' == 'DebugLinux'">true</IsLinuxPlatform>
+    <IsMacOSPlatform Condition="'$(IsMacOSPlatform)' == ''">false</IsMacOSPlatform>
+    <IsMacOSPlatform Condition="'$(_IsWindowsTFM)' != 'false' and '$(Configuration)' == 'DebugMac'">true</IsMacOSPlatform>
+
+    <IsLinuxPlatform Condition="'$(IsLinuxPlatform)' == ''">false</IsLinuxPlatform>
+    <IsLinuxPlatform Condition="'$(_IsWindowsTFM)' != 'false' and '$(Configuration)' == 'DebugLinux'">true</IsLinuxPlatform>
 
     <IsAnyPlatform>false</IsAnyPlatform>
     <IsAnyPlatform Condition="'$(IsWindowsPlatform)' == 'true' Or '$(IsMacOSPlatform)' == 'true' Or '$(IsLinuxPlatform)' == 'true'">true</IsAnyPlatform>
   </PropertyGroup>
 
-  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsWindowsPlatform)' == 'true')">
+  <PropertyGroup Condition="'$(IsWindowsPlatform)' == 'true'">
     <DefineConstants>$(DefineConstants);ENABLE_WINDOWS</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsMacOSPlatform)' == 'true')">
+  <PropertyGroup Condition="'$(IsMacOSPlatform)' == 'true'">
     <DefineConstants>$(DefineConstants);ENABLE_MACOS</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="('$(IsAnyPlatform)' == 'true') or ('$(IsLinuxPlatform)' == 'true')">
+  <PropertyGroup Condition="'$(IsLinuxPlatform)' == 'true'">
     <DefineConstants>$(DefineConstants);ENABLE_LINUX</DefineConstants>
   </PropertyGroup>
 
