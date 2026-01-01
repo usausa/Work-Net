@@ -83,6 +83,8 @@ public sealed class PluginManager : IDisposable
     private readonly IServiceCollection services;
     private IServiceProvider? serviceProvider;
 
+    private readonly HashSet<string> loadedAssemblySimpleNames = new(StringComparer.Ordinal);
+
     public PluginManager()
     {
         services = new ServiceCollection();
@@ -93,6 +95,18 @@ public sealed class PluginManager : IDisposable
         if (serviceProvider is not null)
         {
             throw new InvalidOperationException("PluginManager is already built.");
+        }
+
+        var assemblyName = assembly.GetName().Name;
+        if (string.IsNullOrEmpty(assemblyName))
+        {
+            return;
+        }
+
+        if (!loadedAssemblySimpleNames.Add(assemblyName))
+        {
+            // 同名アセンブリは二重に処理しない
+            return;
         }
 
         var loaderTypes = assembly.GetTypes()
