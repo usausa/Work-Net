@@ -19,13 +19,13 @@
     <_IsWindowsTFM>false</_IsWindowsTFM>
     <_IsWindowsTFM Condition="$(TargetFramework.Contains('windows'))">true</_IsWindowsTFM>
 
-    <IsWindowsPlatform Condition="'$(IsWindowsPlatform)' == ''">false</IsWindowsPlatform>
+    <IsWindowsPlatform>false</IsWindowsPlatform>
     <IsWindowsPlatform Condition="('$(_IsWindowsTFM)' == 'true') and ('$(Configuration)' == 'DebugWindows')">true</IsWindowsPlatform>
 
-    <IsMacOSPlatform Condition="'$(IsMacOSPlatform)' == ''">false</IsMacOSPlatform>
+    <IsMacOSPlatform>false</IsMacOSPlatform>
     <IsMacOSPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugMac')">true</IsMacOSPlatform>
 
-    <IsLinuxPlatform Condition="'$(IsLinuxPlatform)' == ''">false</IsLinuxPlatform>
+    <IsLinuxPlatform>false</IsLinuxPlatform>
     <IsLinuxPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugLinux')">true</IsLinuxPlatform>
 
     <IsAnyPlatform>false</IsAnyPlatform>
