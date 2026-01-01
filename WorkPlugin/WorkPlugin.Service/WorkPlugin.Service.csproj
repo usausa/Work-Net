@@ -16,46 +16,39 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <IsWindowsPlatform>false</IsWindowsPlatform>
-    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows'))">true</IsWindowsPlatform>
-
-    <IsMacOSPlatform>false</IsMacOSPlatform>
-    <IsMacOSPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugMac')">true</IsMacOSPlatform>
-
-    <IsLinuxPlatform>false</IsLinuxPlatform>
-    <IsLinuxPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugLinux')">true</IsLinuxPlatform>
-
-    <IsAnyPlatform>false</IsAnyPlatform>
-    <IsAnyPlatform Condition="('$(IsWindowsPlatform)' == 'true') or ('$(IsMacOSPlatform)' == 'true') or ('$(IsLinuxPlatform)' == 'true')">true</IsAnyPlatform>
+    <BuildPlatform></BuildPlatform>
+    <BuildPlatform Condition="$(TargetFramework.Contains('windows'))">windows</BuildPlatform>
+    <BuildPlatform Condition="!$(TargetFramework.Contains('windows')) and ('$(Configuration)' == 'DebugMac')">macos</BuildPlatform>
+    <BuildPlatform Condition="!$(TargetFramework.Contains('windows')) and ('$(Configuration)' == 'DebugLinux')">linux</BuildPlatform>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(IsWindowsPlatform)' == 'true'">
-    <DefineConstants>$(DefineConstants);ENABLE_WINDOWS</DefineConstants>
+  <PropertyGroup Condition="'$(BuildPlatform)' == 'windows'">
+    <DefineConstants>$(DefineConstants);PLATFORM_WINDOWS</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsMacOSPlatform)' == 'true'">
-    <DefineConstants>$(DefineConstants);ENABLE_MACOS</DefineConstants>
+  <PropertyGroup Condition="'$(BuildPlatform)' == 'macos'">
+    <DefineConstants>$(DefineConstants);PLATFORM_MACOS</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsLinuxPlatform)' == 'true'">
-    <DefineConstants>$(DefineConstants);ENABLE_LINUX</DefineConstants>
+  <PropertyGroup Condition="'$(BuildPlatform)' == 'linux'">
+    <DefineConstants>$(DefineConstants);PLATFORM_LINUX</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\WorkPlugin.Abstraction\WorkPlugin.Abstraction.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(IsAnyPlatform)' == 'true'">
+  <ItemGroup Condition="'$(BuildPlatform)' != ''">
     <ProjectReference Include="..\WorkPlugin.Plugin1\WorkPlugin.Plugin1.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(IsWindowsPlatform)' == 'true'">
+  <ItemGroup Condition="'$(BuildPlatform)' == 'windows'">
     <ProjectReference Include="..\WorkPlugin.Plugin2\WorkPlugin.Plugin2.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(IsMacOSPlatform)' == 'true'">
+  <ItemGroup Condition="'$(BuildPlatform)' == 'macos'">
     <ProjectReference Include="..\WorkPlugin.Plugin3\WorkPlugin.Plugin3.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(IsLinuxPlatform)' == 'true'">
+  <ItemGroup Condition="'$(BuildPlatform)' == 'linux'">
     <ProjectReference Include="..\WorkPlugin.Plugin4\WorkPlugin.Plugin4.csproj" />
   </ItemGroup>
 

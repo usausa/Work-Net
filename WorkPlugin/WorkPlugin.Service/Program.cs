@@ -26,14 +26,14 @@ internal static class Program
 #if DEBUG
         Console.WriteLine("DEBUG");
 #endif
-#if ENABLE_WINDOWS
-        Console.WriteLine("ENABLE_WINDOWS");
+#if PLATFORM_WINDOWS
+        Console.WriteLine("WINDOWS");
 #endif
-#if ENABLE_MACOS
-        Console.WriteLine("ENABLE_MACOS");
+#if PLATFORM_MACOS
+        Console.WriteLine("MACOS");
 #endif
-#if ENABLE_LINUX
-        Console.WriteLine("ENABLE_LINUX");
+#if PLATFORM_LINUX
+        Console.WriteLine("LINUX");
 #endif
 
         var plugins = pluginManager.GetPlugins().ToList();
