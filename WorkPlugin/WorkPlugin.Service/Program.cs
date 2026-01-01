@@ -14,6 +14,16 @@ internal static class Program
     {
         var pluginManager = new PluginManager();
 
+        // 2) アセンブリから（単一ファイル publish 等：既にロード済みのものを対象）
+        var pluginAssembliesInProcess = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic)
+            .Where(a => a.GetName().Name?.StartsWith("WorkPlugin.Plugin", StringComparison.Ordinal) == true)
+            .OrderBy(a => a.GetName().Name, StringComparer.Ordinal);
+        foreach (var assembly in pluginAssembliesInProcess)
+        {
+            pluginManager.LoadPluginsFromAssembly(assembly);
+        }
+
         // 1) ファイルから（通常 publish）
         var pluginAssembliesFromFiles = Directory
             .GetFiles(AppContext.BaseDirectory, "WorkPlugin.Plugin*.dll")
@@ -27,16 +37,6 @@ internal static class Program
             Console.WriteLine($"Loaded: {Path.GetFileName(path)}");
         }
 
-        // 2) アセンブリから（単一ファイル publish 等：既にロード済みのものを対象）
-        var pluginAssembliesInProcess = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic)
-            .Where(a => a.GetName().Name?.StartsWith("WorkPlugin.Plugin", StringComparison.Ordinal) == true)
-            .OrderBy(a => a.GetName().Name, StringComparer.Ordinal);
-
-        foreach (var assembly in pluginAssembliesInProcess)
-        {
-            pluginManager.LoadPluginsFromAssembly(assembly);
-        }
 
         pluginManager.Build();
 
