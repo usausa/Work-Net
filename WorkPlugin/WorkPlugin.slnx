@@ -3,39 +3,33 @@
     <BuildType Name="Debug" />
     <BuildType Name="DebugLinux" />
     <BuildType Name="DebugMac" />
-    <BuildType Name="DebugWindows" />
     <BuildType Name="Release" />
   </Configurations>
   <Project Path="WorkPlugin.Abstraction/WorkPlugin.Abstraction.csproj">
     <BuildType Solution="DebugLinux|*" Project="Debug" />
     <BuildType Solution="DebugMac|*" Project="Debug" />
-    <BuildType Solution="DebugWindows|*" Project="Debug" />
   </Project>
   <Project Path="WorkPlugin.Plugin1/WorkPlugin.Plugin1.csproj">
     <BuildType Solution="DebugLinux|*" Project="Debug" />
     <BuildType Solution="DebugMac|*" Project="Debug" />
-    <BuildType Solution="DebugWindows|*" Project="Debug" />
   </Project>
   <Project Path="WorkPlugin.Plugin2/WorkPlugin.Plugin2.csproj">
     <BuildType Solution="DebugLinux|*" Project="Debug" />
     <BuildType Solution="DebugMac|*" Project="Debug" />
-    <BuildType Solution="DebugWindows|*" Project="Debug" />
     <Build Solution="DebugLinux|*" Project="false" />
     <Build Solution="DebugMac|*" Project="false" />
   </Project>
-  <Project Path="WorkPlugin.Plugin3/WorkPlugin.Plugin3.csproj" Id="4bc60e9d-fcd2-415c-a268-938c447f00d0">
+  <Project Path="WorkPlugin.Plugin3/WorkPlugin.Plugin3.csproj">
     <BuildType Solution="DebugLinux|*" Project="Debug" />
     <BuildType Solution="DebugMac|*" Project="Debug" />
-    <BuildType Solution="DebugWindows|*" Project="Debug" />
     <Build Solution="DebugLinux|*" Project="false" />
-    <Build Solution="DebugWindows|*" Project="false" />
+    <Build Solution="Debug|*" Project="false" />
   </Project>
-  <Project Path="WorkPlugin.Plugin4/WorkPlugin.Plugin4.csproj" Id="045370ed-bcaf-4f1e-abc1-195d7d4978b6">
+  <Project Path="WorkPlugin.Plugin4/WorkPlugin.Plugin4.csproj">
     <BuildType Solution="DebugLinux|*" Project="Debug" />
     <BuildType Solution="DebugMac|*" Project="Debug" />
-    <BuildType Solution="DebugWindows|*" Project="Debug" />
     <Build Solution="DebugMac|*" Project="false" />
-    <Build Solution="DebugWindows|*" Project="false" />
+    <Build Solution="Debug|*" Project="false" />
   </Project>
-  <Project Path="WorkPlugin.Service/WorkPlugin.Service.csproj" Id="9c0b4049-366e-4ea0-a900-5d84e180b0a1" />
+  <Project Path="WorkPlugin.Service/WorkPlugin.Service.csproj" />
 </Solution>

@@ -5,7 +5,7 @@
     <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Configurations>Debug;DebugLinux;DebugMac;DebugWindows;Release</Configurations>
+    <Configurations>Debug;DebugLinux;DebugMac;Release</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'DebugLinux' or '$(Configuration)' == 'DebugMac' or '$(Configuration)' == 'DebugWindows'">
@@ -16,11 +16,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <_IsWindowsTFM>false</_IsWindowsTFM>
-    <_IsWindowsTFM Condition="$(TargetFramework.Contains('windows'))">true</_IsWindowsTFM>
-
     <IsWindowsPlatform>false</IsWindowsPlatform>
-    <IsWindowsPlatform Condition="('$(_IsWindowsTFM)' == 'true') and ('$(Configuration)' == 'DebugWindows')">true</IsWindowsPlatform>
+    <IsWindowsPlatform Condition="$(TargetFramework.Contains('windows'))">true</IsWindowsPlatform>
 
     <IsMacOSPlatform>false</IsMacOSPlatform>
     <IsMacOSPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugMac')">true</IsMacOSPlatform>
@@ -32,9 +29,6 @@
     <IsAnyPlatform Condition="('$(IsWindowsPlatform)' == 'true') or ('$(IsMacOSPlatform)' == 'true') or ('$(IsLinuxPlatform)' == 'true')">true</IsAnyPlatform>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(_IsWindowsTFM)' == 'true'">
-    <DefineConstants>$(DefineConstants);WINDOWS_TFM</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(IsWindowsPlatform)' == 'true'">
     <DefineConstants>$(DefineConstants);ENABLE_WINDOWS</DefineConstants>
   </PropertyGroup>
