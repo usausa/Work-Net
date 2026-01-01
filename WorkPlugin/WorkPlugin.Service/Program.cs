@@ -19,6 +19,9 @@ internal static class Program
 #if DEBUG
         Console.WriteLine("DEBUG");
 #endif
+#if WINDOWS_TFM
+        Console.WriteLine("WINDOWS_TFM");
+#endif
 #if ENABLE_WINDOWS
         Console.WriteLine("ENABLE_WINDOWS");
 #endif

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -20,18 +20,21 @@
     <_IsWindowsTFM Condition="$(TargetFramework.Contains('windows'))">true</_IsWindowsTFM>
 
     <IsWindowsPlatform Condition="'$(IsWindowsPlatform)' == ''">false</IsWindowsPlatform>
-    <IsWindowsPlatform Condition="'$(_IsWindowsTFM)' == 'true' and '$(Configuration)' == 'DebugWindows'">true</IsWindowsPlatform>
+    <IsWindowsPlatform Condition="('$(_IsWindowsTFM)' == 'true') and ('$(Configuration)' == 'DebugWindows')">true</IsWindowsPlatform>
 
     <IsMacOSPlatform Condition="'$(IsMacOSPlatform)' == ''">false</IsMacOSPlatform>
-    <IsMacOSPlatform Condition="'$(_IsWindowsTFM)' != 'false' and '$(Configuration)' == 'DebugMac'">true</IsMacOSPlatform>
+    <IsMacOSPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugMac')">true</IsMacOSPlatform>
 
     <IsLinuxPlatform Condition="'$(IsLinuxPlatform)' == ''">false</IsLinuxPlatform>
-    <IsLinuxPlatform Condition="'$(_IsWindowsTFM)' != 'false' and '$(Configuration)' == 'DebugLinux'">true</IsLinuxPlatform>
+    <IsLinuxPlatform Condition="('$(_IsWindowsTFM)' == 'false') and ('$(Configuration)' == 'DebugLinux')">true</IsLinuxPlatform>
 
     <IsAnyPlatform>false</IsAnyPlatform>
-    <IsAnyPlatform Condition="'$(IsWindowsPlatform)' == 'true' Or '$(IsMacOSPlatform)' == 'true' Or '$(IsLinuxPlatform)' == 'true'">true</IsAnyPlatform>
+    <IsAnyPlatform Condition="('$(IsWindowsPlatform)' == 'true') or ('$(IsMacOSPlatform)' == 'true') or ('$(IsLinuxPlatform)' == 'true')">true</IsAnyPlatform>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(_IsWindowsTFM)' == 'true'">
+    <DefineConstants>$(DefineConstants);WINDOWS_TFM</DefineConstants>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(IsWindowsPlatform)' == 'true'">
     <DefineConstants>$(DefineConstants);ENABLE_WINDOWS</DefineConstants>
   </PropertyGroup>
