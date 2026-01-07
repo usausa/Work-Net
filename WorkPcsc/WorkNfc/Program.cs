@@ -88,24 +88,25 @@ public sealed class SuicaReader
         {
             Console.WriteLine("[デバッグ] Pollingコマンドを送信 (システムコード: FFFF)");
 
-            // 生のFeliCa Pollingコマンド (コマンドコード 0x00)
             List<byte> cmd = new List<byte>();
-            cmd.Add(0xFF); // CLA
-            cmd.Add(0xFE); // INS: 汎用
-            cmd.Add(0x00); // P1
-            cmd.Add(0x00); // P2
+            cmd.Add(0xFF);  // CLA
+            cmd.Add(0xFE);  // INS
+            cmd.Add(0x00);  // P1
+            cmd.Add(0x00);  // P2
 
-            // FeliCa Pollingコマンド
             List<byte> felicaCmd = new List<byte>();
-            felicaCmd.Add(0x00); // コマンドコード: Polling
-            felicaCmd.Add(0xFF); // システムコード上位
-            felicaCmd.Add(0xFF); // システムコード下位
-            felicaCmd.Add(0x01); // リクエストコード
-            felicaCmd.Add(0x00); // タイムスロット
+            felicaCmd.Add(0x00);  // コマンドコード: Polling
+            felicaCmd.Add(0xFF);  // システムコード上位
+            felicaCmd.Add(0xFF);  // システムコード下位
+            felicaCmd.Add(0x01);  // リクエストコード
+            felicaCmd.Add(0x00);  // タイムスロット
 
-            cmd.Add((byte)felicaCmd.Count); // Lc
+            cmd.Add((byte)felicaCmd.Count);
             cmd.AddRange(felicaCmd);
-            cmd.Add(0x00); // Le
+            cmd.Add(0x00);
+
+            // TODO
+
 
             Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
             var response = new byte[256];
