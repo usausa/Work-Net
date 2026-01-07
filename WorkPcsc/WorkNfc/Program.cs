@@ -1,11 +1,13 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
+namespace WorkNfc;
+
 using PCSC;
 using PCSC.Monitoring;
 
-class SuicaReader
+public sealed class SuicaReader
 {
+    // TODO Fix polling
+    // TODO Fix read block
+
     const ushort SERVICE_CODE_HISTORY = 0x090F;
 
     static void Main(string[] args)
