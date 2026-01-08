@@ -105,7 +105,7 @@ public sealed class SuicaReader
 
             cmd.Add((byte)felicaCmd.Count);
             cmd.AddRange(felicaCmd);
-            cmd.Add(0x00);
+            //cmd.Add(0x00);
 
             Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
             var response = new byte[256];
@@ -200,8 +200,62 @@ public sealed class SuicaReader
         byte[] blockData = ReadBlock(reader, idm, SERVICE_CODE_HISTORY, 0, 1, 2, 3, 4, 5, 6, 7);
     }
 
-    // NG
-    //  FF-FE-00-00 0F <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // APDU
+    // https://gist.github.com/hemantvallabh/d24d71a933e7319727cd3daa50ad9f2c
+    // **-FE-**-** : FeliCaコマンド送信(?), Vendor-specific?
+    // FF-50 :
+    // FF-59 :
+
+    // 先頭の FF は CLA を表す : https://cardwerk.com/smart-card-standard-iso7816-4-section-5-basic-organizations/?elementor-preview&1514396438071#chap5_4_1
+
+    // SW
+    // https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
+    //
+    // | SW1-SW2 | 意味                            | 説明 |
+    // |---------|---------------------------------|------|
+    // | `90 00` | Success                         | 正常終了 |
+    // | `6A 81` | Function not supported          | コマンドがサポートされていない |
+    // | `6A 86` | Incorrect P1-P2                 | パラメータP1/P2が不正 |
+    // | `6A 87` | Lc inconsistent with P1-P2      | データ長が不正 |
+    // | `69 85` | Conditions of use not satisfied | 使用条件が満たされていない |
+    // | `69 86` | Command not allowed             | コマンドが許可されていない |
+    // | `6B 00` | Wrong parameter(s) P1-P2        | パラメータP1-P2が間違っている |
+    // | `67 00` | Wrong length                    | 長さが間違っている |
+
+    // PN532 ?
+
+    // [Command & Response]
+
+    // <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> = 15/0x0F
+    //
+    // [NG]
+    // 存在しないトランザクションを終了しようとしました
+    // FF-FE-00-00 0F <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    //   An attempt was made to end a non-existent transaction.
+    // FF-FE-00-00 10 <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    //   An attempt was made to end a non-existent transaction.
+    // FF-FE-00-00 10 <10 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    //   An attempt was made to end a non-existent transaction.
+    // FF-FE-00-00 10 <0F 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    //   An attempt was made to end a non-existent transaction.
+    // FF-FE-00-00 0F <06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00>
+    //   An attempt was made to end a non-existent transaction.
+    //
+    // コマンドがサポートされていない
+    // FF-00-00-00 0F <0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    //   6A-81 Function not supported
+    // FF-00-00-00 0F <06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    //   6A-81 Function not supported
+
+    // FF-FE-00-00 0F <0F 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    //  67-00 Wrong length
+    // FF-FE-00-00-0F-0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00
+    //   An attempt was made to end a non-existent transaction.
+    // FF-FE-00-00-0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    //   An attempt was made to end a non-existent transaction.
+
+    // Polling
+    // FF-FE-00-00 05 <00-FF-FF-01-00>
 
     static byte[] ReadBlock(ICardReader reader, byte[] idm, ushort serviceCode, params int[] blockNos)
     {
@@ -209,8 +263,10 @@ public sealed class SuicaReader
         {
             // FeliCa Read Without Encryptionコマンドを送信
             List<byte> cmd = new List<byte>();
+            // TODO ?
             cmd.Add(0xFF); // CLA
             cmd.Add(0xFE); // INS
+            //cmd.Add(0x00); // INS
             cmd.Add(0x00); // P1
             cmd.Add(0x00); // P2
 
@@ -229,7 +285,10 @@ public sealed class SuicaReader
                 felicaCmd.Add((byte)blockNumber);
             }
 
-            // TODO
+            // TODO ?
+
+            // TODO ?
+            //cmd.Add((byte)felicaCmd.Count);
             cmd.Add((byte)felicaCmd.Count);
             cmd.AddRange(felicaCmd);
             cmd.Add(0x00);
