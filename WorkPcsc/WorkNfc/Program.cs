@@ -68,7 +68,9 @@ public sealed class SuicaReader
                 Console.WriteLine($"PMm: {BitConverter.ToString(pmm).Replace("-", "")}");
                 Console.WriteLine();
 
-                ReadHistory(reader, idm);
+                ReadTest(reader, idm);
+
+                //ReadHistory(reader, idm);
             }
             catch (Exception ex)
             {
@@ -105,79 +107,42 @@ public sealed class SuicaReader
             cmd.AddRange(felicaCmd);
             cmd.Add(0x00);
 
-            // TODO
-
-
             Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
             var response = new byte[256];
             int length = reader.Transmit(cmd.ToArray(), response);
             Console.WriteLine($"[デバッグ] 応答({length}): {BitConverter.ToString(response, 0, length)}");
 
+            // TODO
+
             // ステータスワードの確認
-            if (length < 2)
+            if (length < 2 || response[length - 2] != 0x90 || response[length - 1] != 0x00)
             {
-                Console.WriteLine("[エラー] 応答が短すぎます");
-                return null;
-            }
-
-            byte sw1 = response[length - 2];
-            byte sw2 = response[length - 1];
-            Console.WriteLine($"[デバッグ] ステータスワード: {sw1:X2} {sw2:X2}");
-
-            if (sw1 != 0x90 || sw2 != 0x00)
-            {
-                Console.WriteLine($"[エラー] ステータスエラー");
-                return null;
-            }
-
-            // Polling応答の解析
-            // 実際の応答: [01][01][IDm(8)][PMm(8)][システムコード(2)][90][00]
-            // または: [データ長][応答コード][IDm(8)][PMm(8)][システムコード(2)][90][00]
-
-            int dataLength = length - 2; // ステータスワードを除く
-
-            if (dataLength < 18)
-            {
-                Console.WriteLine($"[エラー] データが不足: {dataLength}バイト");
+                Console.WriteLine("[エラー] ステータスエラー");
                 return null;
             }
 
             int pos = 0;
-
-            // 最初のバイトがデータ長の可能性
-            byte firstByte = response[pos];
-            Console.WriteLine($"[デバッグ] 最初のバイト: {firstByte:X2}");
-
-            // データ長フィールドをスキップ（存在する場合）
-            if (firstByte == dataLength - 1 || firstByte == 0x01)
-            {
-                pos++;
-            }
-
-            // 応答コード
             byte responseCode = response[pos++];
+
             Console.WriteLine($"[デバッグ] 応答コード: {responseCode:X2}");
 
             if (responseCode != 0x01)
             {
-                Console.WriteLine($"[エラー] Polling応答コードが不正: {responseCode:X2} (期待値: 0x01)");
+                Console.WriteLine($"[エラー] Polling応答コードが不正: {responseCode:X2}");
                 return null;
             }
 
-            // IDm (8バイト)
             byte[] idm = new byte[8];
             Array.Copy(response, pos, idm, 0, 8);
             pos += 8;
             Console.WriteLine($"[デバッグ] IDm抽出: {BitConverter.ToString(idm)}");
 
-            // PMm (8バイト)
             byte[] pmm = new byte[8];
             Array.Copy(response, pos, pmm, 0, 8);
             pos += 8;
             Console.WriteLine($"[デバッグ] PMm抽出: {BitConverter.ToString(pmm)}");
 
-            // システムコード (2バイト) - オプション
-            if (pos + 2 <= dataLength)
+            if (pos + 2 <= length - 2)
             {
                 byte[] systemCode = new byte[2];
                 Array.Copy(response, pos, systemCode, 0, 2);
@@ -194,6 +159,38 @@ public sealed class SuicaReader
             return null;
         }
     }
+
+    static void ReadTest(ICardReader reader, byte[] idm)
+    {
+        Console.WriteLine("履歴情報:");
+        Console.WriteLine(new string('-', 60));
+
+
+        byte[] blockData = ReadBlock(reader, idm, 0x008B, (byte)0);
+
+        Console.WriteLine($"[デバッグ] データ: {BitConverter.ToString(blockData)}");
+    }
+
+    public static byte[] MakeReadWoe(byte[] idm, short serviceCode, params int[] blockNos)
+    {
+        var command = new byte[14 + (blockNos.Length * 2)];
+        command[0] = (byte)command.Length;
+        command[1] = 0x06;
+        Buffer.BlockCopy(idm, 0, command, 2, idm.Length);
+        command[10] = 1;
+        command[11] = (byte)(serviceCode & 0xff);
+        command[12] = (byte)(serviceCode >> 8);
+        command[13] = (byte)blockNos.Length;
+        for (var i = 0; i < blockNos.Length; i++)
+        {
+            var offset = 14 + (i * 2);
+            command[offset] = 0x80;
+            command[offset + 1] = (byte)blockNos[i];
+        }
+
+        return command;
+    }
+
 
     static void ReadHistory(ICardReader reader, byte[] idm)
     {
