@@ -12,7 +12,6 @@ class SuicaReader
     static void Main(string[] args)
     {
         var monitor = MonitorFactory.Instance.Create(SCardScope.System);
-
         monitor.CardInserted += (sender, e) =>
         {
             Console.WriteLine($"\n[カード検出] {e.ReaderName}");
@@ -89,98 +88,96 @@ class SuicaReader
 
         System.Threading.Thread.Sleep(200);
 
-        // INS=0x50の詳細テスト
+        // 新しいテスト
         Console.WriteLine("=".PadRight(80, '='));
-        Console.WriteLine("INS=0x50 詳細テスト");
+        Console.WriteLine("Web USB形式に基づくテスト");
         Console.WriteLine("=".PadRight(80, '='));
-        Console.WriteLine("\n応答 C0-03-01-6A-81 の分析:");
-        Console.WriteLine("  C0 = PN532エラー応答");
-        Console.WriteLine("  03 = エラーデータ長");
-        Console.WriteLine("  01 = エラーカテゴリ");
-        Console.WriteLine("  6A 81 = APDUエラー（Function not supported）");
-        Console.WriteLine("\n→ INS=0x50はPN532に届いているが、FeliCaコマンドとして処理されていない");
-        Console.WriteLine("  P1/P2やLcを変更して、正しいフォーマットを探します\n");
 
-        TestINS0x50Variations(readerName, idm);
-
-        // INS=0x59の詳細テスト
-        Console.WriteLine("\n" + "=".PadRight(80, '='));
-        Console.WriteLine("INS=0x59 詳細テスト");
-        Console.WriteLine("=".PadRight(80, '='));
-        Console.WriteLine("\n応答 67-00 (Wrong length) の分析:");
-        Console.WriteLine("  Lcの値が期待値と異なる可能性");
-        Console.WriteLine("  または、FeliCaコマンドの構造が間違っている可能性");
-        Console.WriteLine("\n→ Lc、Le、コマンド構造を変更してテストします\n");
-
-        TestINS0x59Variations(readerName, idm);
+        TestWebUSBFormat(readerName, idm);
     }
 
-    static void TestINS0x50Variations(string readerName, byte[] idm)
+    static void TestWebUSBFormat(string readerName, byte[] idm)
     {
-        var testCases = new[]
-        {
-            // P1/P2の変更
-            new { P1 = (byte)0x00, P2 = (byte)0x00, Lc = -1, Le = (byte?)0x00, Name = "デフォルト" },
-            new { P1 = (byte)0x01, P2 = (byte)0x00, Lc = -1, Le = (byte?)0x00, Name = "P1=01" },
-            new { P1 = (byte)0x00, P2 = (byte)0x01, Lc = -1, Le = (byte?)0x00, Name = "P2=01" },
-            new { P1 = (byte)0x00, P2 = (byte)0x06, Lc = -1, Le = (byte?)0x00, Name = "P2=06 (コマンドコード)" },
+        Console.WriteLine("\n【テスト1】P2=01 + 標準Lc");
+        TestReadWithP2_01(readerName, idm, SERVICE_CODE_HISTORY);
 
-            // Lcを0にする（データなし）
-            new { P1 = (byte)0x00, P2 = (byte)0x00, Lc = 0, Le = (byte?)0x00, Name = "Lc=0" },
+        Console.WriteLine("\n【テスト2】P2=01 + 拡張Lc（00 00 XX）");
+        TestReadWithExtendedLc(readerName, idm, SERVICE_CODE_HISTORY);
 
-            // Leを変更
-            new { P1 = (byte)0x00, P2 = (byte)0x00, Lc = -1, Le = (byte?)null, Name = "Leなし" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, Lc = -1, Le = (byte?)0x1D, Name = "Le=0x1D (29バイト)" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, Lc = -1, Le = (byte?)0x20, Name = "Le=0x20 (32バイト)" },
-        };
+        Console.WriteLine("\n【テスト3】PN532 InDataExchange形式");
+        TestReadWithInDataExchange(readerName, idm, SERVICE_CODE_HISTORY);
 
-        foreach (var test in testCases)
-        {
-            Console.WriteLine($"\n{test.Name}:");
-            TestReadCustom(readerName, idm, 0x50, test.P1, test.P2, test.Lc, test.Le, SERVICE_CODE_HISTORY);
-        }
+        Console.WriteLine("\n【テスト4】INS=0x40（Direct Transmit）");
+        TestReadWithINS0x40(readerName, idm, SERVICE_CODE_HISTORY);
+
+        Console.WriteLine("\n【テスト5】履歴サービス（0x090F）複数ブロック");
+        TestReadMultipleBlocks(readerName, idm, SERVICE_CODE_HISTORY);
+
+        Console.WriteLine("\n【テスト6】基本情報サービス（0x008B）");
+        TestReadWithP2_01(readerName, idm, SERVICE_CODE_BASIC);
     }
 
-    static void TestINS0x59Variations(string readerName, byte[] idm)
-    {
-        var testCases = new[]
-        {
-            // Lcの値を変更（FeliCaコマンド長 + 1など）
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 0, Le = (byte?)0x00, Name = "Lc=FeliCaコマンド長" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 1, Le = (byte?)0x00, Name = "Lc=FeliCaコマンド長+1" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = -1, Le = (byte?)0x00, Name = "Lc=FeliCaコマンド長-1" },
-
-            // Leなし
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 0, Le = (byte?)null, Name = "Leなし" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 1, Le = (byte?)null, Name = "Lc+1, Leなし" },
-
-            // Leを大きくする
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 0, Le = (byte?)0x1D, Name = "Le=0x1D" },
-            new { P1 = (byte)0x00, P2 = (byte)0x00, LcOffset = 0, Le = (byte?)0xFF, Name = "Le=0xFF" },
-
-            // P1/P2を変更
-            new { P1 = (byte)0x01, P2 = (byte)0x00, LcOffset = 0, Le = (byte?)0x00, Name = "P1=01" },
-            new { P1 = (byte)0x00, P2 = (byte)0x01, LcOffset = 0, Le = (byte?)0x00, Name = "P2=01" },
-        };
-
-        foreach (var test in testCases)
-        {
-            Console.WriteLine($"\n{test.Name}:");
-            TestReadCustomWithLcOffset(readerName, idm, 0x59, test.P1, test.P2, test.LcOffset, test.Le, SERVICE_CODE_HISTORY);
-        }
-    }
-
-    static void TestReadCustom(string readerName, byte[] idm, byte ins, byte p1, byte p2,
-                               int lcOverride, byte? le, ushort serviceCode)
+    static void TestReadWithP2_01(string readerName, byte[] idm, ushort serviceCode)
     {
         using (var context = ContextFactory.Instance.Establish(SCardScope.System))
         {
             try
             {
                 var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
-
                 try
                 {
+                    // FeliCa Read Without Encryptionコマンド
+                    List<byte> felicaCmd = new List<byte>();
+                    felicaCmd.Add(0x06);  // コマンドコード
+                    felicaCmd.AddRange(idm);  // IDm (8バイト)
+                    felicaCmd.Add(0x01);  // サービス数
+                    felicaCmd.Add((byte)(serviceCode & 0xFF));  // サービスコード（リトルエンディアン）
+                    felicaCmd.Add((byte)(serviceCode >> 8));
+                    felicaCmd.Add(0x01);  // ブロック数
+                    felicaCmd.Add(0x80);  // ブロックリスト要素（2バイトフォーマット）
+                    felicaCmd.Add(0x00);  // ブロック番号
+
+                    // APDU構築（P2=01）
+                    List<byte> cmd = new List<byte>();
+                    cmd.Add(0xFF);  // CLA
+                    cmd.Add(0x50);  // INS
+                    cmd.Add(0x00);  // P1
+                    cmd.Add(0x01);  // P2 = 01 ★重要★
+                    cmd.Add((byte)felicaCmd.Count);  // Lc
+                    cmd.AddRange(felicaCmd);
+                    cmd.Add(0x00);  // Le
+
+                    Console.WriteLine($"送信: {BitConverter.ToString(cmd.ToArray())}");
+
+                    var response = new byte[256];
+                    int length = reader.Transmit(cmd.ToArray(), response);
+
+                    Console.WriteLine($"応答({length}): {BitConverter.ToString(response, 0, length)}");
+                    AnalyzeResponse(response, length);
+                }
+                finally
+                {
+                    reader.Disconnect(SCardReaderDisposition.Leave);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"例外: {ex.Message}");
+            }
+        }
+        System.Threading.Thread.Sleep(100);
+    }
+
+    static void TestReadWithExtendedLc(string readerName, byte[] idm, ushort serviceCode)
+    {
+        using (var context = ContextFactory.Instance.Establish(SCardScope.System))
+        {
+            try
+            {
+                var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
+                try
+                {
+                    // FeliCa Read Without Encryptionコマンド
                     List<byte> felicaCmd = new List<byte>();
                     felicaCmd.Add(0x06);
                     felicaCmd.AddRange(idm);
@@ -191,46 +188,25 @@ class SuicaReader
                     felicaCmd.Add(0x80);
                     felicaCmd.Add(0x00);
 
+                    // 拡張APDUフォーマット
                     List<byte> cmd = new List<byte>();
                     cmd.Add(0xFF);
-                    cmd.Add(ins);
-                    cmd.Add(p1);
-                    cmd.Add(p2);
-
-                    if (lcOverride >= 0)
-                    {
-                        cmd.Add((byte)lcOverride);
-                    }
-                    else
-                    {
-                        cmd.Add((byte)felicaCmd.Count);
-                    }
-
+                    cmd.Add(0x50);
+                    cmd.Add(0x00);
+                    cmd.Add(0x01);  // P2 = 01
+                    cmd.Add(0x00);  // 拡張Lc開始
+                    cmd.Add(0x00);
+                    cmd.Add((byte)felicaCmd.Count);  // 実際の長さ
                     cmd.AddRange(felicaCmd);
+                    cmd.Add(0x00);  // Le
 
-                    if (le.HasValue)
-                    {
-                        cmd.Add(le.Value);
-                    }
-
-                    Console.WriteLine($"  送信: {BitConverter.ToString(cmd.ToArray())}");
+                    Console.WriteLine($"送信: {BitConverter.ToString(cmd.ToArray())}");
 
                     var response = new byte[256];
                     int length = reader.Transmit(cmd.ToArray(), response);
 
-                    Console.WriteLine($"  応答({length}): {BitConverter.ToString(response, 0, length)}");
-
-                    if (length >= 2)
-                    {
-                        byte sw1 = response[length - 2];
-                        byte sw2 = response[length - 1];
-                        Console.WriteLine($"  SW: {sw1:X2} {sw2:X2}");
-
-                        if (sw1 == 0x90 && sw2 == 0x00)
-                        {
-                            AnalyzeSuccessResponse(response, length);
-                        }
-                    }
+                    Console.WriteLine($"応答({length}): {BitConverter.ToString(response, 0, length)}");
+                    AnalyzeResponse(response, length);
                 }
                 finally
                 {
@@ -239,24 +215,22 @@ class SuicaReader
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  例外: {ex.Message}");
+                Console.WriteLine($"例外: {ex.Message}");
             }
         }
-
         System.Threading.Thread.Sleep(100);
     }
 
-    static void TestReadCustomWithLcOffset(string readerName, byte[] idm, byte ins, byte p1, byte p2,
-                                           int lcOffset, byte? le, ushort serviceCode)
+    static void TestReadWithInDataExchange(string readerName, byte[] idm, ushort serviceCode)
     {
         using (var context = ContextFactory.Instance.Establish(SCardScope.System))
         {
             try
             {
                 var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
-
                 try
                 {
+                    // FeliCa Read Without Encryptionコマンド
                     List<byte> felicaCmd = new List<byte>();
                     felicaCmd.Add(0x06);
                     felicaCmd.AddRange(idm);
@@ -267,37 +241,30 @@ class SuicaReader
                     felicaCmd.Add(0x80);
                     felicaCmd.Add(0x00);
 
+                    // PN532 InDataExchangeでラップ
+                    List<byte> pn532Cmd = new List<byte>();
+                    pn532Cmd.Add(0xD4);  // PN532コマンド
+                    pn532Cmd.Add(0x40);  // InDataExchange
+                    pn532Cmd.Add(0x01);  // Tg (ターゲット番号)
+                    pn532Cmd.AddRange(felicaCmd);
+
+                    // APDU構築
                     List<byte> cmd = new List<byte>();
                     cmd.Add(0xFF);
-                    cmd.Add(ins);
-                    cmd.Add(p1);
-                    cmd.Add(p2);
-                    cmd.Add((byte)(felicaCmd.Count + lcOffset));
-                    cmd.AddRange(felicaCmd);
+                    cmd.Add(0x00);  // INS = 00 (Direct Transmit)
+                    cmd.Add(0x00);
+                    cmd.Add(0x00);
+                    cmd.Add((byte)pn532Cmd.Count);
+                    cmd.AddRange(pn532Cmd);
+                    cmd.Add(0x00);
 
-                    if (le.HasValue)
-                    {
-                        cmd.Add(le.Value);
-                    }
-
-                    Console.WriteLine($"  送信: {BitConverter.ToString(cmd.ToArray())}");
+                    Console.WriteLine($"送信: {BitConverter.ToString(cmd.ToArray())}");
 
                     var response = new byte[256];
                     int length = reader.Transmit(cmd.ToArray(), response);
 
-                    Console.WriteLine($"  応答({length}): {BitConverter.ToString(response, 0, length)}");
-
-                    if (length >= 2)
-                    {
-                        byte sw1 = response[length - 2];
-                        byte sw2 = response[length - 1];
-                        Console.WriteLine($"  SW: {sw1:X2} {sw2:X2}");
-
-                        if (sw1 == 0x90 && sw2 == 0x00)
-                        {
-                            AnalyzeSuccessResponse(response, length);
-                        }
-                    }
+                    Console.WriteLine($"応答({length}): {BitConverter.ToString(response, 0, length)}");
+                    AnalyzeResponse(response, length);
                 }
                 finally
                 {
@@ -306,78 +273,163 @@ class SuicaReader
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  例外: {ex.Message}");
+                Console.WriteLine($"例外: {ex.Message}");
             }
         }
-
         System.Threading.Thread.Sleep(100);
     }
 
-    static void AnalyzeSuccessResponse(byte[] response, int length)
+    static void TestReadWithINS0x40(string readerName, byte[] idm, ushort serviceCode)
     {
-        int dataLength = length - 2;
-        Console.WriteLine($"  ✓ SW=90 00 成功");
-        Console.WriteLine($"  データ長: {dataLength}バイト");
-
-        if (dataLength == 0)
+        using (var context = ContextFactory.Instance.Establish(SCardScope.System))
         {
-            Console.WriteLine($"  → データなし（コマンドは受理されたが応答データなし）");
+            try
+            {
+                var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
+                try
+                {
+                    // FeliCa Read Without Encryptionコマンド
+                    List<byte> felicaCmd = new List<byte>();
+                    felicaCmd.Add(0x06);
+                    felicaCmd.AddRange(idm);
+                    felicaCmd.Add(0x01);
+                    felicaCmd.Add((byte)(serviceCode & 0xFF));
+                    felicaCmd.Add((byte)(serviceCode >> 8));
+                    felicaCmd.Add(0x01);
+                    felicaCmd.Add(0x80);
+                    felicaCmd.Add(0x00);
+
+                    // INS=0x40でテスト
+                    List<byte> cmd = new List<byte>();
+                    cmd.Add(0xFF);
+                    cmd.Add(0x40);  // INS = 40
+                    cmd.Add(0x00);
+                    cmd.Add(0x00);
+                    cmd.Add((byte)felicaCmd.Count);
+                    cmd.AddRange(felicaCmd);
+                    cmd.Add(0x00);
+
+                    Console.WriteLine($"送信: {BitConverter.ToString(cmd.ToArray())}");
+
+                    var response = new byte[256];
+                    int length = reader.Transmit(cmd.ToArray(), response);
+
+                    Console.WriteLine($"応答({length}): {BitConverter.ToString(response, 0, length)}");
+                    AnalyzeResponse(response, length);
+                }
+                finally
+                {
+                    reader.Disconnect(SCardReaderDisposition.Leave);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"例外: {ex.Message}");
+            }
+        }
+        System.Threading.Thread.Sleep(100);
+    }
+
+    static void TestReadMultipleBlocks(string readerName, byte[] idm, ushort serviceCode)
+    {
+        using (var context = ContextFactory.Instance.Establish(SCardScope.System))
+        {
+            try
+            {
+                var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
+                try
+                {
+                    // 複数ブロック読み取り（ブロック0-3）
+                    List<byte> felicaCmd = new List<byte>();
+                    felicaCmd.Add(0x06);
+                    felicaCmd.AddRange(idm);
+                    felicaCmd.Add(0x01);  // サービス数
+                    felicaCmd.Add((byte)(serviceCode & 0xFF));
+                    felicaCmd.Add((byte)(serviceCode >> 8));
+                    felicaCmd.Add(0x04);  // ブロック数 = 4
+                    // ブロックリスト
+                    felicaCmd.Add(0x80); felicaCmd.Add(0x00);  // ブロック0
+                    felicaCmd.Add(0x80); felicaCmd.Add(0x01);  // ブロック1
+                    felicaCmd.Add(0x80); felicaCmd.Add(0x02);  // ブロック2
+                    felicaCmd.Add(0x80); felicaCmd.Add(0x03);  // ブロック3
+
+                    List<byte> cmd = new List<byte>();
+                    cmd.Add(0xFF);
+                    cmd.Add(0x50);
+                    cmd.Add(0x00);
+                    cmd.Add(0x01);  // P2 = 01
+                    cmd.Add((byte)felicaCmd.Count);
+                    cmd.AddRange(felicaCmd);
+                    cmd.Add(0x00);
+
+                    Console.WriteLine($"送信: {BitConverter.ToString(cmd.ToArray())}");
+
+                    var response = new byte[256];
+                    int length = reader.Transmit(cmd.ToArray(), response);
+
+                    Console.WriteLine($"応答({length}): {BitConverter.ToString(response, 0, length)}");
+                    AnalyzeResponse(response, length);
+                }
+                finally
+                {
+                    reader.Disconnect(SCardReaderDisposition.Leave);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"例外: {ex.Message}");
+            }
+        }
+        System.Threading.Thread.Sleep(100);
+    }
+
+    static void AnalyzeResponse(byte[] response, int length)
+    {
+        if (length < 2)
+        {
+            Console.WriteLine("応答が短すぎます");
             return;
         }
 
-        Console.WriteLine($"  データ: {BitConverter.ToString(response, 0, dataLength)}");
-        Console.WriteLine($"  データ詳細:");
+        byte sw1 = response[length - 2];
+        byte sw2 = response[length - 1];
+        Console.WriteLine($"SW: {sw1:X2} {sw2:X2}");
 
-        for (int i = 0; i < dataLength && i < 32; i++)
+        if (sw1 == 0x90 && sw2 == 0x00)
         {
-            Console.Write($"    [{i:D2}] 0x{response[i]:X2}");
-            if (response[i] >= 0x20 && response[i] <= 0x7E)
-            {
-                Console.Write($" ('{(char)response[i]}')");
-            }
-            Console.WriteLine();
-        }
+            Console.WriteLine("✓ SW=90 00 成功");
+            int dataLength = length - 2;
 
-        // 応答パターンの判定
-        if (dataLength >= 2)
-        {
-            byte b0 = response[0];
-            byte b1 = response[1];
+            if (dataLength == 0)
+            {
+                Console.WriteLine("→ データなし");
+                return;
+            }
 
-            Console.WriteLine($"\n  応答パターン判定:");
+            Console.WriteLine($"データ({dataLength}バイト): {BitConverter.ToString(response, 0, dataLength)}");
 
-            // パターン1: PN532エラー応答
-            if (b0 == 0xC0)
+            // FeliCa応答の解析
+            if (dataLength >= 12 && response[1] == 0x07)
             {
-                Console.WriteLine($"    → PN532エラー応答");
-                Console.WriteLine($"       エラーコード長: {b1}");
-                if (dataLength >= 4)
-                {
-                    Console.WriteLine($"       エラー内容: {response[2]:X2} {response[3]:X2}");
-                }
+                Console.WriteLine("\n✓✓✓ FeliCa Read応答を検出！ ✓✓✓");
+                ParseFeliCaReadResponse(response, dataLength);
             }
-            // パターン2: FeliCa応答
-            else if (b1 == 0x07)
+            else if (response[0] == 0xC0)
             {
-                Console.WriteLine($"    → FeliCa Read応答の可能性");
-                ParsePotentialFeliCaResponse(response, dataLength);
+                Console.WriteLine($"→ PN532エラー応答: {response[2]:X2} {response[3]:X2}");
             }
-            // パターン3: コマンドエコー
-            else if (b0 == 0x06)
-            {
-                Console.WriteLine($"    → コマンドエコーバック（未処理）");
-            }
-            // パターン4: その他
             else
             {
-                Console.WriteLine($"    → 不明な応答形式");
-                Console.WriteLine($"       第1バイト: 0x{b0:X2}");
-                Console.WriteLine($"       第2バイト: 0x{b1:X2}");
+                Console.WriteLine("→ 不明な応答形式");
             }
+        }
+        else
+        {
+            Console.WriteLine($"✗ エラー応答: SW={sw1:X2} {sw2:X2}");
         }
     }
 
-    static void ParsePotentialFeliCaResponse(byte[] response, int dataLength)
+    static void ParseFeliCaReadResponse(byte[] response, int dataLength)
     {
         try
         {
@@ -385,44 +437,89 @@ class SuicaReader
             byte respLen = response[pos++];
             byte respCode = response[pos++];
 
-            Console.WriteLine($"       応答長: {respLen}");
-            Console.WriteLine($"       応答コード: {respCode:X2}");
+            Console.WriteLine($"  応答長: {respLen}");
+            Console.WriteLine($"  応答コード: 0x{respCode:X2}");
 
             if (dataLength >= pos + 8)
             {
                 byte[] idm = new byte[8];
                 Array.Copy(response, pos, idm, 0, 8);
                 pos += 8;
-                Console.WriteLine($"       IDm: {BitConverter.ToString(idm)}");
+                Console.WriteLine($"  IDm: {BitConverter.ToString(idm)}");
             }
 
             if (dataLength >= pos + 2)
             {
                 byte sf1 = response[pos++];
                 byte sf2 = response[pos++];
-                Console.WriteLine($"       ステータスフラグ: {sf1:X2} {sf2:X2}");
+                Console.WriteLine($"  ステータスフラグ: {sf1:X2} {sf2:X2}");
 
                 if (sf1 == 0x00 && sf2 == 0x00)
                 {
+                    Console.WriteLine("  → 読み取り成功");
+
                     if (dataLength >= pos + 1)
                     {
                         byte blockCount = response[pos++];
-                        Console.WriteLine($"       ブロック数: {blockCount}");
+                        Console.WriteLine($"  ブロック数: {blockCount}");
 
-                        if (dataLength >= pos + 16)
+                        for (int i = 0; i < blockCount && dataLength >= pos + 16; i++)
                         {
                             byte[] blockData = new byte[16];
                             Array.Copy(response, pos, blockData, 0, 16);
-                            Console.WriteLine($"       ✓✓✓ ブロックデータ取得成功！ ✓✓✓");
-                            Console.WriteLine($"       データ: {BitConverter.ToString(blockData)}");
+                            pos += 16;
+
+                            Console.WriteLine($"\n  ★★★ ブロック{i}データ取得成功！ ★★★");
+                            Console.WriteLine($"  {BitConverter.ToString(blockData)}");
+
+                            // Suica履歴データの場合の解析
+                            if (i == 0)
+                            {
+                                ParseSuicaHistoryBlock(blockData);
+                            }
                         }
                     }
+                }
+                else
+                {
+                    Console.WriteLine($"  → FeliCaエラー: SF1={sf1:X2}, SF2={sf2:X2}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"       解析エラー: {ex.Message}");
+            Console.WriteLine($"  解析エラー: {ex.Message}");
+        }
+    }
+
+    static void ParseSuicaHistoryBlock(byte[] block)
+    {
+        try
+        {
+            Console.WriteLine("\n  === Suica履歴データ解析 ===");
+
+            // 端末種
+            byte termType = block[0];
+            Console.WriteLine($"  端末種: 0x{termType:X2}");
+
+            // 処理
+            byte procType = block[1];
+            Console.WriteLine($"  処理: 0x{procType:X2}");
+
+            // 日付（7ビット年 + 4ビット月 + 5ビット日）
+            ushort dateData = (ushort)((block[4] << 8) | block[5]);
+            int year = ((dateData >> 9) & 0x7F) + 2000;
+            int month = (dateData >> 5) & 0x0F;
+            int day = dateData & 0x1F;
+            Console.WriteLine($"  日付: {year}/{month:D2}/{day:D2}");
+
+            // 残額
+            int balance = (block[10] << 8) | block[11];
+            Console.WriteLine($"  残額: ¥{balance}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  Suicaデータ解析エラー: {ex.Message}");
         }
     }
 
@@ -431,11 +528,11 @@ class SuicaReader
         try
         {
             List<byte> felicaCmd = new List<byte>();
-            felicaCmd.Add(0x00);
+            felicaCmd.Add(0x00);  // システムコード
             felicaCmd.Add(0xFF);
             felicaCmd.Add(0xFF);
-            felicaCmd.Add(0x01);
-            felicaCmd.Add(0x00);
+            felicaCmd.Add(0x01);  // リクエストコード
+            felicaCmd.Add(0x00);  // タイムスロット
 
             List<byte> cmd = new List<byte>();
             cmd.Add(0xFF);
