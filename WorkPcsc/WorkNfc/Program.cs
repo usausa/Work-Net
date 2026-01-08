@@ -261,6 +261,17 @@ public sealed class SuicaReader
     //   C0-03-01 6A-81 90-00
     //   ?        Function not supported  APDUとしては完了？
 
+    // FF-50-00-01 00-00-12 D4-40-01 06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00-00
+    //   C0-03-01 6A-81 90-00
+
+    // 67-00 Wrong length
+    // FF-59-00-00 0F 06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00 00
+    // FF-59-00-00 10 06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    // FF-59-00-00 0F 0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00 00
+    // FF-59-00-00 10 0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00 00
+    // FF-59-00-00 10 10-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00 00
+    // FF-59-00-00 00-00-0F 06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00 00
+
     // Polling
     // FF-FE-00-00 05 <00-FF-FF-01-00>
 
@@ -274,9 +285,11 @@ public sealed class SuicaReader
             cmd.Add(0xFF); // CLA
             //cmd.Add(0x00); // CLA
             //cmd.Add(0xFE); // INS
-            cmd.Add(0x50); // INS
+            //cmd.Add(0x50); // INS
+            cmd.Add(0x59); // INS
             cmd.Add(0x00); // P1
             cmd.Add(0x00); // P2
+            //cmd.Add(0x01); // P2
 
             List<byte> felicaCmd = new List<byte>();
             felicaCmd.Add(0x06); // コマンドコード: Read Without Encryption
@@ -294,14 +307,22 @@ public sealed class SuicaReader
             }
 
             // TODO ?
-            cmd.Add((byte)(felicaCmd.Count + 3));
+            //cmd.Add(0x00);
+            //cmd.Add(0x00);
+            //cmd.Add((byte)(felicaCmd.Count + 3));
             // TODO ?
-            cmd.Add(0xD4); // Host to PN532
-            cmd.Add(0x40); // InDataExchange
-            cmd.Add(0x01); // Target number
+            //cmd.Add(0xD4); // Host to PN532
+            //cmd.Add(0x40); // InDataExchange
+            //cmd.Add(0x01); // Target number
 
-            //cmd.Add((byte)felicaCmd.Count);
+            cmd.Add(0x00);
+            cmd.Add(0x00);
+            //cmd.Add((byte)(felicaCmd.Count + 1));
+            //cmd.Add((byte)(felicaCmd.Count + 1));
+            cmd.Add((byte)felicaCmd.Count);
+
             cmd.AddRange(felicaCmd);
+
             cmd.Add(0x00);
 
             Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
