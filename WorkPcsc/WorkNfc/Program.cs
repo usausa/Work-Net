@@ -226,33 +226,40 @@ public sealed class SuicaReader
 
     // [Command & Response]
 
-    // <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> = 15/0x0F
+    // <06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> = 15/0x0F
     //
     // [NG]
     // 存在しないトランザクションを終了しようとしました
-    // FF-FE-00-00 0F <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // FF-FE-00-00 0F <06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> 00
     //   An attempt was made to end a non-existent transaction.
-    // FF-FE-00-00 10 <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // FF-FE-00-00 10 <06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> 00
     //   An attempt was made to end a non-existent transaction.
-    // FF-FE-00-00 10 <10 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // FF-FE-00-00 10 <10 06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> 00
     //   An attempt was made to end a non-existent transaction.
-    // FF-FE-00-00 10 <0F 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // FF-FE-00-00 10 <0F 06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> 00
     //   An attempt was made to end a non-existent transaction.
-    // FF-FE-00-00 0F <06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00>
+    // FF-FE-00-00 0F <06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00>
     //   An attempt was made to end a non-existent transaction.
     //
     // コマンドがサポートされていない
-    // FF-00-00-00 0F <0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    // FF-00-00-00 0F <0F-06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00-00
     //   6A-81 Function not supported
-    // FF-00-00-00 0F <06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    // FF-00-00-00 0F <06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00-00
     //   6A-81 Function not supported
 
-    // FF-FE-00-00 0F <0F 06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+    // FF-FE-00-00 0F <0F 06 [XX-XX-XX-XX-XX-XX-XX-XX] 01 8B-00 01 80-00> 00
     //  67-00 Wrong length
-    // FF-FE-00-00-0F-0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00
+    // FF-FE-00-00-0F-0F-06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00
     //   An attempt was made to end a non-existent transaction.
-    // FF-FE-00-00-0F-06-01-01-08-01-20-0D-DD-10-01-8B-00-01-80-00-00
+    // FF-FE-00-00-0F-06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00-00
     //   An attempt was made to end a non-existent transaction.
+
+    // FF-50-00-00 12 D4-40-01 0F-06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00 00
+    //  67-00 Wrong length
+
+    // FF-50-00-00-12-D4-40-01-06-XX-XX-XX-XX-XX-XX-XX-XX-01-8B-00-01-80-00-00
+    //   C0-03-01 6A-81 90-00
+    //   ?        Function not supported  APDUとしては完了？
 
     // Polling
     // FF-FE-00-00 05 <00-FF-FF-01-00>
@@ -265,8 +272,9 @@ public sealed class SuicaReader
             List<byte> cmd = new List<byte>();
             // TODO ?
             cmd.Add(0xFF); // CLA
-            cmd.Add(0xFE); // INS
-            //cmd.Add(0x00); // INS
+            //cmd.Add(0x00); // CLA
+            //cmd.Add(0xFE); // INS
+            cmd.Add(0x50); // INS
             cmd.Add(0x00); // P1
             cmd.Add(0x00); // P2
 
@@ -286,10 +294,13 @@ public sealed class SuicaReader
             }
 
             // TODO ?
-
+            cmd.Add((byte)(felicaCmd.Count + 3));
             // TODO ?
+            cmd.Add(0xD4); // Host to PN532
+            cmd.Add(0x40); // InDataExchange
+            cmd.Add(0x01); // Target number
+
             //cmd.Add((byte)felicaCmd.Count);
-            cmd.Add((byte)felicaCmd.Count);
             cmd.AddRange(felicaCmd);
             cmd.Add(0x00);
 
