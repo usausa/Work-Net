@@ -1,14 +1,30 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using PCSC;
+namespace WorkNfc;
 
-class SuicaReader
+using PCSC;
+using PCSC.Monitoring;
+
+public sealed class SuicaReader
 {
+    // TODO Fix polling
+    // TODO Fix read block
+
     const ushort SERVICE_CODE_HISTORY = 0x090F;
 
     static void Main(string[] args)
     {
+        var monitor = MonitorFactory.Instance.Create(SCardScope.System);
+
+        monitor.CardInserted += (sender, e) =>
+        {
+            Console.WriteLine($"\n[カード検出] {e.ReaderName}");
+            Console.WriteLine(new string('=', 60));
+            ReadSuicaCard(e.ReaderName);
+        };
+
+        monitor.CardRemoved += (sender, e) => { Console.WriteLine($"\n[カード除去] {e.ReaderName}"); };
+
+        monitor.MonitorException += (sender, e) => { Console.WriteLine($"モニターエラー: {e.Message}"); };
+
         using (var context = ContextFactory.Instance.Establish(SCardScope.System))
         {
             var readers = context.GetReaders();
@@ -18,375 +34,372 @@ class SuicaReader
                 return;
             }
 
-            Console.WriteLine($"使用リーダー: {readers[0]}\n");
+            Console.WriteLine($"使用リーダー: {readers[0]}");
+            monitor.Start(readers[0]);
+        }
 
-            var reader = context.ConnectReader(readers[0], SCardShareMode.Shared, SCardProtocol.Any);
+        Console.WriteLine("Suicaをタッチしてください (Enterキーで終了)...\n");
+        Console.ReadLine();
+        monitor.Cancel();
+    }
+
+    static void ReadSuicaCard(string readerName)
+    {
+        using (var context = ContextFactory.Instance.Establish(SCardScope.System))
+        {
+            var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
 
             try
             {
-                // Polling
-                Console.WriteLine("=== Polling ===");
-                byte[] idm = null;
-                byte[] pmm = null;
+                Console.WriteLine("[デバッグ] カードに接続しました");
 
-                List<byte> pollingCmd = new List<byte>();
-                pollingCmd.Add(0xFF);
-                pollingCmd.Add(0xFE);
-                pollingCmd.Add(0x00);
-                pollingCmd.Add(0x00);
-                pollingCmd.Add(0x05);
-                pollingCmd.Add(0x00);
-                pollingCmd.Add(0xFF);
-                pollingCmd.Add(0xFF);
-                pollingCmd.Add(0x01);
-                pollingCmd.Add(0x00);
-                pollingCmd.Add(0x00);
-
-                var pollingResponse = new byte[256];
-                int pollingLen = reader.Transmit(pollingCmd.ToArray(), pollingResponse);
-
-                if (pollingLen >= 2 && pollingResponse[pollingLen - 2] == 0x90 && pollingResponse[pollingLen - 1] == 0x00)
+                // Pollingコマンドを実行
+                var pollingResult = ExecutePolling(reader);
+                if (pollingResult == null)
                 {
-                    int dataLen = pollingLen - 2;
-                    if (dataLen >= 18)
-                    {
-                        idm = new byte[8];
-                        Array.Copy(pollingResponse, 1, idm, 0, 8);
-                        pmm = new byte[8];
-                        Array.Copy(pollingResponse, 9, pmm, 0, 8);
-
-                        Console.WriteLine($"IDm: {BitConverter.ToString(idm).Replace("-", "")}");
-                        Console.WriteLine($"PMm: {BitConverter.ToString(pmm).Replace("-", "")}\n");
-                    }
-                }
-
-                if (idm == null)
-                {
-                    Console.WriteLine("Polling失敗");
+                    Console.WriteLine("[エラー] Pollingに失敗しました");
                     return;
                 }
 
-                System.Threading.Thread.Sleep(200);
+                byte[] idm = pollingResult.Item1;
+                byte[] pmm = pollingResult.Item2;
 
-                // 最終テスト
-                Console.WriteLine("=== 最終確認テスト ===\n");
-
-                // テスト1: ISO 7816-4 Select DF
-                Console.WriteLine("[テスト1] ISO Select DF (FeliCa Common Area)");
-                TestSelectDF(reader);
-
-                // テスト2: 異なるCLA
-                Console.WriteLine("\n[テスト2] 異なるCLAでテスト");
-                TestDifferentCLA(reader, idm);
-
-                // テスト3: Get Response
-                Console.WriteLine("\n[テスト3] Get Response (61 XX対応)");
-                TestGetResponse(reader, idm);
-
-                // テスト4: リーダー情報取得
-                Console.WriteLine("\n[テスト4] リーダー情報取得");
-                TestGetReaderInfo(reader);
-
-                // テスト5: 拡張APDUテスト
-                Console.WriteLine("\n[テスト5] 拡張APDU形式");
-                TestExtendedAPDU(reader, idm);
-
-                // 結論
-                Console.WriteLine("\n" + "=".PadRight(80, '='));
-                Console.WriteLine("結論");
-                Console.WriteLine("=".PadRight(80, '='));
-                Console.WriteLine("\nPaSoRi RC-S300のPC/SCドライバは、以下の理由により");
-                Console.WriteLine("Read Without Encryptionを直接サポートしていない可能性が高い：");
+                Console.WriteLine($"IDm: {BitConverter.ToString(idm).Replace("-", "")}");
+                Console.WriteLine($"PMm: {BitConverter.ToString(pmm).Replace("-", "")}");
                 Console.WriteLine();
-                Console.WriteLine("1. すべてのINS/データパターンで 63 01 エラー");
-                Console.WriteLine("2. 5F 46 タグは認識されるが、内容が拒否される");
-                Console.WriteLine("3. Web USBでは動作するが、PC/SCではブロックされる");
-                Console.WriteLine();
-                Console.WriteLine("【代替案】");
-                Console.WriteLine("1. libpafe や libnfc などの低レベルライブラリを使用");
-                Console.WriteLine("2. Web USB API を使用（ブラウザ経由）");
-                Console.WriteLine("3. Androidの NFC API を使用");
-                Console.WriteLine("4. Sony公式のFeliCa SDKを使用（商用利用の場合）");
-                Console.WriteLine();
-                Console.WriteLine("【参考情報】");
-                Console.WriteLine("- Polling (INS=0xFE) は成功 → リーダーは正常動作");
-                Console.WriteLine("- IDm取得は成功 → カード認識は問題なし");
-                Console.WriteLine("- Read コマンドのみ失敗 → ドライバレベルの制限");
-                Console.WriteLine();
-                Console.WriteLine("【技術的詳細】");
-                Console.WriteLine("- エラー 6A 81: PN532がコマンドを認識しない");
-                Console.WriteLine("- エラー 63 01: PN532はコマンドを処理しようとするが認証失敗");
-                Console.WriteLine("- 5F 46: BER-TLVタグ（正しい形式だが内容が不正）");
+
+                ReadTest(reader, idm);
+
+                //ReadHistory(reader, idm);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[エラー] 読み取りエラー: {ex.Message}");
+                Console.WriteLine($"[エラー] スタックトレース: {ex.StackTrace}");
             }
             finally
             {
                 reader.Disconnect(SCardReaderDisposition.Leave);
             }
         }
-
-        Console.WriteLine("\nEnterキーで終了...");
-        Console.ReadLine();
     }
 
-    static void TestSelectDF(ICardReader reader)
+    static Tuple<byte[], byte[]> ExecutePolling(ICardReader reader)
     {
-        // FeliCa Common DF
-        List<byte> cmd = new List<byte>();
-        cmd.Add(0x00);  // CLA
-        cmd.Add(0xA4);  // INS (Select File)
-        cmd.Add(0x04);  // P1 (Select by DF name)
-        cmd.Add(0x00);  // P2
-        cmd.Add(0x07);  // Lc
-        cmd.AddRange(new byte[] { 0xD3, 0x92, 0xF0, 0x03, 0x92, 0x00, 0x01 });  // FeliCa Common DF
-        cmd.Add(0x00);  // Le
-
         try
         {
-            var response = new byte[256];
-            int length = reader.Transmit(cmd.ToArray(), response);
-
-            Console.WriteLine($"  SW: {response[length - 2]:X2} {response[length - 1]:X2}");
-
-            if (length > 2)
-            {
-                int dataLen = length - 2;
-                Console.WriteLine($"  データ({dataLen}): {BitConverter.ToString(response, 0, dataLen)}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"  例外: {ex.Message}");
-        }
-    }
-
-    static void TestDifferentCLA(ICardReader reader, byte[] idm)
-    {
-        byte[] claValues = { 0x00, 0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0, 0xFF };
-
-        foreach (byte cla in claValues)
-        {
-            List<byte> data = new List<byte>();
-            data.Add(0x5F);
-            data.Add(0x46);
-            data.Add(0x00);
-            data.Add(0x10);
-            data.Add(0x06);
-            data.AddRange(idm);
-            data.Add(0x01);
-            data.Add(0x0F);
-            data.Add(0x09);
-            data.Add(0x01);
-            data.Add(0x80);
-            data.Add(0x00);
+            Console.WriteLine("[デバッグ] Pollingコマンドを送信 (システムコード: FFFF)");
 
             List<byte> cmd = new List<byte>();
-            cmd.Add(cla);
-            cmd.Add(0x50);
+            cmd.Add(0xFF);  // CLA
+            cmd.Add(0xFE);  // INS
+            cmd.Add(0x00);  // P1
+            cmd.Add(0x00);  // P2
+
+            List<byte> felicaCmd = new List<byte>();
+            felicaCmd.Add(0x00);  // コマンドコード: Polling
+            felicaCmd.Add(0xFF);  // システムコード上位
+            felicaCmd.Add(0xFF);  // システムコード下位
+            felicaCmd.Add(0x01);  // リクエストコード
+            felicaCmd.Add(0x00);  // タイムスロット
+
+            cmd.Add((byte)felicaCmd.Count);
+            cmd.AddRange(felicaCmd);
             cmd.Add(0x00);
-            cmd.Add(0x01);
-            cmd.Add((byte)data.Count);
-            cmd.AddRange(data);
-            cmd.Add(0x00);
 
-            try
-            {
-                var response = new byte[256];
-                int length = reader.Transmit(cmd.ToArray(), response);
-
-                byte sw1 = response[length - 2];
-                byte sw2 = response[length - 1];
-
-                if (sw1 != 0x6E && sw1 != 0x6D)
-                {
-                    Console.WriteLine($"  CLA=0x{cla:X2}: SW={sw1:X2} {sw2:X2}");
-
-                    if (length > 2)
-                    {
-                        int dataLen = length - 2;
-                        if (response[0] != 0xC0)
-                        {
-                            Console.WriteLine($"    ★ データ: {BitConverter.ToString(response, 0, Math.Min(dataLen, 32))}");
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            System.Threading.Thread.Sleep(50);
-        }
-    }
-
-    static void TestGetResponse(ICardReader reader, byte[] idm)
-    {
-        // まず63 01を発生させる
-        List<byte> data = new List<byte>();
-        data.Add(0x5F);
-        data.Add(0x46);
-        data.Add(0x00);
-        data.Add(0x10);
-        data.Add(0x06);
-        data.AddRange(idm);
-        data.Add(0x01);
-        data.Add(0x0F);
-        data.Add(0x09);
-        data.Add(0x01);
-        data.Add(0x80);
-        data.Add(0x00);
-
-        List<byte> cmd1 = new List<byte>();
-        cmd1.Add(0xFF);
-        cmd1.Add(0x50);
-        cmd1.Add(0x00);
-        cmd1.Add(0x01);
-        cmd1.Add((byte)data.Count);
-        cmd1.AddRange(data);
-        cmd1.Add(0x00);
-
-        var response1 = new byte[256];
-        int length1 = reader.Transmit(cmd1.ToArray(), response1);
-
-        byte sw1 = response1[length1 - 2];
-        byte sw2 = response1[length1 - 1];
-
-        Console.WriteLine($"  初回: SW={sw1:X2} {sw2:X2}");
-
-        // Get Response
-        if (sw1 == 0x61 || sw1 == 0x63)
-        {
-            List<byte> cmd2 = new List<byte>();
-            cmd2.Add(0xFF);
-            cmd2.Add(0xC0);  // Get Response
-            cmd2.Add(0x00);
-            cmd2.Add(0x00);
-            cmd2.Add(sw2 > 0 ? sw2 : (byte)0x00);
-
-            try
-            {
-                var response2 = new byte[256];
-                int length2 = reader.Transmit(cmd2.ToArray(), response2);
-
-                Console.WriteLine($"  Get Response: SW={response2[length2 - 2]:X2} {response2[length2 - 1]:X2}");
-
-                if (length2 > 2)
-                {
-                    int dataLen = length2 - 2;
-                    Console.WriteLine($"  データ: {BitConverter.ToString(response2, 0, dataLen)}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  例外: {ex.Message}");
-            }
-        }
-    }
-
-    static void TestGetReaderInfo(ICardReader reader)
-    {
-        // Get Data - UID
-        List<byte> cmd1 = new List<byte>();
-        cmd1.Add(0xFF);
-        cmd1.Add(0xCA);
-        cmd1.Add(0x00);
-        cmd1.Add(0x00);
-        cmd1.Add(0x00);
-
-        try
-        {
+            Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
             var response = new byte[256];
-            int length = reader.Transmit(cmd1.ToArray(), response);
+            int length = reader.Transmit(cmd.ToArray(), response);
+            Console.WriteLine($"[デバッグ] 応答({length}): {BitConverter.ToString(response, 0, length)}");
 
-            Console.WriteLine($"  Get Data (UID): SW={response[length - 2]:X2} {response[length - 1]:X2}");
+            // TODO
 
-            if (length > 2)
+            // ステータスワードの確認
+            if (length < 2 || response[length - 2] != 0x90 || response[length - 1] != 0x00)
             {
-                int dataLen = length - 2;
-                Console.WriteLine($"  データ: {BitConverter.ToString(response, 0, dataLen)}");
+                Console.WriteLine("[エラー] ステータスエラー");
+                return null;
             }
+
+            int pos = 0;
+            byte responseCode = response[pos++];
+
+            Console.WriteLine($"[デバッグ] 応答コード: {responseCode:X2}");
+
+            if (responseCode != 0x01)
+            {
+                Console.WriteLine($"[エラー] Polling応答コードが不正: {responseCode:X2}");
+                return null;
+            }
+
+            byte[] idm = new byte[8];
+            Array.Copy(response, pos, idm, 0, 8);
+            pos += 8;
+            Console.WriteLine($"[デバッグ] IDm抽出: {BitConverter.ToString(idm)}");
+
+            byte[] pmm = new byte[8];
+            Array.Copy(response, pos, pmm, 0, 8);
+            pos += 8;
+            Console.WriteLine($"[デバッグ] PMm抽出: {BitConverter.ToString(pmm)}");
+
+            if (pos + 2 <= length - 2)
+            {
+                byte[] systemCode = new byte[2];
+                Array.Copy(response, pos, systemCode, 0, 2);
+                Console.WriteLine($"[デバッグ] システムコード: {BitConverter.ToString(systemCode)}");
+            }
+
+            Console.WriteLine("[デバッグ] Polling成功");
+            return Tuple.Create(idm, pmm);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  例外: {ex.Message}");
-        }
-
-        // Get Data - 別のタグ
-        for (byte p2 = 0; p2 <= 0x10; p2++)
-        {
-            List<byte> cmd2 = new List<byte>();
-            cmd2.Add(0xFF);
-            cmd2.Add(0xCA);
-            cmd2.Add(0x00);
-            cmd2.Add(p2);
-            cmd2.Add(0x00);
-
-            try
-            {
-                var response = new byte[256];
-                int length = reader.Transmit(cmd2.ToArray(), response);
-
-                byte sw1 = response[length - 2];
-                byte sw2 = response[length - 1];
-
-                if (sw1 == 0x90 && length > 2)
-                {
-                    int dataLen = length - 2;
-                    if (dataLen > 0)
-                    {
-                        Console.WriteLine($"  P2=0x{p2:X2}: {BitConverter.ToString(response, 0, dataLen)}");
-                    }
-                }
-            }
-            catch { }
+            Console.WriteLine($"[エラー] Polling例外: {ex.Message}");
+            Console.WriteLine($"[エラー] スタックトレース: {ex.StackTrace}");
+            return null;
         }
     }
 
-    static void TestExtendedAPDU(ICardReader reader, byte[] idm)
+    static void ReadTest(ICardReader reader, byte[] idm)
     {
-        Console.WriteLine("  拡張APDU (Case 4 Extended)");
+        Console.WriteLine("履歴情報:");
+        Console.WriteLine(new string('-', 60));
 
-        List<byte> data = new List<byte>();
-        data.Add(0x5F);
-        data.Add(0x46);
-        data.Add(0x00);
-        data.Add(0x10);
-        data.Add(0x06);
-        data.AddRange(idm);
-        data.Add(0x01);
-        data.Add(0x0F);
-        data.Add(0x09);
-        data.Add(0x01);
-        data.Add(0x80);
-        data.Add(0x00);
 
-        List<byte> cmd = new List<byte>();
-        cmd.Add(0xFF);
-        cmd.Add(0x50);
-        cmd.Add(0x00);
-        cmd.Add(0x01);
-        // 拡張Lc (3バイト)
-        cmd.Add(0x00);
-        cmd.Add(0x00);
-        cmd.Add((byte)data.Count);
-        cmd.AddRange(data);
-        // 拡張Le (2バイト)
-        cmd.Add(0x00);
-        cmd.Add(0x00);
+        byte[] blockData = ReadBlock(reader, idm, 0x008B, (byte)0);
 
+        Console.WriteLine($"[デバッグ] データ: {BitConverter.ToString(blockData)}");
+    }
+
+    //public static byte[] MakeReadWoe(byte[] idm, short serviceCode, params int[] blockNos)
+    //{
+    //    var command = new byte[14 + (blockNos.Length * 2)];
+    //    command[0] = (byte)command.Length;
+    //    command[1] = 0x06;
+    //    Buffer.BlockCopy(idm, 0, command, 2, idm.Length);
+    //    command[10] = 1;
+    //    command[11] = (byte)(serviceCode & 0xff);
+    //    command[12] = (byte)(serviceCode >> 8);
+    //    command[13] = (byte)blockNos.Length;
+    //    for (var i = 0; i < blockNos.Length; i++)
+    //    {
+    //        var offset = 14 + (i * 2);
+    //        command[offset] = 0x80;
+    //        command[offset + 1] = (byte)blockNos[i];
+    //    }
+
+    //    return command;
+    //}
+
+
+    static void ReadHistory(ICardReader reader, byte[] idm)
+    {
+        Console.WriteLine("履歴情報:");
+        Console.WriteLine(new string('-', 60));
+
+        byte[] blockData = ReadBlock(reader, idm, SERVICE_CODE_HISTORY, 0, 1, 2, 3, 4, 5, 6, 7);
+    }
+
+    // NG
+    //  FF-FE-00-00 0F <06 [01-01-08-01-20-0D-DD-10] 01 8B-00 01 80-00> 00
+
+    static byte[] ReadBlock(ICardReader reader, byte[] idm, ushort serviceCode, params int[] blockNos)
+    {
         try
         {
-            var response = new byte[65536];
-            int length = reader.Transmit(cmd.ToArray(), response);
+            // FeliCa Read Without Encryptionコマンドを送信
+            List<byte> cmd = new List<byte>();
+            cmd.Add(0xFF); // CLA
+            cmd.Add(0xFE); // INS
+            cmd.Add(0x00); // P1
+            cmd.Add(0x00); // P2
 
-            Console.WriteLine($"  SW: {response[length - 2]:X2} {response[length - 1]:X2}");
+            List<byte> felicaCmd = new List<byte>();
+            felicaCmd.Add(0x06); // コマンドコード: Read Without Encryption
+            felicaCmd.AddRange(idm); // IDm
+            felicaCmd.Add(0x01); // サービス数
+            felicaCmd.Add((byte)(serviceCode & 0xFF));
+            felicaCmd.Add((byte)((serviceCode >> 8) & 0xFF));
 
-            if (length > 2)
+            felicaCmd.Add((byte)blockNos.Length); // ブロック数
+            // ブロックリスト
+            foreach (var blockNumber in blockNos)
             {
-                int dataLen = length - 2;
-                Console.WriteLine($"  データ({dataLen}): {BitConverter.ToString(response, 0, Math.Min(dataLen, 32))}");
+                felicaCmd.Add(0x80);
+                felicaCmd.Add((byte)blockNumber);
             }
+
+            // TODO
+            cmd.Add((byte)felicaCmd.Count);
+            cmd.AddRange(felicaCmd);
+            cmd.Add(0x00);
+
+            Console.WriteLine($"[デバッグ] 送信: {BitConverter.ToString(cmd.ToArray())}");
+            var response = new byte[256];
+            int length = reader.Transmit(cmd.ToArray(), response);
+            Console.WriteLine($"[デバッグ] 応答({length}): {BitConverter.ToString(response, 0, length)}");
+
+            if (length < 2)
+            {
+                Console.WriteLine("[エラー] 応答が短すぎます");
+                return null;
+            }
+
+            byte sw1 = response[length - 2];
+            byte sw2 = response[length - 1];
+            Console.WriteLine($"[デバッグ] ステータスワード: {sw1:X2} {sw2:X2}");
+
+            if (sw1 != 0x90 || sw2 != 0x00)
+            {
+                Console.WriteLine($"[エラー] ステータスエラー");
+                return null;
+            }
+
+            return ParseFeliCaReadResponse(response, length - 2);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  例外: {ex.Message}");
+            Console.WriteLine($"[エラー] 例外: {ex.Message}");
         }
+
+        return null;
+    }
+
+    static byte[] ParseFeliCaReadResponse(byte[] response, int dataLength)
+    {
+        try
+        {
+            // Read Without Encryption応答
+            // [データ長][応答コード 0x07][IDm(8)][SF1][SF2][ブロック数][ブロックデータ(16)]
+
+            if (dataLength < 13)
+            {
+                Console.WriteLine($"[エラー] データ不足: {dataLength}バイト");
+                return null;
+            }
+
+            int pos = 0;
+            byte respLen = response[pos++];
+            byte responseCode = response[pos++];
+
+            Console.WriteLine($"[デバッグ] 応答長: {respLen}, 応答コード: {responseCode:X2}");
+
+            if (responseCode != 0x07)
+            {
+                Console.WriteLine($"[エラー] 応答コードが不正: {responseCode:X2} (期待値: 0x07)");
+                return null;
+            }
+
+            // IDmをスキップ (8バイト)
+            pos += 8;
+
+            // ステータスフラグ
+            byte sf1 = response[pos++];
+            byte sf2 = response[pos++];
+            Console.WriteLine($"[デバッグ] ステータスフラグ: {sf1:X2} {sf2:X2}");
+
+            if (sf1 != 0x00 || sf2 != 0x00)
+            {
+                Console.WriteLine($"[警告] FeliCaステータスフラグエラー");
+                return null;
+            }
+
+            // ブロック数
+            byte blockCount = response[pos++];
+            Console.WriteLine($"[デバッグ] ブロック数: {blockCount}");
+
+            if (dataLength - pos < 16)
+            {
+                Console.WriteLine($"[エラー] ブロックデータ不足");
+                return null;
+            }
+
+            // ブロックデータ (16バイト)
+            byte[] blockData = new byte[16];
+            Array.Copy(response, pos, blockData, 0, 16);
+            Console.WriteLine($"[デバッグ] ブロックデータ抽出成功");
+
+            return blockData;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[エラー] 解析例外: {ex.Message}");
+            return null;
+        }
+    }
+
+    static void ParseHistoryRecord(int index, byte[] data)
+    {
+        int termType = data[0];
+        int process = data[1];
+        int dateValue = data[4] | (data[5] << 8);
+
+        if (dateValue == 0)
+        {
+            Console.WriteLine($"[{index + 1:D2}] (空のレコード)");
+            return;
+        }
+
+        DateTime date = new DateTime(2000, 1, 1).AddDays(dateValue);
+        int balance = data[8] | (data[9] << 8);
+        int inStation = data[6];
+        int outStation = data[7];
+
+        Console.WriteLine($"[{index + 1:D2}] {date:yyyy/MM/dd} " +
+                          $"種別:{GetTerminalType(termType)} " +
+                          $"処理:{GetProcessType(process)} " +
+                          $"残額:¥{balance} " +
+                          $"入:{inStation:X2} 出:{outStation:X2}");
+    }
+
+    static string GetTerminalType(int type)
+    {
+        return type switch
+        {
+            0x03 => "精算機",
+            0x05 => "車載端末",
+            0x07 => "券売機",
+            0x08 => "券売機",
+            0x09 => "入金機",
+            0x16 => "改札機",
+            0x17 => "簡易改札機",
+            0x18 => "窓口端末",
+            0x1A => "改札端末",
+            0x1B => "携帯電話",
+            0x1C => "乗継精算機",
+            0x1D => "連絡改札機",
+            0x1F => "簡易入金機",
+            0x23 => "新幹線改札機",
+            0xC7 => "物販端末",
+            0xC8 => "自販機",
+            _ => $"不明({type:X2})"
+        };
+    }
+
+    static string GetProcessType(int type)
+    {
+        return type switch
+        {
+            0x01 => "運賃支払",
+            0x02 => "チャージ",
+            0x03 => "券購入",
+            0x04 => "精算",
+            0x05 => "精算(入場)",
+            0x06 => "窓出",
+            0x07 => "新規",
+            0x08 => "控除",
+            0x13 => "支払(新幹線)",
+            0x14 => "入A",
+            0x15 => "出A",
+            0x46 => "物販",
+            0x48 => "特典",
+            0x49 => "入金(レジ)",
+            0x4A => "物販取消",
+            0x4B => "入物",
+            0xC6 => "現金併用物販",
+            0x84 => "他社精算",
+            0x85 => "他社入精",
+            _ => $"不明({type:X2})"
+        };
     }
 }
