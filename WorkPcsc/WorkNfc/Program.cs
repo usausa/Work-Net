@@ -162,13 +162,52 @@ public sealed class SuicaReader
 
     static void ReadTest(ICardReader reader, byte[] idm)
     {
-        Console.WriteLine("履歴情報:");
-        Console.WriteLine(new string('-', 60));
+        List<byte> felicaCmd = new List<byte>();
+        felicaCmd.Add(0x04);
+        felicaCmd.AddRange(idm);
 
+        List<byte> cmd = new List<byte>();
 
-        byte[] blockData = ReadBlock(reader, idm, 0x008B, (byte)0);
+        // communicateThruEX
+        cmd.Add(0xFF);
+        cmd.Add(0x50);
+        cmd.Add(0x00);
+        cmd.Add(0x01);
+        cmd.Add(0x00);
+        var dataLength = felicaCmd.Count + 11;
+        cmd.Add((byte)((dataLength >> 8) & 0xFF));
+        cmd.Add((byte)(dataLength & 0xFF));
 
-        Console.WriteLine($"[デバッグ] データ: {BitConverter.ToString(blockData)}");
+        // FeliCa Lite-S
+        cmd.Add(0x5F);
+        cmd.Add(0x46);
+        cmd.Add(0x04);
+
+        cmd.Add(0x80); // Timeout microseconds (MSB)?
+        cmd.Add(0x1A);
+        cmd.Add(0x06);
+        cmd.Add(0x00);
+
+        cmd.Add(0x95);
+        cmd.Add(0x82);
+
+        cmd.Add((byte)((felicaCmd.Count >> 8) & 0xFF));
+        cmd.Add((byte)(felicaCmd.Count & 0xFF));
+
+        // FeliCa
+        cmd.AddRange(felicaCmd);
+
+        // communicateThruEX
+        cmd.Add(0x00);
+        cmd.Add(0x00);
+        cmd.Add(0x00);
+
+        Console.WriteLine($"[デバッグ] 送信({cmd.Count}): {BitConverter.ToString(cmd.ToArray())}");
+
+        var response = new byte[256];
+        int length = reader.Transmit(cmd.ToArray(), response);
+        Console.WriteLine($"[デバッグ] 応答({length}): {BitConverter.ToString(response, 0, length)}");
+
     }
 
     //public static byte[] MakeReadWoe(byte[] idm, short serviceCode, params int[] blockNos)
