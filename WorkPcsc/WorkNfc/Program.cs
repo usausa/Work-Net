@@ -49,6 +49,11 @@ public sealed class SuicaReader
         {
             var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any);
 
+            //if (ReadTest(reader))
+            //{
+            //    return;
+            //}
+
             try
             {
                 Console.WriteLine("[デバッグ] カードに接続しました");
@@ -82,6 +87,44 @@ public sealed class SuicaReader
                 reader.Disconnect(SCardReaderDisposition.Leave);
             }
         }
+    }
+
+    static bool ReadTest(ICardReader reader)
+    {
+        try
+        {
+            //// End Transeparent Session
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x82, 0x00, 0x00]);
+            //// Start Transeparent Session
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x81, 0x00, 0x00]);
+            //// Turn Off RF
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00]);
+            //// Turn On RF
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x84, 0x00, 0x00]);
+
+            // Send some command
+            RequestResponse(reader, [
+                0xFF, 0x50, 0x00, 0x01, 0x00, 0x00, 0x11, 0x5F, 0x46, 0x04, 0xA0, 0x86, 0x01, 0x00, 0x95, 0x82, 0x00, 0x06, 0x06, 0x00, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00, 0x00]);
+
+            //// Turn Off RF
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00]);
+            // End Transeparent Session
+            //RequestResponse(reader, [0xFF, 0x50, 0x00, 0x00, 0x02, 0x82, 0x00, 0x00]);
+        }
+        catch (Exception ex)
+        {
+            Console.Write(ex);
+        }
+
+        return true;
+    }
+
+    static void RequestResponse(ICardReader reader, byte[] cmd)
+    {
+        Console.WriteLine($"[デバッグ] 送信({cmd}): {BitConverter.ToString(cmd)}");
+        var response = new byte[256];
+        int length = reader.Transmit(cmd, response);
+        Console.WriteLine($"[デバッグ] 応答({length}): {BitConverter.ToString(response, 0, length)}");
     }
 
     static Tuple<byte[], byte[]> ExecutePolling(ICardReader reader)
