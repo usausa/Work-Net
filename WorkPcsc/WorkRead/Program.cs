@@ -73,7 +73,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("券面事項入力補助APを選択...");
             var response = SendCommand(reader, selectAp);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"AP選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -92,7 +92,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("暗証番号を選択...");
             response = SendCommand(reader, selectPin);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"暗証番号選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -111,7 +111,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("PIN認証...");
             response = SendCommand(reader, verifyPin);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"PIN認証失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -130,7 +130,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("マイナンバー選択...");
             response = SendCommand(reader, selectMyNumber);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"マイナンバー選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -142,14 +142,14 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("個人番号読み取り...");
             response = SendCommand(reader, readId);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"個人番号読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
             }
             Console.WriteLine("個人番号読み取り成功!");
 
-            var id = Encoding.ASCII.GetString(response.Data.AsSpan(3, 12));
+            var id = Encoding.ASCII.GetString(response.Data.Slice(3, 12));
             Console.WriteLine($"個人番号: {id}");
 
             // 基本4情報選択
@@ -164,7 +164,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("基本4情報選択...");
             response = SendCommand(reader, selectInformation);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"基本4情報選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -176,7 +176,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("データ長読み取り...");
             response = SendCommand(reader, readLength);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"データ長読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -191,7 +191,7 @@ internal sealed class Reader : IDisposable
 
             Console.WriteLine("基本4情報読み取り読み取り...");
             response = SendCommand(reader, readInformation);
-            if (!IsSuccess(response))
+            if (!response.IsSuccess())
             {
                 Console.WriteLine($"基本4情報読み取り読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
@@ -199,14 +199,7 @@ internal sealed class Reader : IDisposable
             Console.WriteLine("基本4情報読み取り読み取り成功!");
 
             // パース
-            var start = response.Data.IndexOf((byte)0xDF);
-            if (start < 0)
-            {
-                Console.WriteLine("パース失敗");
-                return;
-            }
-
-            var map = ParseTlv(response.Data[start..]);
+            var map = ParseTlv(response.Data);
             Console.WriteLine($"制御情報(DF21): {Convert.ToHexString(map.GetValueOrDefault(0xDF21, []))}");
             Console.WriteLine($"氏名(DF22): {Encoding.UTF8.GetString(map.GetValueOrDefault(0xDF22, []))}");
             Console.WriteLine($"住所(DF23): {Encoding.UTF8.GetString(map.GetValueOrDefault(0xDF23, []))}");
@@ -237,40 +230,50 @@ internal sealed class Reader : IDisposable
         return new ResponseData(receiveBuffer, bytesReceived);
     }
 
-    private bool IsSuccess(ResponseData response)
+    private sealed class ResponseData
     {
-        return response.SW1 == 0x90 && response.SW2 == 0x00;
-    }
+        private readonly byte[] buffer;
 
-    class ResponseData
-    {
-        public byte[] Data { get; private set; }
-        public byte SW1 { get; private set; }
-        public byte SW2 { get; private set; }
+        private readonly int length;
+
+        public ReadOnlySpan<byte> Data => buffer.AsSpan(0, length >= 2 ? length - 2 : 0);
+
+        public byte SW1 { get; }
+
+        public byte SW2 { get; }
 
         public ResponseData(byte[] buffer, int length)
         {
+            this.buffer = buffer;
+            this.length = length;
+
             if (length >= 2)
             {
                 SW1 = buffer[length - 2];
                 SW2 = buffer[length - 1];
-                Data = new byte[length - 2];
-                Array.Copy(buffer, 0, Data, 0, length - 2);
             }
             else
             {
-                Data = [];
                 SW1 = 0x00;
                 SW2 = 0x00;
             }
+        }
+
+        public bool IsSuccess()
+        {
+            return SW1 == 0x90 && SW2 == 0x00;
         }
     }
 
     private static Dictionary<int, byte[]> ParseTlv(ReadOnlySpan<byte> tlvData)
     {
-        var map = new Dictionary<int, byte[]>();
+        var index = tlvData.IndexOf((byte)0xDF);
+        if (index < 0)
+        {
+            return [];
+        }
 
-        var index = 0;
+        var map = new Dictionary<int, byte[]>();
         while (index < tlvData.Length)
         {
             // タグ
