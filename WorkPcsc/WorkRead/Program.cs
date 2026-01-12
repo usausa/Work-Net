@@ -1,18 +1,17 @@
-using PCSC;
-using PCSC.Iso7816;
-using PCSC.Monitoring;
-using System.Text;
-
 namespace WorkRead;
 
-internal class Program
+using System.Text;
+
+using PCSC;
+using PCSC.Monitoring;
+
+internal static class Program
 {
-    static void Main(string[] args)
+    static void Main()
     {
         // PIN入力
-        Console.Write("\n券面事項入力補助用PIN（4桁）を入力してください: ");
-        string pin = Console.ReadLine();
-
+        Console.Write("券面事項入力補助用PIN(4桁)を入力してください: ");
+        var pin = Console.ReadLine();
         if (string.IsNullOrEmpty(pin) || pin.Length != 4)
         {
             Console.WriteLine("PINは4桁の数字である必要があります");
@@ -21,7 +20,6 @@ internal class Program
 
         using var reader = new Reader(pin);
         reader.Start();
-
 
         Console.WriteLine("* Start");
 
@@ -64,19 +62,17 @@ internal sealed class Reader : IDisposable
             Console.WriteLine($"接続プロトコル: {reader.Protocol}");
 
             // 券面事項入力補助APの選択
-            byte[] aid = new byte[] {
-            0xD3, 0x92, 0xF0, 0x00, 0x26, 0x01, 0x00, 0x00,
-            0x00, 0x01
-        };
-
-            var sendBuffer = new byte[] {
-            0x00, 0xA4, 0x04, 0x0C,
-            (byte)aid.Length
-        }.Concat(aid).ToArray();
+            var selectApData = new byte[] { 0xD3, 0x92, 0x10, 0x00, 0x31, 0x00, 0x01, 0x01, 0x04, 0x08 };
+            var selectAp = new byte[4 + 1 + selectApData.Length];
+            selectAp[0] = 0x00; // CLA
+            selectAp[1] = 0xA4; // INS
+            selectAp[2] = 0x04; // P1
+            selectAp[3] = 0x0C; // P2
+            selectAp[4] = (byte)selectApData.Length; // Lc
+            selectApData.CopyTo(selectAp.AsSpan(5, selectApData.Length));
 
             Console.WriteLine("券面事項入力補助APを選択...");
-            var response = SendCommand(reader, sendBuffer);
-
+            var response = SendCommand(reader, selectAp);
             if (!IsSuccess(response))
             {
                 Console.WriteLine($"AP選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
@@ -84,169 +80,138 @@ internal sealed class Reader : IDisposable
             }
             Console.WriteLine("AP選択成功!");
 
-        //    // 方法1: DFを選択してからEFにアクセス
-        //    Console.WriteLine("\n=== 方法1: DF選択 ===");
+            // 券面入力補助用PIN(EF)の選択
+            var selectPinData = new byte[] { 0x00, 0x11 };
+            var selectPin = new byte[4 + 1 + selectPinData.Length];
+            selectPin[0] = 0x00; // CLA
+            selectPin[1] = 0xA4; // INS
+            selectPin[2] = 0x02; // P1
+            selectPin[3] = 0x0C; // P2
+            selectPin[4] = (byte)selectPinData.Length; // Lc
+            selectPinData.CopyTo(selectPin.AsSpan(5, selectPinData.Length));
 
-        //    // DF選択（P1=0x01: DFを選択）
-        //    sendBuffer = new byte[] {
-        //    0x00, 0xA4, 0x01, 0x0C,
-        //    0x02,
-        //    0x00, 0x11  // DF ID
-        //};
-
-        //    Console.WriteLine("DF 0x0011 を選択...");
-        //    response = SendCommand(reader, sendBuffer);
-
-        //    if (IsSuccess(response))
-        //    {
-        //        Console.WriteLine("DF選択成功!");
-
-        //        // DFの下のEFを選択（P1=0x02）
-        //        sendBuffer = new byte[] {
-        //        0x00, 0xA4, 0x02, 0x0C,
-        //        0x02,
-        //        0x00, 0x01  // 相対EF ID
-        //    };
-
-        //        response = SendCommand(reader, sendBuffer);
-
-        //        if (IsSuccess(response))
-        //        {
-        //            Console.WriteLine("EF選択成功!");
-        //            TryReadFile(reader);
-        //        }
-        //    }
-
-            // 方法2: MFから選択
-            Console.WriteLine("\n=== 方法2: MFから選択 ===");
-
-            // MF選択
-            sendBuffer = new byte[] {
-            0x00, 0xA4, 0x00, 0x0C,
-            0x02,
-            0x3F, 0x00  // MF
-        };
-
-            //Console.WriteLine("MFを選択...");
-            //response = SendCommand(reader, sendBuffer);
-
-            //if (IsSuccess(response))
-            //{
-            //    Console.WriteLine("MF選択成功!");
-
-            //    // フルパスでEF選択
-            //    sendBuffer = new byte[] {
-            //    0x00, 0xA4, 0x08, 0x0C,  // P1=0x08: パス指定
-            //    0x04,
-            //    0x00, 0x11, 0x00, 0x01
-            //};
-
-            //    response = SendCommand(reader, sendBuffer);
-
-            //    if (IsSuccess(response))
-            //    {
-            //        Console.WriteLine("EF選択成功!");
-            //        TryReadFile(reader);
-            //    }
-            //}
-
-            // 方法3: 個人番号カードAPを試す（こちらの方が一般的）
-            Console.WriteLine("\n=== 方法3: 個人番号カードAP ===");
-
-            byte[] aid2 = new byte[] {
-            0xD3, 0x92, 0x10, 0x00, 0x31, 0x00, 0x01, 0x01,
-            0x04, 0x08
-        };
-
-            sendBuffer = new byte[] {
-            0x00, 0xA4, 0x04, 0x0C,
-            (byte)aid2.Length
-        }.Concat(aid2).ToArray();
-
-            Console.WriteLine("個人番号カードAPを選択...");
-            response = SendCommand(reader, sendBuffer);
-
-            if (IsSuccess(response))
+            Console.WriteLine("暗証番号を選択...");
+            response = SendCommand(reader, selectPin);
+            if (!IsSuccess(response))
             {
-                Console.WriteLine("AP選択成功!");
+                Console.WriteLine($"暗証番号選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("暗証番号選択成功!");
 
-                if (!string.IsNullOrEmpty(pin) && pin.Length == 4)
-                {
-                    byte[] pinBytes = Encoding.ASCII.GetBytes(pin);
-                    sendBuffer = new byte[] {
-                    0x00, 0x20, 0x00, 0x80,
-                    (byte)pinBytes.Length
-                }.Concat(pinBytes).ToArray();
+            // VERIFYコマンドでPIN認証
+            var pinBytes = Encoding.ASCII.GetBytes(pin);
+            var verifyPin = new byte[4 + 1 + pinBytes.Length];
+            verifyPin[0] = 0x00; // CLA
+            verifyPin[1] = 0x20; // INS
+            verifyPin[2] = 0x00; // P1
+            verifyPin[3] = 0x80; // P2
+            verifyPin[4] = (byte)pinBytes.Length; // Lc
+            pinBytes.CopyTo(verifyPin.AsSpan(5, pinBytes.Length));
 
-                    Console.WriteLine("PIN認証...");
-                    response = SendCommand(reader, sendBuffer);
+            Console.WriteLine("PIN認証...");
+            response = SendCommand(reader, verifyPin);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"PIN認証失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("PIN認証成功!");
 
-                    if (IsSuccess(response))
-                    {
-                        Console.WriteLine("PIN認証成功!");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"PIN認証失敗: SW={response.SW1:X2}{response.SW2:X2}");
-                    }
-                }
+            // マイナンバー選択
+            var selectMyNumberData = new byte[] { 0x00, 0x01 };
+            var selectMyNumber = new byte[4 + 1 + selectMyNumberData.Length];
+            selectMyNumber[0] = 0x00; // CLA
+            selectMyNumber[1] = 0xA4; // INS
+            selectMyNumber[2] = 0x02; // P1
+            selectMyNumber[3] = 0x0C; // P2
+            selectMyNumber[4] = (byte)selectMyNumberData.Length; // Lc
+            selectMyNumberData.CopyTo(selectMyNumber.AsSpan(5, selectMyNumberData.Length));
 
-                // EF選択を試す
-                ushort[] efIds = { 0x0011 , 0x0016, 0x0017, 0x001A };
+            Console.WriteLine("マイナンバー選択...");
+            response = SendCommand(reader, selectMyNumber);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"マイナンバー選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("マイナンバー選択成功!");
 
-                foreach (var efId in efIds)
-                {
-                    sendBuffer = new byte[] {
-                    0x00, 0xA4, 0x02, 0x0C,
-                    0x02,
-                    (byte)(efId >> 8),
-                    (byte)(efId & 0xFF)
-                };
+            // 個人番号読み取り
+            var readId = new byte[] { 0x00, 0xB0, 0x00, 0x00, 0x00 };
 
-                    Console.WriteLine($"\nEF 0x{efId:X4} を選択...");
-                    response = SendCommand(reader, sendBuffer);
+            Console.WriteLine("個人番号読み取り...");
+            response = SendCommand(reader, readId);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"個人番号読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("個人番号読み取り成功!");
 
-                    if (IsSuccess(response))
-                    {
-                        Console.WriteLine("選択成功!");
-                        TryReadFile(reader);
-                    }
-                }
+            var id = Encoding.ASCII.GetString(response.Data.AsSpan(3, 12));
+            Console.WriteLine($"個人番号: {id}");
+
+            // 基本4情報選択
+            var selectInformationData = new byte[] { 0x00, 0x02 };
+            var selectInformation = new byte[4 + 1 + selectInformationData.Length];
+            selectInformation[0] = 0x00; // CLA
+            selectInformation[1] = 0xA4; // INS
+            selectInformation[2] = 0x02; // P1
+            selectInformation[3] = 0x0C; // P2
+            selectInformation[4] = (byte)selectInformationData.Length; // Lc
+            selectInformationData.CopyTo(selectInformation.AsSpan(5, selectInformationData.Length));
+
+            Console.WriteLine("基本4情報選択...");
+            response = SendCommand(reader, selectInformation);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"基本4情報選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("基本4情報選択成功!");
+
+            // データ長読み取り
+            var readLength = new byte[] { 0x00, 0xB0, 0x00, 0x02, 0x01 };
+
+            Console.WriteLine("データ長読み取り...");
+            response = SendCommand(reader, readLength);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"データ長読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("データ長読み取り成功!");
+
+            var length = response.Data[0];
+            Console.WriteLine($"データ長: {length}");
+
+            // 基本4情報読み取り
+            var readInformation = new byte[] { 0x00, 0xB0, 0x00, 0x00, (byte)(3 + length) };
+
+            Console.WriteLine("基本4情報読み取り読み取り...");
+            response = SendCommand(reader, readInformation);
+            if (!IsSuccess(response))
+            {
+                Console.WriteLine($"基本4情報読み取り読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                return;
+            }
+            Console.WriteLine("基本4情報読み取り読み取り成功!");
+
+            // パース
+            var start = response.Data.IndexOf((byte)0xDF);
+            if (start < 0)
+            {
+                Console.WriteLine("パース失敗");
+                return;
             }
 
-            // 方法4: 公的個人認証APを試す
-            Console.WriteLine("\n=== 方法4: 公的個人認証AP（署名用） ===");
-
-            byte[] aid3 = new byte[] {
-            0xD3, 0x92, 0xF0, 0x00, 0x26, 0x01, 0x00, 0x00,
-            0x00, 0x01
-        };
-
-            sendBuffer = new byte[] {
-            0x00, 0xA4, 0x04, 0x0C,
-            (byte)aid3.Length
-        }.Concat(aid3).ToArray();
-
-            response = SendCommand(reader, sendBuffer);
-
-            if (IsSuccess(response))
-            {
-                // 証明書を読み取る
-                sendBuffer = new byte[] {
-                0x00, 0xA4, 0x02, 0x0C,
-                0x02,
-                0x00, 0x0A  // 証明書EF
-            };
-
-                Console.WriteLine("証明書EFを選択...");
-                response = SendCommand(reader, sendBuffer);
-
-                if (IsSuccess(response))
-                {
-                    Console.WriteLine("選択成功!");
-                    TryReadFile(reader);
-                }
-            }
+            var map = ParseTlv(response.Data[start..]);
+            Console.WriteLine($"制御情報(DF21): {Convert.ToHexString(map.GetValueOrDefault(0xDF21, []))}");
+            Console.WriteLine($"氏名(DF22): {Encoding.UTF8.GetString(map.GetValueOrDefault(0xDF22, []))}");
+            Console.WriteLine($"住所(DF23): {Encoding.UTF8.GetString(map.GetValueOrDefault(0xDF23, []))}");
+            Console.WriteLine($"生年月日(DF24): {Encoding.ASCII.GetString(map.GetValueOrDefault(0xDF24, []))}");
+            Console.WriteLine($"性別(DF25): {Encoding.ASCII.GetString(map.GetValueOrDefault(0xDF25, []))}");
         }
         catch (Exception ex)
         {
@@ -258,117 +223,6 @@ internal sealed class Reader : IDisposable
             reader.Disconnect(SCardReaderDisposition.Leave);
         }
     }
-
-    private void TryReadFile(ICardReader reader)
-    {
-        // READ BINARYを試す
-        var sendBuffer = new byte[] {
-            0x00, 0xB0,
-            0x00, 0x00,
-            0x00
-        };
-
-        Console.WriteLine("  READ BINARY...");
-        var response = SendCommand(reader, sendBuffer);
-
-        if (IsSuccess(response) && response.Data.Length > 0)
-        {
-            Console.WriteLine($"  成功! ({response.Data.Length}バイト)");
-            Console.WriteLine($"  HEX: {BitConverter.ToString(response.Data)}");
-            ParseRecordData(response.Data);
-            return;
-        }
-
-        // READ RECORDを試す
-        sendBuffer = new byte[] {
-            0x00, 0xB2,
-            0x01, 0x04,
-            0x00
-        };
-
-        Console.WriteLine("  READ RECORD...");
-        response = SendCommand(reader, sendBuffer);
-
-        if (IsSuccess(response) && response.Data.Length > 0)
-        {
-            Console.WriteLine($"  成功! ({response.Data.Length}バイト)");
-            Console.WriteLine($"  HEX: {BitConverter.ToString(response.Data)}");
-            ParseRecordData(response.Data);
-            return;
-        }
-
-        Console.WriteLine($"  読み取り失敗: SW={response.SW1:X2}{response.SW2:X2}");
-    }
-
-    private void ParseRecordData(byte[] data)
-    {
-        if (data.Length == 0)
-            return;
-
-        try
-        {
-            Console.WriteLine("\n--- データ解析 ---");
-
-            // UTF-8でデコードを試みる
-            try
-            {
-                var printableData = data.Where(b => b >= 0x20 || b == 0x0A || b == 0x0D).ToArray();
-
-                if (printableData.Length > 10)
-                {
-                    string text = Encoding.UTF8.GetString(printableData);
-                    Console.WriteLine($"テキスト抽出: {text}");
-                }
-            }
-            catch { }
-
-            // TLV構造を解析
-            ParseTLV(data);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"解析エラー: {ex.Message}");
-        }
-    }
-
-
-
-    private void ParseTLV(byte[] data)
-    {
-        int pos = 0;
-        while (pos < data.Length - 2)
-        {
-            byte tag = data[pos];
-            if (tag == 0x00 || tag == 0xFF) // パディング
-            {
-                pos++;
-                continue;
-            }
-
-            int length = data[pos + 1];
-            pos += 2;
-
-            if (pos + length > data.Length)
-                break;
-
-            byte[] value = new byte[length];
-            Array.Copy(data, pos, value, 0, length);
-
-            try
-            {
-                string valueStr = Encoding.UTF8.GetString(value);
-                Console.WriteLine($"Tag: 0x{tag:X2}, Length: {length}, Value: {valueStr}");
-            }
-            catch
-            {
-                Console.WriteLine($"Tag: 0x{tag:X2}, Length: {length}, Value: {BitConverter.ToString(value)}");
-            }
-
-            pos += length;
-        }
-    }
-
-
 
     private ResponseData SendCommand(ICardReader reader, byte[] command)
     {
@@ -388,59 +242,6 @@ internal sealed class Reader : IDisposable
         return response.SW1 == 0x90 && response.SW2 == 0x00;
     }
 
-    private int ParseDataLength(byte[] header)
-    {
-        // TLV形式のデータ長を解析
-        // 通常は header[1] にデータ長が入っている
-        if (header.Length < 2)
-            return 0;
-
-        if (header[1] <= 0x7F)
-        {
-            // 短形式
-            return header[1];
-        }
-        else
-        {
-            // 長形式
-            int numBytes = header[1] & 0x7F;
-            int length = 0;
-            for (int i = 0; i < numBytes && (2 + i) < header.Length; i++)
-            {
-                length = (length << 8) | header[2 + i];
-            }
-            return length;
-        }
-    }
-
-    private void ParseMyNumberCardData(byte[] data)
-    {
-        Console.WriteLine("\n=== 券面事項入力補助データ ===");
-
-        // TLVデータの解析
-        int pos = 0;
-        while (pos < data.Length)
-        {
-            if (pos + 2 > data.Length)
-                break;
-
-            byte tag = data[pos];
-            int length = data[pos + 1];
-            pos += 2;
-
-            if (pos + length > data.Length)
-                break;
-
-            byte[] value = new byte[length];
-            Array.Copy(data, pos, value, 0, length);
-            pos += length;
-
-            // タグに応じて表示
-            string valueStr = Encoding.UTF8.GetString(value);
-            Console.WriteLine($"Tag: 0x{tag:X2}, Length: {length}, Value: {valueStr}");
-        }
-    }
-
     class ResponseData
     {
         public byte[] Data { get; private set; }
@@ -458,11 +259,67 @@ internal sealed class Reader : IDisposable
             }
             else
             {
-                Data = new byte[0];
+                Data = [];
                 SW1 = 0x00;
                 SW2 = 0x00;
             }
         }
+    }
+
+    private static Dictionary<int, byte[]> ParseTlv(ReadOnlySpan<byte> tlvData)
+    {
+        var map = new Dictionary<int, byte[]>();
+
+        var index = 0;
+        while (index < tlvData.Length)
+        {
+            // タグ
+            if (index >= tlvData.Length)
+            {
+                break;
+            }
+
+            var tag1 = tlvData[index++];
+            int tag;
+
+            if (tag1 == 0xDF)
+            {
+                // 2バイトタグ (DFxx)
+                if (index >= tlvData.Length)
+                {
+                    break;
+                }
+
+                var tag2 = tlvData[index++];
+                tag = (tag1 << 8) | tag2;
+            }
+            else
+            {
+                // 1バイトタグ (FF や他のタグを想定)
+                tag = tag1;
+            }
+
+            // 長さ（1バイト長さ想定）
+            if (index >= tlvData.Length)
+            {
+                break;
+            }
+
+            var length = tlvData[index++];
+            if (index + length > tlvData.Length)
+            {
+                break;
+            }
+
+            var value = tlvData.Slice(index, length).ToArray();
+
+            // Override
+            map[tag] = value;
+
+            index += length;
+        }
+
+        return map;
     }
 
     public bool Start()
