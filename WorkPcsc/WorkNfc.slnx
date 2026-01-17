@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="WorkNfc/WorkNfc.csproj" />
   <Project Path="WorkRead/WorkRead.csproj" Id="b103cbaf-a93c-4a2c-ac4f-3909bbae550a" />
+  <Project Path="WorkSuica/WorkSuica.csproj" Id="b0c73d47-ea2e-47c9-a315-4e0a2492b412" />
 </Solution>
