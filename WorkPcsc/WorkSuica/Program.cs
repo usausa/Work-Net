@@ -1,15 +1,13 @@
 namespace WorkSuica;
 
 using PCSC;
-using PCSC.Iso7816;
-using PCSC.Monitoring;
+
 using System.Buffers.Binary;
 
 internal static class Program
 {
-    static void Main()
+    public static void Main()
     {
-        var monitor = MonitorFactory.Instance.Create(SCardScope.System);
         using var context = ContextFactory.Instance.Establish(SCardScope.System);
         var readers = context.GetReaders();
         if (readers.Length > 0)
@@ -33,7 +31,7 @@ internal static class Program
 
     private static void Process(ICardReader reader)
     {
-        // IDm取得 (FF:ベンダ独自 CA:GET DATA)
+        // IDm取得 FF:ベンダ独自 CA:ベンダ固有GET DATA
         var response = SendCommand(reader, CreateCommand(0xFF, 0xCA, 0x00, 0x00, 0x00));
         if (!response.IsSuccess())
         {
@@ -44,7 +42,7 @@ internal static class Program
         var idm = Convert.ToHexString(response.Data);
         Console.WriteLine($"IDm: {idm}");
 
-        // 基本情報選択 ベンダ独自SELECT? 0x008B
+        // 基本情報選択  FF:ベンダ独自 A4:ベンダ固有SELECT 0x008B
         response = SendCommand(reader, CreateCommand(0xFF, 0xA4, 0x00, 0x01, [0x8B, 0x00]));
         if (!response.IsSuccess())
         {
@@ -61,11 +59,11 @@ internal static class Program
 
         Console.WriteLine($"残高: \\{SuicaLogic.ExtractAccessBalance(response.Data)}");
 
-        // 履歴
+        // 利用履歴 FF:ベンダ独自 A4:ベンダ固有SELECT 0x090F
         response = SendCommand(reader, CreateCommand(0xFF, 0xA4, 0x00, 0x01, [0x0F, 0x09]));
         if (!response.IsSuccess())
         {
-            Console.WriteLine($"基本情報選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
+            Console.WriteLine($"利用履歴選択失敗: SW={response.SW1:X2}{response.SW2:X2}");
             return;
         }
 
@@ -74,7 +72,7 @@ internal static class Program
             response = SendCommand(reader, CreateCommand(0xFF, 0xB0, 0x00, (byte)i, 0x00));
             if (!response.IsSuccess())
             {
-                Console.WriteLine($"基本情報読取失敗: SW={response.SW1:X2}{response.SW2:X2}");
+                Console.WriteLine($"利用履歴読取失敗: SW={response.SW1:X2}{response.SW2:X2}");
                 return;
             }
 
