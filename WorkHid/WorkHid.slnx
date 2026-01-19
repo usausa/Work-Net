@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="WorkBasicHidSharp/WorkBasicHidSharp.csproj" Id="02b9816e-09af-48f9-95ce-0d716cfca810" />
   <Project Path="WorkHid/WorkHid.csproj" />
 </Solution>
