@@ -2,5 +2,6 @@
   <Project Path="WorkBasicHidLibrary/WorkBasicHidLibrary.csproj" Id="5f4091b4-c128-400c-8e5b-dde6494da335" />
   <Project Path="WorkBasicHidSharp/WorkBasicHidSharp.csproj" Id="02b9816e-09af-48f9-95ce-0d716cfca810" />
   <Project Path="WorkJoypad/WorkJoypad.csproj" Id="3bb2ccfc-211e-4dfe-9da5-53b71ee1c626" />
+  <Project Path="WorkTss/WorkTss.csproj" Id="7506fb68-75df-4555-a0cb-db87020190dc" />
   <Project Path="WorkUsbBasic/WorkUsbBasic.csproj" Id="74de4999-3518-4598-bcdc-e5d097bbcc87" />
 </Solution>
