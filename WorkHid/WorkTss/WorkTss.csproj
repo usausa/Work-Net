@@ -11,4 +11,10 @@
     <PackageReference Include="LibUsbDotNet" Version="2.2.75" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
