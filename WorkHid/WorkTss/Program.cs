@@ -10,11 +10,50 @@ using LibUsbDotNet.Main;
 
 internal static class Program
 {
+
+
     static void Main()
     {
+
         using var device = new TuringDeviceMinimal();
         try
         {
+            // 暗号化・復号化の検証
+            Console.WriteLine("=== Encryption/Decryption Test ===");
+            var originalData = TuringDeviceMinimal.BuildCommandPacketHeader(102);
+            Console.WriteLine($"Original data length: {originalData.Length} bytes");
+            Console.WriteLine($"Original data (first 20 bytes): {BitConverter.ToString(originalData, 0, Math.Min(20, originalData.Length))}");
+
+            var encrypted = TuringDeviceMinimal.EncryptCommandPacket(originalData);
+            Console.WriteLine($"Encrypted data length: {encrypted.Length} bytes");
+            Console.WriteLine($"Magic bytes: {encrypted[^2]}, {encrypted[^1]} (expected: 161, 26)");
+
+            var decrypted = TuringDeviceMinimal.DecryptCommandPacket(encrypted);
+            Console.WriteLine($"Decrypted data length: {decrypted.Length} bytes");
+            Console.WriteLine($"Decrypted data (first 20 bytes): {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
+
+            // データ一致確認
+            bool isMatch = true;
+            for (int i = 0; i < originalData.Length; i++)
+            {
+                if (originalData[i] != decrypted[i])
+                {
+                    isMatch = false;
+                    Console.WriteLine($"Mismatch at index {i}: original={originalData[i]}, decrypted={decrypted[i]}");
+                    break;
+                }
+            }
+
+            if (isMatch)
+            {
+                Console.WriteLine("✓ Encryption/Decryption test PASSED - Data matches!");
+            }
+            else
+            {
+                Console.WriteLine("✗ Encryption/Decryption test FAILED - Data mismatch!");
+            }
+            Console.WriteLine();
+
             // デバイス初期化
             if (!device.Initialize())
             {
@@ -22,20 +61,24 @@ internal static class Program
                 return;
             }
 
-            Console.WriteLine("Device initialized successfully");
+            //Console.WriteLine("Device initialized successfully");
+            device.SendPngBytes(File.ReadAllBytes("image.png"));
 
-            // PNGバイト配列を送信
-            var pngData = File.ReadAllBytes("image.png");
-            if (device.SendPngBytes(pngData))
-            {
-                Console.WriteLine("PNG bytes sent successfully");
-            }
+            device.SendPngBytes(File.ReadAllBytes("blue.png"));
 
-            // 画面クリア
-            if (device.ClearScreen())
-            {
-                Console.WriteLine("Screen cleared");
-            }
+
+            //// PNGバイト配列を送信
+            //var pngData = File.ReadAllBytes("image.png");
+            //if (device.SendPngBytes(pngData))
+            //{
+            //    Console.WriteLine("PNG bytes sent successfully");
+            //}
+
+            //// 画面クリア
+            //if (device.ClearScreen())
+            //{
+            //    Console.WriteLine("Screen cleared");
+            //}
         }
         catch (TuringDeviceException ex)
         {
@@ -115,7 +158,7 @@ public class TuringDeviceMinimal : IDisposable
     /// <summary>
     /// コマンドパケットヘッダーを構築
     /// </summary>
-    private byte[] BuildCommandPacketHeader(byte commandId)
+    public static byte[] BuildCommandPacketHeader(byte commandId)
     {
         var packet = ArrayPool<byte>.Shared.Rent(CMD_PACKET_SIZE);
         try
@@ -152,7 +195,7 @@ public class TuringDeviceMinimal : IDisposable
     /// <summary>
     /// DES-CBC暗号化（.NET標準ライブラリ使用）
     /// </summary>
-    private byte[] EncryptWithDES(byte[] data)
+    public static byte[] EncryptWithDES(byte[] data)
     {
         // 8バイト境界に切り上げ
         var paddedLen = (data.Length + 7) & ~7;
@@ -194,7 +237,7 @@ public class TuringDeviceMinimal : IDisposable
     /// <summary>
     /// コマンドパケットを暗号化して512バイトパケットに整形
     /// </summary>
-    private byte[] EncryptCommandPacket(byte[] data)
+    public static byte[] EncryptCommandPacket(byte[] data)
     {
         var encrypted = EncryptWithDES(data);
         var finalPacket = ArrayPool<byte>.Shared.Rent(FULL_PACKET_SIZE);
@@ -214,12 +257,74 @@ public class TuringDeviceMinimal : IDisposable
             // 結果をコピーして返す
             var result = new byte[FULL_PACKET_SIZE];
             Buffer.BlockCopy(finalPacket, 0, result, 0, FULL_PACKET_SIZE);
+
             return result;
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(finalPacket);
         }
+    }
+
+    /// <summary>
+    /// DES-CBC復号化（.NET標準ライブラリ使用）
+    /// </summary>
+    private static byte[] DecryptWithDES(byte[] encryptedData)
+    {
+        using var des = DES.Create();
+        des.Key = DES_KEY_BYTES;
+        des.IV = DES_KEY_BYTES;  // IVも同じ鍵を使用
+        des.Mode = CipherMode.CBC;
+        des.Padding = PaddingMode.None;  // 手動でパディング済み
+
+        using var decryptor = des.CreateDecryptor();
+        var decrypted = ArrayPool<byte>.Shared.Rent(encryptedData.Length);
+        try
+        {
+            var outputLen = decryptor.TransformBlock(encryptedData, 0, encryptedData.Length, decrypted, 0);
+
+            // 実際の復号化データのみをコピーして返す
+            var result = new byte[outputLen];
+            Buffer.BlockCopy(decrypted, 0, result, 0, outputLen);
+            return result;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(decrypted);
+        }
+    }
+
+    /// <summary>
+    /// 512バイトの暗号化パケットを復号化して500バイトのコマンドパケットを取得
+    /// </summary>
+    public static byte[] DecryptCommandPacket(byte[] encryptedPacket)
+    {
+        if (encryptedPacket == null || encryptedPacket.Length != FULL_PACKET_SIZE)
+        {
+            throw new ArgumentException($"Encrypted packet must be exactly {FULL_PACKET_SIZE} bytes");
+        }
+
+        // マジックバイトを確認
+        if (encryptedPacket[FULL_PACKET_SIZE - 2] != MAGIC_BYTES[0] ||
+            encryptedPacket[FULL_PACKET_SIZE - 1] != MAGIC_BYTES[1])
+        {
+            throw new ArgumentException("Invalid magic bytes in encrypted packet");
+        }
+
+        // 500バイトは8バイト境界に切り上げられて504バイトになっている
+        // 504バイトの暗号化データを取り出して復号化
+        var encryptedDataLen = ((CMD_PACKET_SIZE + 7) & ~7);  // 500 -> 504
+        var encryptedData = new byte[encryptedDataLen];
+        Buffer.BlockCopy(encryptedPacket, 0, encryptedData, 0, encryptedDataLen);
+
+        // DES復号化
+        var decrypted = DecryptWithDES(encryptedData);
+
+        // 500バイトのみを返す
+        var result = new byte[CMD_PACKET_SIZE];
+        Buffer.BlockCopy(decrypted, 0, result, 0, CMD_PACKET_SIZE);
+
+        return result;
     }
 
     /// <summary>
