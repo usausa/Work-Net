@@ -15,51 +15,94 @@ internal static class Program
 
     static void Main()
     {
-        // input.txtからHEXダンプを読み込み
-        Console.WriteLine("=== Processing input.txt ===");
+        using var device = new TuringDeviceMinimal();
         try
         {
-            var hexText = File.ReadAllText("input.txt");
-            var hexBytes = hexText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)
-                                   .Select(h => Convert.ToByte(h, 16))
-                                   .ToArray();
-
-            Console.WriteLine($"Read {hexBytes.Length} bytes from input.txt");
-
-            if (hexBytes.Length < 512)
+            // デバイス初期化
+            if (!device.Initialize())
             {
-                Console.WriteLine($"Error: Input file contains only {hexBytes.Length} bytes, need at least 512 bytes");
+                Console.WriteLine("Failed to initialize device");
                 return;
             }
 
-            // 後ろ512バイトを取り出す
-            var last512Bytes = new byte[512];
-            Buffer.BlockCopy(hexBytes, hexBytes.Length - 512, last512Bytes, 0, 512);
-            Console.WriteLine($"Extracted last 512 bytes");
-            Console.WriteLine($"Magic bytes check: {last512Bytes[^2]}, {last512Bytes[^1]} (expected: 161, 26)");
-
-            // 復号化
-            var decrypted = TuringDeviceMinimal.DecryptCommandPacket(last512Bytes);
-            Console.WriteLine($"Decrypted to {decrypted.Length} bytes");
-
-            // output.txtにHEXダンプで出力
-            var hexDump = string.Join(" ", decrypted.Select((b, i) =>
+            // 画面クリア
+            if (device.ClearScreen())
             {
-                var hex = b.ToString("x2");
-                // 16バイトごとに改行
-                return (i > 0 && i % 16 == 0) ? Environment.NewLine + hex : hex;
-            }));
+                Console.WriteLine("Screen cleared");
+            }
 
-            File.WriteAllText("output.txt", hexDump);
-            Console.WriteLine("Written decrypted data to output.txt");
-            Console.WriteLine($"First 20 bytes: {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
-            Console.WriteLine();
+            device.Brightness(0x42);
+            var ret = device.Rotate(3);
+
+            // PNGバイト配列を送信
+            var pngData = File.ReadAllBytes("image2.png");
+            if (device.SendPngBytes(pngData))
+            {
+                Console.WriteLine("PNG bytes sent successfully");
+            }
+
+            //for (var i = 0; i <= 100; i += 1)
+            //{
+            //    Console.WriteLine(i);
+            //    device.Brightness((byte)i);
+            //    Thread.Sleep(100);
+            //}
+
+        }
+        catch (TuringDeviceException ex)
+        {
+            Console.WriteLine($"Device error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing input.txt: {ex.Message}");
-            return;
+            Console.WriteLine($"Error: {ex.Message}");
         }
+
+        //// input.txtからHEXダンプを読み込み
+        //Console.WriteLine("=== Processing input.txt ===");
+        //try
+        //{
+        //    var hexText = File.ReadAllText("input.txt");
+        //    var hexBytes = hexText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+        //                           .Select(h => Convert.ToByte(h, 16))
+        //                           .ToArray();
+
+        //    Console.WriteLine($"Read {hexBytes.Length} bytes from input.txt");
+
+        //    if (hexBytes.Length < 512)
+        //    {
+        //        Console.WriteLine($"Error: Input file contains only {hexBytes.Length} bytes, need at least 512 bytes");
+        //        return;
+        //    }
+
+        //    // 後ろ512バイトを取り出す
+        //    var last512Bytes = new byte[512];
+        //    Buffer.BlockCopy(hexBytes, hexBytes.Length - 512, last512Bytes, 0, 512);
+        //    Console.WriteLine($"Extracted last 512 bytes");
+        //    Console.WriteLine($"Magic bytes check: {last512Bytes[^2]}, {last512Bytes[^1]} (expected: 161, 26)");
+
+        //    // 復号化
+        //    var decrypted = TuringDeviceMinimal.DecryptCommandPacket(last512Bytes);
+        //    Console.WriteLine($"Decrypted to {decrypted.Length} bytes");
+
+        //    // output.txtにHEXダンプで出力
+        //    var hexDump = string.Join(" ", decrypted.Select((b, i) =>
+        //    {
+        //        var hex = b.ToString("x2");
+        //        // 16バイトごとに改行
+        //        return (i > 0 && i % 16 == 0) ? Environment.NewLine + hex : hex;
+        //    }));
+
+        //    File.WriteAllText("output.txt", hexDump);
+        //    Console.WriteLine("Written decrypted data to output.txt");
+        //    Console.WriteLine($"First 20 bytes: {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
+        //    Console.WriteLine();
+        //}
+        //catch (Exception ex)
+        //{
+        //    Console.WriteLine($"Error processing input.txt: {ex.Message}");
+        //    return;
+        //}
 
         //using var device = new TuringDeviceMinimal();
         //try
@@ -509,6 +552,30 @@ public class TuringDeviceMinimal : IDisposable
         {
             ArrayPool<byte>.Shared.Return(fullPayload);
         }
+    }
+
+    public bool Brightness(byte value)
+    {
+        var cmdPacket = BuildCommandPacketHeader(14);
+
+        cmdPacket[8] = value;
+        // パケット暗号化
+        var encryptedPacket = EncryptCommandPacket(cmdPacket);
+
+        // 暗号化パケット + PNG生データを結合
+        return WriteToDevice(encryptedPacket);
+    }
+
+    public bool Rotate(byte value)
+    {
+        var cmdPacket = BuildCommandPacketHeader(13);
+
+        cmdPacket[8] = value;
+        // パケット暗号化
+        var encryptedPacket = EncryptCommandPacket(cmdPacket);
+
+        // 暗号化パケット + PNG生データを結合
+        return WriteToDevice(encryptedPacket);
     }
 
     /// <summary>
