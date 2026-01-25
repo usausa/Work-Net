@@ -3,6 +3,7 @@ namespace WorkTss;
 using System;
 using System.Buffers;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 using LibUsbDotNet;
@@ -14,80 +15,125 @@ internal static class Program
 
     static void Main()
     {
-
-        using var device = new TuringDeviceMinimal();
+        // input.txtからHEXダンプを読み込み
+        Console.WriteLine("=== Processing input.txt ===");
         try
         {
-            // 暗号化・復号化の検証
-            Console.WriteLine("=== Encryption/Decryption Test ===");
-            var originalData = TuringDeviceMinimal.BuildCommandPacketHeader(102);
-            Console.WriteLine($"Original data length: {originalData.Length} bytes");
-            Console.WriteLine($"Original data (first 20 bytes): {BitConverter.ToString(originalData, 0, Math.Min(20, originalData.Length))}");
+            var hexText = File.ReadAllText("input.txt");
+            var hexBytes = hexText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(h => Convert.ToByte(h, 16))
+                                   .ToArray();
 
-            var encrypted = TuringDeviceMinimal.EncryptCommandPacket(originalData);
-            Console.WriteLine($"Encrypted data length: {encrypted.Length} bytes");
-            Console.WriteLine($"Magic bytes: {encrypted[^2]}, {encrypted[^1]} (expected: 161, 26)");
+            Console.WriteLine($"Read {hexBytes.Length} bytes from input.txt");
 
-            var decrypted = TuringDeviceMinimal.DecryptCommandPacket(encrypted);
-            Console.WriteLine($"Decrypted data length: {decrypted.Length} bytes");
-            Console.WriteLine($"Decrypted data (first 20 bytes): {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
-
-            // データ一致確認
-            bool isMatch = true;
-            for (int i = 0; i < originalData.Length; i++)
+            if (hexBytes.Length < 512)
             {
-                if (originalData[i] != decrypted[i])
-                {
-                    isMatch = false;
-                    Console.WriteLine($"Mismatch at index {i}: original={originalData[i]}, decrypted={decrypted[i]}");
-                    break;
-                }
-            }
-
-            if (isMatch)
-            {
-                Console.WriteLine("✓ Encryption/Decryption test PASSED - Data matches!");
-            }
-            else
-            {
-                Console.WriteLine("✗ Encryption/Decryption test FAILED - Data mismatch!");
-            }
-            Console.WriteLine();
-
-            // デバイス初期化
-            if (!device.Initialize())
-            {
-                Console.WriteLine("Failed to initialize device");
+                Console.WriteLine($"Error: Input file contains only {hexBytes.Length} bytes, need at least 512 bytes");
                 return;
             }
 
-            //Console.WriteLine("Device initialized successfully");
-            device.SendPngBytes(File.ReadAllBytes("image.png"));
+            // 後ろ512バイトを取り出す
+            var last512Bytes = new byte[512];
+            Buffer.BlockCopy(hexBytes, hexBytes.Length - 512, last512Bytes, 0, 512);
+            Console.WriteLine($"Extracted last 512 bytes");
+            Console.WriteLine($"Magic bytes check: {last512Bytes[^2]}, {last512Bytes[^1]} (expected: 161, 26)");
 
-            device.SendPngBytes(File.ReadAllBytes("blue.png"));
+            // 復号化
+            var decrypted = TuringDeviceMinimal.DecryptCommandPacket(last512Bytes);
+            Console.WriteLine($"Decrypted to {decrypted.Length} bytes");
 
+            // output.txtにHEXダンプで出力
+            var hexDump = string.Join(" ", decrypted.Select((b, i) =>
+            {
+                var hex = b.ToString("x2");
+                // 16バイトごとに改行
+                return (i > 0 && i % 16 == 0) ? Environment.NewLine + hex : hex;
+            }));
 
-            //// PNGバイト配列を送信
-            //var pngData = File.ReadAllBytes("image.png");
-            //if (device.SendPngBytes(pngData))
-            //{
-            //    Console.WriteLine("PNG bytes sent successfully");
-            //}
-
-            //// 画面クリア
-            //if (device.ClearScreen())
-            //{
-            //    Console.WriteLine("Screen cleared");
-            //}
-        }
-        catch (TuringDeviceException ex)
-        {
-            Console.WriteLine($"Device error: {ex.Message}");
+            File.WriteAllText("output.txt", hexDump);
+            Console.WriteLine("Written decrypted data to output.txt");
+            Console.WriteLine($"First 20 bytes: {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
+            Console.WriteLine();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Error processing input.txt: {ex.Message}");
+            return;
         }
+
+        //using var device = new TuringDeviceMinimal();
+        //try
+        //{
+        //    // 暗号化・復号化の検証
+        //    Console.WriteLine("=== Encryption/Decryption Test ===");
+        //    var originalData = TuringDeviceMinimal.BuildCommandPacketHeader(102);
+        //    Console.WriteLine($"Original data length: {originalData.Length} bytes");
+        //    Console.WriteLine($"Original data (first 20 bytes): {BitConverter.ToString(originalData, 0, Math.Min(20, originalData.Length))}");
+
+        //    var encrypted = TuringDeviceMinimal.EncryptCommandPacket(originalData);
+        //    Console.WriteLine($"Encrypted data length: {encrypted.Length} bytes");
+        //    Console.WriteLine($"Magic bytes: {encrypted[^2]}, {encrypted[^1]} (expected: 161, 26)");
+
+        //    var decrypted = TuringDeviceMinimal.DecryptCommandPacket(encrypted);
+        //    Console.WriteLine($"Decrypted data length: {decrypted.Length} bytes");
+        //    Console.WriteLine($"Decrypted data (first 20 bytes): {BitConverter.ToString(decrypted, 0, Math.Min(20, decrypted.Length))}");
+
+        //    // データ一致確認
+        //    bool isMatch = true;
+        //    for (int i = 0; i < originalData.Length; i++)
+        //    {
+        //        if (originalData[i] != decrypted[i])
+        //        {
+        //            isMatch = false;
+        //            Console.WriteLine($"Mismatch at index {i}: original={originalData[i]}, decrypted={decrypted[i]}");
+        //            break;
+        //        }
+        //    }
+
+        //    if (isMatch)
+        //    {
+        //        Console.WriteLine("✓ Encryption/Decryption test PASSED - Data matches!");
+        //    }
+        //    else
+        //    {
+        //        Console.WriteLine("✗ Encryption/Decryption test FAILED - Data mismatch!");
+        //    }
+        //    Console.WriteLine();
+
+        //    // デバイス初期化
+        //    if (!device.Initialize())
+        //    {
+        //        Console.WriteLine("Failed to initialize device");
+        //        return;
+        //    }
+
+        //    //Console.WriteLine("Device initialized successfully");
+        //    device.SendPngBytes(File.ReadAllBytes("image.png"));
+
+        //    device.SendPngBytes(File.ReadAllBytes("blue.png"));
+
+
+        //    //// PNGバイト配列を送信
+        //    //var pngData = File.ReadAllBytes("image.png");
+        //    //if (device.SendPngBytes(pngData))
+        //    //{
+        //    //    Console.WriteLine("PNG bytes sent successfully");
+        //    //}
+
+        //    //// 画面クリア
+        //    //if (device.ClearScreen())
+        //    //{
+        //    //    Console.WriteLine("Screen cleared");
+        //    //}
+        //}
+        //catch (TuringDeviceException ex)
+        //{
+        //    Console.WriteLine($"Device error: {ex.Message}");
+        //}
+        //catch (Exception ex)
+        //{
+        //    Console.WriteLine($"Error: {ex.Message}");
+        //}
     }
 }
 
