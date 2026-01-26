@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WorkPi/WorkPi.csproj" />
+  <Project Path="WorkWatch/WorkWatch.csproj" />
+</Solution>
