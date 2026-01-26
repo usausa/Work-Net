@@ -1,4 +1,11 @@
 <Solution>
-  <Project Path="WorkPi/WorkPi.csproj" />
+  <Folder Name="/Info/">
+    <Project Path="WorkPi/WorkPi.csproj" />
+  </Folder>
+  <Folder Name="/IO/">
+    <Project Path="WorkBlink/WorkBlink.csproj" />
+  </Folder>
+  <Folder Name="/Other/" />
+  <Project Path="WorkMailbox/WorkMailbox.csproj" Id="359ade0e-a003-4563-9a9e-f9a6e29be882" />
   <Project Path="WorkWatch/WorkWatch.csproj" />
 </Solution>
