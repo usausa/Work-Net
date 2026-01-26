@@ -1,8 +1,9 @@
-using System.Buffers;
-using System.Buffers.Binary;
-using System.Security.Cryptography;
 using LibUsbDotNet;
 using LibUsbDotNet.Main;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace WorkTssUsb;
 
@@ -19,7 +20,39 @@ internal class Program
         }
 
         using var screen = new ScreenDevice(device);
-        screen.SetBrightness(10);
+
+        if (!screen.Sync())
+        {
+            Debug.WriteLine("****0");
+        }
+
+        if (!screen.SetOrientation(Orientation.Portrait))
+        {
+            Debug.WriteLine("****1");
+        }
+        if (!screen.SetOrientation(Orientation.ReversePortrait))
+        {
+            Debug.WriteLine("****2");
+        }
+        if (!screen.SetOrientation(Orientation.Portrait))
+        {
+            Debug.WriteLine("****3");
+        }
+
+        if (!screen.DrawJpeg(File.ReadAllBytes("usa.jpg")))
+        {
+            Debug.WriteLine("****3");
+        }
+
+        for (var i = 0; i <= 100; i++)
+        {
+            var ret = screen.SetBrightness((byte)i);
+            if (!ret)
+            {
+                Debug.WriteLine("*" + i);
+            }
+            Thread.Sleep(1);
+        }
 
         UsbDevice.Exit();
     }
@@ -75,6 +108,9 @@ public sealed class ScreenDevice : IDisposable
 
         reader = usbDevice.OpenEndpointReader(ReadEndpointID.Ep01);
         writer = usbDevice.OpenEndpointWriter(WriteEndpointID.Ep01);
+
+        des.Key = KeyIv;
+        des.IV = KeyIv;
 
         commandBuffer = ArrayPool<byte>.Shared.Rent(PaddingCommandSize);
         encryptedBuffer = ArrayPool<byte>.Shared.Rent(PacketSize);
@@ -141,6 +177,7 @@ public sealed class ScreenDevice : IDisposable
         encryptedBuffer[PacketSize - 2] = 0xA1;
         encryptedBuffer[PacketSize - 1] = 0x1A;
 
+        // TODO Timeout behavior ?
         var errorCode = writer.Write(encryptedBuffer, 0, PacketSize, WriteTimeout, out var transferLength);
         if ((errorCode != ErrorCode.None) || (transferLength != PacketSize))
         {
@@ -157,31 +194,30 @@ public sealed class ScreenDevice : IDisposable
         }
 
         errorCode = reader.Read(readBuffer, 0, PacketSize, ReadTimeout, out transferLength);
-        if ((errorCode != ErrorCode.None) || (transferLength != PacketSize))
-        {
-            return false;
-        }
+        var result = (errorCode == ErrorCode.None) && (transferLength == PacketSize);
 
-        // TODO
+        // TODO Discard ?
+        reader.ReadFlush();
 
-        return false;
+        return result;
     }
 
     // --------------------------------------------------------------------------------
     // Command
     // --------------------------------------------------------------------------------
 
-    public bool DrawPng(byte[] imageBytes)
+    // TODO reset?
+
+    public bool Sync()
     {
-        PrepareCommandHeader(102);
-        BinaryPrimitives.WriteInt32BigEndian(commandBuffer.AsSpan(8, 4), imageBytes.Length);
+        PrepareCommandHeader(10);
         return RequestResponse();
     }
 
-    public bool DrawJpeg(byte[] imageBytes)
+    public bool SetOrientation(Orientation value)
     {
-        PrepareCommandHeader(101);
-        BinaryPrimitives.WriteInt32BigEndian(commandBuffer.AsSpan(8, 4), imageBytes.Length);
+        PrepareCommandHeader(13);
+        commandBuffer[8] = (byte)value;
         return RequestResponse();
     }
 
@@ -192,10 +228,19 @@ public sealed class ScreenDevice : IDisposable
         return RequestResponse();
     }
 
-    public bool SetOrientation(Orientation value)
+    public bool DrawPng(byte[] imageBytes)
     {
-        PrepareCommandHeader(12);
-        commandBuffer[8] = (byte)value;
-        return RequestResponse();
+        PrepareCommandHeader(102);
+        BinaryPrimitives.WriteInt32BigEndian(commandBuffer.AsSpan(8, 4), imageBytes.Length);
+        return RequestResponse(imageBytes);
     }
+
+    public bool DrawJpeg(byte[] imageBytes)
+    {
+        PrepareCommandHeader(101);
+        BinaryPrimitives.WriteInt32BigEndian(commandBuffer.AsSpan(8, 4), imageBytes.Length);
+        return RequestResponse(imageBytes);
+    }
+
+    // TODO clear
 }
