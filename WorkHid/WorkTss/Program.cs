@@ -32,14 +32,19 @@ internal static class Program
             }
 
             device.Brightness(0x42);
-            var ret = device.Rotate(3);
+            var ret = device.Rotate(0);
 
-            // PNGバイト配列を送信
-            var pngData = File.ReadAllBytes("image2.png");
-            if (device.SendPngBytes(pngData))
+            // Jpegバイト配列を送信
+            if (device.SendJpegBytes(File.ReadAllBytes("usa.jpg")))
             {
-                Console.WriteLine("PNG bytes sent successfully");
+                Console.WriteLine("Jpg bytes sent successfully");
             }
+
+            //// PNGバイト配列を送信
+            //if (device.SendPngBytes(File.ReadAllBytes("image2.png")))
+            //{
+            //    Console.WriteLine("PNG bytes sent successfully");
+            //}
 
             //for (var i = 0; i <= 100; i += 1)
             //{
@@ -524,6 +529,47 @@ public class TuringDeviceMinimal : IDisposable
 
         // コマンドパケット作成（ID 102）
         var cmdPacket = BuildCommandPacketHeader(102);
+
+        // 画像サイズをビッグエンディアンで格納（バイト8-11）
+        cmdPacket[8] = (byte)((imgSize >> 24) & 0xFF);
+        cmdPacket[9] = (byte)((imgSize >> 16) & 0xFF);
+        cmdPacket[10] = (byte)((imgSize >> 8) & 0xFF);
+        cmdPacket[11] = (byte)(imgSize & 0xFF);
+
+        // パケット暗号化
+        var encryptedPacket = EncryptCommandPacket(cmdPacket);
+
+        // 暗号化パケット + PNG生データを結合
+        var fullPayload = ArrayPool<byte>.Shared.Rent(encryptedPacket.Length + pngData.Length);
+        try
+        {
+            Buffer.BlockCopy(encryptedPacket, 0, fullPayload, 0, encryptedPacket.Length);
+            Buffer.BlockCopy(pngData, 0, fullPayload, encryptedPacket.Length, pngData.Length);
+
+            // 実際のペイロードサイズ分のみを送信用に切り出す
+            var payload = new byte[encryptedPacket.Length + pngData.Length];
+            Buffer.BlockCopy(fullPayload, 0, payload, 0, payload.Length);
+
+            // USB経由で送信
+            return WriteToDevice(payload);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(fullPayload);
+        }
+    }
+
+    public bool SendJpegBytes(byte[] pngData)
+    {
+        if (pngData == null || pngData.Length == 0)
+        {
+            throw new ArgumentException("PNG data cannot be null or empty");
+        }
+
+        var imgSize = pngData.Length;
+
+        // コマンドパケット作成（ID 102）
+        var cmdPacket = BuildCommandPacketHeader(101);
 
         // 画像サイズをビッグエンディアンで格納（バイト8-11）
         cmdPacket[8] = (byte)((imgSize >> 24) & 0xFF);
