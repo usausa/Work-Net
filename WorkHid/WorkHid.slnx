@@ -4,6 +4,7 @@
   <Project Path="WorkCryptBenchmark/WorkCryptBenchmark.csproj" Id="00d24065-ea21-409b-9a6a-ecd8eccf6809" />
   <Project Path="WorkFile/WorkFile.csproj" Id="0004da8c-130a-41f1-a78c-dbda53b23914" />
   <Project Path="WorkJoypad/WorkJoypad.csproj" Id="3bb2ccfc-211e-4dfe-9da5-53b71ee1c626" />
+  <Project Path="WorkPng/WorkPng.csproj" Id="e06efb9c-fa85-4474-a90e-e35e066b9a89" />
   <Project Path="WorkTss/WorkTss.csproj" Id="7506fb68-75df-4555-a0cb-db87020190dc" />
   <Project Path="WorkTssUsb/WorkTssUsb.csproj" Id="715d721f-5ca9-4817-924a-f4f0d45169bc" />
   <Project Path="WorkUsbBasic/WorkUsbBasic.csproj" Id="74de4999-3518-4598-bcdc-e5d097bbcc87" />
