@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Analyzers.ruleset" />
+    <File Path="CodeCoverage.runsettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <File Path="MapperLibrary.props" />
+    <File Path="MapperLibrary.sln.DotSettings" />
+  </Folder>
+  <Project Path="Develop/Develop.csproj" DefaultStartup="true" />
+  <Project Path="MapperLibrary/MapperLibrary.csproj">
+    <BuildDependency Project="MapperLibrary.Generator/MapperLibrary.Generator.csproj" />
+  </Project>
+  <Project Path="MapperLibrary.Generator/MapperLibrary.Generator.csproj" />
+  <Project Path="MapperLibrary.Tests/MapperLibrary.Tests.csproj" />
+</Solution>
