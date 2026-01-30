@@ -684,6 +684,7 @@ public sealed class PgDataReader : DbDataReader
     private readonly PgConnection _connection;
     private readonly CommandBehavior _behavior;
     private PgColumnInfo[]? _columns;
+    private int _columnCount;
     private bool _hasRows;
     private bool _firstRowRead;
     private bool _isClosed;
@@ -701,7 +702,7 @@ public sealed class PgDataReader : DbDataReader
         _behavior = behavior;
     }
 
-    public override int FieldCount => _columns?.Length ?? 0;
+    public override int FieldCount => _columnCount;
     public override int RecordsAffected => -1;
     public override bool HasRows => _hasRows;
     public override bool IsClosed => _isClosed;
@@ -730,10 +731,10 @@ public sealed class PgDataReader : DbDataReader
         if (result.State == PgReadState.Columns)
         {
             _columns = result.Columns;
-            // オフセット/長さ配列を確保
-            var columnCount = _columns!.Length;
-            _offsets = new int[columnCount];
-            _lengths = new int[columnCount];
+            // オフセット/長さ配列を確保（プールから取得）
+            _columnCount = _columns!.Length;
+            _offsets = ArrayPool<int>.Shared.Rent(_columnCount);
+            _lengths = ArrayPool<int>.Shared.Rent(_columnCount);
             result = await _context.ReadNextRowAsync(this, cancellationToken).ConfigureAwait(false);
         }
 
@@ -775,6 +776,23 @@ public sealed class PgDataReader : DbDataReader
         if (_isClosed) return;
         _isClosed = true;
         _context.Complete();
+
+        // プールからのバッファを返却
+        if (_columns != null)
+        {
+            ArrayPool<PgColumnInfo>.Shared.Return(_columns);
+            _columns = null;
+        }
+        if (_offsets != null)
+        {
+            ArrayPool<int>.Shared.Return(_offsets);
+            _offsets = null;
+        }
+        if (_lengths != null)
+        {
+            ArrayPool<int>.Shared.Return(_lengths);
+            _lengths = null;
+        }
 
         // ストリームバッファへの参照をクリア（所有していないので返却不要）
         _rowBuffer = null;
@@ -1619,7 +1637,7 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
     private static PgColumnInfo[] ParseRowDescriptionArray(ReadOnlySpan<byte> payload)
     {
         var fieldCount = BinaryPrimitives.ReadInt16BigEndian(payload);
-        var columns = new PgColumnInfo[fieldCount];
+        var columns = ArrayPool<PgColumnInfo>.Shared.Rent(fieldCount);
         var offset = 2;
 
         for (int i = 0; i < fieldCount; i++)
