@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Buffers.Text;
 using System.Collections;
 using System.Data;
 using System.Data.Common;
@@ -426,8 +427,8 @@ public sealed class PgCommand : DbCommand
     {
         ValidateCommand();
         var sql = BuildSql();
-        var result = await _connection!.Protocol.ExecuteQueryAsync(sql, cancellationToken);
-        return new PgDataReader(result, _connection, behavior);
+        var context = await _connection!.Protocol.ExecuteQueryStreamingAsync(sql, cancellationToken);
+        return new PgDataReader(context, _connection, behavior);
     }
 
     public override void Prepare()
@@ -675,26 +676,29 @@ public sealed class PgParameterCollection : DbParameterCollection
 }
 
 /// <summary>
-/// PostgreSQLデータリーダー (DbDataReader実装)
+/// PostgreSQLデータリーダー (DbDataReader実装) - ストリーミング対応
 /// </summary>
 public sealed class PgDataReader : DbDataReader
 {
-    private readonly PgQueryResult _result;
+    private readonly PgStreamingQueryContext _context;
     private readonly PgConnection _connection;
     private readonly CommandBehavior _behavior;
-    private int _currentRow = -1;
+    private PgColumnInfo[]? _columns;
+    private PgRowData _currentRow;
+    private bool _hasRows;
+    private bool _firstRowRead;
     private bool _isClosed;
 
-    internal PgDataReader(PgQueryResult result, PgConnection connection, CommandBehavior behavior)
+    internal PgDataReader(PgStreamingQueryContext context, PgConnection connection, CommandBehavior behavior)
     {
-        _result = result;
+        _context = context;
         _connection = connection;
         _behavior = behavior;
     }
 
-    public override int FieldCount => _result.Columns.Count;
+    public override int FieldCount => _columns?.Length ?? 0;
     public override int RecordsAffected => -1;
-    public override bool HasRows => _result.Rows.Count > 0;
+    public override bool HasRows => _hasRows;
     public override bool IsClosed => _isClosed;
     public override int Depth => 0;
 
@@ -703,17 +707,34 @@ public sealed class PgDataReader : DbDataReader
 
     public override bool Read()
     {
-        if (_isClosed)
-            return false;
-
-        _currentRow++;
-        return _currentRow < _result.Rows.Count;
+        return ReadAsync(CancellationToken.None).GetAwaiter().GetResult();
     }
 
     public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
-        return Read();
+        if (_isClosed)
+            return false;
+
+        var result = await _context.ReadNextRowAsync(cancellationToken);
+
+        if (result.IsColumns)
+        {
+            _columns = result.ColumnsData;
+            result = await _context.ReadNextRowAsync(cancellationToken);
+        }
+
+        if (result.IsRow)
+        {
+            _currentRow = result.RowData;
+            if (!_firstRowRead)
+            {
+                _hasRows = true;
+                _firstRowRead = true;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     public override bool NextResult()
@@ -721,15 +742,16 @@ public sealed class PgDataReader : DbDataReader
         return false;
     }
 
-    public override async Task<bool> NextResultAsync(CancellationToken cancellationToken)
+    public override Task<bool> NextResultAsync(CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
-        return false;
+        return Task.FromResult(false);
     }
 
     public override void Close()
     {
+        if (_isClosed) return;
         _isClosed = true;
+        _context.Complete();
 
         if ((_behavior & CommandBehavior.CloseConnection) != 0)
         {
@@ -737,21 +759,26 @@ public sealed class PgDataReader : DbDataReader
         }
     }
 
-    public override async Task CloseAsync()
+
+    public override Task CloseAsync()
     {
         Close();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool GetBoolean(int ordinal)
     {
-        var value = GetString(ordinal);
-        return value == "t" || value == "true" || value == "1";
+        var span = _currentRow.GetValueSpan(ordinal);
+        return span.Length > 0 && (span[0] == 't' || span[0] == '1');
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override byte GetByte(int ordinal)
     {
-        return byte.Parse(GetString(ordinal));
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out byte value, out _);
+        return value;
     }
 
     public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length)
@@ -759,9 +786,11 @@ public sealed class PgDataReader : DbDataReader
         throw new NotSupportedException();
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override char GetChar(int ordinal)
     {
-        return GetString(ordinal)[0];
+        var span = _currentRow.GetValueSpan(ordinal);
+        return (char)span[0];
     }
 
     public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length)
@@ -775,92 +804,121 @@ public sealed class PgDataReader : DbDataReader
         return copyLength;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override DateTime GetDateTime(int ordinal)
     {
-        return DateTime.Parse(GetString(ordinal));
+        // PostgreSQLのtimestamp形式をパース
+        var span = _currentRow.GetValueSpan(ordinal);
+        Span<char> chars = stackalloc char[span.Length];
+        var charCount = Encoding.UTF8.GetChars(span, chars);
+        return DateTime.Parse(chars.Slice(0, charCount));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override decimal GetDecimal(int ordinal)
     {
-        return decimal.Parse(GetString(ordinal), System.Globalization.CultureInfo.InvariantCulture);
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out decimal value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override double GetDouble(int ordinal)
     {
-        return double.Parse(GetString(ordinal), System.Globalization.CultureInfo.InvariantCulture);
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out double value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override float GetFloat(int ordinal)
     {
-        return float.Parse(GetString(ordinal), System.Globalization.CultureInfo.InvariantCulture);
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out float value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override Guid GetGuid(int ordinal)
     {
-        return Guid.Parse(GetString(ordinal));
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out Guid value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override short GetInt16(int ordinal)
     {
-        return short.Parse(GetString(ordinal));
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out short value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetInt32(int ordinal)
     {
-        return int.Parse(GetString(ordinal));
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out int value, out _);
+        return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override long GetInt64(int ordinal)
     {
-        return long.Parse(GetString(ordinal));
+        var span = _currentRow.GetValueSpan(ordinal);
+        Utf8Parser.TryParse(span, out long value, out _);
+        return value;
     }
 
     public override string GetName(int ordinal)
     {
-        return _result.Columns[ordinal].Name;
+        return _columns![ordinal].Name;
     }
 
     public override int GetOrdinal(string name)
     {
-        for (int i = 0; i < _result.Columns.Count; i++)
+        var columns = _columns!;
+        for (int i = 0; i < columns.Length; i++)
         {
-            if (_result.Columns[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            if (columns[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                 return i;
         }
         throw new IndexOutOfRangeException($"カラム '{name}' が見つかりません");
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override string GetString(int ordinal)
     {
-        return GetCurrentRow()[ordinal] ?? throw new InvalidCastException("値がNULLです");
+        var span = _currentRow.GetValueSpan(ordinal);
+        return Encoding.UTF8.GetString(span);
     }
 
     public override object GetValue(int ordinal)
     {
-        var value = GetCurrentRow()[ordinal];
-        return value == null ? DBNull.Value : value;
+        if (IsDBNull(ordinal))
+            return DBNull.Value;
+        return GetString(ordinal);
     }
 
     public override int GetValues(object[] values)
     {
-        var row = GetCurrentRow();
-        var count = Math.Min(values.Length, row.Count);
+        var count = Math.Min(values.Length, _currentRow.ColumnCount);
         for (int i = 0; i < count; i++)
         {
-            values[i] = row[i] == null ? DBNull.Value : row[i]!;
+            values[i] = IsDBNull(i) ? DBNull.Value : GetString(i);
         }
         return count;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool IsDBNull(int ordinal)
     {
-        return GetCurrentRow()[ordinal] == null;
+        return _currentRow.IsNull(ordinal);
     }
 
-    public override async Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
+    public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken)
     {
-        await Task.CompletedTask;
-        return IsDBNull(ordinal);
+        return Task.FromResult(IsDBNull(ordinal));
     }
 
     public override string GetDataTypeName(int ordinal)
@@ -878,19 +936,11 @@ public sealed class PgDataReader : DbDataReader
         return new DbEnumerator(this, closeReader: false);
     }
 
-    private List<string?> GetCurrentRow()
-    {
-        if (_currentRow < 0 || _currentRow >= _result.Rows.Count)
-            throw new InvalidOperationException("データがありません");
-
-        return _result.Rows[_currentRow];
-    }
-
-    public override async ValueTask DisposeAsync()
+    public override ValueTask DisposeAsync()
     {
         Close();
-        await Task.CompletedTask;
         GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
     }
 }
 
@@ -913,6 +963,11 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
     private string _user = "";
     private string _password = "";
 
+    // ストリーミング読み込み用バッファ
+    private byte[] _streamBuffer = null!;
+    private int _streamBufferPos;
+    private int _streamBufferLen;
+
     public async Task ConnectAsync(string host, int port, string database, string user, string password, CancellationToken cancellationToken)
     {
         _user = user;
@@ -924,6 +979,7 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
 
         _readBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
         _writeBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
+        _streamBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize * 4);
 
         await SendStartupMessageAsync(database, user, cancellationToken);
         await HandleAuthenticationAsync(cancellationToken);
@@ -1163,6 +1219,92 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
         }
     }
 
+    public async Task<PgStreamingQueryContext> ExecuteQueryStreamingAsync(string query, CancellationToken cancellationToken)
+    {
+        await SendQueryMessageAsync(query, cancellationToken);
+        return new PgStreamingQueryContext(this, cancellationToken);
+    }
+
+    internal async Task<PgStreamingReadResult> ReadNextRowStreamingAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            // ヘッダー読み込み (1バイトタイプ + 4バイト長さ)
+            await EnsureBufferedAsync(5, cancellationToken);
+            var messageType = (char)_streamBuffer[_streamBufferPos];
+            var length = BinaryPrimitives.ReadInt32BigEndian(_streamBuffer.AsSpan(_streamBufferPos + 1)) - 4;
+            _streamBufferPos += 5;
+
+            // ペイロード読み込み
+            await EnsureBufferedAsync(length, cancellationToken);
+            var payload = _streamBuffer.AsSpan(_streamBufferPos, length);
+
+            switch (messageType)
+            {
+                case 'T':
+                    var columns = ParseRowDescriptionArray(payload);
+                    _streamBufferPos += length;
+                    return PgStreamingReadResult.CreateColumns(columns);
+
+                case 'D':
+                    var row = ParseDataRowStreaming(payload);
+                    _streamBufferPos += length;
+                    return PgStreamingReadResult.CreateRow(row);
+
+                case 'C':
+                    _streamBufferPos += length;
+                    break;
+
+                case 'Z':
+                    _streamBufferPos += length;
+                    return PgStreamingReadResult.CreateEnd();
+
+                case 'E':
+                    var error = ParseErrorMessage(payload);
+                    _streamBufferPos += length;
+                    throw new PostgresException($"クエリエラー: {error}");
+
+                default:
+                    _streamBufferPos += length;
+                    break;
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task EnsureBufferedAsync(int count, CancellationToken cancellationToken)
+    {
+        var available = _streamBufferLen - _streamBufferPos;
+        if (available >= count)
+            return;
+
+        // 残りデータを先頭に移動
+        if (available > 0)
+        {
+            Buffer.BlockCopy(_streamBuffer, _streamBufferPos, _streamBuffer, 0, available);
+        }
+        _streamBufferPos = 0;
+        _streamBufferLen = available;
+
+        // 必要なサイズまでバッファを拡張
+        if (count > _streamBuffer.Length)
+        {
+            var newBuffer = ArrayPool<byte>.Shared.Rent(count);
+            Buffer.BlockCopy(_streamBuffer, 0, newBuffer, 0, available);
+            ArrayPool<byte>.Shared.Return(_streamBuffer);
+            _streamBuffer = newBuffer;
+        }
+
+        // 必要な分を読み込み
+        while (_streamBufferLen < count)
+        {
+            var read = await _stream!.ReadAsync(_streamBuffer.AsMemory(_streamBufferLen), cancellationToken);
+            if (read == 0)
+                throw new PostgresException("接続が閉じられました");
+            _streamBufferLen += read;
+        }
+    }
+
     public async Task<PgQueryResult> ExecuteQueryAsync(string query, CancellationToken cancellationToken)
     {
         var result = new PgQueryResult();
@@ -1324,6 +1466,51 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
         return columns;
     }
 
+    private static PgColumnInfo[] ParseRowDescriptionArray(ReadOnlySpan<byte> payload)
+    {
+        var fieldCount = BinaryPrimitives.ReadInt16BigEndian(payload);
+        var columns = new PgColumnInfo[fieldCount];
+        var offset = 2;
+
+        for (int i = 0; i < fieldCount; i++)
+        {
+            var nameEnd = payload.Slice(offset).IndexOf((byte)0);
+            var name = Encoding.UTF8.GetString(payload.Slice(offset, nameEnd));
+            offset += nameEnd + 1;
+
+            var typeOid = BinaryPrimitives.ReadInt32BigEndian(payload.Slice(offset + 6));
+            offset += 18;
+
+            columns[i] = new PgColumnInfo(name, typeOid);
+        }
+
+        return columns;
+    }
+
+    private static PgRowData ParseDataRowStreaming(ReadOnlySpan<byte> payload)
+    {
+        var columnCount = BinaryPrimitives.ReadInt16BigEndian(payload);
+        var offsets = new int[columnCount];
+        var lengths = new int[columnCount];
+        var currentOffset = 2;
+
+        for (int i = 0; i < columnCount; i++)
+        {
+            var length = BinaryPrimitives.ReadInt32BigEndian(payload.Slice(currentOffset));
+            currentOffset += 4;
+
+            offsets[i] = currentOffset;
+            lengths[i] = length;
+
+            if (length > 0)
+                currentOffset += length;
+        }
+
+        // データをコピー（バッファは再利用されるため）
+        var data = payload.ToArray();
+        return new PgRowData(data, offsets, lengths);
+    }
+
     private static List<string?> ParseDataRow(ReadOnlySpan<byte> payload, int columnCount)
     {
         var values = new List<string?>(columnCount);
@@ -1448,6 +1635,12 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
             ArrayPool<byte>.Shared.Return(_writeBuffer);
             _writeBuffer = null;
         }
+
+        if (_streamBuffer != null)
+        {
+            ArrayPool<byte>.Shared.Return(_streamBuffer);
+            _streamBuffer = null!;
+        }
     }
 }
 
@@ -1457,6 +1650,98 @@ internal sealed class PgQueryResult
 {
     public List<PgColumnInfo> Columns { get; set; } = [];
     public List<List<string?>> Rows { get; set; } = [];
+}
+
+/// <summary>
+/// ストリーミングクエリコンテキスト
+/// </summary>
+internal sealed class PgStreamingQueryContext
+{
+    private readonly PgProtocolHandler _handler;
+    private readonly CancellationToken _cancellationToken;
+    private bool _completed;
+
+    public PgStreamingQueryContext(PgProtocolHandler handler, CancellationToken cancellationToken)
+    {
+        _handler = handler;
+        _cancellationToken = cancellationToken;
+    }
+
+    public async Task<PgStreamingReadResult> ReadNextRowAsync(CancellationToken cancellationToken)
+    {
+        if (_completed)
+            return PgStreamingReadResult.CreateEnd();
+
+        var result = await _handler.ReadNextRowStreamingAsync(cancellationToken);
+        if (result.IsEnd)
+            _completed = true;
+
+        return result;
+    }
+
+    public void Complete()
+    {
+        _completed = true;
+    }
+}
+
+/// <summary>
+/// ストリーミング読み込み結果
+/// </summary>
+internal readonly struct PgStreamingReadResult
+{
+    public readonly PgColumnInfo[]? ColumnsData;
+    public readonly PgRowData RowData;
+    public readonly bool IsEnd;
+
+    public bool IsColumns => ColumnsData != null;
+    public bool IsRow => !IsEnd && ColumnsData == null;
+
+    private PgStreamingReadResult(PgColumnInfo[]? columns, PgRowData row, bool isEnd)
+    {
+        ColumnsData = columns;
+        RowData = row;
+        IsEnd = isEnd;
+    }
+
+    public static PgStreamingReadResult CreateColumns(PgColumnInfo[] columns) => new(columns, default, false);
+    public static PgStreamingReadResult CreateRow(PgRowData row) => new(null, row, false);
+    public static PgStreamingReadResult CreateEnd() => new(null, default, true);
+}
+
+/// <summary>
+/// 行データ（低アロケーション版）
+/// </summary>
+internal readonly struct PgRowData
+{
+    private readonly byte[] _data;
+    private readonly int[] _offsets;
+    private readonly int[] _lengths;
+
+    public int ColumnCount => _offsets?.Length ?? 0;
+
+    public PgRowData(byte[] data, int[] offsets, int[] lengths)
+    {
+        _data = data;
+        _offsets = offsets;
+        _lengths = lengths;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsNull(int ordinal)
+    {
+        return _lengths[ordinal] == -1;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ReadOnlySpan<byte> GetValueSpan(int ordinal)
+    {
+        var length = _lengths[ordinal];
+        if (length == -1)
+            throw new InvalidCastException("値がNULLです");
+
+        return _data.AsSpan(_offsets[ordinal], length);
+    }
 }
 
 #endregion
