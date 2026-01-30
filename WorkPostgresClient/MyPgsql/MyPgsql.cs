@@ -715,7 +715,12 @@ public sealed class PgDataReader : DbDataReader
         return ReadAsync(CancellationToken.None).GetAwaiter().GetResult();
     }
 
-    public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+    public override Task<bool> ReadAsync(CancellationToken cancellationToken)
+    {
+        return ReadAsyncCore(cancellationToken).AsTask();
+    }
+
+    private async ValueTask<bool> ReadAsyncCore(CancellationToken cancellationToken)
     {
         if (_isClosed)
             return false;
@@ -1257,7 +1262,85 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
         return new PgStreamingQueryContext(this, cancellationToken);
     }
 
-    internal async Task<PgStreamingReadResult> ReadNextRowStreamingAsync(PgDataReader reader, CancellationToken cancellationToken)
+    internal ValueTask<PgStreamingReadResult> ReadNextRowStreamingAsync(PgDataReader reader, CancellationToken cancellationToken)
+    {
+        // バッファに十分なデータがある場合は同期的に処理
+        var available = _streamBufferLen - _streamBufferPos;
+        if (available >= 5)
+        {
+            var messageType = (char)_streamBuffer[_streamBufferPos];
+            var length = BinaryPrimitives.ReadInt32BigEndian(_streamBuffer.AsSpan(_streamBufferPos + 1)) - 4;
+
+            if (available >= 5 + length)
+            {
+                // 同期的に処理可能
+                var result = ProcessMessageSync(reader, ref available);
+                if (result.HasValue)
+                    return new ValueTask<PgStreamingReadResult>(result.Value);
+            }
+        }
+
+        // 非同期処理が必要
+        return ReadNextRowStreamingAsyncCore(reader, cancellationToken);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private PgStreamingReadResult? ProcessMessageSync(PgDataReader reader, ref int available)
+    {
+        while (available >= 5)
+        {
+            var messageType = (char)_streamBuffer[_streamBufferPos];
+            var length = BinaryPrimitives.ReadInt32BigEndian(_streamBuffer.AsSpan(_streamBufferPos + 1)) - 4;
+
+            if (available < 5 + length)
+                return null; // バッファ不足
+
+            _streamBufferPos += 5;
+            available -= 5;
+            var payloadOffset = _streamBufferPos;
+            var payload = _streamBuffer.AsSpan(_streamBufferPos, length);
+
+            switch (messageType)
+            {
+                case 'T':
+                    var columns = ParseRowDescriptionArray(payload);
+                    _streamBufferPos += length;
+                    available -= length;
+                    return PgStreamingReadResult.CreateColumns(columns);
+
+                case 'D':
+                    ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
+                    _streamBufferPos += length;
+                    available -= length;
+                    return PgStreamingReadResult.CreateRow();
+
+                case 'C':
+                    _streamBufferPos += length;
+                    available -= length;
+                    // 次のメッセージを処理（ループで継続）
+                    break;
+
+                case 'Z':
+                    _streamBufferPos += length;
+                    available -= length;
+                    return PgStreamingReadResult.CreateEnd();
+
+                case 'E':
+                    var error = ParseErrorMessage(payload);
+                    _streamBufferPos += length;
+                    throw new PostgresException($"クエリエラー: {error}");
+
+                default:
+                    _streamBufferPos += length;
+                    available -= length;
+                    // 次のメッセージを処理（ループで継続）
+                    break;
+            }
+        }
+        return null;
+    }
+
+    private async ValueTask<PgStreamingReadResult> ReadNextRowStreamingAsyncCore(PgDataReader reader, CancellationToken cancellationToken)
     {
         while (true)
         {
@@ -1280,7 +1363,6 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
                     return PgStreamingReadResult.CreateColumns(columns);
 
                 case 'D':
-                    // ストリームバッファへの直接参照を設定（ポジション進める前に）
                     ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
                     _streamBufferPos += length;
                     return PgStreamingReadResult.CreateRow();
@@ -1332,11 +1414,19 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
     }
 
 
-    private async Task EnsureBufferedAsync(int count, CancellationToken cancellationToken)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ValueTask EnsureBufferedAsync(int count, CancellationToken cancellationToken)
     {
         var available = _streamBufferLen - _streamBufferPos;
         if (available >= count)
-            return;
+            return ValueTask.CompletedTask;
+
+        return EnsureBufferedAsyncCore(count, cancellationToken);
+    }
+
+    private async ValueTask EnsureBufferedAsyncCore(int count, CancellationToken cancellationToken)
+    {
+        var available = _streamBufferLen - _streamBufferPos;
 
         // 残りデータを先頭に移動（Spanを使用）
         if (available > 0)
@@ -1731,11 +1821,17 @@ internal sealed class PgStreamingQueryContext
         _handler = handler;
     }
 
-    public async Task<PgStreamingReadResult> ReadNextRowAsync(PgDataReader reader, CancellationToken cancellationToken)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<PgStreamingReadResult> ReadNextRowAsync(PgDataReader reader, CancellationToken cancellationToken)
     {
         if (_completed)
-            return PgStreamingReadResult.CreateEnd();
+            return new ValueTask<PgStreamingReadResult>(PgStreamingReadResult.CreateEnd());
 
+        return ReadNextRowAsyncCore(reader, cancellationToken);
+    }
+
+    private async ValueTask<PgStreamingReadResult> ReadNextRowAsyncCore(PgDataReader reader, CancellationToken cancellationToken)
+    {
         var result = await _handler.ReadNextRowStreamingAsync(reader, cancellationToken).ConfigureAwait(false);
         if (result.State == PgReadState.End)
             _completed = true;
