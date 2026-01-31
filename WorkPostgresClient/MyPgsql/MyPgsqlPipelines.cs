@@ -302,7 +302,22 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 
     public async Task<int> ExecuteNonQueryAsync(string query, CancellationToken cancellationToken = default)
     {
-        await SendQueryMessageAsync(query, cancellationToken).ConfigureAwait(false);
+        var byteCount = Encoding.UTF8.GetByteCount(query);
+        var sqlBuffer = ArrayPool<byte>.Shared.Rent(byteCount);
+        try
+        {
+            Encoding.UTF8.GetBytes(query, sqlBuffer);
+            return await ExecuteNonQueryAsync(sqlBuffer, byteCount, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(sqlBuffer);
+        }
+    }
+
+    public async Task<int> ExecuteNonQueryAsync(byte[] sqlBuffer, int sqlLength, CancellationToken cancellationToken = default)
+    {
+        await SendQueryMessageAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false);
 
         var affectedRows = 0;
 
@@ -335,7 +350,22 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 
     public async Task<PgPipeStreamingQueryContext> ExecuteQueryStreamingAsync(string query, CancellationToken cancellationToken)
     {
-        await SendQueryMessageAsync(query, cancellationToken).ConfigureAwait(false);
+        var byteCount = Encoding.UTF8.GetByteCount(query);
+        var sqlBuffer = ArrayPool<byte>.Shared.Rent(byteCount);
+        try
+        {
+            Encoding.UTF8.GetBytes(query, sqlBuffer);
+            return await ExecuteQueryStreamingAsync(sqlBuffer, byteCount, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(sqlBuffer);
+        }
+    }
+
+    public async Task<PgPipeStreamingQueryContext> ExecuteQueryStreamingAsync(byte[] sqlBuffer, int sqlLength, CancellationToken cancellationToken)
+    {
+        await SendQueryMessageAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false);
         return new PgPipeStreamingQueryContext(this, cancellationToken, useBinaryFormat: false);
     }
 
@@ -349,19 +379,35 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
     }
 
     /// <summary>
+    /// Extended Query Protocol でクエリを実行（バイナリフォーマット、バイト配列版）
+    /// </summary>
+    public async Task<PgPipeStreamingQueryContext> ExecuteQueryBinaryStreamingAsync(byte[] sqlBuffer, int sqlLength, CancellationToken cancellationToken)
+    {
+        await SendExtendedQueryAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false);
+        return new PgPipeStreamingQueryContext(this, cancellationToken, useBinaryFormat: true);
+    }
+
+    /// <summary>
     /// Extended Query Protocol でクエリを送信（バイナリフォーマット）
     /// </summary>
     private async ValueTask SendExtendedQueryAsync(string sql, CancellationToken cancellationToken)
     {
         var sqlBytes = Encoding.UTF8.GetBytes(sql);
+        await SendExtendedQueryAsync(sqlBytes, sqlBytes.Length, cancellationToken).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// Extended Query Protocol でクエリを送信（バイナリフォーマット、バイト配列版）
+    /// </summary>
+    private async ValueTask SendExtendedQueryAsync(byte[] sqlBuffer, int sqlLength, CancellationToken cancellationToken)
+    {
         // 必要なバッファサイズを計算
         // Parse: 1 + 4 + 1(name) + sqlLen + 1 + 2(param count)
         // Bind: 1 + 4 + 1(portal) + 1(stmt) + 2(format count) + 2(param count) + 2(result format count) + 2(result format=1)
         // Describe: 1 + 4 + 1(type) + 1(name)
         // Execute: 1 + 4 + 1(portal) + 4(max rows)
         // Sync: 1 + 4
-        var parseLen = 1 + 4 + 1 + sqlBytes.Length + 1 + 2;
+        var parseLen = 1 + 4 + 1 + sqlLength + 1 + 2;
         var bindLen = 1 + 4 + 1 + 1 + 2 + 2 + 2 + 2;
         var describeLen = 1 + 4 + 1 + 1;
         var executeLen = 1 + 4 + 1 + 4;
@@ -378,8 +424,8 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
             BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), parseLen - 1);
             offset += 4;
             buffer[offset++] = 0; // unnamed statement
-            sqlBytes.CopyTo(buffer.AsSpan(offset));
-            offset += sqlBytes.Length;
+            sqlBuffer.AsSpan(0, sqlLength).CopyTo(buffer.AsSpan(offset));
+            offset += sqlLength;
             buffer[offset++] = 0; // null terminator
             BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameter types
             offset += 2;
@@ -704,6 +750,31 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
         }
     }
 
+    private async ValueTask SendQueryMessageAsync(byte[] sqlBuffer, int sqlLength, CancellationToken cancellationToken)
+    {
+        var queryByteCount = sqlLength + 1; // +1 for null terminator
+        var totalLength = 1 + 4 + queryByteCount;
+
+        var buffer = totalLength <= _writeBuffer!.Length
+            ? _writeBuffer
+            : ArrayPool<byte>.Shared.Rent(totalLength);
+
+        try
+        {
+            buffer[0] = (byte)'Q';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(1), 4 + queryByteCount);
+            sqlBuffer.AsSpan(0, sqlLength).CopyTo(buffer.AsSpan(5));
+            buffer[5 + sqlLength] = 0; // null terminator
+
+            await _socket!.SendAsync(buffer.AsMemory(0, totalLength), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (!ReferenceEquals(buffer, _writeBuffer))
+                ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
     private async Task<(char type, byte[] payload, int length)> ReadMessageAsync(CancellationToken cancellationToken)
     {
         await ReadExactAsync(_readBuffer.AsMemory(0, 5), cancellationToken).ConfigureAwait(false);
@@ -953,6 +1024,7 @@ public sealed class PgPipeConnection : DbConnection
     private string _connectionString = "";
     private ConnectionState _state = ConnectionState.Closed;
     private PgPipeProtocolHandler? _protocol;
+    private PgPipeTransaction? _currentTransaction;
 
     public PgPipeConnection() { }
 
@@ -978,6 +1050,7 @@ public sealed class PgPipeConnection : DbConnection
     public override ConnectionState State => _state;
 
     internal PgPipeProtocolHandler Protocol => _protocol ?? throw new InvalidOperationException("接続が開かれていません");
+    internal PgPipeTransaction? CurrentTransaction => _currentTransaction;
 
     public override void Open()
     {
@@ -1031,12 +1104,45 @@ public sealed class PgPipeConnection : DbConnection
             _protocol = null;
         }
 
+        _currentTransaction = null;
         _state = ConnectionState.Closed;
     }
 
     protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
     {
-        throw new NotImplementedException();
+        return BeginTransactionAsync(isolationLevel, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public new async Task<PgPipeTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        return await BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+    }
+
+    public async Task<PgPipeTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+    {
+        if (_state != ConnectionState.Open)
+            throw new InvalidOperationException("接続が開かれていません");
+
+        if (_currentTransaction != null)
+            throw new InvalidOperationException("既にトランザクションが開始されています");
+
+        var isolationLevelSql = isolationLevel switch
+        {
+            IsolationLevel.ReadUncommitted => "READ UNCOMMITTED",
+            IsolationLevel.ReadCommitted => "READ COMMITTED",
+            IsolationLevel.RepeatableRead => "REPEATABLE READ",
+            IsolationLevel.Serializable => "SERIALIZABLE",
+            _ => "READ COMMITTED"
+        };
+
+        await Protocol.ExecuteNonQueryAsync($"BEGIN ISOLATION LEVEL {isolationLevelSql}", cancellationToken);
+        _currentTransaction = new PgPipeTransaction(this, isolationLevel);
+        return _currentTransaction;
+    }
+
+    internal void ClearTransaction()
+    {
+        _currentTransaction = null;
     }
 
     public new PgPipeCommand CreateCommand()
@@ -1071,18 +1177,116 @@ public sealed class PgPipeConnection : DbConnection
 }
 
 /// <summary>
+/// PostgreSQLトランザクション (Pipelines版)
+/// </summary>
+public sealed class PgPipeTransaction : DbTransaction
+{
+    private readonly PgPipeConnection _connection;
+    private readonly IsolationLevel _isolationLevel;
+    private bool _completed;
+
+    internal PgPipeTransaction(PgPipeConnection connection, IsolationLevel isolationLevel)
+    {
+        _connection = connection;
+        _isolationLevel = isolationLevel;
+    }
+
+    public new PgPipeConnection Connection => _connection;
+    protected override DbConnection DbConnection => _connection;
+    public override IsolationLevel IsolationLevel => _isolationLevel;
+
+    public override void Commit()
+    {
+        CommitAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public override async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        if (_completed)
+            throw new InvalidOperationException("トランザクションは既に完了しています");
+
+        await _connection.Protocol.ExecuteNonQueryAsync("COMMIT", cancellationToken);
+        _completed = true;
+        _connection.ClearTransaction();
+    }
+
+    public override void Rollback()
+    {
+        RollbackAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        if (_completed)
+            throw new InvalidOperationException("トランザクションは既に完了しています");
+
+        await _connection.Protocol.ExecuteNonQueryAsync("ROLLBACK", cancellationToken);
+        _completed = true;
+        _connection.ClearTransaction();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && !_completed)
+        {
+            try
+            {
+                Rollback();
+            }
+            catch
+            {
+                // 無視
+            }
+        }
+        base.Dispose(disposing);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (!_completed)
+        {
+            try
+            {
+                await RollbackAsync();
+            }
+            catch
+            {
+                // 無視
+            }
+        }
+        GC.SuppressFinalize(this);
+    }
+}
+
+/// <summary>
 /// PostgreSQL コマンド (Pipelines版)
 /// </summary>
 public sealed class PgPipeCommand : DbCommand
 {
     private PgPipeConnection? _connection;
+    private PgPipeTransaction? _transaction;
     private string _commandText = "";
     private readonly PgParameterCollection _parameters = new();
+    private CommandType _commandType = CommandType.Text;
+    private int _commandTimeout = 30;
 
     /// <summary>
     /// バイナリフォーマットでクエリを実行するかどうか
     /// </summary>
     public bool UseBinaryFormat { get; set; }
+
+    public PgPipeCommand() { }
+
+    public PgPipeCommand(string commandText)
+    {
+        _commandText = commandText;
+    }
+
+    public PgPipeCommand(string commandText, PgPipeConnection connection)
+    {
+        _commandText = commandText;
+        _connection = connection;
+    }
 
     [AllowNull]
     public override string CommandText
@@ -1091,9 +1295,20 @@ public sealed class PgPipeCommand : DbCommand
         set => _commandText = value ?? "";
     }
 
-    public override int CommandTimeout { get; set; } = 30;
-    public override CommandType CommandType { get; set; } = CommandType.Text;
+    public override int CommandTimeout
+    {
+        get => _commandTimeout;
+        set => _commandTimeout = value;
+    }
+
+    public override CommandType CommandType
+    {
+        get => _commandType;
+        set => _commandType = value;
+    }
+
     public override bool DesignTimeVisible { get; set; }
+
     public override UpdateRowSource UpdatedRowSource { get; set; }
 
     public new PgPipeConnection? Connection
@@ -1108,12 +1323,25 @@ public sealed class PgPipeCommand : DbCommand
         set => _connection = value as PgPipeConnection;
     }
 
-    protected override DbTransaction? DbTransaction { get; set; }
-    protected override DbParameterCollection DbParameterCollection => _parameters;
+    public new PgPipeTransaction? Transaction
+    {
+        get => _transaction;
+        set => _transaction = value;
+    }
+
+    protected override DbTransaction? DbTransaction
+    {
+        get => _transaction;
+        set => _transaction = value as PgPipeTransaction;
+    }
 
     public new PgParameterCollection Parameters => _parameters;
+    protected override DbParameterCollection DbParameterCollection => _parameters;
 
-    public override void Cancel() { }
+    public override void Cancel()
+    {
+        // 未実装
+    }
 
     public override int ExecuteNonQuery()
     {
@@ -1123,8 +1351,15 @@ public sealed class PgPipeCommand : DbCommand
     public override async Task<int> ExecuteNonQueryAsync(CancellationToken cancellationToken)
     {
         ValidateCommand();
-        var sql = BuildSql();
-        return await _connection!.Protocol.ExecuteNonQueryAsync(sql, cancellationToken).ConfigureAwait(false);
+        var (sqlBuffer, sqlLength) = BuildSqlUtf8();
+        try
+        {
+            return await _connection!.Protocol.ExecuteNonQueryAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(sqlBuffer);
+        }
     }
 
     public override object? ExecuteScalar()
@@ -1150,14 +1385,24 @@ public sealed class PgPipeCommand : DbCommand
     protected override async Task<DbDataReader> ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
     {
         ValidateCommand();
-        var sql = BuildSql();
-        var context = UseBinaryFormat
-            ? await _connection!.Protocol.ExecuteQueryBinaryStreamingAsync(sql, cancellationToken).ConfigureAwait(false)
-            : await _connection!.Protocol.ExecuteQueryStreamingAsync(sql, cancellationToken).ConfigureAwait(false);
-        return new PgPipeDataReader(context, _connection, behavior);
+        var (sqlBuffer, sqlLength) = BuildSqlUtf8();
+        try
+        {
+            var context = UseBinaryFormat
+                ? await _connection!.Protocol.ExecuteQueryBinaryStreamingAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false)
+                : await _connection!.Protocol.ExecuteQueryStreamingAsync(sqlBuffer, sqlLength, cancellationToken).ConfigureAwait(false);
+            return new PgPipeDataReader(context, _connection, behavior);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(sqlBuffer);
+        }
     }
 
-    public override void Prepare() { }
+    public override void Prepare()
+    {
+        // Simple Queryプロトコルでは不要
+    }
 
     protected override DbParameter CreateDbParameter()
     {
@@ -1176,53 +1421,357 @@ public sealed class PgPipeCommand : DbCommand
             throw new InvalidOperationException("CommandTextが設定されていません");
     }
 
-    private string BuildSql()
+    /// <summary>
+    /// SQLをUTF8バイト配列として構築（プールから借用したバッファを返す）
+    /// </summary>
+    private (byte[] buffer, int length) BuildSqlUtf8()
     {
         if (_parameters.Count == 0)
-            return _commandText;
-
-        var sql = _commandText;
-        foreach (PgParameter param in _parameters)
         {
-            var value = FormatParameterValue(param);
-            sql = sql.Replace(param.ParameterName, value);
+            // パラメータなしの場合：最大長で確保して直接エンコード
+            // UTF8は1文字あたり最大3バイト（BMPの範囲、SQLでは十分）
+            var maxByteCount = _commandText.Length * 3;
+            var buffer = ArrayPool<byte>.Shared.Rent(maxByteCount);
+            var actualLength = Encoding.UTF8.GetBytes(_commandText, buffer);
+            return (buffer, actualLength);
         }
-        return sql;
+
+        // パラメータありの場合：位置とバイト長を収集
+        var paramPositions = new List<(int charStart, int charLength, int paramIndex)>();
+        var commandSpan = _commandText.AsSpan();
+
+        for (int i = 0; i < _parameters.Count; i++)
+        {
+            var param = (PgParameter)_parameters[i]!;
+            var paramName = param.ParameterName;
+            var pos = 0;
+            while (pos < commandSpan.Length)
+            {
+                var idx = commandSpan.Slice(pos).IndexOf(paramName.AsSpan(), StringComparison.Ordinal);
+                if (idx < 0) break;
+                paramPositions.Add((pos + idx, paramName.Length, i));
+                pos += idx + paramName.Length;
+            }
+        }
+
+        // 出現順にソート
+        paramPositions.Sort((a, b) => a.charStart.CompareTo(b.charStart));
+
+        // 必要なバッファサイズを推定（UTF8最大長 × 文字数 + パラメータ値の余裕）
+        var estimatedSize = _commandText.Length * 3 + _parameters.Count * 64;
+        var resultBuffer = ArrayPool<byte>.Shared.Rent(estimatedSize);
+        var resultOffset = 0;
+
+        var lastCharPos = 0;
+        foreach (var (charStart, charLength, paramIndex) in paramPositions)
+        {
+            // パラメータの前のテキストを書き込み
+            if (charStart > lastCharPos)
+            {
+                var textBefore = _commandText.AsSpan(lastCharPos, charStart - lastCharPos);
+                // UTF8最大長で確保（GetByteCount呼び出しを回避）
+                var maxNeeded = textBefore.Length * 3;
+                EnsureBufferCapacity(ref resultBuffer, resultOffset + maxNeeded);
+                resultOffset += Encoding.UTF8.GetBytes(textBefore, resultBuffer.AsSpan(resultOffset));
+            }
+
+            // パラメータ値を書き込み
+            var param = (PgParameter)_parameters[paramIndex]!;
+            var valueWritten = FormatParameterValueUtf8(param, ref resultBuffer, ref resultOffset);
+            resultOffset += valueWritten;
+
+            lastCharPos = charStart + charLength;
+        }
+
+        // 残りのテキストを書き込み
+        if (lastCharPos < _commandText.Length)
+        {
+            var remaining = _commandText.AsSpan(lastCharPos);
+            // UTF8最大長で確保
+            var maxNeeded = remaining.Length * 3;
+            EnsureBufferCapacity(ref resultBuffer, resultOffset + maxNeeded);
+            resultOffset += Encoding.UTF8.GetBytes(remaining, resultBuffer.AsSpan(resultOffset));
+        }
+
+        return (resultBuffer, resultOffset);
     }
 
-    private static string FormatParameterValue(PgParameter param)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void EnsureBufferCapacity(ref byte[] buffer, int requiredCapacity)
     {
+        if (requiredCapacity <= buffer.Length) return;
+
+        var newSize = Math.Max(buffer.Length * 2, requiredCapacity);
+        var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+        buffer.AsSpan(0, buffer.Length).CopyTo(newBuffer);
+        ArrayPool<byte>.Shared.Return(buffer);
+        buffer = newBuffer;
+    }
+
+    /// <summary>
+    /// パラメータ値をUTF8バイトとして直接書き込み
+    /// </summary>
+    private static int FormatParameterValueUtf8(PgParameter param, ref byte[] buffer, ref int currentOffset)
+    {
+        // NULLチェック
         if (param.Value == null || param.Value == DBNull.Value)
-            return "NULL";
-
-        return param.DbType switch
         {
-            DbType.Int16 or DbType.Int32 or DbType.Int64 or
-            DbType.UInt16 or DbType.UInt32 or DbType.UInt64 or
-            DbType.Single or DbType.Double or DbType.Decimal
-                => Convert.ToString(param.Value, System.Globalization.CultureInfo.InvariantCulture) ?? "NULL",
+            EnsureBufferCapacity(ref buffer, currentOffset + 4);
+            "NULL"u8.CopyTo(buffer.AsSpan(currentOffset));
+            return 4;
+        }
 
-            DbType.Boolean
-                => (bool)param.Value ? "TRUE" : "FALSE",
+        switch (param.DbType)
+        {
+            case DbType.Int16:
+                EnsureBufferCapacity(ref buffer, currentOffset + 8);
+                Utf8Formatter.TryFormat(Convert.ToInt16(param.Value), buffer.AsSpan(currentOffset), out var written16);
+                return written16;
 
-            DbType.DateTime or DbType.DateTime2 or DbType.DateTimeOffset
-                => $"'{((DateTime)param.Value):yyyy-MM-dd HH:mm:ss.ffffff}'",
+            case DbType.Int32:
+                EnsureBufferCapacity(ref buffer, currentOffset + 16);
+                Utf8Formatter.TryFormat(Convert.ToInt32(param.Value), buffer.AsSpan(currentOffset), out var written32);
+                return written32;
 
-            DbType.Date
-                => $"'{((DateTime)param.Value):yyyy-MM-dd}'",
+            case DbType.Int64:
+                EnsureBufferCapacity(ref buffer, currentOffset + 24);
+                Utf8Formatter.TryFormat(Convert.ToInt64(param.Value), buffer.AsSpan(currentOffset), out var written64);
+                return written64;
 
-            DbType.Time
-                => $"'{((TimeSpan)param.Value):hh\\:mm\\:ss\\.ffffff}'",
+            case DbType.UInt16:
+                EnsureBufferCapacity(ref buffer, currentOffset + 8);
+                Utf8Formatter.TryFormat(Convert.ToUInt16(param.Value), buffer.AsSpan(currentOffset), out var writtenu16);
+                return writtenu16;
 
-            DbType.Guid
-                => $"'{param.Value}'",
+            case DbType.UInt32:
+                EnsureBufferCapacity(ref buffer, currentOffset + 16);
+                Utf8Formatter.TryFormat(Convert.ToUInt32(param.Value), buffer.AsSpan(currentOffset), out var writtenu32);
+                return writtenu32;
 
-            DbType.Binary
-                => $"'\\x{Convert.ToHexString((byte[])param.Value)}'",
+            case DbType.UInt64:
+                EnsureBufferCapacity(ref buffer, currentOffset + 24);
+                Utf8Formatter.TryFormat(Convert.ToUInt64(param.Value), buffer.AsSpan(currentOffset), out var writtenu64);
+                return writtenu64;
 
-            _
-                => $"'{param.Value.ToString()?.Replace("'", "''")}'"
-        };
+            case DbType.Single:
+                EnsureBufferCapacity(ref buffer, currentOffset + 32);
+                Utf8Formatter.TryFormat(Convert.ToSingle(param.Value), buffer.AsSpan(currentOffset), out var writtenF);
+                return writtenF;
+
+            case DbType.Double:
+                EnsureBufferCapacity(ref buffer, currentOffset + 32);
+                Utf8Formatter.TryFormat(Convert.ToDouble(param.Value), buffer.AsSpan(currentOffset), out var writtenD);
+                return writtenD;
+
+            case DbType.Decimal:
+                EnsureBufferCapacity(ref buffer, currentOffset + 48);
+                Utf8Formatter.TryFormat(Convert.ToDecimal(param.Value), buffer.AsSpan(currentOffset), out var writtenDec);
+                return writtenDec;
+
+            case DbType.Boolean:
+                if ((bool)param.Value)
+                {
+                    EnsureBufferCapacity(ref buffer, currentOffset + 4);
+                    "TRUE"u8.CopyTo(buffer.AsSpan(currentOffset));
+                    return 4;
+                }
+                else
+                {
+                    EnsureBufferCapacity(ref buffer, currentOffset + 5);
+                    "FALSE"u8.CopyTo(buffer.AsSpan(currentOffset));
+                    return 5;
+                }
+
+            case DbType.DateTime or DbType.DateTime2 or DbType.DateTimeOffset:
+                return FormatDateTimeUtf8((DateTime)param.Value, ref buffer, ref currentOffset, includeTime: true);
+
+            case DbType.Date:
+                return FormatDateTimeUtf8((DateTime)param.Value, ref buffer, ref currentOffset, includeTime: false);
+
+            case DbType.Time:
+                return FormatTimeSpanUtf8((TimeSpan)param.Value, ref buffer, ref currentOffset);
+
+            case DbType.Guid:
+                EnsureBufferCapacity(ref buffer, currentOffset + 40);
+                buffer[currentOffset] = (byte)'\'';
+                Utf8Formatter.TryFormat((Guid)param.Value, buffer.AsSpan(currentOffset + 1), out var writtenGuid);
+                buffer[currentOffset + 1 + writtenGuid] = (byte)'\'';
+                return writtenGuid + 2;
+
+            case DbType.Binary:
+                var bytes = (byte[])param.Value;
+                // '\\x' + hex + '\''
+                var hexLen = bytes.Length * 2;
+                EnsureBufferCapacity(ref buffer, currentOffset + hexLen + 4);
+                buffer[currentOffset] = (byte)'\'';
+                buffer[currentOffset + 1] = (byte)'\\';
+                buffer[currentOffset + 2] = (byte)'x';
+                HexEncodeLower(bytes, buffer.AsSpan(currentOffset + 3));
+                buffer[currentOffset + 3 + hexLen] = (byte)'\'';
+                return hexLen + 4;
+
+            default:
+                // 文字列として処理（エスケープ付き）
+                return FormatStringValueUtf8(param.Value?.ToString() ?? "", ref buffer, ref currentOffset);
+        }
+    }
+
+    private static int FormatDateTimeUtf8(DateTime dt, ref byte[] buffer, ref int currentOffset, bool includeTime)
+    {
+        // 'yyyy-MM-dd HH:mm:ss.ffffff' 最大29文字
+        EnsureBufferCapacity(ref buffer, currentOffset + 32);
+        var span = buffer.AsSpan(currentOffset);
+        var written = 0;
+
+        span[written++] = (byte)'\'';
+
+        // Year
+        Utf8Formatter.TryFormat(dt.Year, span.Slice(written), out var w, new StandardFormat('D', 4));
+        written += w;
+        span[written++] = (byte)'-';
+
+        // Month
+        Utf8Formatter.TryFormat(dt.Month, span.Slice(written), out w, new StandardFormat('D', 2));
+        written += w;
+        span[written++] = (byte)'-';
+
+        // Day
+        Utf8Formatter.TryFormat(dt.Day, span.Slice(written), out w, new StandardFormat('D', 2));
+        written += w;
+
+        if (includeTime)
+        {
+            span[written++] = (byte)' ';
+
+            // Hour
+            Utf8Formatter.TryFormat(dt.Hour, span.Slice(written), out w, new StandardFormat('D', 2));
+            written += w;
+            span[written++] = (byte)':';
+
+            // Minute
+            Utf8Formatter.TryFormat(dt.Minute, span.Slice(written), out w, new StandardFormat('D', 2));
+            written += w;
+            span[written++] = (byte)':';
+
+            // Second
+            Utf8Formatter.TryFormat(dt.Second, span.Slice(written), out w, new StandardFormat('D', 2));
+            written += w;
+
+            // Microseconds
+            var ticks = dt.Ticks % TimeSpan.TicksPerSecond;
+            if (ticks > 0)
+            {
+                span[written++] = (byte)'.';
+                var micros = ticks / 10; // ticks to microseconds
+                Utf8Formatter.TryFormat(micros, span.Slice(written), out w, new StandardFormat('D', 6));
+                written += w;
+            }
+        }
+
+        span[written++] = (byte)'\'';
+        return written;
+    }
+
+    private static int FormatTimeSpanUtf8(TimeSpan ts, ref byte[] buffer, ref int currentOffset)
+    {
+        // 'HH:mm:ss.ffffff' 最大17文字
+        EnsureBufferCapacity(ref buffer, currentOffset + 20);
+        var span = buffer.AsSpan(currentOffset);
+        var written = 0;
+
+        span[written++] = (byte)'\'';
+
+        // Hours
+        Utf8Formatter.TryFormat(ts.Hours, span.Slice(written), out var w, new StandardFormat('D', 2));
+        written += w;
+        span[written++] = (byte)':';
+
+        // Minutes
+        Utf8Formatter.TryFormat(ts.Minutes, span.Slice(written), out w, new StandardFormat('D', 2));
+        written += w;
+        span[written++] = (byte)':';
+
+        // Seconds
+        Utf8Formatter.TryFormat(ts.Seconds, span.Slice(written), out w, new StandardFormat('D', 2));
+        written += w;
+
+        // Microseconds
+        var ticks = ts.Ticks % TimeSpan.TicksPerSecond;
+        if (ticks > 0)
+        {
+            span[written++] = (byte)'.';
+            var micros = ticks / 10;
+            Utf8Formatter.TryFormat(micros, span.Slice(written), out w, new StandardFormat('D', 6));
+            written += w;
+        }
+
+        span[written++] = (byte)'\'';
+        return written;
+    }
+
+    private static int FormatStringValueUtf8(string value, ref byte[] buffer, ref int currentOffset)
+    {
+        // エスケープが必要な文字をカウント
+        var escapeCount = 0;
+        foreach (var c in value)
+        {
+            if (c == '\'') escapeCount++;
+        }
+
+        // UTF8最大長で確保（GetByteCount呼び出しを回避）
+        // 1文字最大3バイト + エスケープ分 + クォート2文字
+        var maxSize = value.Length * 3 + escapeCount + 2;
+        EnsureBufferCapacity(ref buffer, currentOffset + maxSize);
+
+        var span = buffer.AsSpan(currentOffset);
+        var written = 0;
+
+        span[written++] = (byte)'\'';
+
+        if (escapeCount == 0)
+        {
+            // エスケープ不要：直接エンコード
+            written += Encoding.UTF8.GetBytes(value, span.Slice(written));
+        }
+        else
+        {
+            // エスケープが必要：Encoder を使用して効率的に処理
+            var encoder = Encoding.UTF8.GetEncoder();
+            var chars = value.AsSpan();
+            var dest = span.Slice(written);
+
+            foreach (var c in chars)
+            {
+                if (c == '\'')
+                {
+                    dest[0] = (byte)'\'';
+                    dest[1] = (byte)'\'';
+                    dest = dest.Slice(2);
+                    written += 2;
+                }
+                else
+                {
+                    ReadOnlySpan<char> singleChar = stackalloc char[1] { c };
+                    var bytesWritten = Encoding.UTF8.GetBytes(singleChar, dest);
+                    dest = dest.Slice(bytesWritten);
+                    written += bytesWritten;
+                }
+            }
+        }
+
+        span[written++] = (byte)'\'';
+        return written;
+    }
+
+    private static void HexEncodeLower(ReadOnlySpan<byte> source, Span<byte> destination)
+    {
+        const string hexChars = "0123456789abcdef";
+        for (int i = 0; i < source.Length; i++)
+        {
+            var b = source[i];
+            destination[i * 2] = (byte)hexChars[b >> 4];
+            destination[i * 2 + 1] = (byte)hexChars[b & 0xF];
+        }
     }
 
     public override async ValueTask DisposeAsync()

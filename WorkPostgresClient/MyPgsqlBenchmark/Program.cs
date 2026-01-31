@@ -24,7 +24,7 @@ public class PostgresBenchmarks
 
     private NpgsqlConnection _npgsqlConnection = null!;
     private PgPipeConnection _myPgsqlConnection = null!;
-    //private PgPipeConnection _myPgsqlPipeConnection = null!;
+    private PgPipeConnection _myPgsqlPipeConnection = null!;
     private RawPgClient _rawPgsqlClient = null!;
     private int _insertId;
 
@@ -39,9 +39,9 @@ public class PostgresBenchmarks
         _myPgsqlConnection = new PgPipeConnection(ConnectionString);
         await _myPgsqlConnection.OpenAsync();
 
-        //// MyPgsql接続 (Pipelines版)
-        //_myPgsqlPipeConnection = new PgPipeConnection(ConnectionString);
-        //await _myPgsqlPipeConnection.OpenAsync();
+        // MyPgsql接続 (Pipelines版)
+        _myPgsqlPipeConnection = new PgPipeConnection(ConnectionString);
+        await _myPgsqlPipeConnection.OpenAsync();
 
         // RawPgsql接続 (DbConnection非実装版)
         _rawPgsqlClient = await RawPgClient.CreateAsync(ConnectionString);
@@ -54,7 +54,7 @@ public class PostgresBenchmarks
     {
         await _npgsqlConnection.DisposeAsync();
         await _myPgsqlConnection.DisposeAsync();
-        //await _myPgsqlPipeConnection.DisposeAsync();
+        await _myPgsqlPipeConnection.DisposeAsync();
         await _rawPgsqlClient.DisposeAsync();
     }
 
@@ -100,61 +100,61 @@ public class PostgresBenchmarks
         return count;
     }
 
-    //[Benchmark(Description = "RawPgsql: SELECT all from data")]
-    //public async Task<int> RawPgsql_SelectAllData()
-    //{
-    //    await using var reader = await _rawPgsqlClient.ExecuteQueryAsync("SELECT id, name, option, flag, create_at FROM data");
+    [Benchmark(Description = "RawPgsql: SELECT all from data")]
+    public async Task<int> RawPgsql_SelectAllData()
+    {
+        await using var reader = await _rawPgsqlClient.ExecuteQueryAsync("SELECT id, name, option, flag, create_at FROM data");
 
-    //    var count = 0;
-    //    while (await reader.ReadAsync())
-    //    {
-    //        var id = reader.GetInt32(0);
-    //        var name = reader.GetString(1);
-    //        var option = reader.GetStringOrNull(2);
-    //        var flag = reader.GetBoolean(3);
-    //        var createAt = reader.GetDateTime(4);
-    //        count++;
-    //    }
-    //    return count;
-    //}
+        var count = 0;
+        while (await reader.ReadAsync())
+        {
+            var id = reader.GetInt32(0);
+            var name = reader.GetString(1);
+            var option = reader.GetStringOrNull(2);
+            var flag = reader.GetBoolean(3);
+            var createAt = reader.GetDateTime(4);
+            count++;
+        }
+        return count;
+    }
 
-    //[Benchmark(Description = "RawPgsql-Binary: SELECT all from data")]
-    //public async Task<int> RawPgsqlBinary_SelectAllData()
-    //{
-    //    await using var reader = await _rawPgsqlClient.ExecuteQueryBinaryAsync("SELECT id, name, option, flag, create_at FROM data");
+    [Benchmark(Description = "RawPgsql-Binary: SELECT all from data")]
+    public async Task<int> RawPgsqlBinary_SelectAllData()
+    {
+        await using var reader = await _rawPgsqlClient.ExecuteQueryBinaryAsync("SELECT id, name, option, flag, create_at FROM data");
 
-    //    var count = 0;
-    //    while (await reader.ReadAsync())
-    //    {
-    //        var id = reader.GetInt32(0);
-    //        var name = reader.GetString(1);
-    //        var option = reader.GetStringOrNull(2);
-    //        var flag = reader.GetBoolean(3);
-    //        var createAt = reader.GetDateTime(4);
-    //        count++;
-    //    }
-    //    return count;
-    //}
+        var count = 0;
+        while (await reader.ReadAsync())
+        {
+            var id = reader.GetInt32(0);
+            var name = reader.GetString(1);
+            var option = reader.GetStringOrNull(2);
+            var flag = reader.GetBoolean(3);
+            var createAt = reader.GetDateTime(4);
+            count++;
+        }
+        return count;
+    }
 
-    //[Benchmark(Description = "MyPgsql-Pipe: SELECT all from data")]
-    //public async Task<int> MyPgsqlPipe_SelectAllData()
-    //{
-    //    await using var cmd = _myPgsqlPipeConnection.CreateCommand();
-    //    cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
-    //    await using var reader = await cmd.ExecuteReaderAsync();
+    [Benchmark(Description = "MyPgsql-Pipe: SELECT all from data")]
+    public async Task<int> MyPgsqlPipe_SelectAllData()
+    {
+        await using var cmd = _myPgsqlPipeConnection.CreateCommand();
+        cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
+        await using var reader = await cmd.ExecuteReaderAsync();
 
-    //    var count = 0;
-    //    while (await reader.ReadAsync())
-    //    {
-    //        var id = reader.GetInt32(0);
-    //        var name = reader.GetString(1);
-    //        var option = reader.IsDBNull(2) ? null : reader.GetString(2);
-    //        var flag = reader.GetBoolean(3);
-    //        var createAt = reader.GetDateTime(4);
-    //        count++;
-    //    }
-    //    return count;
-    //}
+        var count = 0;
+        while (await reader.ReadAsync())
+        {
+            var id = reader.GetInt32(0);
+            var name = reader.GetString(1);
+            var option = reader.IsDBNull(2) ? null : reader.GetString(2);
+            var flag = reader.GetBoolean(3);
+            var createAt = reader.GetDateTime(4);
+            count++;
+        }
+        return count;
+    }
 
     #endregion
 
@@ -210,30 +210,30 @@ public class PostgresBenchmarks
         }
     }
 
-    //[Benchmark(Description = "MyPgsql-Pipe: INSERT and DELETE user")]
-    //public async Task MyPgsqlPipe_InsertDeleteUser()
-    //{
-    //    var id = Interlocked.Increment(ref _insertId);
+    [Benchmark(Description = "MyPgsql-Pipe: INSERT and DELETE user")]
+    public async Task MyPgsqlPipe_InsertDeleteUser()
+    {
+        var id = Interlocked.Increment(ref _insertId);
 
-    //    // INSERT
-    //    await using (var cmd = _myPgsqlPipeConnection.CreateCommand())
-    //    {
-    //        cmd.CommandText = "INSERT INTO users (id, name, email, created_at) VALUES (@id, @name, @email, @created_at)";
-    //        cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = id });
-    //        cmd.Parameters.Add(new PgParameter("@name", DbType.String) { Value = "Benchmark User" });
-    //        cmd.Parameters.Add(new PgParameter("@email", DbType.String) { Value = "benchmark@example.com" });
-    //        cmd.Parameters.Add(new PgParameter("@created_at", DbType.DateTime) { Value = DateTime.UtcNow });
-    //        await cmd.ExecuteNonQueryAsync();
-    //    }
+        // INSERT
+        await using (var cmd = _myPgsqlPipeConnection.CreateCommand())
+        {
+            cmd.CommandText = "INSERT INTO users (id, name, email, created_at) VALUES (@id, @name, @email, @created_at)";
+            cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = id });
+            cmd.Parameters.Add(new PgParameter("@name", DbType.String) { Value = "Benchmark User" });
+            cmd.Parameters.Add(new PgParameter("@email", DbType.String) { Value = "benchmark@example.com" });
+            cmd.Parameters.Add(new PgParameter("@created_at", DbType.DateTime) { Value = DateTime.UtcNow });
+            await cmd.ExecuteNonQueryAsync();
+        }
 
-    //    // DELETE
-    //    await using (var cmd = _myPgsqlPipeConnection.CreateCommand())
-    //    {
-    //        cmd.CommandText = "DELETE FROM users WHERE id = @id";
-    //        cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = id });
-    //        await cmd.ExecuteNonQueryAsync();
-    //    }
-    //}
+        // DELETE
+        await using (var cmd = _myPgsqlPipeConnection.CreateCommand())
+        {
+            cmd.CommandText = "DELETE FROM users WHERE id = @id";
+            cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = id });
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
 
     #endregion
 }
