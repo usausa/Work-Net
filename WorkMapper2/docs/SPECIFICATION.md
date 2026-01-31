@@ -283,21 +283,125 @@ public static partial void Map(Source source, Destination destination);
 | 2 | `[MapConstant]` 固定値 | 高 | ✅ 完了 |
 | 2 | `[BeforeMap]`/`[AfterMap]` 追加処理 | 高 | ✅ 完了 |
 | 2 | 基本的な型変換（組み込み型） | 高 | ✅ 完了 |
+| - | `[MapProperty]` ドット記法（ネスト対応） | 高 | ✅ 完了 |
 | 3 | `[MapFrom]` 合成 | 中 | - |
 | 3 | `[MapperConverter]` カスタム変換 | 中 | - |
-| 3 | 入れ子クラスのマッピング | 中 | - |
+| 3 | 入れ子クラスのマッピング（自動検出） | 中 | - |
 | 4 | コレクションのマッピング | 中 | - |
 | 4 | Null処理オプション | 低 | - |
 | 5 | Flatten/Unflatten | 低 | - |
 | 5 | 条件付きマッピング | 低 | - |
 
-## 7. 実装済み型変換一覧
+## 7. ネストプロパティマッピング
 
-### 7.1 文字列への変換
+`[MapProperty]`属性でドット記法を使用することで、ネストされたプロパティ間のマッピングが可能です。
+
+### 7.1 フラットからネストへのマッピング（Unflatten）
+
+```csharp
+public class Source
+{
+    public int Value1 { get; set; }
+    public int Value2 { get; set; }
+}
+
+public class DestinationChild
+{
+    public int Value { get; set; }
+}
+
+public class Destination
+{
+    public DestinationChild? Child1 { get; set; }
+    public DestinationChild? Child2 { get; set; }
+}
+
+[Mapper]
+[MapProperty("Value1", "Child1.Value")]
+[MapProperty("Value2", "Child2.Value")]
+public static partial void Map(Source source, Destination destination);
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Child1 ??= new DestinationChild();
+    destination.Child2 ??= new DestinationChild();
+    destination.Child1.Value = source.Value1;
+    destination.Child2.Value = source.Value2;
+}
+```
+
+### 7.2 ネストからフラットへのマッピング（Flatten）
+
+```csharp
+public class SourceChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class Source
+{
+    public SourceChild? Child { get; set; }
+}
+
+public class Destination
+{
+    public int ChildId { get; set; }
+    public string ChildName { get; set; }
+}
+
+[Mapper]
+[MapProperty("Child.Id", "ChildId")]
+[MapProperty("Child.Name", "ChildName")]
+public static partial void Map(Source source, Destination destination);
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.ChildId = source.Child!.Id;
+    destination.ChildName = source.Child!.Name;
+}
+```
+
+### 7.3 深いネストのマッピング
+
+```csharp
+[Mapper]
+[MapProperty("DeepValue", "Outer.Inner.Value")]
+public static partial void Map(DeepSource source, DeepNestedDestination destination);
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(DeepSource source, DeepNestedDestination destination)
+{
+    destination.Outer ??= new DeepNestedParent();
+    destination.Outer.Inner ??= new DeepNestedChild();
+    destination.Outer.Inner.Value = source.DeepValue;
+}
+```
+
+### 7.4 注意事項
+
+- **ターゲット側のネスト**: 中間オブジェクトが`null`の場合、自動的にインスタンスが生成されます（`??= new`）
+- **ソース側のネスト**: null-forgiving演算子（`!`）を使用します。ソースのネストプロパティが`null`の場合は`NullReferenceException`が発生します
+- 既存のインスタンスは保持され、プロパティのみが更新されます
+
+## 8. 実装済み型変換一覧
+
+### 8.1 文字列への変換
 
 すべての型から `string` への変換は `ToString()` メソッドを使用します。
 
-### 7.2 文字列からの変換
+### 8.2 文字列からの変換
 
 | 変換先 | 変換方法 |
 |--------|----------|
@@ -317,11 +421,11 @@ public static partial void Map(Source source, Destination destination);
 | `TimeSpan` | `TimeSpan.Parse()` |
 | `Guid` | `Guid.Parse()` |
 
-### 7.3 数値型間の変換
+### 8.3 数値型間の変換
 
 数値型（`int`, `long`, `short`, `byte`, `float`, `double`, `decimal` 等）間の変換は、明示的なキャストを使用します。
 
-### 7.4 日時型の変換
+### 8.4 日時型の変換
 
 | 変換元 | 変換先 | 変換方法 |
 |--------|--------|----------|

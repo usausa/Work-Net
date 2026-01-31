@@ -246,19 +246,39 @@ public sealed class MapperGenerator : IIncrementalGenerator
         var sourceProperties = GetAllProperties(sourceType);
         var destinationProperties = GetAllProperties(destinationType);
 
-        // Create a dictionary of custom mappings (target -> source)
-        var customMappings = model.PropertyMappings.ToDictionary(
-            m => m.TargetName,
-            m => m.SourceName,
-            StringComparer.Ordinal);
+        // Separate custom mappings (with dot notation) from simple mappings
+        var customMappings = new Dictionary<string, string>(StringComparer.Ordinal);
+        var nestedMappings = new List<PropertyMappingModel>();
+
+        foreach (var mapping in model.PropertyMappings)
+        {
+            // Check if this is a nested mapping (contains dots)
+            if (mapping.TargetPath.Contains('.') || mapping.SourcePath.Contains('.'))
+            {
+                // Resolve types for nested paths
+                ResolveNestedMapping(mapping, sourceType, destinationType);
+                nestedMappings.Add(mapping);
+            }
+            else
+            {
+                customMappings[mapping.TargetPath] = mapping.SourcePath;
+            }
+        }
 
         // Clear and rebuild property mappings
         var mappings = new List<PropertyMappingModel>();
 
+        // Process simple (non-nested) destination properties
         foreach (var destProp in destinationProperties)
         {
             // Skip ignored properties
             if (model.IgnoredProperties.Contains(destProp.Name))
+            {
+                continue;
+            }
+
+            // Skip if there's a nested mapping for this target
+            if (nestedMappings.Any(m => m.TargetPath.StartsWith(destProp.Name + ".") || m.TargetPath == destProp.Name))
             {
                 continue;
             }
@@ -269,39 +289,122 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 continue;
             }
 
-            string? sourcePropName = null;
-            IPropertySymbol? sourceProp = null;
+            string? sourcePropPath = null;
+            ITypeSymbol? sourcePropertyType = null;
 
             // Check for custom mapping first
-            if (customMappings.TryGetValue(destProp.Name, out var customSourceName))
+            if (customMappings.TryGetValue(destProp.Name, out var customSourcePath))
             {
-                sourcePropName = customSourceName;
-                sourceProp = sourceProperties.FirstOrDefault(p => p.Name == customSourceName);
+                sourcePropPath = customSourcePath;
+                sourcePropertyType = ResolvePropertyType(sourceType, customSourcePath);
             }
             else
             {
                 // Try to find matching property by name
-                sourceProp = sourceProperties.FirstOrDefault(p => p.Name == destProp.Name);
-                sourcePropName = sourceProp?.Name;
+                var sourceProp = sourceProperties.FirstOrDefault(p => p.Name == destProp.Name);
+                if (sourceProp is not null)
+                {
+                    sourcePropPath = sourceProp.Name;
+                    sourcePropertyType = sourceProp.Type;
+                }
             }
 
-            if (sourceProp is not null && sourcePropName is not null)
+            if (sourcePropPath is not null && sourcePropertyType is not null)
             {
-                var sourceTypeName = sourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var sourceTypeName = sourcePropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var destTypeName = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
                 mappings.Add(new PropertyMappingModel
                 {
-                    SourceName = sourcePropName,
-                    TargetName = destProp.Name,
+                    SourcePath = sourcePropPath,
+                    TargetPath = destProp.Name,
                     SourceType = sourceTypeName,
                     TargetType = destTypeName,
-                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourceProp.Type, destProp.Type)
+                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type)
                 });
             }
         }
 
+        // Add nested mappings
+        mappings.AddRange(nestedMappings);
+
         model.PropertyMappings = mappings;
+    }
+
+    private static void ResolveNestedMapping(PropertyMappingModel mapping, ITypeSymbol sourceType, ITypeSymbol destinationType)
+    {
+        // Resolve source type
+        var sourcePropertyType = ResolvePropertyType(sourceType, mapping.SourcePath);
+        if (sourcePropertyType is not null)
+        {
+            mapping.SourceType = sourcePropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        // Resolve target type and build path segments for auto-instantiation
+        var targetParts = mapping.TargetPath.Split('.');
+        if (targetParts.Length > 1)
+        {
+            var currentType = destinationType;
+            var pathBuilder = new List<string>();
+
+            // Process all but the last segment (which is the actual property to set)
+            for (var i = 0; i < targetParts.Length - 1; i++)
+            {
+                var part = targetParts[i];
+                pathBuilder.Add(part);
+
+                var prop = GetAllProperties(currentType).FirstOrDefault(p => p.Name == part);
+                if (prop is not null)
+                {
+                    mapping.TargetPathSegments.Add(new NestedPathSegment
+                    {
+                        Path = string.Join(".", pathBuilder),
+                        TypeName = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                    });
+                    currentType = prop.Type;
+                }
+            }
+
+            // Get the final property type
+            var finalProp = GetAllProperties(currentType).FirstOrDefault(p => p.Name == targetParts[targetParts.Length - 1]);
+            if (finalProp is not null)
+            {
+                mapping.TargetType = finalProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+        }
+        else
+        {
+            // Simple target, just get its type
+            var destProp = GetAllProperties(destinationType).FirstOrDefault(p => p.Name == mapping.TargetPath);
+            if (destProp is not null)
+            {
+                mapping.TargetType = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            }
+        }
+
+        // Determine if conversion is needed
+        if (!string.IsNullOrEmpty(mapping.SourceType) && !string.IsNullOrEmpty(mapping.TargetType))
+        {
+            mapping.RequiresConversion = mapping.SourceType != mapping.TargetType;
+        }
+    }
+
+    private static ITypeSymbol? ResolvePropertyType(ITypeSymbol type, string path)
+    {
+        var parts = path.Split('.');
+        var currentType = type;
+
+        foreach (var part in parts)
+        {
+            var prop = GetAllProperties(currentType).FirstOrDefault(p => p.Name == part);
+            if (prop is null)
+            {
+                return null;
+            }
+            currentType = prop.Type;
+        }
+
+        return currentType;
     }
 
     private static List<IPropertySymbol> GetAllProperties(ITypeSymbol type)
@@ -429,11 +532,31 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent().Append(method.BeforeMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
         }
 
+        // Collect all nested paths that need auto-instantiation
+        var nestedPathsToInstantiate = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var mapping in method.PropertyMappings)
+        {
+            foreach (var segment in mapping.TargetPathSegments)
+            {
+                if (!nestedPathsToInstantiate.ContainsKey(segment.Path))
+                {
+                    nestedPathsToInstantiate[segment.Path] = segment.TypeName;
+                }
+            }
+        }
+
+        // Generate auto-instantiation for nested paths (sorted by path length to ensure parent before child)
+        foreach (var kvp in nestedPathsToInstantiate.OrderBy(x => x.Key.Count(c => c == '.')))
+        {
+            builder.Indent();
+            builder.Append(destVarName).Append(".").Append(kvp.Key).Append(" ??= new ").Append(kvp.Value).Append("();").NewLine();
+        }
+
         // Generate property mappings
         foreach (var mapping in method.PropertyMappings)
         {
             builder.Indent();
-            builder.Append(destVarName).Append(".").Append(mapping.TargetName).Append(" = ");
+            builder.Append(destVarName).Append(".").Append(mapping.TargetPath).Append(" = ");
 
             if (mapping.RequiresConversion)
             {
@@ -442,7 +565,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
             else
             {
-                builder.Append(method.SourceParameterName).Append(".").Append(mapping.SourceName);
+                // For nested source paths, add null-forgiving operator for intermediate properties
+                var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, method.SourceParameterName);
+                builder.Append(sourceAccessor);
             }
 
             builder.Append(";").NewLine();
@@ -483,9 +608,36 @@ public sealed class MapperGenerator : IIncrementalGenerator
         builder.EndScope();
     }
 
+    private static string BuildSourceAccessor(string sourcePath, string sourceParamName)
+    {
+        // For nested paths, add null-forgiving operator (!) to intermediate properties
+        if (!sourcePath.Contains('.'))
+        {
+            return $"{sourceParamName}.{sourcePath}";
+        }
+
+        var parts = sourcePath.Split('.');
+        var result = new StringBuilder();
+        result.Append(sourceParamName);
+
+        for (var i = 0; i < parts.Length; i++)
+        {
+            result.Append('.');
+            result.Append(parts[i]);
+
+            // Add null-forgiving operator for all but the last segment
+            if (i < parts.Length - 1)
+            {
+                result.Append('!');
+            }
+        }
+
+        return result.ToString();
+    }
+
     private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName)
     {
-        var sourceExpr = $"{sourceParamName}.{mapping.SourceName}";
+        var sourceExpr = BuildSourceAccessor(mapping.SourcePath, sourceParamName);
 
         // Normalize type names for comparison
         var sourceType = NormalizeTypeName(mapping.SourceType);

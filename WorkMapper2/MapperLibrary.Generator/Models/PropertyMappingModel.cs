@@ -1,6 +1,8 @@
 namespace MapperLibrary.Generator.Models;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 /// <summary>
 /// Represents a property mapping configuration.
@@ -8,14 +10,14 @@ using System;
 internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
 {
     /// <summary>
-    /// Gets or sets the source property name.
+    /// Gets or sets the source property path (supports dot notation).
     /// </summary>
-    public string SourceName { get; set; } = string.Empty;
+    public string SourcePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the target property name.
+    /// Gets or sets the target property path (supports dot notation).
     /// </summary>
-    public string TargetName { get; set; } = string.Empty;
+    public string TargetPath { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the source property type as a fully qualified name.
@@ -32,6 +34,35 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
     /// </summary>
     public bool RequiresConversion { get; set; }
 
+    /// <summary>
+    /// Gets or sets the nested target path segments with their types for auto-instantiation.
+    /// Key: path segment, Value: type name
+    /// </summary>
+    public List<NestedPathSegment> TargetPathSegments { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether the source path is nested.
+    /// </summary>
+    public bool IsSourceNested => SourcePath.Contains('.');
+
+    /// <summary>
+    /// Gets a value indicating whether the target path is nested.
+    /// </summary>
+    public bool IsTargetNested => TargetPath.Contains('.');
+
+    // Legacy property names for compatibility
+    public string SourceName
+    {
+        get => SourcePath;
+        set => SourcePath = value;
+    }
+
+    public string TargetName
+    {
+        get => TargetPath;
+        set => TargetPath = value;
+    }
+
     public bool Equals(PropertyMappingModel? other)
     {
         if (other is null)
@@ -44,11 +75,12 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
             return true;
         }
 
-        return SourceName == other.SourceName &&
-               TargetName == other.TargetName &&
+        return SourcePath == other.SourcePath &&
+               TargetPath == other.TargetPath &&
                SourceType == other.SourceType &&
                TargetType == other.TargetType &&
-               RequiresConversion == other.RequiresConversion;
+               RequiresConversion == other.RequiresConversion &&
+               TargetPathSegments.SequenceEqual(other.TargetPathSegments);
     }
 
     public override bool Equals(object? obj) => Equals(obj as PropertyMappingModel);
@@ -58,12 +90,45 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
         unchecked
         {
             var hash = 17;
-            hash = (hash * 31) + (SourceName?.GetHashCode() ?? 0);
-            hash = (hash * 31) + (TargetName?.GetHashCode() ?? 0);
+            hash = (hash * 31) + (SourcePath?.GetHashCode() ?? 0);
+            hash = (hash * 31) + (TargetPath?.GetHashCode() ?? 0);
             hash = (hash * 31) + (SourceType?.GetHashCode() ?? 0);
             hash = (hash * 31) + (TargetType?.GetHashCode() ?? 0);
             hash = (hash * 31) + RequiresConversion.GetHashCode();
             return hash;
+        }
+    }
+}
+
+/// <summary>
+/// Represents a segment in a nested property path.
+/// </summary>
+internal sealed class NestedPathSegment : IEquatable<NestedPathSegment>
+{
+    /// <summary>
+    /// Gets or sets the path up to this segment (e.g., "Child1" for "Child1.Value").
+    /// </summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the type of this segment.
+    /// </summary>
+    public string TypeName { get; set; } = string.Empty;
+
+    public bool Equals(NestedPathSegment? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return Path == other.Path && TypeName == other.TypeName;
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as NestedPathSegment);
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            return (Path?.GetHashCode() ?? 0) * 31 + (TypeName?.GetHashCode() ?? 0);
         }
     }
 }

@@ -118,6 +118,67 @@ public class NumericConversionDestination
     public decimal DoubleValue { get; set; }
 }
 
+// Nested mapping test models
+public class FlatSource
+{
+    public int Value1 { get; set; }
+    public int Value2 { get; set; }
+    public int Value3 { get; set; }
+}
+
+public class DestinationChild
+{
+    public int Value { get; set; }
+}
+
+public class NestedDestination
+{
+    public DestinationChild? Child1 { get; set; }
+    public DestinationChild? Child2 { get; set; }
+    public DestinationChild? Child3 { get; set; }
+}
+
+// Source with nested properties (for flatten test)
+public class NestedSourceChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class NestedSource
+{
+    public NestedSourceChild? Child { get; set; }
+    public int DirectValue { get; set; }
+}
+
+public class FlatDestination
+{
+    public int ChildId { get; set; }
+    public string ChildName { get; set; } = string.Empty;
+    public int DirectValue { get; set; }
+}
+
+// Deep nested test models
+public class DeepNestedChild
+{
+    public int Value { get; set; }
+}
+
+public class DeepNestedParent
+{
+    public DeepNestedChild? Inner { get; set; }
+}
+
+public class DeepNestedDestination
+{
+    public DeepNestedParent? Outer { get; set; }
+}
+
+public class DeepSource
+{
+    public int DeepValue { get; set; }
+}
+
 #endregion
 
 #region Mappers
@@ -183,6 +244,36 @@ internal static partial class TestMappers
     // Phase 2: Numeric conversions
     [Mapper]
     public static partial void Map(NumericConversionSource source, NumericConversionDestination destination);
+
+    // Nested mapping: flat source to nested destination
+    [Mapper]
+    [MapProperty("Value1", "Child1.Value")]
+    [MapProperty("Value2", "Child2.Value")]
+    [MapProperty("Value3", "Child3.Value")]
+    public static partial void Map(FlatSource source, NestedDestination destination);
+
+    // Nested mapping: flat source to nested destination with return type
+    [Mapper]
+    [MapProperty("Value1", "Child1.Value")]
+    [MapProperty("Value2", "Child2.Value")]
+    [MapProperty("Value3", "Child3.Value")]
+    public static partial NestedDestination MapToNew(FlatSource source);
+
+    // Nested mapping: nested source to flat destination (flatten)
+    [Mapper]
+    [MapProperty("Child.Id", "ChildId")]
+    [MapProperty("Child.Name", "ChildName")]
+    public static partial void Map(NestedSource source, FlatDestination destination);
+
+    // Deep nested mapping
+    [Mapper]
+    [MapProperty("DeepValue", "Outer.Inner.Value")]
+    public static partial void Map(DeepSource source, DeepNestedDestination destination);
+
+    // Deep nested mapping with return type
+    [Mapper]
+    [MapProperty("DeepValue", "Outer.Inner.Value")]
+    public static partial DeepNestedDestination MapToNew(DeepSource source);
 }
 
 #endregion
@@ -429,6 +520,147 @@ public class NumericConversionTests
         Assert.Equal(100L, destination.IntValue);
         Assert.Equal(200, destination.LongValue);
         Assert.Equal(3.5m, destination.DoubleValue);
+    }
+}
+
+// Nested mapping tests
+public class NestedMappingTests
+{
+    [Fact]
+    public void Map_FlatToNested_MapsToNestedProperties()
+    {
+        // Arrange
+        var source = new FlatSource
+        {
+            Value1 = 10,
+            Value2 = 20,
+            Value3 = 30
+        };
+        var destination = new NestedDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Child1);
+        Assert.NotNull(destination.Child2);
+        Assert.NotNull(destination.Child3);
+        Assert.Equal(10, destination.Child1.Value);
+        Assert.Equal(20, destination.Child2.Value);
+        Assert.Equal(30, destination.Child3.Value);
+    }
+
+    [Fact]
+    public void MapToNew_FlatToNested_ReturnsNestedObject()
+    {
+        // Arrange
+        var source = new FlatSource
+        {
+            Value1 = 100,
+            Value2 = 200,
+            Value3 = 300
+        };
+
+        // Act
+        var destination = TestMappers.MapToNew(source);
+
+        // Assert
+        Assert.NotNull(destination);
+        Assert.NotNull(destination.Child1);
+        Assert.NotNull(destination.Child2);
+        Assert.NotNull(destination.Child3);
+        Assert.Equal(100, destination.Child1.Value);
+        Assert.Equal(200, destination.Child2.Value);
+        Assert.Equal(300, destination.Child3.Value);
+    }
+
+    [Fact]
+    public void Map_NestedToFlat_FlattensProperties()
+    {
+        // Arrange
+        var source = new NestedSource
+        {
+            Child = new NestedSourceChild
+            {
+                Id = 42,
+                Name = "Test"
+            },
+            DirectValue = 999
+        };
+        var destination = new FlatDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(42, destination.ChildId);
+        Assert.Equal("Test", destination.ChildName);
+        Assert.Equal(999, destination.DirectValue);
+    }
+
+    [Fact]
+    public void Map_DeepNested_MapsToDeepNestedProperties()
+    {
+        // Arrange
+        var source = new DeepSource
+        {
+            DeepValue = 12345
+        };
+        var destination = new DeepNestedDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Outer);
+        Assert.NotNull(destination.Outer.Inner);
+        Assert.Equal(12345, destination.Outer.Inner.Value);
+    }
+
+    [Fact]
+    public void MapToNew_DeepNested_ReturnsDeepNestedObject()
+    {
+        // Arrange
+        var source = new DeepSource
+        {
+            DeepValue = 67890
+        };
+
+        // Act
+        var destination = TestMappers.MapToNew(source);
+
+        // Assert
+        Assert.NotNull(destination);
+        Assert.NotNull(destination.Outer);
+        Assert.NotNull(destination.Outer.Inner);
+        Assert.Equal(67890, destination.Outer.Inner.Value);
+    }
+
+    [Fact]
+    public void Map_FlatToNested_PreservesExistingNestedObjects()
+    {
+        // Arrange
+        var source = new FlatSource
+        {
+            Value1 = 10,
+            Value2 = 20,
+            Value3 = 30
+        };
+        var existingChild1 = new DestinationChild { Value = 999 };
+        var destination = new NestedDestination
+        {
+            Child1 = existingChild1
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - Child1 should be the same instance, just with updated value
+        Assert.Same(existingChild1, destination.Child1);
+        Assert.Equal(10, destination.Child1.Value);
+        // Child2 and Child3 should be created
+        Assert.NotNull(destination.Child2);
+        Assert.NotNull(destination.Child3);
     }
 }
 
