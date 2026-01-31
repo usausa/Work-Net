@@ -278,6 +278,54 @@ public class ConverterDestination
     public string FormattedText { get; set; } = string.Empty;
 }
 
+// MapFrom test models
+public class MapFromSource
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+}
+
+public class MapFromDestination
+{
+    public string FullName { get; set; } = string.Empty;
+    public string UpperCaseName { get; set; } = string.Empty;
+}
+
+public class MapFromContext
+{
+    public string Separator { get; set; } = " ";
+}
+
+// MapFromMethod test models
+public class MapFromMethodSource
+{
+    public int[] Items { get; set; } = [];
+
+    public int GetItemCount() => Items.Length;
+    public int GetItemSum() => Items.Sum();
+}
+
+public class MapFromMethodDestination
+{
+    public int ItemCount { get; set; }
+    public int ItemSum { get; set; }
+}
+
+// AutoMap = false test models
+public class AutoMapSource
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int Value { get; set; }
+}
+
+public class AutoMapDestination
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int Value { get; set; }
+}
+
 #endregion
 
 #region Mappers
@@ -490,6 +538,49 @@ internal static partial class TestMappers
     {
         return !string.IsNullOrEmpty(name);
     }
+
+    // MapFrom: basic usage
+    [Mapper]
+    [MapFrom(nameof(MapFromDestination.FullName), nameof(CombineFullName))]
+    [MapFrom(nameof(MapFromDestination.UpperCaseName), nameof(GetUpperCaseName))]
+    public static partial void Map(MapFromSource source, MapFromDestination destination);
+
+    private static string CombineFullName(MapFromSource source)
+    {
+        return $"{source.FirstName} {source.LastName}";
+    }
+
+    private static string GetUpperCaseName(MapFromSource source)
+    {
+        return $"{source.FirstName} {source.LastName}".ToUpperInvariant();
+    }
+
+    // MapFrom: with custom parameters
+    [Mapper]
+    [MapFrom(nameof(MapFromDestination.FullName), nameof(CombineFullNameWithContext))]
+    public static partial MapFromDestination MapWithContext(MapFromSource source, MapFromContext context);
+
+    private static string CombineFullNameWithContext(MapFromSource source, MapFromContext context)
+    {
+        return $"{source.FirstName}{context.Separator}{source.LastName}";
+    }
+
+    // MapFromMethod: calling methods on source object
+    [Mapper]
+    [MapFromMethod(nameof(MapFromMethodDestination.ItemCount), nameof(MapFromMethodSource.GetItemCount))]
+    [MapFromMethod(nameof(MapFromMethodDestination.ItemSum), nameof(MapFromMethodSource.GetItemSum))]
+    public static partial void Map(MapFromMethodSource source, MapFromMethodDestination destination);
+
+    // AutoMap = false: only explicitly mapped properties
+    [Mapper(AutoMap = false)]
+    [MapProperty(nameof(AutoMapSource.Id), nameof(AutoMapDestination.Id))]
+    public static partial void MapExplicit(AutoMapSource source, AutoMapDestination destination);
+
+    // AutoMap = false: with multiple MapProperty
+    [Mapper(AutoMap = false)]
+    [MapProperty(nameof(AutoMapSource.Id), nameof(AutoMapDestination.Id))]
+    [MapProperty(nameof(AutoMapSource.Name), nameof(AutoMapDestination.Name))]
+    public static partial AutoMapDestination MapExplicitToNew(AutoMapSource source);
 }
 
 // Custom context for testing
@@ -1381,6 +1472,119 @@ public class ConditionTests
         Assert.Equal("Test", destination.Name);
         Assert.Equal(2, destination.Version);
         Assert.Equal("Pending", destination.Status);
+    }
+}
+
+// MapFrom tests
+public class MapFromTests
+{
+    [Fact]
+    public void MapFrom_ComputesValueFromMethod()
+    {
+        // Arrange
+        var source = new MapFromSource
+        {
+            FirstName = "John",
+            LastName = "Doe"
+        };
+        var destination = new MapFromDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal("John Doe", destination.FullName);
+        Assert.Equal("JOHN DOE", destination.UpperCaseName);
+    }
+
+    [Fact]
+    public void MapFrom_WithCustomParameters_UsesContext()
+    {
+        // Arrange
+        var source = new MapFromSource
+        {
+            FirstName = "Jane",
+            LastName = "Smith"
+        };
+        var context = new MapFromContext { Separator = " - " };
+
+        // Act
+        var destination = TestMappers.MapWithContext(source, context);
+
+        // Assert
+        Assert.Equal("Jane - Smith", destination.FullName);
+    }
+}
+
+// MapFromMethod tests
+public class MapFromMethodTests
+{
+    [Fact]
+    public void MapFromMethod_CallsSourceMethod()
+    {
+        // Arrange
+        var source = new MapFromMethodSource
+        {
+            Items = new[] { 1, 2, 3, 4, 5 }
+        };
+        var destination = new MapFromMethodDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(5, destination.ItemCount);
+        Assert.Equal(15, destination.ItemSum);
+    }
+}
+
+// AutoMap = false tests
+public class AutoMapFalseTests
+{
+    [Fact]
+    public void AutoMapFalse_OnlyMapsExplicitProperties()
+    {
+        // Arrange
+        var source = new AutoMapSource
+        {
+            Id = 42,
+            Name = "Test",
+            Value = 100
+        };
+        var destination = new AutoMapDestination
+        {
+            Id = 0,
+            Name = "Original",
+            Value = 0
+        };
+
+        // Act
+        TestMappers.MapExplicit(source, destination);
+
+        // Assert
+        Assert.Equal(42, destination.Id);  // Explicitly mapped
+        Assert.Equal("Original", destination.Name);  // Not mapped (AutoMap = false)
+        Assert.Equal(0, destination.Value);  // Not mapped (AutoMap = false)
+    }
+
+    [Fact]
+    public void AutoMapFalse_WithMapProperty_OnlyMapsSpecified()
+    {
+        // Arrange
+        var source = new AutoMapSource
+        {
+            Id = 10,
+            Name = "Explicit",
+            Value = 200
+        };
+
+        // Act
+        var destination = TestMappers.MapExplicitToNew(source);
+
+        // Assert
+        Assert.Equal(10, destination.Id);  // Explicitly mapped
+        Assert.Equal("Explicit", destination.Name);  // Explicitly mapped
+        Assert.Equal(0, destination.Value);  // Not mapped
     }
 }
 

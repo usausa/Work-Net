@@ -67,6 +67,38 @@ internal static class Diagnostics
         category: "MapperLibrary",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidMapFromSignature { get; } = new(
+        id: "ML0009",
+        title: "Invalid MapFrom method signature",
+        messageFormat: "MapFrom method signature does not match. Expected (Source) or (Source, customParams...) returning target property type. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidMapFromMethodSignature { get; } = new(
+        id: "ML0010",
+        title: "Invalid MapFromMethod method signature",
+        messageFormat: "MapFromMethod method must be a parameterless method on the source type. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor MapFromReturnTypeMismatch { get; } = new(
+        id: "ML0011",
+        title: "MapFrom return type mismatch",
+        messageFormat: "MapFrom method return type does not match target property type. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor MapFromMethodReturnTypeMismatch { get; } = new(
+        id: "ML0012",
+        title: "MapFromMethod return type mismatch",
+        messageFormat: "MapFromMethod method return type does not match target property type. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }
 
 

@@ -62,6 +62,11 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     public bool ReturnsDestination { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to automatically map properties with matching names.
+    /// </summary>
+    public bool AutoMap { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the custom parameters (additional parameters beyond source and destination).
     /// </summary>
     public List<CustomParameterModel> CustomParameters { get; set; } = [];
@@ -85,6 +90,16 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     /// Gets or sets the constant mappings.
     /// </summary>
     public List<ConstantMappingModel> ConstantMappings { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the MapFrom mappings (computed from source via a method).
+    /// </summary>
+    public List<MapFromModel> MapFromMappings { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the MapFromMethod mappings (calling a method on source).
+    /// </summary>
+    public List<MapFromMethodModel> MapFromMethodMappings { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the method name to call before mapping.

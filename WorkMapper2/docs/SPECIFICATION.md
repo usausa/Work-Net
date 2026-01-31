@@ -27,8 +27,10 @@ public static partial Destination Map(Source source);
 | 属性 | 用途 | 適用対象 |
 |------|------|----------|
 | `[Mapper]` | マッピングメソッドの指定 | Method |
+| `[Mapper(AutoMap = false)]` | 自動マッピング無効化 | Method |
 | `[MapProperty]` | プロパティ間のマッピング指定 | Method |
-| `[MapFrom]` | 複数プロパティからの合成 | Method |
+| `[MapFrom]` | 静的メソッドによる値の合成 | Method |
+| `[MapFromMethod]` | ソースオブジェクトのメソッド呼び出し | Method |
 | `[MapConstant]` | 固定値の設定 | Method |
 | `[MapConstant<T>]` | 型指定の固定値設定（C# 11+） | Method |
 | `[MapIgnore]` | マッピング除外 | Method |
@@ -57,7 +59,9 @@ internal static partial class ObjectMapper
 }
 ```
 
-### 4.2 複数プロパティからの値合成
+### 4.2 複数プロパティからの値合成（MapFrom）
+
+`[MapFrom]` 属性を使用して、同じクラス内の静的メソッドを呼び出し、その結果をターゲットプロパティに設定します。
 
 ```csharp
 internal static partial class ObjectMapper
@@ -81,6 +85,113 @@ public static partial void Map(Source source, Destination destination)
     // 他のプロパティ...
 }
 ```
+
+#### カスタムパラメーター対応
+
+マッパーメソッドにカスタムパラメーターがある場合、MapFromメソッドにもカスタムパラメーターを渡すことができます。
+
+```csharp
+internal static partial class ObjectMapper
+{
+    [Mapper]
+    [MapFrom("FullName", nameof(CombineFullName))]
+    public static partial Destination Map(Source source, FormattingContext context);
+    
+    // カスタムパラメーターを受け取るメソッド
+    private static string CombineFullName(Source source, FormattingContext context) 
+        => $"{source.FirstName}{context.Separator}{source.LastName}";
+}
+```
+
+**注意:**
+- メソッドの戻り値の型は、ターゲットプロパティの型と一致する必要があります
+- メソッドが見つからない場合、または型が一致しない場合はコンパイルエラーになります
+
+### 4.2.1 ソースオブジェクトのメソッド呼び出し（MapFromMethod）
+
+`[MapFromMethod]` 属性を使用して、ソースオブジェクトのインスタンスメソッドを呼び出し、その結果をターゲットプロパティに設定します。
+
+```csharp
+public class Source
+{
+    public int[] Items { get; set; } = [];
+    
+    // 引数なしのインスタンスメソッド
+    public int GetItemCount() => Items.Length;
+    public int GetItemSum() => Items.Sum();
+}
+
+public class Destination
+{
+    public int ItemCount { get; set; }
+    public int ItemSum { get; set; }
+}
+
+internal static partial class ObjectMapper
+{
+    [Mapper]
+    [MapFromMethod(nameof(Destination.ItemCount), nameof(Source.GetItemCount))]
+    [MapFromMethod(nameof(Destination.ItemSum), nameof(Source.GetItemSum))]
+    public static partial void Map(Source source, Destination destination);
+}
+```
+
+**生成コード例:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.ItemCount = source.GetItemCount();
+    destination.ItemSum = source.GetItemSum();
+}
+```
+
+**注意:**
+- ソースメソッドは引数なしのインスタンスメソッドである必要があります
+- メソッドの戻り値の型は、ターゲットプロパティの型と一致する必要があります
+- 引数が必要な場合は `[MapFrom]` を使用してください
+
+### 4.2.2 自動マッピングの無効化（AutoMap = false）
+
+`[Mapper(AutoMap = false)]` を使用すると、同名プロパティの自動マッピングを無効化し、明示的に指定したプロパティのみをマッピングします。
+
+```csharp
+public class Source
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Value { get; set; }
+}
+
+public class Destination
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Value { get; set; }
+}
+
+internal static partial class ObjectMapper
+{
+    // AutoMap = false: 明示的に指定したプロパティのみマッピング
+    [Mapper(AutoMap = false)]
+    [MapProperty(nameof(Source.Id), nameof(Destination.Id))]
+    public static partial void Map(Source source, Destination destination);
+}
+```
+
+**生成コード例:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    // Idのみマッピング（NameとValueは自動マッピングされない）
+    destination.Id = source.Id;
+}
+```
+
+**使用ケース:**
+- AutoMapperの `.ForAllMembers(opt => opt.Ignore())` + 明示的マッピングと同等の動作
+- AfterMapで手動設定のみ行い、自動マッピングを無効化したい場合
 
 ### 4.3 追加処理（Before/After Map）
 
@@ -287,7 +398,9 @@ public static partial void Map(Source source, Destination destination);
 | 2 | `[BeforeMap]`/`[AfterMap]` 追加処理 | 高 | ✅ 完了 |
 | 2 | 基本的な型変換（組み込み型） | 高 | ✅ 完了 |
 | - | `[MapProperty]` ドット記法（ネスト対応） | 高 | ✅ 完了 |
-| 3 | `[MapFrom]` 合成 | 中 | - |
+| 3 | `[MapFrom]` 合成 | 中 | ✅ 完了 |
+| 3 | `[MapFromMethod]` ソースメソッド呼び出し | 中 | ✅ 完了 |
+| 3 | `[Mapper(AutoMap = false)]` 自動マッピング無効化 | 中 | ✅ 完了 |
 | 3 | `[MapperConverter]` カスタム変換 | 中 | - |
 | 3 | 入れ子クラスのマッピング（自動検出） | 中 | - |
 | 4 | コレクションのマッピング | 中 | - |
@@ -736,6 +849,10 @@ public static partial void Map(Source source, Destination destination)
 | ML0006 | Converterメソッドのシグネチャが一致しません |
 | ML0007 | 条件メソッドのシグネチャが一致しません |
 | ML0008 | プロパティ条件メソッドのシグネチャが一致しません |
+| ML0009 | MapFromメソッドのシグネチャが一致しません |
+| ML0010 | MapFromMethodで指定されたメソッドは引数なしのインスタンスメソッドである必要があります |
+| ML0011 | MapFromメソッドの戻り値の型がターゲットプロパティの型と一致しません |
+| ML0012 | MapFromMethodメソッドの戻り値の型がターゲットプロパティの型と一致しません |
 
 ## 14. 実装ステータス
 
@@ -758,16 +875,119 @@ public static partial void Map(Source source, Destination destination)
 | Converter | ✅ 実装済み |
 | 条件付きマッピング（グローバル） | ✅ 実装済み |
 | 条件付きマッピング（プロパティレベル） | ✅ 実装済み |
+| MapFrom（静的メソッドによる値の合成） | ✅ 実装済み |
+| MapFromMethod（ソースオブジェクトのメソッド呼び出し） | ✅ 実装済み |
+| AutoMap = false（自動マッピング無効化） | ✅ 実装済み |
 
 ### 14.2 未実装機能
 
-| 機能 | 説明 |
-|------|------|
-| MapFrom（複数プロパティからの合成） | 複数のソースプロパティを1つのデスティネーションに合成 |
-| MapperConverter（カスタム型変換器） | クラス/アセンブリレベルでのカスタム変換器定義 |
-| コレクション対応 | List, Array等のコレクションマッピング |
-| 継承対応 | 派生クラスのマッピング |
-| 双方向マッピング | SourceとDestination両方向のマッピング生成 |
-| インクルードマッピング | 別のマッパーを呼び出してネストオブジェクトをマッピング |
-| NullSubstitute | null値の代替値設定 |
+| 機能 | 説明 | 参考（AutoMapper相当） |
+|------|------|----------------------|
+| MapperConverter（カスタム型変換器） | クラス/アセンブリレベルでのカスタム変換器定義 | `CreateMap<string, double>().ConvertUsing<StringToDoubleConverter>()` |
+| コレクション対応 | List, Array等のコレクションマッピング | `CreateMap<List<A>, List<B>>()` |
+| 入れ子クラスのマッピング（自動検出） | 別のマッパーを呼び出してネストオブジェクトをマッピング | `CreateMap<A, B>()` with nested mapper |
+| 継承対応 | 派生クラスのマッピング | `Include<DerivedSource, DerivedDest>()` |
+| 双方向マッピング | SourceとDestination両方向のマッピング生成 | `ReverseMap()` |
+| NullSubstitute | null値の代替値設定 | `NullSubstitute("N/A")` |
+
+## 15. 未実装機能の参考実装案
+
+### 15.1 コレクションマッピング
+
+AutoMapperでの使用例：
+
+```csharp
+// AutoMapper: 配列・リストの自動マッピング
+CreateMap<SourceItem, DestItem>();
+CreateMap<Source, Destination>()
+    .ForMember(d => d.Items, opt => opt.MapFrom(s => s.Items));  // List<SourceItem> → List<DestItem>
+
+// 使用例（元のMappingProfile.csより）
+.ForMember(x => x.Entries, o => o.MapFrom(s => s.AsVoltageEntry()))
+.AfterMap((_, d) => d.Entries.WithNos());
+```
+
+MapperLibraryでの想定実装：
+
+```csharp
+// 案1: 自動検出（同一クラス内にアイテムマッパーがあれば自動使用）
+internal static partial class ObjectMapper
+{
+    [Mapper]
+    public static partial void Map(Source source, Destination destination);  // Items自動マッピング
+    
+    [Mapper]
+    public static partial void Map(SourceItem source, DestItem destination);  // アイテムのマッパー
+}
+
+// 案2: 明示的指定
+[Mapper]
+[MapCollection(nameof(Destination.Items), ItemMapper = nameof(MapItem))]
+public static partial void Map(Source source, Destination destination);
+```
+
+### 15.2 カスタム型変換器（グローバル）
+
+AutoMapperでの使用例：
+
+```csharp
+// AutoMapper: グローバル型変換
+CreateMap<string, double>()
+    .ConvertUsing<StringToDoubleConverter>();
+
+public class StringToDoubleConverter : ITypeConverter<string, double>
+{
+    public double Convert(string source, double destination, ResolutionContext context)
+        => double.Parse(source);
+}
+```
+
+MapperLibraryでの想定実装：
+
+```csharp
+// アセンブリレベルでカスタムコンバーターを定義
+[assembly: MapperConverter(typeof(string), typeof(double), typeof(Converters), nameof(Converters.StringToDouble))]
+
+public static class Converters
+{
+    public static double StringToDouble(string value) => double.Parse(value);
+}
+
+// 使用時は自動的に適用される
+[Mapper]
+public static partial void Map(Source source, Destination destination);
+```
+
+### 15.3 AfterMap内でのコレクション/子マッピング
+
+AutoMapperでの使用例：
+
+```csharp
+// AutoMapper: AfterMap内でIMapperContextを使用
+.AfterMap((s, d, c) => 
+    d.Apply(s.Entries.Select(x => 
+        c.Mapper.Map<EditVoltageDialog.FormEntry, UpdateGatewayVoltageParameter.VoltageEntry>(x)
+    ).ToArray())
+);
+```
+
+MapperLibraryでの想定実装：
+
+```csharp
+// カスタムパラメーターとして明示的にマッパーを渡す
+[Mapper]
+[AfterMap(nameof(OnAfterMap))]
+public static partial void Map(Source source, Destination destination);
+
+private static void OnAfterMap(Source source, Destination destination)
+{
+    // 子要素のマッピングは明示的に呼び出す
+    destination.Entries = source.Entries
+        .Select(x => MapEntry(x))
+        .ToArray();
+}
+
+[Mapper]
+private static partial EntryDest MapEntry(EntrySource source);
+```
 
