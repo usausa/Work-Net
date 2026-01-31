@@ -314,14 +314,18 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 var sourceTypeName = sourcePropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var destTypeName = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-                mappings.Add(new PropertyMappingModel
+                var mapping = new PropertyMappingModel
                 {
                     SourcePath = sourcePropPath,
                     TargetPath = destProp.Name,
                     SourceType = sourceTypeName,
                     TargetType = destTypeName,
-                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type)
-                });
+                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type),
+                    IsSourceNullable = IsNullableSymbol(sourcePropertyType),
+                    IsTargetNullable = IsNullableSymbol(destProp.Type)
+                };
+
+                mappings.Add(mapping);
             }
         }
 
@@ -331,20 +335,76 @@ public sealed class MapperGenerator : IIncrementalGenerator
         model.PropertyMappings = mappings;
     }
 
+    private static bool IsNullableSymbol(ITypeSymbol type)
+    {
+        // Check for nullable reference type
+        if (type.NullableAnnotation == NullableAnnotation.Annotated)
+        {
+            return true;
+        }
+
+        // Check for Nullable<T> value type
+        if (type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     private static void ResolveNestedMapping(PropertyMappingModel mapping, ITypeSymbol sourceType, ITypeSymbol destinationType)
     {
-        // Resolve source type
-        var sourcePropertyType = ResolvePropertyType(sourceType, mapping.SourcePath);
-        if (sourcePropertyType is not null)
+        // Resolve source path segments and check for nullable intermediate types
+        var sourceParts = mapping.SourcePath.Split('.');
+        if (sourceParts.Length > 1)
         {
-            mapping.SourceType = sourcePropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var currentType = sourceType;
+            var pathBuilder = new List<string>();
+
+            // Process all but the last segment
+            for (var i = 0; i < sourceParts.Length - 1; i++)
+            {
+                var part = sourceParts[i];
+                pathBuilder.Add(part);
+
+                var prop = GetAllProperties(currentType).FirstOrDefault(p => p.Name == part);
+                if (prop is not null)
+                {
+                    var isNullable = IsNullableSymbol(prop.Type);
+                    mapping.SourcePathSegments.Add(new NestedPathSegment
+                    {
+                        Path = string.Join(".", pathBuilder),
+                        TypeName = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                        IsNullable = isNullable
+                    });
+                    currentType = prop.Type;
+                }
+            }
+
+            // Get the final property type
+            var finalSourceProp = GetAllProperties(currentType).FirstOrDefault(p => p.Name == sourceParts[sourceParts.Length - 1]);
+            if (finalSourceProp is not null)
+            {
+                mapping.SourceType = finalSourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                mapping.IsSourceNullable = IsNullableSymbol(finalSourceProp.Type);
+            }
+        }
+        else
+        {
+            // Simple source path
+            var sourceProp = GetAllProperties(sourceType).FirstOrDefault(p => p.Name == mapping.SourcePath);
+            if (sourceProp is not null)
+            {
+                mapping.SourceType = sourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                mapping.IsSourceNullable = IsNullableSymbol(sourceProp.Type);
+            }
         }
 
         // Resolve target type and build path segments for auto-instantiation
         var targetParts = mapping.TargetPath.Split('.');
         if (targetParts.Length > 1)
         {
-            var currentType = destinationType;
+            var currentTargetType = destinationType;
             var pathBuilder = new List<string>();
 
             // Process all but the last segment (which is the actual property to set)
@@ -353,7 +413,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 var part = targetParts[i];
                 pathBuilder.Add(part);
 
-                var prop = GetAllProperties(currentType).FirstOrDefault(p => p.Name == part);
+                var prop = GetAllProperties(currentTargetType).FirstOrDefault(p => p.Name == part);
                 if (prop is not null)
                 {
                     mapping.TargetPathSegments.Add(new NestedPathSegment
@@ -361,15 +421,16 @@ public sealed class MapperGenerator : IIncrementalGenerator
                         Path = string.Join(".", pathBuilder),
                         TypeName = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
                     });
-                    currentType = prop.Type;
+                    currentTargetType = prop.Type;
                 }
             }
 
             // Get the final property type
-            var finalProp = GetAllProperties(currentType).FirstOrDefault(p => p.Name == targetParts[targetParts.Length - 1]);
+            var finalProp = GetAllProperties(currentTargetType).FirstOrDefault(p => p.Name == targetParts[targetParts.Length - 1]);
             if (finalProp is not null)
             {
                 mapping.TargetType = finalProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                mapping.IsTargetNullable = IsNullableSymbol(finalProp.Type);
             }
         }
         else
@@ -379,6 +440,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             if (destProp is not null)
             {
                 mapping.TargetType = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                mapping.IsTargetNullable = IsNullableSymbol(destProp.Type);
             }
         }
 
@@ -516,6 +578,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Append(")").NewLine();
         }
 
+
         builder.BeginScope();
 
         var destVarName = method.ReturnsDestination ? "destination" : method.DestinationParameterName!;
@@ -532,10 +595,16 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent().Append(method.BeforeMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
         }
 
-        // Collect all nested paths that need auto-instantiation
+        // Collect all nested paths that need auto-instantiation (excluding those with nullable source paths)
         var nestedPathsToInstantiate = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var mapping in method.PropertyMappings)
         {
+            // Skip auto-instantiation if source has nullable path segments
+            if (mapping.SourcePathSegments.Any(s => s.IsNullable))
+            {
+                continue;
+            }
+
             foreach (var segment in mapping.TargetPathSegments)
             {
                 if (!nestedPathsToInstantiate.ContainsKey(segment.Path))
@@ -552,25 +621,51 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Append(destVarName).Append(".").Append(kvp.Key).Append(" ??= new ").Append(kvp.Value).Append("();").NewLine();
         }
 
-        // Generate property mappings
-        foreach (var mapping in method.PropertyMappings)
+        // Group mappings by whether they require null check
+        var mappingsWithoutNullCheck = method.PropertyMappings.Where(m => !m.RequiresNullCheck).ToList();
+        var mappingsWithNullCheck = method.PropertyMappings.Where(m => m.RequiresNullCheck).ToList();
+
+        // Generate property mappings without null check
+        foreach (var mapping in mappingsWithoutNullCheck)
         {
-            builder.Indent();
-            builder.Append(destVarName).Append(".").Append(mapping.TargetPath).Append(" = ");
+            BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName);
+        }
 
-            if (mapping.RequiresConversion)
+        // Generate property mappings with null check (grouped by source null check condition)
+        var groupedByNullCheck = mappingsWithNullCheck
+            .GroupBy(m => GetNullCheckCondition(m, method.SourceParameterName))
+            .Where(g => !string.IsNullOrEmpty(g.Key));
+
+        foreach (var group in groupedByNullCheck)
+        {
+            builder.Indent().Append("if (").Append(group.Key).Append(")").NewLine();
+            builder.BeginScope();
+
+            // Generate auto-instantiation for these mappings' target paths
+            var groupNestedPaths = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var mapping in group)
             {
-                // Basic type conversion
-                BuildTypeConversion(builder, mapping, method.SourceParameterName);
-            }
-            else
-            {
-                // For nested source paths, add null-forgiving operator for intermediate properties
-                var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, method.SourceParameterName);
-                builder.Append(sourceAccessor);
+                foreach (var segment in mapping.TargetPathSegments)
+                {
+                    if (!groupNestedPaths.ContainsKey(segment.Path))
+                    {
+                        groupNestedPaths[segment.Path] = segment.TypeName;
+                    }
+                }
             }
 
-            builder.Append(";").NewLine();
+            foreach (var kvp in groupNestedPaths.OrderBy(x => x.Key.Count(c => c == '.')))
+            {
+                builder.Indent();
+                builder.Append(destVarName).Append(".").Append(kvp.Key).Append(" ??= new ").Append(kvp.Value).Append("();").NewLine();
+            }
+
+            foreach (var mapping in group)
+            {
+                BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName, nullChecked: true);
+            }
+
+            builder.EndScope();
         }
 
         // Generate constant mappings
@@ -608,9 +703,56 @@ public sealed class MapperGenerator : IIncrementalGenerator
         builder.EndScope();
     }
 
-    private static string BuildSourceAccessor(string sourcePath, string sourceParamName)
+    private static void BuildPropertyAssignment(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, string destVarName, bool nullChecked = false)
     {
-        // For nested paths, add null-forgiving operator (!) to intermediate properties
+        builder.Indent();
+        builder.Append(destVarName).Append(".").Append(mapping.TargetPath).Append(" = ");
+
+        if (mapping.RequiresConversion)
+        {
+            BuildTypeConversion(builder, mapping, sourceParamName, nullChecked);
+        }
+        else
+        {
+            var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
+            builder.Append(sourceAccessor);
+        }
+
+        builder.Append(";").NewLine();
+    }
+
+    private static string GetNullCheckCondition(PropertyMappingModel mapping, string sourceParamName)
+    {
+        var conditions = new List<string>();
+
+        // Check for nullable source path segments
+        if (mapping.SourcePathSegments.Count > 0)
+        {
+            var pathBuilder = new StringBuilder();
+            pathBuilder.Append(sourceParamName);
+
+            foreach (var segment in mapping.SourcePathSegments)
+            {
+                pathBuilder.Append('.').Append(segment.Path.Split('.').Last());
+                if (segment.IsNullable)
+                {
+                    conditions.Add($"{pathBuilder} is not null");
+                }
+            }
+        }
+
+        // Check for nullable source to non-nullable target
+        if (mapping.IsSourceNullable && !mapping.IsTargetNullable && mapping.SourcePathSegments.Count == 0)
+        {
+            conditions.Add($"{sourceParamName}.{mapping.SourcePath} is not null");
+        }
+
+        return string.Join(" && ", conditions);
+    }
+
+    private static string BuildSourceAccessor(string sourcePath, string sourceParamName, bool nullChecked = false)
+    {
+        // For simple paths, just return the accessor
         if (!sourcePath.Contains('.'))
         {
             return $"{sourceParamName}.{sourcePath}";
@@ -625,8 +767,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
             result.Append('.');
             result.Append(parts[i]);
 
-            // Add null-forgiving operator for all but the last segment
-            if (i < parts.Length - 1)
+            // Add null-forgiving operator for intermediate segments only if not null checked
+            if (i < parts.Length - 1 && !nullChecked)
             {
                 result.Append('!');
             }
@@ -635,9 +777,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
         return result.ToString();
     }
 
-    private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName)
+    private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, bool nullChecked = false)
     {
-        var sourceExpr = BuildSourceAccessor(mapping.SourcePath, sourceParamName);
+        var sourceExpr = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
 
         // Normalize type names for comparison
         var sourceType = NormalizeTypeName(mapping.SourceType);

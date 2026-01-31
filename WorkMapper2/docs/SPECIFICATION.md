@@ -348,6 +348,7 @@ public class Source
     public SourceChild? Child { get; set; }
 }
 
+
 public class Destination
 {
     public int ChildId { get; set; }
@@ -365,8 +366,11 @@ public static partial void Map(Source source, Destination destination);
 ```csharp
 public static partial void Map(Source source, Destination destination)
 {
-    destination.ChildId = source.Child!.Id;
-    destination.ChildName = source.Child!.Name;
+    if (source.Child is not null)
+    {
+        destination.ChildId = source.Child.Id;
+        destination.ChildName = source.Child.Name;
+    }
 }
 ```
 
@@ -392,16 +396,74 @@ public static partial void Map(DeepSource source, DeepNestedDestination destinat
 ### 7.4 注意事項
 
 - **ターゲット側のネスト**: 中間オブジェクトが`null`の場合、自動的にインスタンスが生成されます（`??= new`）
-- **ソース側のネスト**: null-forgiving演算子（`!`）を使用します。ソースのネストプロパティが`null`の場合は`NullReferenceException`が発生します
+- **ソース側のネスト**: 中間オブジェクトがnullableの場合、nullチェックが追加され、nullの場合はマッピングがスキップされます
 - 既存のインスタンスは保持され、プロパティのみが更新されます
 
-## 8. 実装済み型変換一覧
+## 8. Null処理
 
-### 8.1 文字列への変換
+### 8.1 Nullableプロパティの動作
+
+| ソース型 | ターゲット型 | 動作 |
+|----------|-------------|------|
+| `T?` | `T?` | そのままコピー（nullも含む） |
+| `T?` | `T` | nullチェックを追加し、nullの場合はスキップ |
+| `T` | `T?` | そのままコピー |
+| `T` | `T` | そのままコピー |
+
+### 8.2 ネストプロパティのnull処理
+
+ソース側のネストプロパティの中間パスがnullableの場合：
+
+```csharp
+// Source.Child? がnullableの場合
+public static partial void Map(Source source, Destination destination)
+{
+    // 非ネストプロパティは常にコピー
+    destination.DirectValue = source.DirectValue;
+    
+    // ネストプロパティはnullチェック付き
+    if (source.Child is not null)
+    {
+        destination.ChildId = source.Child.Id;
+        destination.ChildName = source.Child.Name;
+    }
+}
+```
+
+### 8.3 nullable → non-nullable のマッピング
+
+```csharp
+public class Source
+{
+    public string? Name { get; set; }
+}
+
+public class Destination
+{
+    public string Name { get; set; } = "default";
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    if (source.Name is not null)
+    {
+        destination.Name = source.Name;
+    }
+    // nullの場合は元の値を保持
+}
+```
+
+## 9. 実装済み型変換一覧
+
+### 9.1 文字列への変換
 
 すべての型から `string` への変換は `ToString()` メソッドを使用します。
 
-### 8.2 文字列からの変換
+### 9.2 文字列からの変換
 
 | 変換先 | 変換方法 |
 |--------|----------|
@@ -421,11 +483,11 @@ public static partial void Map(DeepSource source, DeepNestedDestination destinat
 | `TimeSpan` | `TimeSpan.Parse()` |
 | `Guid` | `Guid.Parse()` |
 
-### 8.3 数値型間の変換
+### 9.3 数値型間の変換
 
 数値型（`int`, `long`, `short`, `byte`, `float`, `double`, `decimal` 等）間の変換は、明示的なキャストを使用します。
 
-### 8.4 日時型の変換
+### 9.4 日時型の変換
 
 | 変換元 | 変換先 | 変換方法 |
 |--------|--------|----------|

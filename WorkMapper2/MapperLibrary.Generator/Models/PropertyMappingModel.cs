@@ -36,9 +36,23 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
 
     /// <summary>
     /// Gets or sets the nested target path segments with their types for auto-instantiation.
-    /// Key: path segment, Value: type name
     /// </summary>
     public List<NestedPathSegment> TargetPathSegments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the nested source path segments for null checking.
+    /// </summary>
+    public List<NestedPathSegment> SourcePathSegments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether source type is nullable.
+    /// </summary>
+    public bool IsSourceNullable { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether target type is nullable.
+    /// </summary>
+    public bool IsTargetNullable { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the source path is nested.
@@ -49,6 +63,12 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
     /// Gets a value indicating whether the target path is nested.
     /// </summary>
     public bool IsTargetNested => TargetPath.Contains('.');
+
+    /// <summary>
+    /// Gets a value indicating whether null check is required before mapping.
+    /// This is true when source has nullable nested path or when source is nullable but target is not.
+    /// </summary>
+    public bool RequiresNullCheck => SourcePathSegments.Count > 0 || (IsSourceNullable && !IsTargetNullable);
 
     // Legacy property names for compatibility
     public string SourceName
@@ -80,7 +100,10 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
                SourceType == other.SourceType &&
                TargetType == other.TargetType &&
                RequiresConversion == other.RequiresConversion &&
-               TargetPathSegments.SequenceEqual(other.TargetPathSegments);
+               IsSourceNullable == other.IsSourceNullable &&
+               IsTargetNullable == other.IsTargetNullable &&
+               TargetPathSegments.SequenceEqual(other.TargetPathSegments) &&
+               SourcePathSegments.SequenceEqual(other.SourcePathSegments);
     }
 
     public override bool Equals(object? obj) => Equals(obj as PropertyMappingModel);
@@ -95,6 +118,8 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
             hash = (hash * 31) + (SourceType?.GetHashCode() ?? 0);
             hash = (hash * 31) + (TargetType?.GetHashCode() ?? 0);
             hash = (hash * 31) + RequiresConversion.GetHashCode();
+            hash = (hash * 31) + IsSourceNullable.GetHashCode();
+            hash = (hash * 31) + IsTargetNullable.GetHashCode();
             return hash;
         }
     }
@@ -115,11 +140,16 @@ internal sealed class NestedPathSegment : IEquatable<NestedPathSegment>
     /// </summary>
     public string TypeName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether this segment is nullable.
+    /// </summary>
+    public bool IsNullable { get; set; }
+
     public bool Equals(NestedPathSegment? other)
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return Path == other.Path && TypeName == other.TypeName;
+        return Path == other.Path && TypeName == other.TypeName && IsNullable == other.IsNullable;
     }
 
     public override bool Equals(object? obj) => Equals(obj as NestedPathSegment);
@@ -128,7 +158,9 @@ internal sealed class NestedPathSegment : IEquatable<NestedPathSegment>
     {
         unchecked
         {
-            return (Path?.GetHashCode() ?? 0) * 31 + (TypeName?.GetHashCode() ?? 0);
+            var hash = (Path?.GetHashCode() ?? 0) * 31 + (TypeName?.GetHashCode() ?? 0);
+            hash = hash * 31 + IsNullable.GetHashCode();
+            return hash;
         }
     }
 }

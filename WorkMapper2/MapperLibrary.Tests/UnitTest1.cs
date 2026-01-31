@@ -158,6 +158,7 @@ public class FlatDestination
     public int DirectValue { get; set; }
 }
 
+
 // Deep nested test models
 public class DeepNestedChild
 {
@@ -177,6 +178,52 @@ public class DeepNestedDestination
 public class DeepSource
 {
     public int DeepValue { get; set; }
+}
+
+// Null handling test models - Nested source with nullable child
+public class NullableNestedSourceChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class NullableNestedSource
+{
+    public NullableNestedSourceChild? Child { get; set; }
+    public int DirectValue { get; set; }
+}
+
+public class NullableNestedFlatDestination
+{
+    public int ChildId { get; set; }
+    public string ChildName { get; set; } = string.Empty;
+    public int DirectValue { get; set; }
+}
+
+// Null handling test models - Simple nullable properties
+public class NullablePropertySource
+{
+    public string? NullableName { get; set; }
+    public int? NullableInt { get; set; }
+    public string NonNullableName { get; set; } = string.Empty;
+}
+
+public class NullablePropertyDestination
+{
+    public string? NullableName { get; set; }
+    public int? NullableInt { get; set; }
+    public string NonNullableName { get; set; } = "default";
+}
+
+// Null handling - nullable to non-nullable
+public class NullableToNonNullableSource
+{
+    public string? Name { get; set; }
+}
+
+public class NullableToNonNullableDestination
+{
+    public string Name { get; set; } = "original";
 }
 
 #endregion
@@ -274,6 +321,20 @@ internal static partial class TestMappers
     [Mapper]
     [MapProperty("DeepValue", "Outer.Inner.Value")]
     public static partial DeepNestedDestination MapToNew(DeepSource source);
+
+    // Null handling: nested source to flat destination (with nullable source child)
+    [Mapper]
+    [MapProperty("Child.Id", "ChildId")]
+    [MapProperty("Child.Name", "ChildName")]
+    public static partial void Map(NullableNestedSource source, NullableNestedFlatDestination destination);
+
+    // Null handling: simple nullable properties
+    [Mapper]
+    public static partial void Map(NullablePropertySource source, NullablePropertyDestination destination);
+
+    // Null handling: nullable to non-nullable
+    [Mapper]
+    public static partial void Map(NullableToNonNullableSource source, NullableToNonNullableDestination destination);
 }
 
 #endregion
@@ -661,6 +722,146 @@ public class NestedMappingTests
         // Child2 and Child3 should be created
         Assert.NotNull(destination.Child2);
         Assert.NotNull(destination.Child3);
+    }
+}
+
+// Null handling tests
+public class NullHandlingTests
+{
+    [Fact]
+    public void Map_NestedSourceWithNullChild_SkipsCopyForNullSource()
+    {
+        // Arrange
+        var source = new NullableNestedSource
+        {
+            Child = null,  // Child is null
+            DirectValue = 100
+        };
+        var destination = new NullableNestedFlatDestination
+        {
+            ChildId = 999,       // Original values should be preserved
+            ChildName = "Original",
+            DirectValue = 0
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - DirectValue should be copied, but nested properties should be skipped
+        Assert.Equal(100, destination.DirectValue);
+        Assert.Equal(999, destination.ChildId);           // Should preserve original
+        Assert.Equal("Original", destination.ChildName);  // Should preserve original
+    }
+
+    [Fact]
+    public void Map_NestedSourceWithNonNullChild_CopiesNestedProperties()
+    {
+        // Arrange
+        var source = new NullableNestedSource
+        {
+            Child = new NullableNestedSourceChild
+            {
+                Id = 42,
+                Name = "Test"
+            },
+            DirectValue = 100
+        };
+        var destination = new NullableNestedFlatDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - All properties should be copied
+        Assert.Equal(100, destination.DirectValue);
+        Assert.Equal(42, destination.ChildId);
+        Assert.Equal("Test", destination.ChildName);
+    }
+
+    [Fact]
+    public void Map_NullableProperties_CopiesNullValues()
+    {
+        // Arrange
+        var source = new NullablePropertySource
+        {
+            NullableName = null,
+            NullableInt = null,
+            NonNullableName = "Test"
+        };
+        var destination = new NullablePropertyDestination
+        {
+            NullableName = "Original",
+            NullableInt = 999
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - Nullable properties should be copied (including null)
+        Assert.Null(destination.NullableName);
+        Assert.Null(destination.NullableInt);
+        Assert.Equal("Test", destination.NonNullableName);
+    }
+
+    [Fact]
+    public void Map_NullableProperties_CopiesNonNullValues()
+    {
+        // Arrange
+        var source = new NullablePropertySource
+        {
+            NullableName = "NewName",
+            NullableInt = 42,
+            NonNullableName = "Test"
+        };
+        var destination = new NullablePropertyDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal("NewName", destination.NullableName);
+        Assert.Equal(42, destination.NullableInt);
+        Assert.Equal("Test", destination.NonNullableName);
+    }
+
+    [Fact]
+    public void Map_NullableToNonNullable_WithNullSource_SkipsOrSetsNull()
+    {
+        // Arrange
+        var source = new NullableToNonNullableSource
+        {
+            Name = null
+        };
+        var destination = new NullableToNonNullableDestination
+        {
+            Name = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - Expected behavior: Skip copy when source is null and target is non-nullable
+        // This preserves the original value and avoids null assignment to non-nullable
+        Assert.Equal("Original", destination.Name);  // Skip copy, preserve original
+    }
+
+    [Fact]
+    public void Map_NullableToNonNullable_WithNonNullSource_CopiesValue()
+    {
+        // Arrange
+        var source = new NullableToNonNullableSource
+        {
+            Name = "NewValue"
+        };
+        var destination = new NullableToNonNullableDestination
+        {
+            Name = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal("NewValue", destination.Name);
     }
 }
 
