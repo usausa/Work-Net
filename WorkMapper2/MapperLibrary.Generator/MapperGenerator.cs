@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis.Text;
 using SourceGenerateHelper;
 
 [Generator]
-public sealed class TemplateGenerator : IIncrementalGenerator
+public sealed class MapperGenerator : IIncrementalGenerator
 {
     private const string AttributeName = "MapperLibrary.CustomMethodAttribute";
 
