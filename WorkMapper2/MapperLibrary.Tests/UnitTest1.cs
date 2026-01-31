@@ -208,6 +208,7 @@ public class NullablePropertySource
     public string NonNullableName { get; set; } = string.Empty;
 }
 
+
 public class NullablePropertyDestination
 {
     public string? NullableName { get; set; }
@@ -224,6 +225,17 @@ public class NullableToNonNullableSource
 public class NullableToNonNullableDestination
 {
     public string Name { get; set; } = "original";
+}
+
+// Null handling - nullable int to string
+public class NullableIntToStringSource
+{
+    public int? IntValue { get; set; }
+}
+
+public class NullableIntToStringDestination
+{
+    public string IntValue { get; set; } = "original";
 }
 
 #endregion
@@ -335,6 +347,10 @@ internal static partial class TestMappers
     // Null handling: nullable to non-nullable
     [Mapper]
     public static partial void Map(NullableToNonNullableSource source, NullableToNonNullableDestination destination);
+
+    // Null handling: nullable int to non-nullable string
+    [Mapper]
+    public static partial void Map(NullableIntToStringSource source, NullableIntToStringDestination destination);
 }
 
 #endregion
@@ -824,7 +840,7 @@ public class NullHandlingTests
     }
 
     [Fact]
-    public void Map_NullableToNonNullable_WithNullSource_SkipsOrSetsNull()
+    public void Map_NullableToNonNullable_WithNullSource_SetsDefault()
     {
         // Arrange
         var source = new NullableToNonNullableSource
@@ -839,9 +855,9 @@ public class NullHandlingTests
         // Act
         TestMappers.Map(source, destination);
 
-        // Assert - Expected behavior: Skip copy when source is null and target is non-nullable
-        // This preserves the original value and avoids null assignment to non-nullable
-        Assert.Equal("Original", destination.Name);  // Skip copy, preserve original
+        // Assert - Expected behavior: Set default! when source is null and target is non-nullable
+        // For string, default! is null
+        Assert.Null(destination.Name);
     }
 
     [Fact]
@@ -862,6 +878,46 @@ public class NullHandlingTests
 
         // Assert
         Assert.Equal("NewValue", destination.Name);
+    }
+
+    [Fact]
+    public void Map_NullableIntToString_WithNullSource_SetsDefault()
+    {
+        // Arrange
+        var source = new NullableIntToStringSource
+        {
+            IntValue = null
+        };
+        var destination = new NullableIntToStringDestination
+        {
+            IntValue = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - int? null -> string should be default! (null)
+        Assert.Null(destination.IntValue);
+    }
+
+    [Fact]
+    public void Map_NullableIntToString_WithNonNullSource_ConvertsValue()
+    {
+        // Arrange
+        var source = new NullableIntToStringSource
+        {
+            IntValue = 42
+        };
+        var destination = new NullableIntToStringDestination
+        {
+            IntValue = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal("42", destination.IntValue);
     }
 }
 

@@ -66,9 +66,15 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
 
     /// <summary>
     /// Gets a value indicating whether null check is required before mapping.
-    /// This is true when source has nullable nested path or when source is nullable but target is not.
+    /// This is true only when source has nullable nested path segments (intermediate elements).
     /// </summary>
-    public bool RequiresNullCheck => SourcePathSegments.Count > 0 || (IsSourceNullable && !IsTargetNullable);
+    public bool RequiresNullCheck => SourcePathSegments.Any(s => s.IsNullable);
+
+    /// <summary>
+    /// Gets a value indicating whether null coalescing is required for the assignment.
+    /// This is true when source is nullable but target is not (terminal element).
+    /// </summary>
+    public bool RequiresNullCoalescing => IsSourceNullable && !IsTargetNullable;
 
     // Legacy property names for compatibility
     public string SourceName

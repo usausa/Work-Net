@@ -406,13 +406,13 @@ public static partial void Map(DeepSource source, DeepNestedDestination destinat
 | ソース型 | ターゲット型 | 動作 |
 |----------|-------------|------|
 | `T?` | `T?` | そのままコピー（nullも含む） |
-| `T?` | `T` | nullチェックを追加し、nullの場合はスキップ |
+| `T?` | `T` (末端) | `default!` を代入 |
 | `T` | `T?` | そのままコピー |
 | `T` | `T` | そのままコピー |
 
 ### 8.2 ネストプロパティのnull処理
 
-ソース側のネストプロパティの中間パスがnullableの場合：
+ソース側のネストプロパティの**中間パス**がnullableの場合、処理をスキップします：
 
 ```csharp
 // Source.Child? がnullableの場合
@@ -421,7 +421,7 @@ public static partial void Map(Source source, Destination destination)
     // 非ネストプロパティは常にコピー
     destination.DirectValue = source.DirectValue;
     
-    // ネストプロパティはnullチェック付き
+    // ネストプロパティは中間要素のnullチェック付き
     if (source.Child is not null)
     {
         destination.ChildId = source.Child.Id;
@@ -430,30 +430,35 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 8.3 nullable → non-nullable のマッピング
+### 8.3 末端要素の nullable → non-nullable マッピング
+
+末端の要素がnullの場合は `default!` を代入します：
 
 ```csharp
 public class Source
 {
     public string? Name { get; set; }
+    public int? IntValue { get; set; }
 }
 
 public class Destination
 {
     public string Name { get; set; } = "default";
+    public string IntValue { get; set; } = "default";
 }
 ```
+
 
 **生成コード:**
 
 ```csharp
 public static partial void Map(Source source, Destination destination)
 {
-    if (source.Name is not null)
-    {
-        destination.Name = source.Name;
-    }
-    // nullの場合は元の値を保持
+    // string? -> string: null-forgiving operator を使用
+    destination.Name = source.Name!;
+    
+    // int? -> string: null-coalescing で default! を使用
+    destination.IntValue = source.IntValue?.ToString() ?? default!;
 }
 ```
 
@@ -462,6 +467,7 @@ public static partial void Map(Source source, Destination destination)
 ### 9.1 文字列への変換
 
 すべての型から `string` への変換は `ToString()` メソッドを使用します。
+nullable型の場合は `?.ToString()` を使用し、ターゲットがnon-nullableなら `?? default!` を追加します。
 
 ### 9.2 文字列からの変換
 

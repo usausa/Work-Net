@@ -716,6 +716,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
         {
             var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
             builder.Append(sourceAccessor);
+
+            // For nullable to non-nullable terminal element, add null-forgiving operator
+            if (mapping.RequiresNullCoalescing)
+            {
+                builder.Append("!");
+            }
         }
 
         builder.Append(";").NewLine();
@@ -725,7 +731,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
     {
         var conditions = new List<string>();
 
-        // Check for nullable source path segments
+        // Check for nullable source path segments (intermediate elements only)
         if (mapping.SourcePathSegments.Count > 0)
         {
             var pathBuilder = new StringBuilder();
@@ -741,11 +747,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
         }
 
-        // Check for nullable source to non-nullable target
-        if (mapping.IsSourceNullable && !mapping.IsTargetNullable && mapping.SourcePathSegments.Count == 0)
-        {
-            conditions.Add($"{sourceParamName}.{mapping.SourcePath} is not null");
-        }
+        // Note: Terminal nullable to non-nullable is handled by RequiresNullCoalescing, not here
 
         return string.Join(" && ", conditions);
     }
@@ -780,15 +782,20 @@ public sealed class MapperGenerator : IIncrementalGenerator
     private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, bool nullChecked = false)
     {
         var sourceExpr = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
+        var requiresNullCoalescing = mapping.RequiresNullCoalescing;
 
         // Normalize type names for comparison
         var sourceType = NormalizeTypeName(mapping.SourceType);
         var targetType = NormalizeTypeName(mapping.TargetType);
 
-        // Same normalized type - no conversion needed
+        // Same normalized type - no conversion needed (but may need null handling)
         if (sourceType == targetType)
         {
             builder.Append(sourceExpr);
+            if (requiresNullCoalescing)
+            {
+                builder.Append("!");
+            }
             return;
         }
 
@@ -797,7 +804,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
         {
             if (IsNullableType(mapping.SourceType))
             {
+                // int? -> string: source.Value?.ToString() ?? default!
                 builder.Append(sourceExpr).Append("?.ToString()");
+                if (!mapping.IsTargetNullable)
+                {
+                    builder.Append(" ?? default!");
+                }
             }
             else
             {
@@ -812,52 +824,117 @@ public sealed class MapperGenerator : IIncrementalGenerator
             var parseMethod = GetParseMethod(targetType);
             if (parseMethod is not null)
             {
-                builder.Append(parseMethod).Append("(").Append(sourceExpr).Append(")");
+                if (IsNullableType(mapping.SourceType) && !mapping.IsTargetNullable)
+                {
+                    // string? -> int: source.Value is not null ? int.Parse(source.Value) : default
+                    builder.Append(sourceExpr).Append(" is not null ? ")
+                           .Append(parseMethod).Append("(").Append(sourceExpr).Append(") : default");
+                }
+                else
+                {
+                    builder.Append(parseMethod).Append("(").Append(sourceExpr).Append(")");
+                }
                 return;
             }
         }
 
-        // Numeric conversions
+        // Numeric conversions (including nullable)
         if (IsNumericType(sourceType) && IsNumericType(targetType))
         {
-            // Use explicit cast for numeric conversions
-            builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+            if (IsNullableType(mapping.SourceType))
+            {
+                if (mapping.IsTargetNullable)
+                {
+                    // int? -> long?: (long?)source.Value
+                    builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+                }
+                else
+                {
+                    // int? -> long: source.Value ?? default
+                    builder.Append("(").Append(mapping.TargetType).Append(")(").Append(sourceExpr).Append(" ?? default)");
+                }
+            }
+            else
+            {
+                // int -> long: (long)source.Value
+                builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+            }
             return;
         }
 
         // DateTime conversions
         if (sourceType == "DateTime" && targetType == "DateTimeOffset")
         {
-            builder.Append("new global::System.DateTimeOffset(").Append(sourceExpr).Append(")");
+            builder.Append("new global::System.DateTimeOffset(").Append(sourceExpr);
+            if (IsNullableType(mapping.SourceType))
+            {
+                builder.Append(" ?? default");
+            }
+            builder.Append(")");
             return;
         }
         if (sourceType == "DateTimeOffset" && targetType == "DateTime")
         {
-            builder.Append(sourceExpr).Append(".DateTime");
+            if (IsNullableType(mapping.SourceType))
+            {
+                builder.Append(sourceExpr).Append("?.DateTime ?? default");
+            }
+            else
+            {
+                builder.Append(sourceExpr).Append(".DateTime");
+            }
             return;
         }
 
-        // DateOnly/TimeOnly conversions (if available)
+        // DateOnly/TimeOnly conversions
         if (sourceType == "DateTime" && targetType == "DateOnly")
         {
-            builder.Append("global::System.DateOnly.FromDateTime(").Append(sourceExpr).Append(")");
+            builder.Append("global::System.DateOnly.FromDateTime(").Append(sourceExpr);
+            if (IsNullableType(mapping.SourceType))
+            {
+                builder.Append(" ?? default");
+            }
+            builder.Append(")");
             return;
         }
         if (sourceType == "DateTime" && targetType == "TimeOnly")
         {
-            builder.Append("global::System.TimeOnly.FromDateTime(").Append(sourceExpr).Append(")");
+            builder.Append("global::System.TimeOnly.FromDateTime(").Append(sourceExpr);
+            if (IsNullableType(mapping.SourceType))
+            {
+                builder.Append(" ?? default");
+            }
+            builder.Append(")");
             return;
         }
 
         // Guid conversions
         if (sourceType == "string" && targetType == "Guid")
         {
-            builder.Append("global::System.Guid.Parse(").Append(sourceExpr).Append(")");
+            if (IsNullableType(mapping.SourceType) && !mapping.IsTargetNullable)
+            {
+                builder.Append(sourceExpr).Append(" is not null ? global::System.Guid.Parse(").Append(sourceExpr).Append(") : default");
+            }
+            else
+            {
+                builder.Append("global::System.Guid.Parse(").Append(sourceExpr).Append(")");
+            }
             return;
         }
         if (sourceType == "Guid" && targetType == "string")
         {
-            builder.Append(sourceExpr).Append(".ToString()");
+            if (IsNullableType(mapping.SourceType))
+            {
+                builder.Append(sourceExpr).Append("?.ToString()");
+                if (!mapping.IsTargetNullable)
+                {
+                    builder.Append(" ?? default!");
+                }
+            }
+            else
+            {
+                builder.Append(sourceExpr).Append(".ToString()");
+            }
             return;
         }
 
@@ -871,6 +948,10 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
         // Fallback: try explicit cast
         builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+        if (requiresNullCoalescing && IsNullableType(mapping.SourceType))
+        {
+            // Unlikely to reach here, but add null handling just in case
+        }
     }
 
     private static string NormalizeTypeName(string typeName)
