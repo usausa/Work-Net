@@ -71,6 +71,21 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     /// </summary>
     public HashSet<string> IgnoredProperties { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the constant mappings.
+    /// </summary>
+    public List<ConstantMappingModel> ConstantMappings { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the method name to call before mapping.
+    /// </summary>
+    public string? BeforeMapMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the method name to call after mapping.
+    /// </summary>
+    public string? AfterMapMethod { get; set; }
+
     public bool Equals(MapperMethodModel? other)
     {
         if (other is null)
@@ -94,7 +109,10 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
                DestinationParameterName == other.DestinationParameterName &&
                ReturnsDestination == other.ReturnsDestination &&
                PropertyMappings.SequenceEqual(other.PropertyMappings) &&
-               IgnoredProperties.SetEquals(other.IgnoredProperties);
+               IgnoredProperties.SetEquals(other.IgnoredProperties) &&
+               ConstantMappings.SequenceEqual(other.ConstantMappings) &&
+               BeforeMapMethod == other.BeforeMapMethod &&
+               AfterMapMethod == other.AfterMapMethod;
     }
 
     public override bool Equals(object? obj) => Equals(obj as MapperMethodModel);
@@ -114,6 +132,8 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
             hash = (hash * 31) + (DestinationTypeName?.GetHashCode() ?? 0);
             hash = (hash * 31) + (DestinationParameterName?.GetHashCode() ?? 0);
             hash = (hash * 31) + ReturnsDestination.GetHashCode();
+            hash = (hash * 31) + (BeforeMapMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + (AfterMapMethod?.GetHashCode() ?? 0);
             return hash;
         }
     }

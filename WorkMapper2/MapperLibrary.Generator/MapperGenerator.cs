@@ -20,6 +20,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
     private const string MapperAttributeName = "MapperLibrary.MapperAttribute";
     private const string MapPropertyAttributeName = "MapperLibrary.MapPropertyAttribute";
     private const string MapIgnoreAttributeName = "MapperLibrary.MapIgnoreAttribute";
+    private const string MapConstantAttributeName = "MapperLibrary.MapConstantAttribute";
+    private const string BeforeMapAttributeName = "MapperLibrary.BeforeMapAttribute";
+    private const string AfterMapAttributeName = "MapperLibrary.AfterMapAttribute";
 
     // ------------------------------------------------------------
     // Initialize
@@ -108,7 +111,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             model.ReturnsDestination = true;
         }
 
-        // Parse attributes for MapProperty and MapIgnore
+        // Parse attributes for MapProperty, MapIgnore, MapConstant, BeforeMap, AfterMap
         ParseMappingAttributes(symbol, model);
 
         // Get source and destination properties
@@ -116,6 +119,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
         var destinationType = symbol.Parameters.Length == 2 ? symbol.Parameters[1].Type : symbol.ReturnType;
 
         BuildPropertyMappings(sourceType, destinationType, model);
+
+        // Build constant mappings with type information
+        BuildConstantMappings(destinationType, model);
 
         return Results.Success(model);
     }
@@ -150,6 +156,87 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     var targetName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
                     model.IgnoredProperties.Add(targetName);
                 }
+            }
+            else if (attributeName == MapConstantAttributeName)
+            {
+                // MapConstant(target, value) with optional Expression property
+                if (attribute.ConstructorArguments.Length >= 2)
+                {
+                    var targetName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    var value = attribute.ConstructorArguments[1].Value;
+
+                    var constantMapping = new ConstantMappingModel
+                    {
+                        TargetName = targetName,
+                        Value = FormatConstantValue(value)
+                    };
+
+                    // Check for Expression named argument
+                    foreach (var namedArg in attribute.NamedArguments)
+                    {
+                        if (namedArg.Key == "Expression" && namedArg.Value.Value is string expression)
+                        {
+                            constantMapping.Expression = expression;
+                        }
+                    }
+
+                    model.ConstantMappings.Add(constantMapping);
+
+                    // Also add to ignored properties so normal mapping doesn't override
+                    model.IgnoredProperties.Add(targetName);
+                }
+            }
+            else if (attributeName == BeforeMapAttributeName)
+            {
+                // BeforeMap(methodName)
+                if (attribute.ConstructorArguments.Length >= 1)
+                {
+                    model.BeforeMapMethod = attribute.ConstructorArguments[0].Value?.ToString();
+                }
+            }
+            else if (attributeName == AfterMapAttributeName)
+            {
+                // AfterMap(methodName)
+                if (attribute.ConstructorArguments.Length >= 1)
+                {
+                    model.AfterMapMethod = attribute.ConstructorArguments[0].Value?.ToString();
+                }
+            }
+        }
+    }
+
+    private static string? FormatConstantValue(object? value)
+    {
+        if (value is null)
+        {
+            return "null";
+        }
+
+        return value switch
+        {
+            string s => $"\"{s.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"",
+            char c => $"'{c}'",
+            bool b => b ? "true" : "false",
+            float f => $"{f}f",
+            double d => $"{d}d",
+            decimal m => $"{m}m",
+            long l => $"{l}L",
+            ulong ul => $"{ul}UL",
+            uint ui => $"{ui}U",
+            _ => value.ToString()
+        };
+    }
+
+    private static void BuildConstantMappings(ITypeSymbol destinationType, MapperMethodModel model)
+    {
+        var destinationProperties = GetAllProperties(destinationType);
+
+        foreach (var constantMapping in model.ConstantMappings)
+        {
+            var destProp = destinationProperties.FirstOrDefault(p => p.Name == constantMapping.TargetName);
+            if (destProp is not null)
+            {
+                constantMapping.TargetType = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             }
         }
     }
@@ -336,6 +423,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent().Append("var ").Append(destVarName).Append(" = new ").Append(method.DestinationTypeName).Append("();").NewLine();
         }
 
+        // Call BeforeMap if specified
+        if (!string.IsNullOrEmpty(method.BeforeMapMethod))
+        {
+            builder.Indent().Append(method.BeforeMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
+        }
+
         // Generate property mappings
         foreach (var mapping in method.PropertyMappings)
         {
@@ -355,6 +448,32 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Append(";").NewLine();
         }
 
+        // Generate constant mappings
+        foreach (var constant in method.ConstantMappings)
+        {
+            builder.Indent();
+            builder.Append(destVarName).Append(".").Append(constant.TargetName).Append(" = ");
+
+            if (constant.IsExpression)
+            {
+                // Use expression directly
+                builder.Append(constant.Expression!);
+            }
+            else
+            {
+                // Use constant value
+                builder.Append(constant.Value ?? "null");
+            }
+
+            builder.Append(";").NewLine();
+        }
+
+        // Call AfterMap if specified
+        if (!string.IsNullOrEmpty(method.AfterMapMethod))
+        {
+            builder.Indent().Append(method.AfterMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
+        }
+
         // Return destination if needed
         if (method.ReturnsDestination)
         {
@@ -366,50 +485,166 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
     private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName)
     {
-        // Basic type conversion using ToString() for now
-        // TODO: Implement more sophisticated type conversion in Phase 2
         var sourceExpr = $"{sourceParamName}.{mapping.SourceName}";
 
-        // Check common conversion patterns
-        if (mapping.TargetType == "string" || mapping.TargetType == "global::System.String")
+        // Normalize type names for comparison
+        var sourceType = NormalizeTypeName(mapping.SourceType);
+        var targetType = NormalizeTypeName(mapping.TargetType);
+
+        // Same normalized type - no conversion needed
+        if (sourceType == targetType)
         {
-            // Convert to string
-            builder.Append(sourceExpr).Append(".ToString()");
+            builder.Append(sourceExpr);
+            return;
         }
-        else if (mapping.SourceType == "string" || mapping.SourceType == "global::System.String")
+
+        // Convert to string
+        if (targetType == "string")
         {
-            // Convert from string to other types
-            if (mapping.TargetType is "int" or "global::System.Int32")
+            if (IsNullableType(mapping.SourceType))
             {
-                builder.Append("int.Parse(").Append(sourceExpr).Append(")");
-            }
-            else if (mapping.TargetType is "long" or "global::System.Int64")
-            {
-                builder.Append("long.Parse(").Append(sourceExpr).Append(")");
-            }
-            else if (mapping.TargetType is "double" or "global::System.Double")
-            {
-                builder.Append("double.Parse(").Append(sourceExpr).Append(")");
-            }
-            else if (mapping.TargetType is "decimal" or "global::System.Decimal")
-            {
-                builder.Append("decimal.Parse(").Append(sourceExpr).Append(")");
-            }
-            else if (mapping.TargetType is "bool" or "global::System.Boolean")
-            {
-                builder.Append("bool.Parse(").Append(sourceExpr).Append(")");
+                builder.Append(sourceExpr).Append("?.ToString()");
             }
             else
             {
-                // Fallback: direct cast
-                builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+                builder.Append(sourceExpr).Append(".ToString()");
+            }
+            return;
+        }
+
+        // Convert from string to other types
+        if (sourceType == "string")
+        {
+            var parseMethod = GetParseMethod(targetType);
+            if (parseMethod is not null)
+            {
+                builder.Append(parseMethod).Append("(").Append(sourceExpr).Append(")");
+                return;
             }
         }
-        else
+
+        // Numeric conversions
+        if (IsNumericType(sourceType) && IsNumericType(targetType))
         {
-            // Try implicit/explicit conversion
+            // Use explicit cast for numeric conversions
             builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+            return;
         }
+
+        // DateTime conversions
+        if (sourceType == "DateTime" && targetType == "DateTimeOffset")
+        {
+            builder.Append("new global::System.DateTimeOffset(").Append(sourceExpr).Append(")");
+            return;
+        }
+        if (sourceType == "DateTimeOffset" && targetType == "DateTime")
+        {
+            builder.Append(sourceExpr).Append(".DateTime");
+            return;
+        }
+
+        // DateOnly/TimeOnly conversions (if available)
+        if (sourceType == "DateTime" && targetType == "DateOnly")
+        {
+            builder.Append("global::System.DateOnly.FromDateTime(").Append(sourceExpr).Append(")");
+            return;
+        }
+        if (sourceType == "DateTime" && targetType == "TimeOnly")
+        {
+            builder.Append("global::System.TimeOnly.FromDateTime(").Append(sourceExpr).Append(")");
+            return;
+        }
+
+        // Guid conversions
+        if (sourceType == "string" && targetType == "Guid")
+        {
+            builder.Append("global::System.Guid.Parse(").Append(sourceExpr).Append(")");
+            return;
+        }
+        if (sourceType == "Guid" && targetType == "string")
+        {
+            builder.Append(sourceExpr).Append(".ToString()");
+            return;
+        }
+
+        // Enum conversions
+        if (sourceType == "string")
+        {
+            // Assume target might be an enum - use Enum.Parse
+            builder.Append("(").Append(mapping.TargetType).Append(")global::System.Enum.Parse(typeof(").Append(mapping.TargetType).Append("), ").Append(sourceExpr).Append(")");
+            return;
+        }
+
+        // Fallback: try explicit cast
+        builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+    }
+
+    private static string NormalizeTypeName(string typeName)
+    {
+        // Remove global:: prefix and System. prefix for comparison
+        var normalized = typeName
+            .Replace("global::", "")
+            .Replace("System.", "");
+
+        // Handle nullable types
+        if (normalized.EndsWith("?"))
+        {
+            normalized = normalized.TrimEnd('?');
+        }
+        if (normalized.StartsWith("Nullable<") && normalized.EndsWith(">"))
+        {
+            normalized = normalized.Substring(9, normalized.Length - 10);
+        }
+
+        return normalized;
+    }
+
+    private static bool IsNullableType(string typeName)
+    {
+        return typeName.EndsWith("?") ||
+               typeName.Contains("Nullable<") ||
+               typeName.Contains("Nullable`1");
+    }
+
+    private static bool IsNumericType(string normalizedType)
+    {
+        return normalizedType is "int" or "Int32"
+            or "long" or "Int64"
+            or "short" or "Int16"
+            or "byte" or "Byte"
+            or "sbyte" or "SByte"
+            or "uint" or "UInt32"
+            or "ulong" or "UInt64"
+            or "ushort" or "UInt16"
+            or "float" or "Single"
+            or "double" or "Double"
+            or "decimal" or "Decimal";
+    }
+
+    private static string? GetParseMethod(string normalizedTargetType)
+    {
+        return normalizedTargetType switch
+        {
+            "int" or "Int32" => "int.Parse",
+            "long" or "Int64" => "long.Parse",
+            "short" or "Int16" => "short.Parse",
+            "byte" or "Byte" => "byte.Parse",
+            "sbyte" or "SByte" => "sbyte.Parse",
+            "uint" or "UInt32" => "uint.Parse",
+            "ulong" or "UInt64" => "ulong.Parse",
+            "ushort" or "UInt16" => "ushort.Parse",
+            "float" or "Single" => "float.Parse",
+            "double" or "Double" => "double.Parse",
+            "decimal" or "Decimal" => "decimal.Parse",
+            "bool" or "Boolean" => "bool.Parse",
+            "DateTime" => "global::System.DateTime.Parse",
+            "DateTimeOffset" => "global::System.DateTimeOffset.Parse",
+            "DateOnly" => "global::System.DateOnly.Parse",
+            "TimeOnly" => "global::System.TimeOnly.Parse",
+            "TimeSpan" => "global::System.TimeSpan.Parse",
+            "Guid" => "global::System.Guid.Parse",
+            _ => null
+        };
     }
 
     // ------------------------------------------------------------

@@ -275,18 +275,58 @@ public static partial void Map(Source source, Destination destination);
 
 ## 6. 実装優先度
 
-| Phase | 機能 | 優先度 |
-|-------|------|--------|
-| 1 | 基本マッピング（同名プロパティ） | 必須 |
-| 1 | `[MapProperty]` 異なる名前のマッピング | 必須 |
-| 1 | `[MapIgnore]` 除外 | 必須 |
-| 2 | `[MapConstant]` 固定値 | 高 |
-| 2 | `[BeforeMap]`/`[AfterMap]` 追加処理 | 高 |
-| 2 | 基本的な型変換（組み込み型） | 高 |
-| 3 | `[MapFrom]` 合成 | 中 |
-| 3 | `[MapperConverter]` カスタム変換 | 中 |
-| 3 | 入れ子クラスのマッピング | 中 |
-| 4 | コレクションのマッピング | 中 |
-| 4 | Null処理オプション | 低 |
-| 5 | Flatten/Unflatten | 低 |
-| 5 | 条件付きマッピング | 低 |
+| Phase | 機能 | 優先度 | 実装状況 |
+|-------|------|--------|----------|
+| 1 | 基本マッピング（同名プロパティ） | 必須 | ✅ 完了 |
+| 1 | `[MapProperty]` 異なる名前のマッピング | 必須 | ✅ 完了 |
+| 1 | `[MapIgnore]` 除外 | 必須 | ✅ 完了 |
+| 2 | `[MapConstant]` 固定値 | 高 | ✅ 完了 |
+| 2 | `[BeforeMap]`/`[AfterMap]` 追加処理 | 高 | ✅ 完了 |
+| 2 | 基本的な型変換（組み込み型） | 高 | ✅ 完了 |
+| 3 | `[MapFrom]` 合成 | 中 | - |
+| 3 | `[MapperConverter]` カスタム変換 | 中 | - |
+| 3 | 入れ子クラスのマッピング | 中 | - |
+| 4 | コレクションのマッピング | 中 | - |
+| 4 | Null処理オプション | 低 | - |
+| 5 | Flatten/Unflatten | 低 | - |
+| 5 | 条件付きマッピング | 低 | - |
+
+## 7. 実装済み型変換一覧
+
+### 7.1 文字列への変換
+
+すべての型から `string` への変換は `ToString()` メソッドを使用します。
+
+### 7.2 文字列からの変換
+
+| 変換先 | 変換方法 |
+|--------|----------|
+| `int` | `int.Parse()` |
+| `long` | `long.Parse()` |
+| `short` | `short.Parse()` |
+| `byte` | `byte.Parse()` |
+| `uint`, `ulong`, `ushort` | 対応する `Parse()` |
+| `float` | `float.Parse()` |
+| `double` | `double.Parse()` |
+| `decimal` | `decimal.Parse()` |
+| `bool` | `bool.Parse()` |
+| `DateTime` | `DateTime.Parse()` |
+| `DateTimeOffset` | `DateTimeOffset.Parse()` |
+| `DateOnly` | `DateOnly.Parse()` |
+| `TimeOnly` | `TimeOnly.Parse()` |
+| `TimeSpan` | `TimeSpan.Parse()` |
+| `Guid` | `Guid.Parse()` |
+
+### 7.3 数値型間の変換
+
+数値型（`int`, `long`, `short`, `byte`, `float`, `double`, `decimal` 等）間の変換は、明示的なキャストを使用します。
+
+### 7.4 日時型の変換
+
+| 変換元 | 変換先 | 変換方法 |
+|--------|--------|----------|
+| `DateTime` | `DateTimeOffset` | `new DateTimeOffset(value)` |
+| `DateTimeOffset` | `DateTime` | `.DateTime` |
+| `DateTime` | `DateOnly` | `DateOnly.FromDateTime()` |
+| `DateTime` | `TimeOnly` | `TimeOnly.FromDateTime()` |
+

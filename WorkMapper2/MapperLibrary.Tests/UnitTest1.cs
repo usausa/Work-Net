@@ -54,6 +54,70 @@ public class TypeConversionDestination
     public int StringValue { get; set; }
 }
 
+// Phase 2 Test Models
+public class ConstantSource
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class ConstantDestination
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int Version { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class BeforeAfterSource
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+}
+
+public class BeforeAfterDestination
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public bool BeforeMapCalled { get; set; }
+    public bool AfterMapCalled { get; set; }
+}
+
+public class ExtendedTypeConversionSource
+{
+    public long LongValue { get; set; }
+    public double DoubleValue { get; set; }
+    public decimal DecimalValue { get; set; }
+    public bool BoolValue { get; set; }
+    public DateTime DateTimeValue { get; set; }
+    public string GuidString { get; set; } = string.Empty;
+}
+
+public class ExtendedTypeConversionDestination
+{
+    public string LongValue { get; set; } = string.Empty;
+    public string DoubleValue { get; set; } = string.Empty;
+    public string DecimalValue { get; set; } = string.Empty;
+    public string BoolValue { get; set; } = string.Empty;
+    public string DateTimeValue { get; set; } = string.Empty;
+    public Guid GuidString { get; set; }
+}
+
+public class NumericConversionSource
+{
+    public int IntValue { get; set; }
+    public long LongValue { get; set; }
+    public double DoubleValue { get; set; }
+}
+
+public class NumericConversionDestination
+{
+    public long IntValue { get; set; }
+    public int LongValue { get; set; }
+    public decimal DoubleValue { get; set; }
+}
+
 #endregion
 
 #region Mappers
@@ -88,6 +152,37 @@ internal static partial class TestMappers
     // Type conversion mapping
     [Mapper]
     public static partial void Map(TypeConversionSource source, TypeConversionDestination destination);
+
+    // Phase 2: Constant value mapping
+    [Mapper]
+    [MapConstant("Status", "Active")]
+    [MapConstant("Version", 1)]
+    [MapConstant("CreatedAt", null, Expression = "System.DateTime.Now")]
+    public static partial void Map(ConstantSource source, ConstantDestination destination);
+
+    // Phase 2: BeforeMap and AfterMap
+    [Mapper]
+    [BeforeMap(nameof(OnBeforeMap))]
+    [AfterMap(nameof(OnAfterMap))]
+    public static partial void Map(BeforeAfterSource source, BeforeAfterDestination destination);
+
+    private static void OnBeforeMap(BeforeAfterSource source, BeforeAfterDestination destination)
+    {
+        destination.BeforeMapCalled = true;
+    }
+
+    private static void OnAfterMap(BeforeAfterSource source, BeforeAfterDestination destination)
+    {
+        destination.AfterMapCalled = true;
+    }
+
+    // Phase 2: Extended type conversions
+    [Mapper]
+    public static partial void Map(ExtendedTypeConversionSource source, ExtendedTypeConversionDestination destination);
+
+    // Phase 2: Numeric conversions
+    [Mapper]
+    public static partial void Map(NumericConversionSource source, NumericConversionDestination destination);
 }
 
 #endregion
@@ -226,6 +321,114 @@ public class TypeConversionMappingTests
         // Assert
         Assert.Equal("999", destination.IntValue);
         Assert.Equal(123, destination.StringValue);
+    }
+}
+
+// Phase 2 Tests
+public class ConstantMappingTests
+{
+    [Fact]
+    public void Map_ConstantValues_SetsConstantsCorrectly()
+    {
+        // Arrange
+        var source = new ConstantSource
+        {
+            Id = 1,
+            Name = "Test"
+        };
+        var destination = new ConstantDestination();
+        var beforeMap = DateTime.Now;
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(1, destination.Id);
+        Assert.Equal("Test", destination.Name);
+        Assert.Equal("Active", destination.Status);
+        Assert.Equal(1, destination.Version);
+        Assert.True(destination.CreatedAt >= beforeMap);
+        Assert.True(destination.CreatedAt <= DateTime.Now);
+    }
+}
+
+public class BeforeAfterMapTests
+{
+    [Fact]
+    public void Map_BeforeAfterMap_CallsBothMethods()
+    {
+        // Arrange
+        var source = new BeforeAfterSource
+        {
+            Value = 42,
+            Text = "Hello"
+        };
+        var destination = new BeforeAfterDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(42, destination.Value);
+        Assert.Equal("Hello", destination.Text);
+        Assert.True(destination.BeforeMapCalled);
+        Assert.True(destination.AfterMapCalled);
+    }
+}
+
+public class ExtendedTypeConversionTests
+{
+    [Fact]
+    public void Map_ExtendedTypeConversions_ConvertsCorrectly()
+    {
+        // Arrange
+        var guid = Guid.NewGuid();
+        var dateTime = new DateTime(2024, 1, 15, 10, 30, 0);
+        var source = new ExtendedTypeConversionSource
+        {
+            LongValue = 1234567890L,
+            DoubleValue = 3.14159,
+            DecimalValue = 99.99m,
+            BoolValue = true,
+            DateTimeValue = dateTime,
+            GuidString = guid.ToString()
+        };
+        var destination = new ExtendedTypeConversionDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal("1234567890", destination.LongValue);
+        Assert.Contains("3.14159", destination.DoubleValue);
+        Assert.Contains("99.99", destination.DecimalValue);
+        Assert.Equal("True", destination.BoolValue);
+        Assert.Equal(dateTime.ToString(), destination.DateTimeValue);
+        Assert.Equal(guid, destination.GuidString);
+    }
+}
+
+public class NumericConversionTests
+{
+    [Fact]
+    public void Map_NumericConversions_ConvertsCorrectly()
+    {
+        // Arrange
+        var source = new NumericConversionSource
+        {
+            IntValue = 100,
+            LongValue = 200L,
+            DoubleValue = 3.5
+        };
+        var destination = new NumericConversionDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(100L, destination.IntValue);
+        Assert.Equal(200, destination.LongValue);
+        Assert.Equal(3.5m, destination.DoubleValue);
     }
 }
 

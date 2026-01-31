@@ -29,6 +29,18 @@ internal static class Program
         ObjectMapper.Map(ignoreSource, ignoreDest);
         Console.WriteLine($"Ignore: Secret should be 'Original': {ignoreDest.Secret}");
 
+        // Phase 2: Test constant values
+        var constSource = new ConstantSource { Id = 1, Name = "Test" };
+        var constDest = new ConstantDestination();
+        ObjectMapper.Map(constSource, constDest);
+        Console.WriteLine($"Constants: Status={constDest.Status}, Version={constDest.Version}, CreatedAt={constDest.CreatedAt}");
+
+        // Phase 2: Test BeforeMap/AfterMap
+        var beforeAfterSource = new BeforeAfterSource { Value = 42, Text = "Hello" };
+        var beforeAfterDest = new BeforeAfterDestination();
+        ObjectMapper.Map(beforeAfterSource, beforeAfterDest);
+        Console.WriteLine($"BeforeAfter: BeforeMapCalled={beforeAfterDest.BeforeMapCalled}, AfterMapCalled={beforeAfterDest.AfterMapCalled}");
+
         Console.WriteLine("All tests passed!");
     }
 }
@@ -49,6 +61,31 @@ internal static partial class ObjectMapper
     [Mapper]
     [MapIgnore("Secret")]
     public static partial void Map(IgnoreSource source, IgnoreDestination destination);
+
+    // Phase 2: Constant values
+    [Mapper]
+    [MapConstant("Status", "Active")]
+    [MapConstant("Version", 1)]
+    [MapConstant("CreatedAt", null, Expression = "System.DateTime.Now")]
+    public static partial void Map(ConstantSource source, ConstantDestination destination);
+
+    // Phase 2: BeforeMap/AfterMap
+    [Mapper]
+    [BeforeMap(nameof(OnBeforeMap))]
+    [AfterMap(nameof(OnAfterMap))]
+    public static partial void Map(BeforeAfterSource source, BeforeAfterDestination destination);
+
+    private static void OnBeforeMap(BeforeAfterSource source, BeforeAfterDestination destination)
+    {
+        destination.BeforeMapCalled = true;
+        Console.WriteLine("  BeforeMap called!");
+    }
+
+    private static void OnAfterMap(BeforeAfterSource source, BeforeAfterDestination destination)
+    {
+        destination.AfterMapCalled = true;
+        Console.WriteLine("  AfterMap called!");
+    }
 }
 
 internal sealed class Source
@@ -85,4 +122,34 @@ internal sealed class IgnoreDestination
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Secret { get; set; } = string.Empty;
+}
+
+// Phase 2 models
+internal sealed class ConstantSource
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+internal sealed class ConstantDestination
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int Version { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+internal sealed class BeforeAfterSource
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+}
+
+internal sealed class BeforeAfterDestination
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public bool BeforeMapCalled { get; set; }
+    public bool AfterMapCalled { get; set; }
 }
