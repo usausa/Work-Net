@@ -24,6 +24,7 @@ public sealed class PgBinaryConnection : DbConnection
     private string _connectionString = "";
     private ConnectionState _state = ConnectionState.Closed;
     private PgBinaryProtocolHandler? _protocol;
+    private PgBinaryTransaction? _currentTransaction;
 
     public PgBinaryConnection() { }
 
@@ -49,6 +50,7 @@ public sealed class PgBinaryConnection : DbConnection
     public override ConnectionState State => _state;
 
     internal PgBinaryProtocolHandler Protocol => _protocol ?? throw new InvalidOperationException("接続が開かれていません");
+    internal PgBinaryTransaction? CurrentTransaction => _currentTransaction;
 
     public override void Open()
     {
@@ -99,12 +101,45 @@ public sealed class PgBinaryConnection : DbConnection
             _protocol = null;
         }
 
+        _currentTransaction = null;
         _state = ConnectionState.Closed;
     }
 
     protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
     {
-        throw new NotSupportedException("トランザクションはサポートされていません");
+        return BeginTransactionAsync(isolationLevel, CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public new async Task<PgBinaryTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        return await BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+    }
+
+    public async Task<PgBinaryTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
+    {
+        if (_state != ConnectionState.Open)
+            throw new InvalidOperationException("接続が開かれていません");
+
+        if (_currentTransaction != null)
+            throw new InvalidOperationException("既にトランザクションが開始されています");
+
+        var isolationLevelSql = isolationLevel switch
+        {
+            IsolationLevel.ReadUncommitted => "READ UNCOMMITTED",
+            IsolationLevel.ReadCommitted => "READ COMMITTED",
+            IsolationLevel.RepeatableRead => "REPEATABLE READ",
+            IsolationLevel.Serializable => "SERIALIZABLE",
+            _ => "READ COMMITTED"
+        };
+
+        await Protocol.ExecuteSimpleQueryAsync($"BEGIN ISOLATION LEVEL {isolationLevelSql}", cancellationToken);
+        _currentTransaction = new PgBinaryTransaction(this, isolationLevel);
+        return _currentTransaction;
+    }
+
+    internal void ClearTransaction()
+    {
+        _currentTransaction = null;
     }
 
     public new PgBinaryCommand CreateCommand()
@@ -139,11 +174,94 @@ public sealed class PgBinaryConnection : DbConnection
 }
 
 /// <summary>
+/// PostgreSQLトランザクション (DbTransaction実装) - バイナリプロトコル版
+/// </summary>
+public sealed class PgBinaryTransaction : DbTransaction
+{
+    private readonly PgBinaryConnection _connection;
+    private readonly IsolationLevel _isolationLevel;
+    private bool _completed;
+
+    internal PgBinaryTransaction(PgBinaryConnection connection, IsolationLevel isolationLevel)
+    {
+        _connection = connection;
+        _isolationLevel = isolationLevel;
+    }
+
+    public new PgBinaryConnection Connection => _connection;
+    protected override DbConnection DbConnection => _connection;
+    public override IsolationLevel IsolationLevel => _isolationLevel;
+
+    public override void Commit()
+    {
+        CommitAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public override async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        if (_completed)
+            throw new InvalidOperationException("トランザクションは既に完了しています");
+
+        await _connection.Protocol.ExecuteSimpleQueryAsync("COMMIT", cancellationToken);
+        _completed = true;
+        _connection.ClearTransaction();
+    }
+
+    public override void Rollback()
+    {
+        RollbackAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+
+    public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        if (_completed)
+            throw new InvalidOperationException("トランザクションは既に完了しています");
+
+        await _connection.Protocol.ExecuteSimpleQueryAsync("ROLLBACK", cancellationToken);
+        _completed = true;
+        _connection.ClearTransaction();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && !_completed)
+        {
+            try
+            {
+                Rollback();
+            }
+            catch
+            {
+                // 無視
+            }
+        }
+        base.Dispose(disposing);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (!_completed)
+        {
+            try
+            {
+                await RollbackAsync();
+            }
+            catch
+            {
+                // 無視
+            }
+        }
+        GC.SuppressFinalize(this);
+    }
+}
+
+/// <summary>
 /// PostgreSQLコマンド (DbCommand実装) - バイナリプロトコル版
 /// </summary>
 public sealed class PgBinaryCommand : DbCommand
 {
     private PgBinaryConnection? _connection;
+    private PgBinaryTransaction? _transaction;
     private string _commandText = "";
     private readonly PgParameterCollection _parameters = new();
     private CommandType _commandType = CommandType.Text;
@@ -197,10 +315,16 @@ public sealed class PgBinaryCommand : DbCommand
         set => _connection = value as PgBinaryConnection;
     }
 
+    public new PgBinaryTransaction? Transaction
+    {
+        get => _transaction;
+        set => _transaction = value;
+    }
+
     protected override DbTransaction? DbTransaction
     {
-        get => null;
-        set { }
+        get => _transaction;
+        set => _transaction = value as PgBinaryTransaction;
     }
 
     public new PgParameterCollection Parameters => _parameters;
@@ -1011,6 +1135,74 @@ internal sealed class PgBinaryProtocolHandler : IAsyncDisposable
                     _streamBufferPos += length;
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Simple Query Protocol でクエリを実行（トランザクション制御用）
+    /// </summary>
+    public async Task<int> ExecuteSimpleQueryAsync(string sql, CancellationToken cancellationToken)
+    {
+        await SendSimpleQueryAsync(sql, cancellationToken);
+
+        var affectedRows = 0;
+
+        while (true)
+        {
+            await EnsureBufferedAsync(5, cancellationToken).ConfigureAwait(false);
+            var messageType = (char)_streamBuffer[_streamBufferPos];
+            var length = BinaryPrimitives.ReadInt32BigEndian(_streamBuffer.AsSpan(_streamBufferPos + 1)) - 4;
+            _streamBufferPos += 5;
+
+            await EnsureBufferedAsync(length, cancellationToken).ConfigureAwait(false);
+            var payload = _streamBuffer.AsSpan(_streamBufferPos, length);
+
+            switch (messageType)
+            {
+                case 'C':
+                    affectedRows = ParseCommandComplete(payload);
+                    _streamBufferPos += length;
+                    break;
+
+                case 'Z':
+                    _streamBufferPos += length;
+                    return affectedRows;
+
+                case 'E':
+                    var error = ParseErrorMessage(payload);
+                    _streamBufferPos += length;
+                    throw new PostgresException($"クエリエラー: {error}");
+
+                default:
+                    _streamBufferPos += length;
+                    break;
+            }
+        }
+    }
+
+    private async ValueTask SendSimpleQueryAsync(string sql, CancellationToken cancellationToken)
+    {
+        var sqlByteCount = Encoding.UTF8.GetByteCount(sql);
+        var queryByteCount = sqlByteCount + 1; // +1 for null terminator
+        var totalLength = 1 + 4 + queryByteCount;
+
+        var buffer = totalLength <= _writeBuffer!.Length
+            ? _writeBuffer
+            : ArrayPool<byte>.Shared.Rent(totalLength);
+
+        try
+        {
+            buffer[0] = (byte)'Q';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(1), 4 + queryByteCount);
+            Encoding.UTF8.GetBytes(sql, buffer.AsSpan(5));
+            buffer[5 + sqlByteCount] = 0; // null terminator
+
+            await _socket!.SendAsync(buffer.AsMemory(0, totalLength), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (!ReferenceEquals(buffer, _writeBuffer))
+                ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 
