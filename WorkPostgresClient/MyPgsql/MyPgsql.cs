@@ -785,7 +785,7 @@ public sealed class PgCommand : DbCommand
             var encoder = Encoding.UTF8.GetEncoder();
             var chars = value.AsSpan();
             var dest = span.Slice(written);
-            
+
             foreach (var c in chars)
             {
                 if (c == '\'')
@@ -1326,7 +1326,7 @@ public sealed class PgDataReader : DbDataReader
 internal sealed class PgProtocolHandler : IAsyncDisposable
 {
     private const int DefaultBufferSize = 8192;
-    private const int StreamBufferSize = 65536; // 64KB - より大きなバッファでシフト頻度を減らす
+    private const int StreamBufferSize = 65536 * 4; // 64KB - より大きなバッファでシフト頻度を減らす
 
     private TcpClient? _tcpClient;
     private NetworkStream? _stream;

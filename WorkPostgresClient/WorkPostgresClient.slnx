@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="MyPgsql/MyPgsql.csproj" Id="c8999f1e-24d8-40d1-87f5-78870e9fd652" />
   <Project Path="MyPgsqlBenchmark/MyPgsqlBenchmark.csproj" Id="02d125e8-4371-4a22-83b4-151c9c7ffe31" />
+  <Project Path="RawPgsql/RawPgsql.csproj" />
   <Project Path="WorkPostgresClient/WorkPostgresClient.csproj" />
 </Solution>
