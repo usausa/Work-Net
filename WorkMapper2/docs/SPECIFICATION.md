@@ -880,12 +880,13 @@ public static partial void Map(Source source, Destination destination)
 | AutoMap = false（自動マッピング無効化） | ✅ 実装済み |
 | MapCollection（コレクションマッピング） | ✅ 実装済み |
 | MapNested（子オブジェクトマッピング） | ✅ 実装済み |
+| MapConverter（カスタム型変換器） | ✅ 実装済み |
+| CollectionConverter（カスタムコレクション変換器） | ✅ 実装済み |
 
 ### 14.2 未実装機能
 
 | 機能 | 説明 | 参考（AutoMapper相当） |
 |------|------|----------------------|
-| MapperConverter（カスタム型変換器） | クラス/アセンブリレベルでのカスタム変換器定義 | `CreateMap<string, double>().ConvertUsing<StringToDoubleConverter>()` |
 | NullSubstitute | null値の代替値設定 | `NullSubstitute("N/A")` |
 
 ## 15. コレクションマッピング（MapCollection）
@@ -894,7 +895,7 @@ public static partial void Map(Source source, Destination destination)
 
 - **自動マッピングは行わない**: コレクションプロパティが同名でも自動的にはマッピングしない
 - **明示的なマッパーメソッド指定が必須**: 子要素のマッパーメソッドを先に定義し、それを使用する
-- **コレクション型の変換は自動判断**: ターゲットの型に応じて `.ToArray()` / `.ToList()` を自動選択
+- **コレクション変換はDefaultCollectionConverterを使用**: カスタムコレクションコンバーターで差し替え可能
 - **voidマッパーとreturnマッパー両方対応**: 子要素マッパーはどちらのパターンでも使用可能
 
 ### 15.2 属性
@@ -964,26 +965,28 @@ public static partial DestinationChild MapChild(SourceChild source)
 
 public static partial void Map(Source source, Destination destination)
 {
-    destination.Children = source.Children is not null 
-        ? source.Children.Select(x => MapChild(x)).ToList() 
-        : default!;
+    destination.Children = global::MapperLibrary.DefaultCollectionConverter.ToList<SourceChild, DestinationChild>(
+        source.Children, MapChild)!;
 }
 ```
 
-### 15.4 コレクション型の自動変換
+### 15.4 コレクション変換器
 
-| ソース型 | ターゲット型 | 生成コード |
-|----------|-------------|-----------|
-| `T[]` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
-| `T[]` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
-| `List<T>` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
-| `List<T>` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
-| `IEnumerable<T>` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
-| `IEnumerable<T>` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
+コレクションの変換には `DefaultCollectionConverter` が使用されます。ターゲットの型に応じて `ToArray()` または `ToList()` が呼び出されます。
+
+**生成コードのパターン:**
+
+```csharp
+// 配列の場合
+destination.Items = DefaultCollectionConverter.ToArray<TSource, TDest>(source.Items, MapChild)!;
+
+// Listの場合
+destination.Items = DefaultCollectionConverter.ToList<TSource, TDest>(source.Items, MapChild)!;
+```
 
 ### 15.5 voidマッパーの場合
 
-マッパーメソッドが `void` パターンの場合も対応：
+voidマッパーの場合、`Action<TSource, TDest>` を受け取るオーバーロードが使用されます：
 
 ```csharp
 [Mapper]
@@ -999,23 +1002,16 @@ public static partial void Map(Source source, Destination destination);
 ```csharp
 public static partial void Map(Source source, Destination destination)
 {
-    destination.Children = source.Children is not null 
-        ? source.Children.Select(__item => { 
-            var __dest = new DestinationChild(); 
-            MapChild(__item, __dest); 
-            return __dest; 
-          }).ToList() 
-        : default!;
+    destination.Children = global::MapperLibrary.DefaultCollectionConverter.ToList<SourceChild, DestinationChild>(
+        source.Children, MapChild)!;
 }
 ```
 
 ### 15.6 nullハンドリング
 
-ソースコレクションがnullの場合、ターゲットには`default!`が設定されます（終端要素として扱い、通常のプロパティマッピングと同じルール）。
+ソースコレクションがnullの場合、`DefaultCollectionConverter` が `default` を返し、null-forgiving演算子で `default!` が設定されます。
 
 ## 16. 子オブジェクトマッピング（MapNested）
-
-#### 設計方針
 
 ### 16.1 設計方針
 
@@ -1141,63 +1137,203 @@ public static partial void Map(Source source, Destination destination)
 | `[MapFrom("B", nameof(Method))]` | 静的メソッドでソース全体から計算 | `d.B = Method(s)` |
 | `[MapFromMethod("B", "GetX")]` | ソースのメソッド呼び出し | `d.B = s.GetX()` |
 | `[MapNested("A", "B", ...)]` | 別マッパーで子オブジェクト変換 | `d.B = MapChild(s.A)` |
-| `[MapCollection("A", "B", ...)]` | 別マッパーでコレクション変換 | `d.B = s.A.Select(x => MapChild(x)).ToList()` |
+| `[MapCollection("A", "B", ...)]` | 別マッパーでコレクション変換 | `DefaultCollectionConverter.ToList(...)` |
 
-## 18. 未実装機能の参考実装案
+## 18. カスタム型変換器（MapConverter）
 
-### 18.1 カスタム型変換器（グローバル）
+### 18.1 設計方針
 
-AutoMapperでの使用例：
+- **Generic静的メソッドベース**: インスタンス生成のオーバーヘッドを回避
+- **JIT最適化**: `typeof(T) == typeof(int)` のような条件分岐はJITで最適化される
+- **階層的な適用**: メソッドレベル → クラスレベル → デフォルトの優先順位
 
-```csharp
-// AutoMapper: グローバル型変換
-CreateMap<string, double>()
-    .ConvertUsing<StringToDoubleConverter>();
+### 18.2 デフォルト実装（DefaultMapConverter）
 
-public class StringToDoubleConverter : ITypeConverter<string, double>
-{
-    public double Convert(string source, double destination, ResolutionContext context)
-        => double.Parse(source);
-}
-```
-
-MapperLibraryでの想定実装：
+すべての型変換は `DefaultMapConverter.Convert<TSource, TDestination>()` を通じて行われます：
 
 ```csharp
-// アセンブリレベルでカスタムコンバーターを定義
-[assembly: MapperConverter(typeof(string), typeof(double), typeof(Converters), nameof(Converters.StringToDouble))]
-
-public static class Converters
+public static class DefaultMapConverter
 {
-    public static double StringToDouble(string value) => double.Parse(value);
-}
-
-// 使用時は自動的に適用される
-[Mapper]
-public static partial void Map(Source source, Destination destination);
-```
-
-### 18.2 AfterMap内でのコレクション/子マッピング（代替手段）
-
-専用属性を使用せず、AfterMapで対応する方法も引き続きサポートされます：
-
-```csharp
-[Mapper]
-[AfterMap(nameof(OnAfterMap))]
-public static partial void Map(Source source, Destination destination);
-
-private static void OnAfterMap(Source source, Destination destination)
-{
-    // 子要素のマッピングは明示的に呼び出す
-    if (source.Children is not null)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TDestination Convert<TSource, TDestination>(TSource source)
     {
-        destination.Children = source.Children
-            .Select(x => MapChild(x))
-            .ToList();
+        // 同じ型
+        if (typeof(TSource) == typeof(TDestination))
+        {
+            return (TDestination)(object)source!;
+        }
+
+        // Nullable<T> -> T
+        // T -> Nullable<T>
+        // 数値変換（int, long, double, etc.）
+        // string <-> 数値/bool/DateTime/Guid
+        // ...
+    }
+}
+```
+
+**生成コード例:**
+
+```csharp
+// int -> long の変換
+destination.LongValue = global::MapperLibrary.DefaultMapConverter.Convert<int, long>(source.IntValue);
+
+// string -> int の変換
+destination.IntValue = global::MapperLibrary.DefaultMapConverter.Convert<string, int>(source.StringValue);
+```
+
+### 18.3 カスタムコンバーターの指定
+
+#### 属性
+
+```csharp
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
+public sealed class MapConverterAttribute : Attribute
+{
+    /// <summary>
+    /// コンバーター型。以下のシグネチャの静的メソッドが必要：
+    /// TDestination Convert&lt;TSource, TDestination&gt;(TSource source)
+    /// </summary>
+    public Type ConverterType { get; }
+    
+    public MapConverterAttribute(Type converterType) { ... }
+}
+```
+
+#### 使用例
+
+```csharp
+// カスタムコンバーターの実装
+public static class CustomConverter
+{
+    public static TDestination Convert<TSource, TDestination>(TSource source)
+    {
+        // カスタム変換: int -> string (プレフィックス付き)
+        if (typeof(TSource) == typeof(int) && typeof(TDestination) == typeof(string))
+        {
+            var value = (int)(object)source!;
+            return (TDestination)(object)$"ID_{value}";
+        }
+
+        // その他はデフォルトコンバーターにフォールバック
+        return DefaultMapConverter.Convert<TSource, TDestination>(source);
     }
 }
 
+// メソッドレベルで指定
 [Mapper]
-private static partial DestinationChild MapChild(SourceChild source);
+[MapConverter(typeof(CustomConverter))]
+public static partial void Map(Source source, Destination destination);
+
+// クラスレベルで指定（すべてのマッパーに適用）
+[MapConverter(typeof(CustomConverter))]
+internal static partial class ObjectMapper
+{
+    [Mapper]
+    public static partial void Map(Source source, Destination destination);
+}
 ```
+
+### 18.4 適用の優先順位
+
+1. **メソッドレベル**: `[Mapper]` メソッドに直接指定
+2. **クラスレベル**: マッパークラスに指定
+3. **デフォルト**: 指定なしの場合は `DefaultMapConverter`
+
+## 19. カスタムコレクション変換器（CollectionConverter）
+
+### 19.1 設計方針
+
+- **コレクション変換の統一**: すべてのコレクションマッピングは `DefaultCollectionConverter` を通じて行われる
+- **カスタマイズ可能**: `CollectionConverterAttribute` で差し替え可能
+
+### 19.2 デフォルト実装（DefaultCollectionConverter）
+
+```csharp
+public static class DefaultCollectionConverter
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static TDest[]? ToArray<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        return source.Select(mapper).ToArray();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static List<TDest>? ToList<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        return source.Select(mapper).ToList();
+    }
+
+    // voidマッパー用のオーバーロード
+    public static TDest[]? ToArray<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Action<TSource, TDest> mapper) where TDest : new() { ... }
+
+    public static List<TDest>? ToList<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Action<TSource, TDest> mapper) where TDest : new() { ... }
+}
+```
+
+### 19.3 カスタムコレクションコンバーターの指定
+
+#### 属性
+
+```csharp
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
+public sealed class CollectionConverterAttribute : Attribute
+{
+    /// <summary>
+    /// コンバーター型。以下のシグネチャの静的メソッドが必要：
+    /// TDest[]? ToArray&lt;TSource, TDest&gt;(IEnumerable&lt;TSource&gt;? source, Func&lt;TSource, TDest&gt; mapper)
+    /// List&lt;TDest&gt;? ToList&lt;TSource, TDest&gt;(IEnumerable&lt;TSource&gt;? source, Func&lt;TSource, TDest&gt; mapper)
+    /// </summary>
+    public Type ConverterType { get; }
+    
+    public CollectionConverterAttribute(Type converterType) { ... }
+}
+```
+
+#### 使用例
+
+```csharp
+// カスタムコレクションコンバーターの実装
+public static class CustomCollectionConverter
+{
+    public static List<TDest>? ToList<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        // カスタム処理（例：変換後にソート）
+        return source.Select(mapper).OrderBy(x => x).ToList();
+    }
+
+    public static TDest[]? ToArray<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        return source.Select(mapper).OrderBy(x => x).ToArray();
+    }
+}
+
+// 使用
+[Mapper]
+[CollectionConverter(typeof(CustomCollectionConverter))]
+[MapCollection(nameof(Source.Items), nameof(Destination.Items), MapperMethod = nameof(MapItem))]
+public static partial void Map(Source source, Destination destination);
+```
+
+## 20. 未実装機能
+
+| 機能 | 説明 |
+|------|------|
+| NullSubstitute | null値の代替値設定 |
 

@@ -400,6 +400,96 @@ public class VoidMapperDestination
     public List<VoidMapperDestinationChild>? Children { get; set; }
 }
 
+// Custom converter test models
+public class CustomConverterSource
+{
+    public int IntValue { get; set; }
+    public string StringValue { get; set; } = string.Empty;
+}
+
+public class CustomConverterDestination
+{
+    public string IntValue { get; set; } = string.Empty;  // int -> string with custom format
+    public int StringValue { get; set; }  // string -> int with custom parsing
+}
+
+// Custom converter implementation
+public static class TestCustomConverter
+{
+    public static TDestination Convert<TSource, TDestination>(TSource source)
+    {
+        // Custom int -> string conversion (with prefix)
+        if (typeof(TSource) == typeof(int) && typeof(TDestination) == typeof(string))
+        {
+            var value = (int)(object)source!;
+            return (TDestination)(object)$"PREFIX_{value}";
+        }
+
+        // Custom string -> int conversion (removes prefix)
+        if (typeof(TSource) == typeof(string) && typeof(TDestination) == typeof(int))
+        {
+            var value = (string)(object)source!;
+            if (value.StartsWith("NUM_"))
+            {
+                return (TDestination)(object)int.Parse(value.Substring(4));
+            }
+            return (TDestination)(object)int.Parse(value);
+        }
+
+        // Fallback to default converter
+        return DefaultMapConverter.Convert<TSource, TDestination>(source);
+    }
+}
+
+// Custom collection converter test models
+public class CustomCollectionSource
+{
+    public CollectionSourceChild[]? Numbers { get; set; }
+}
+
+public class CustomCollectionDestination
+{
+    public List<CollectionDestinationChild>? Numbers { get; set; }
+}
+
+// Custom collection converter implementation (doubles Id values)
+public static class TestCustomCollectionConverter
+{
+    public static TDest[]? ToArray<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        // Custom: doubles Id value if destination has Id property
+        return source.Select(x =>
+        {
+            var mapped = mapper(x);
+            if (mapped is CollectionDestinationChild child)
+            {
+                child.Id *= 2;
+            }
+            return mapped;
+        }).ToArray();
+    }
+
+    public static List<TDest>? ToList<TSource, TDest>(
+        IEnumerable<TSource>? source,
+        Func<TSource, TDest> mapper)
+    {
+        if (source is null) return default;
+        // Custom: doubles Id value if destination has Id property
+        return source.Select(x =>
+        {
+            var mapped = mapper(x);
+            if (mapped is CollectionDestinationChild child)
+            {
+                child.Id *= 2;
+            }
+            return mapped;
+        }).ToList();
+    }
+}
+
 #endregion
 
 #region Mappers
@@ -701,6 +791,17 @@ internal static partial class TestMappers
     [Mapper]
     [MapNested(nameof(NestedObjectSource.Child), nameof(NestedObjectDestination.Child), MapperMethod = nameof(MapNestedChildVoid))]
     public static partial void MapWithVoidNested(NestedObjectSource source, NestedObjectDestination destination);
+
+    // Custom type converter test
+    [Mapper]
+    [MapConverter(typeof(TestCustomConverter))]
+    public static partial void MapWithCustomConverter(CustomConverterSource source, CustomConverterDestination destination);
+
+    // Custom collection converter test - using CollectionSourceChild to CollectionDestinationChild
+    [Mapper]
+    [CollectionConverter(typeof(TestCustomCollectionConverter))]
+    [MapCollection(nameof(CustomCollectionSource.Numbers), nameof(CustomCollectionDestination.Numbers), MapperMethod = nameof(MapCollectionChild))]
+    public static partial void MapWithCustomCollectionConverter(CustomCollectionSource source, CustomCollectionDestination destination);
 }
 
 // Custom context for testing
@@ -1920,6 +2021,56 @@ public class MapNestedTests
         Assert.Equal(77, destination.Child.Value);
         Assert.Equal("VoidTest", destination.Child.Text);
         Assert.Equal(88, destination.DirectValue);
+    }
+}
+
+// Custom converter tests
+public class CustomConverterTests
+{
+    [Fact]
+    public void MapWithCustomConverter_UsesCustomConversion()
+    {
+        // Arrange
+        var source = new CustomConverterSource
+        {
+            IntValue = 42,
+            StringValue = "NUM_100"
+        };
+        var destination = new CustomConverterDestination();
+
+        // Act
+        TestMappers.MapWithCustomConverter(source, destination);
+
+        // Assert
+        Assert.Equal("PREFIX_42", destination.IntValue);  // Custom int -> string conversion
+        Assert.Equal(100, destination.StringValue);  // Custom string -> int conversion
+    }
+
+    [Fact]
+    public void MapWithCustomCollectionConverter_UsesCustomCollectionConversion()
+    {
+        // Arrange
+        var source = new CustomCollectionSource
+        {
+            Numbers =
+            [
+                new CollectionSourceChild { Id = 1, Name = "One" },
+                new CollectionSourceChild { Id = 2, Name = "Two" },
+                new CollectionSourceChild { Id = 3, Name = "Three" }
+            ]
+        };
+        var destination = new CustomCollectionDestination();
+
+        // Act
+        TestMappers.MapWithCustomCollectionConverter(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Numbers);
+        Assert.Equal(3, destination.Numbers.Count);
+        // Custom converter doubles Id values
+        Assert.Equal(2, destination.Numbers[0].Id);
+        Assert.Equal(4, destination.Numbers[1].Id);
+        Assert.Equal(6, destination.Numbers[2].Id);
     }
 }
 

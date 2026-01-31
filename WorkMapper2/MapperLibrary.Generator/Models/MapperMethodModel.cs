@@ -141,6 +141,18 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     /// </summary>
     public bool ConditionAcceptsCustomParameters { get; set; }
 
+    /// <summary>
+    /// Gets or sets the custom type converter type name.
+    /// If null, DefaultMapConverter is used.
+    /// </summary>
+    public string? MapConverterTypeName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the custom collection converter type name.
+    /// If null, DefaultCollectionConverter is used.
+    /// </summary>
+    public string? CollectionConverterTypeName { get; set; }
+
     public bool Equals(MapperMethodModel? other)
     {
         if (other is null)

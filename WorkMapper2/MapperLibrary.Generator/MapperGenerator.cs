@@ -29,6 +29,11 @@ public sealed class MapperGenerator : IIncrementalGenerator
     private const string MapFromMethodAttributeName = "MapperLibrary.MapFromMethodAttribute";
     private const string MapCollectionAttributeName = "MapperLibrary.MapCollectionAttribute";
     private const string MapNestedAttributeName = "MapperLibrary.MapNestedAttribute";
+    private const string MapConverterAttributeName = "MapperLibrary.MapConverterAttribute";
+    private const string CollectionConverterAttributeName = "MapperLibrary.CollectionConverterAttribute";
+
+    private const string DefaultMapConverterTypeName = "global::MapperLibrary.DefaultMapConverter";
+    private const string DefaultCollectionConverterTypeName = "global::MapperLibrary.DefaultCollectionConverter";
 
     // ------------------------------------------------------------
     // Initialize
@@ -157,6 +162,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
         // Parse attributes for MapProperty, MapIgnore, MapConstant, BeforeMap, AfterMap, MapCondition
         ParseMappingAttributes(symbol, model);
+
+        // Parse converter attributes (class level and method level)
+        ParseConverterAttributes(symbol, model);
 
         // Validate BeforeMap/AfterMap signatures if specified
         var validationError = ValidateCallbackMethods(symbol, model, syntax);
@@ -755,12 +763,63 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
         }
 
+
         // Associate property conditions with mappings from MapProperty attributes
         foreach (var mapping in model.PropertyMappings)
         {
             if (propertyConditions.TryGetValue(mapping.TargetPath, out var conditionMethod))
             {
                 mapping.ConditionMethod = conditionMethod;
+            }
+        }
+    }
+
+    private static void ParseConverterAttributes(IMethodSymbol symbol, MapperMethodModel model)
+    {
+        // Check method level first (higher priority)
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            var attributeName = attribute.AttributeClass?.ToDisplayString();
+
+            if (attributeName == MapConverterAttributeName)
+            {
+                if (attribute.ConstructorArguments.Length >= 1 &&
+                    attribute.ConstructorArguments[0].Value is INamedTypeSymbol converterType)
+                {
+                    model.MapConverterTypeName = converterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
+            }
+            else if (attributeName == CollectionConverterAttributeName)
+            {
+                if (attribute.ConstructorArguments.Length >= 1 &&
+                    attribute.ConstructorArguments[0].Value is INamedTypeSymbol converterType)
+                {
+                    model.CollectionConverterTypeName = converterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
+            }
+        }
+
+        // Check class level if not specified at method level
+        var containingType = symbol.ContainingType;
+        foreach (var attribute in containingType.GetAttributes())
+        {
+            var attributeName = attribute.AttributeClass?.ToDisplayString();
+
+            if (attributeName == MapConverterAttributeName && model.MapConverterTypeName is null)
+            {
+                if (attribute.ConstructorArguments.Length >= 1 &&
+                    attribute.ConstructorArguments[0].Value is INamedTypeSymbol converterType)
+                {
+                    model.MapConverterTypeName = converterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
+            }
+            else if (attributeName == CollectionConverterAttributeName && model.CollectionConverterTypeName is null)
+            {
+                if (attribute.ConstructorArguments.Length >= 1 &&
+                    attribute.ConstructorArguments[0].Value is INamedTypeSymbol converterType)
+                {
+                    model.CollectionConverterTypeName = converterType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                }
             }
         }
     }
@@ -1841,7 +1900,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Append(";").NewLine();
         }
 
-        // Generate MapCollection mappings (call mapper method for collection elements)
+        // Generate MapCollection mappings using collection converter
+        var collectionConverterTypeName = method.CollectionConverterTypeName ?? DefaultCollectionConverterTypeName;
         foreach (var mapCollection in method.MapCollectionMappings)
         {
             var sourceAccess = $"{method.SourceParameterName}.{mapCollection.SourceName}";
@@ -1849,48 +1909,33 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent();
             builder.Append(destVarName).Append(".").Append(mapCollection.TargetName).Append(" = ");
 
-            if (mapCollection.IsSourceNullable)
-            {
-                // source.Children is not null ? ... : default!
-                builder.Append(sourceAccess).Append(" is not null ? ");
-            }
+            // Use collection converter
+            builder.Append(collectionConverterTypeName).Append(".");
 
-            // Start the Select expression
-            builder.Append(sourceAccess);
-            if (mapCollection.IsSourceNullable)
-            {
-                builder.Append("!");
-            }
-            builder.Append(".Select(__item => ");
-
-            if (mapCollection.MapperReturnsValue)
-            {
-                // Return value pattern: MapChild(__item)
-                builder.Append(mapCollection.MapperMethod).Append("(__item)");
-            }
-            else
-            {
-                // Void pattern: create new instance, call mapper, return instance
-                builder.Append("{ var __dest = new ").Append(mapCollection.TargetElementType).Append("(); ");
-                builder.Append(mapCollection.MapperMethod).Append("(__item, __dest); return __dest; }");
-            }
-
-            builder.Append(")");
-
-            // Add .ToArray() or .ToList() based on target type
+            // Choose ToArray or ToList based on target type
             if (mapCollection.TargetIsArray)
             {
-                builder.Append(".ToArray()");
+                builder.Append("ToArray");
             }
             else
             {
-                builder.Append(".ToList()");
+                builder.Append("ToList");
             }
 
-            if (mapCollection.IsSourceNullable)
-            {
-                builder.Append(" : default!");
-            }
+            // Add type parameters
+            builder.Append("<")
+                   .Append(mapCollection.SourceElementType)
+                   .Append(", ")
+                   .Append(mapCollection.TargetElementType)
+                   .Append(">(");
+
+            // Source collection
+            builder.Append(sourceAccess).Append(", ");
+
+            // Mapper method reference
+            builder.Append(mapCollection.MapperMethod);
+
+            builder.Append(")!");  // null-forgiving for null handling
 
             builder.Append(";").NewLine();
         }
@@ -1964,7 +2009,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
         }
         else if (mapping.RequiresConversion)
         {
-            BuildTypeConversion(builder, mapping, sourceParamName, nullChecked);
+            BuildTypeConversion(builder, mapping, sourceParamName, nullChecked, method);
         }
         else
         {
@@ -2039,252 +2084,27 @@ public sealed class MapperGenerator : IIncrementalGenerator
         return result.ToString();
     }
 
-    private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, bool nullChecked = false)
+    private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, bool nullChecked, MapperMethodModel method)
     {
         var sourceExpr = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
-        var requiresNullCoalescing = mapping.RequiresNullCoalescing;
+        var converterTypeName = method.MapConverterTypeName ?? DefaultMapConverterTypeName;
 
-        // Normalize type names for comparison
-        var sourceType = NormalizeTypeName(mapping.SourceType);
-        var targetType = NormalizeTypeName(mapping.TargetType);
-
-        // Same normalized type - no conversion needed (but may need null handling)
-        if (sourceType == targetType)
-        {
-            builder.Append(sourceExpr);
-            if (requiresNullCoalescing)
-            {
-                builder.Append("!");
-            }
-            return;
-        }
-
-        // Convert to string
-        if (targetType == "string")
-        {
-            if (IsNullableType(mapping.SourceType))
-            {
-                // int? -> string: source.Value?.ToString() ?? default!
-                builder.Append(sourceExpr).Append("?.ToString()");
-                if (!mapping.IsTargetNullable)
-                {
-                    builder.Append(" ?? default!");
-                }
-            }
-            else
-            {
-                builder.Append(sourceExpr).Append(".ToString()");
-            }
-            return;
-        }
-
-        // Convert from string to other types
-        if (sourceType == "string")
-        {
-            var parseMethod = GetParseMethod(targetType);
-            if (parseMethod is not null)
-            {
-                if (IsNullableType(mapping.SourceType) && !mapping.IsTargetNullable)
-                {
-                    // string? -> int: source.Value is not null ? int.Parse(source.Value) : default
-                    builder.Append(sourceExpr).Append(" is not null ? ")
-                           .Append(parseMethod).Append("(").Append(sourceExpr).Append(") : default");
-                }
-                else
-                {
-                    builder.Append(parseMethod).Append("(").Append(sourceExpr).Append(")");
-                }
-                return;
-            }
-        }
-
-        // Numeric conversions (including nullable)
-        if (IsNumericType(sourceType) && IsNumericType(targetType))
-        {
-            if (IsNullableType(mapping.SourceType))
-            {
-                if (mapping.IsTargetNullable)
-                {
-                    // int? -> long?: (long?)source.Value
-                    builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
-                }
-                else
-                {
-                    // int? -> long: source.Value ?? default
-                    builder.Append("(").Append(mapping.TargetType).Append(")(").Append(sourceExpr).Append(" ?? default)");
-                }
-            }
-            else
-            {
-                // int -> long: (long)source.Value
-                builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
-            }
-            return;
-        }
-
-        // DateTime conversions
-        if (sourceType == "DateTime" && targetType == "DateTimeOffset")
-        {
-            builder.Append("new global::System.DateTimeOffset(").Append(sourceExpr);
-            if (IsNullableType(mapping.SourceType))
-            {
-                builder.Append(" ?? default");
-            }
-            builder.Append(")");
-            return;
-        }
-        if (sourceType == "DateTimeOffset" && targetType == "DateTime")
-        {
-            if (IsNullableType(mapping.SourceType))
-            {
-                builder.Append(sourceExpr).Append("?.DateTime ?? default");
-            }
-            else
-            {
-                builder.Append(sourceExpr).Append(".DateTime");
-            }
-            return;
-        }
-
-        // DateOnly/TimeOnly conversions
-        if (sourceType == "DateTime" && targetType == "DateOnly")
-        {
-            builder.Append("global::System.DateOnly.FromDateTime(").Append(sourceExpr);
-            if (IsNullableType(mapping.SourceType))
-            {
-                builder.Append(" ?? default");
-            }
-            builder.Append(")");
-            return;
-        }
-        if (sourceType == "DateTime" && targetType == "TimeOnly")
-        {
-            builder.Append("global::System.TimeOnly.FromDateTime(").Append(sourceExpr);
-            if (IsNullableType(mapping.SourceType))
-            {
-                builder.Append(" ?? default");
-            }
-            builder.Append(")");
-            return;
-        }
-
-        // Guid conversions
-        if (sourceType == "string" && targetType == "Guid")
-        {
-            if (IsNullableType(mapping.SourceType) && !mapping.IsTargetNullable)
-            {
-                builder.Append(sourceExpr).Append(" is not null ? global::System.Guid.Parse(").Append(sourceExpr).Append(") : default");
-            }
-            else
-            {
-                builder.Append("global::System.Guid.Parse(").Append(sourceExpr).Append(")");
-            }
-            return;
-        }
-        if (sourceType == "Guid" && targetType == "string")
-        {
-            if (IsNullableType(mapping.SourceType))
-            {
-                builder.Append(sourceExpr).Append("?.ToString()");
-                if (!mapping.IsTargetNullable)
-                {
-                    builder.Append(" ?? default!");
-                }
-            }
-            else
-            {
-                builder.Append(sourceExpr).Append(".ToString()");
-            }
-            return;
-        }
-
-        // Enum conversions
-        if (sourceType == "string")
-        {
-            // Assume target might be an enum - use Enum.Parse
-            builder.Append("(").Append(mapping.TargetType).Append(")global::System.Enum.Parse(typeof(").Append(mapping.TargetType).Append("), ").Append(sourceExpr).Append(")");
-            return;
-        }
-
-        // Fallback: try explicit cast
-        builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
-        if (requiresNullCoalescing && IsNullableType(mapping.SourceType))
-        {
-            // Unlikely to reach here, but add null handling just in case
-        }
-    }
-
-    private static string NormalizeTypeName(string typeName)
-    {
-        // Remove global:: prefix and System. prefix for comparison
-        var normalized = typeName
-            .Replace("global::", "")
-            .Replace("System.", "");
-
-        // Handle nullable types
-        if (normalized.EndsWith("?"))
-        {
-            normalized = normalized.TrimEnd('?');
-        }
-        if (normalized.StartsWith("Nullable<") && normalized.EndsWith(">"))
-        {
-            normalized = normalized.Substring(9, normalized.Length - 10);
-        }
-
-        return normalized;
-    }
-
-    private static bool IsNullableType(string typeName)
-    {
-        return typeName.EndsWith("?") ||
-               typeName.Contains("Nullable<") ||
-               typeName.Contains("Nullable`1");
-    }
-
-    private static bool IsNumericType(string normalizedType)
-    {
-        return normalizedType is "int" or "Int32"
-            or "long" or "Int64"
-            or "short" or "Int16"
-            or "byte" or "Byte"
-            or "sbyte" or "SByte"
-            or "uint" or "UInt32"
-            or "ulong" or "UInt64"
-            or "ushort" or "UInt16"
-            or "float" or "Single"
-            or "double" or "Double"
-            or "decimal" or "Decimal";
-    }
-
-    private static string? GetParseMethod(string normalizedTargetType)
-    {
-        return normalizedTargetType switch
-        {
-            "int" or "Int32" => "int.Parse",
-            "long" or "Int64" => "long.Parse",
-            "short" or "Int16" => "short.Parse",
-            "byte" or "Byte" => "byte.Parse",
-            "sbyte" or "SByte" => "sbyte.Parse",
-            "uint" or "UInt32" => "uint.Parse",
-            "ulong" or "UInt64" => "ulong.Parse",
-            "ushort" or "UInt16" => "ushort.Parse",
-            "float" or "Single" => "float.Parse",
-            "double" or "Double" => "double.Parse",
-            "decimal" or "Decimal" => "decimal.Parse",
-            "bool" or "Boolean" => "bool.Parse",
-            "DateTime" => "global::System.DateTime.Parse",
-            "DateTimeOffset" => "global::System.DateTimeOffset.Parse",
-            "DateOnly" => "global::System.DateOnly.Parse",
-            "TimeOnly" => "global::System.TimeOnly.Parse",
-            "TimeSpan" => "global::System.TimeSpan.Parse",
-            "Guid" => "global::System.Guid.Parse",
-            _ => null
-        };
+        // Use generic converter for type conversion
+        // DefaultMapConverter.Convert<TSource, TDest>(source.Value)
+        builder.Append(converterTypeName)
+               .Append(".Convert<")
+               .Append(mapping.SourceType)
+               .Append(", ")
+               .Append(mapping.TargetType)
+               .Append(">(")
+               .Append(sourceExpr)
+               .Append(")");
     }
 
     // ------------------------------------------------------------
     // Helper
     // ------------------------------------------------------------
+
 
     private static string MakeFilename(string ns, string className)
     {
