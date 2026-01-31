@@ -1149,7 +1149,7 @@ public static partial void Map(Source source, Destination destination)
 
 ### 18.2 デフォルト実装（DefaultMapConverter）
 
-すべての型変換は `DefaultMapConverter.Convert<TSource, TDestination>()` を通じて行われます：
+型変換が必要な場合、`DefaultMapConverter.Convert<TSource, TDestination>()` が使用されます：
 
 ```csharp
 public static class DefaultMapConverter
@@ -1172,17 +1172,54 @@ public static class DefaultMapConverter
 }
 ```
 
+### 18.3 コンバーターが使用されるケース
+
+**コンバーターが使用される（明示的な変換が必要）:**
+
+| ソース型 | ターゲット型 | 説明 |
+|----------|-------------|------|
+| `string` | `int` | パース変換 |
+| `int` | `string` | ToString変換 |
+| `long` | `int` | ナローイング変換（明示的キャストが必要） |
+| `double` | `decimal` | 異なる数値型間の変換 |
+| `int?` | `string` | Nullable値の文字列変換 |
+
+**コンバーターが使用されない（直接代入）:**
+
+| ソース型 | ターゲット型 | 説明 |
+|----------|-------------|------|
+| `int` | `int` | 同じ型 |
+| `int` | `long` | 暗黙的なワイドニング変換 |
+| `int` | `int?` | 非NullableからNullableへ |
+| `int?` | `int` | null-forgiving演算子（`!`）で処理 |
+| `float` | `double` | 暗黙的なワイドニング変換 |
+
 **生成コード例:**
 
 ```csharp
-// int -> long の変換
-destination.LongValue = global::MapperLibrary.DefaultMapConverter.Convert<int, long>(source.IntValue);
+// 暗黙的変換（int -> long）: コンバーター不使用
+destination.LongValue = source.IntValue;
 
-// string -> int の変換
+// 明示的変換が必要（string -> int）: コンバーター使用
 destination.IntValue = global::MapperLibrary.DefaultMapConverter.Convert<string, int>(source.StringValue);
+
+// 同じ型: コンバーター不使用
+destination.Id = source.Id;
+
+// Nullable -> 非Nullable: null-forgiving演算子
+destination.Value = source.NullableValue!;
 ```
 
-### 18.3 カスタムコンバーターの指定
+### 18.4 カスタムコンバーターの指定
+
+#### 指定レベルと優先順位
+
+| レベル | 適用範囲 | 優先順位 |
+|--------|----------|----------|
+| MapPropertyのConverterプロパティ | 指定したプロパティのみ | 最高 |
+| Mapperメソッドの`[MapConverter]` | そのメソッドの全プロパティ | 中 |
+| クラスの`[MapConverter]` | クラス内の全Mapperメソッド | 低 |
+| デフォルト | DefaultMapConverter | 最低 |
 
 #### 属性
 
@@ -1200,7 +1237,22 @@ public sealed class MapConverterAttribute : Attribute
 }
 ```
 
-#### 使用例
+### 18.5 使用例
+
+#### プロパティレベルの指定（MapPropertyのConverterプロパティ）
+
+```csharp
+[Mapper]
+[MapProperty(nameof(Source.Value), nameof(Destination.FormattedValue), Converter = nameof(FormatValue))]
+public static partial void Map(Source source, Destination destination);
+
+private static string FormatValue(int value)
+{
+    return $"Value: {value}";
+}
+```
+
+#### メソッドレベルの指定
 
 ```csharp
 // カスタムコンバーターの実装
@@ -1220,25 +1272,28 @@ public static class CustomConverter
     }
 }
 
-// メソッドレベルで指定
+// メソッドレベルで指定（このメソッドの全プロパティに適用）
 [Mapper]
 [MapConverter(typeof(CustomConverter))]
 public static partial void Map(Source source, Destination destination);
+```
 
+#### クラスレベルの指定
+
+```csharp
 // クラスレベルで指定（すべてのマッパーに適用）
 [MapConverter(typeof(CustomConverter))]
 internal static partial class ObjectMapper
 {
     [Mapper]
     public static partial void Map(Source source, Destination destination);
+    
+    // このメソッドはメソッドレベルの指定が優先される
+    [Mapper]
+    [MapConverter(typeof(SpecialConverter))]
+    public static partial void MapSpecial(Source source, Destination destination);
 }
 ```
-
-### 18.4 適用の優先順位
-
-1. **メソッドレベル**: `[Mapper]` メソッドに直接指定
-2. **クラスレベル**: マッパークラスに指定
-3. **デフォルト**: 指定なしの場合は `DefaultMapConverter`
 
 ## 19. カスタムコレクション変換器（CollectionConverter）
 

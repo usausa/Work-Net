@@ -1406,6 +1406,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
             {
                 var sourceTypeName = sourcePropertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 var destTypeName = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var isSourceNullable = IsNullableSymbol(sourcePropertyType);
+                var isTargetNullable = IsNullableSymbol(destProp.Type);
 
                 var mapping = new PropertyMappingModel
                 {
@@ -1413,9 +1415,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     TargetPath = destProp.Name,
                     SourceType = sourceTypeName,
                     TargetType = destTypeName,
-                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type),
-                    IsSourceNullable = IsNullableSymbol(sourcePropertyType),
-                    IsTargetNullable = IsNullableSymbol(destProp.Type),
+                    RequiresConversion = RequiresTypeConversion(sourceTypeName, destTypeName, isSourceNullable, isTargetNullable),
+                    IsSourceNullable = isSourceNullable,
+                    IsTargetNullable = isTargetNullable,
                     ConverterMethod = converterMethod,
                     ConditionMethod = conditionMethod
                 };
@@ -1550,10 +1552,97 @@ public sealed class MapperGenerator : IIncrementalGenerator
         }
 
         // Determine if conversion is needed
+        // Conversion is NOT needed when:
+        // - Same type (int -> int)
+        // - Implicit numeric widening (int -> long, float -> double)
+        // - Nullable to non-nullable of same type (int? -> int, handled by null coalescing)
+        // - Non-nullable to nullable (int -> int?)
         if (!string.IsNullOrEmpty(mapping.SourceType) && !string.IsNullOrEmpty(mapping.TargetType))
         {
-            mapping.RequiresConversion = mapping.SourceType != mapping.TargetType;
+            mapping.RequiresConversion = RequiresTypeConversion(mapping.SourceType, mapping.TargetType, mapping.IsSourceNullable, mapping.IsTargetNullable);
         }
+    }
+
+    private static bool RequiresTypeConversion(string sourceType, string targetType, bool isSourceNullable, bool isTargetNullable)
+    {
+        // Normalize type names
+        var normalizedSource = NormalizeTypeName(sourceType);
+        var normalizedTarget = NormalizeTypeName(targetType);
+
+        // Same type - no conversion needed
+        if (normalizedSource == normalizedTarget)
+        {
+            return false;
+        }
+
+        // Check for implicit numeric widening conversions (no explicit conversion needed)
+        if (IsImplicitNumericConversion(normalizedSource, normalizedTarget))
+        {
+            return false;
+        }
+
+        // All other cases require conversion
+        return true;
+    }
+
+    private static bool IsImplicitNumericConversion(string sourceType, string targetType)
+    {
+        // Implicit numeric conversions in C#
+        // sbyte -> short, int, long, float, double, decimal
+        // byte -> short, ushort, int, uint, long, ulong, float, double, decimal
+        // short -> int, long, float, double, decimal
+        // ushort -> int, uint, long, ulong, float, double, decimal
+        // int -> long, float, double, decimal
+        // uint -> long, ulong, float, double, decimal
+        // long -> float, double, decimal
+        // ulong -> float, double, decimal
+        // float -> double
+        // char -> ushort, int, uint, long, ulong, float, double, decimal
+
+        return sourceType switch
+        {
+            "sbyte" or "SByte" => targetType is "short" or "Int16" or "int" or "Int32" or "long" or "Int64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "byte" or "Byte" => targetType is "short" or "Int16" or "ushort" or "UInt16"
+                or "int" or "Int32" or "uint" or "UInt32" or "long" or "Int64" or "ulong" or "UInt64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "short" or "Int16" => targetType is "int" or "Int32" or "long" or "Int64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "ushort" or "UInt16" => targetType is "int" or "Int32" or "uint" or "UInt32"
+                or "long" or "Int64" or "ulong" or "UInt64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "int" or "Int32" => targetType is "long" or "Int64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "uint" or "UInt32" => targetType is "long" or "Int64" or "ulong" or "UInt64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "long" or "Int64" => targetType is "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "ulong" or "UInt64" => targetType is "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            "float" or "Single" => targetType is "double" or "Double",
+            "char" or "Char" => targetType is "ushort" or "UInt16" or "int" or "Int32" or "uint" or "UInt32"
+                or "long" or "Int64" or "ulong" or "UInt64"
+                or "float" or "Single" or "double" or "Double" or "decimal" or "Decimal",
+            _ => false
+        };
+    }
+
+    private static string NormalizeTypeName(string typeName)
+    {
+        // Remove global:: prefix and System. prefix for comparison
+        var normalized = typeName
+            .Replace("global::", "")
+            .Replace("System.", "");
+
+        // Handle nullable types
+        if (normalized.EndsWith("?"))
+        {
+            normalized = normalized.TrimEnd('?');
+        }
+        if (normalized.StartsWith("Nullable<") && normalized.EndsWith(">"))
+        {
+            normalized = normalized.Substring(9, normalized.Length - 10);
+        }
+
+        return normalized;
     }
 
     private static ITypeSymbol? ResolvePropertyType(ITypeSymbol type, string path)
