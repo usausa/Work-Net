@@ -20,6 +20,30 @@ public static partial Destination Map(Source source);
 - 同名・同型のプロパティは自動でマッピング
 - `partial`メソッドに対してSource Generatorがコードを生成
 
+**生成コード例（voidパターン）:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Id = source.Id;
+    destination.Name = source.Name;
+    destination.Description = source.Description;
+}
+```
+
+**生成コード例（戻り値パターン）:**
+
+```csharp
+public static partial Destination Map(Source source)
+{
+    var destination = new Destination();
+    destination.Id = source.Id;
+    destination.Name = source.Name;
+    destination.Description = source.Description;
+    return destination;
+}
+```
+
 ## 3. 属性一覧
 
 ### 3.1 メソッドレベル属性
@@ -38,12 +62,17 @@ public static partial Destination Map(Source source);
 | `[BeforeMap]` | マッピング前の追加処理 | Method |
 | `[MapCondition]` | マッピング全体の条件 | Method |
 | `[MapPropertyCondition]` | プロパティレベルの条件 | Method |
+| `[MapCollection]` | コレクションマッピング | Method |
+| `[MapNested]` | 子オブジェクトマッピング | Method |
+| `[MapConverter]` | メソッドレベルのカスタム型変換器 | Method |
+| `[CollectionConverter]` | カスタムコレクション変換器 | Method |
 
 ### 3.2 クラス/アセンブリレベル属性
 
 | 属性 | 用途 | 適用対象 |
 |------|------|----------|
-| `[MapperConverter]` | カスタム型変換器の指定 | Class, Assembly |
+| `[MapConverter]` | カスタム型変換器の指定 | Class, Method |
+| `[CollectionConverter]` | カスタムコレクション変換器 | Class, Method |
 
 ## 4. 詳細仕様
 
@@ -56,6 +85,16 @@ internal static partial class ObjectMapper
     [MapProperty(nameof(Source.SourceName), nameof(Destination.DestinationName))]
     [MapProperty(nameof(Source.Code), nameof(Destination.Id))]  // 複数指定可能
     public static partial void Map(Source source, Destination destination);
+}
+```
+
+**生成コード例:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.DestinationName = source.SourceName;
+    destination.Id = source.Code;
 }
 ```
 
@@ -325,7 +364,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 4.7 マッピング除外
+## 5. マッピング除外
 
 ```csharp
 [Mapper]
@@ -334,85 +373,22 @@ public static partial void Map(Source source, Destination destination)
 public static partial void Map(Source source, Destination destination);
 ```
 
-## 5. 追加検討機能
-
-### 5.1 Null処理の指定
+**生成コード例:**
 
 ```csharp
-[Mapper(NullHandling = NullHandling.SetNull)]  // または ThrowException, SkipProperty
-public static partial void Map(Source source, Destination destination);
+public static partial void Map(Source source, Destination destination)
+{
+    // InternalId と TempValue はマッピングされない
+    destination.Name = source.Name;
+    // ...
+}
 ```
 
-### 5.2 コレクションのマッピング
-
-```csharp
-// List<SourceItem> → List<DestItem> の自動マッピング
-[Mapper]
-public static partial void Map(Source source, Destination destination);
-
-// ItemのマッパーがあればListも自動対応
-[Mapper]  
-public static partial DestItem Map(SourceItem source);
-```
-
-### 5.3 条件付きマッピング
-
-```csharp
-[Mapper]
-[MapWhen("Premium", nameof(IsPremiumUser))]  // 条件が真の場合のみマップ
-public static partial void Map(Source source, Destination destination);
-
-private static bool IsPremiumUser(Source source) => source.UserType == "Premium";
-```
-
-### 5.4 継承のサポート
-
-```csharp
-[Mapper]
-[MapIncludeBase]  // 基底クラスのプロパティも含める
-public static partial void Map(DerivedSource source, DerivedDestination destination);
-```
-
-### 5.5 Flattening / Unflattening
-
-```csharp
-// Source.Address.City → Destination.AddressCity (Flatten)
-[Mapper]
-[MapFlatten("Address")]
-public static partial void Map(Source source, Destination destination);
-
-// Source.AddressCity → Destination.Address.City (Unflatten)  
-[Mapper]
-[MapUnflatten("Address")]
-public static partial void Map(Source source, Destination destination);
-```
-
-## 6. 実装優先度
-
-| Phase | 機能 | 優先度 | 実装状況 |
-|-------|------|--------|----------|
-| 1 | 基本マッピング（同名プロパティ） | 必須 | ✅ 完了 |
-| 1 | `[MapProperty]` 異なる名前のマッピング | 必須 | ✅ 完了 |
-| 1 | `[MapIgnore]` 除外 | 必須 | ✅ 完了 |
-| 2 | `[MapConstant]` 固定値 | 高 | ✅ 完了 |
-| 2 | `[BeforeMap]`/`[AfterMap]` 追加処理 | 高 | ✅ 完了 |
-| 2 | 基本的な型変換（組み込み型） | 高 | ✅ 完了 |
-| - | `[MapProperty]` ドット記法（ネスト対応） | 高 | ✅ 完了 |
-| 3 | `[MapFrom]` 合成 | 中 | ✅ 完了 |
-| 3 | `[MapFromMethod]` ソースメソッド呼び出し | 中 | ✅ 完了 |
-| 3 | `[Mapper(AutoMap = false)]` 自動マッピング無効化 | 中 | ✅ 完了 |
-| 3 | `[MapperConverter]` カスタム変換 | 中 | - |
-| 3 | 入れ子クラスのマッピング（自動検出） | 中 | - |
-| 4 | コレクションのマッピング | 中 | - |
-| 4 | Null処理オプション | 低 | - |
-| 5 | Flatten/Unflatten | 低 | - |
-| 5 | 条件付きマッピング | 低 | - |
-
-## 7. ネストプロパティマッピング
+## 6. ネストプロパティマッピング
 
 `[MapProperty]`属性でドット記法を使用することで、ネストされたプロパティ間のマッピングが可能です。
 
-### 7.1 フラットからネストへのマッピング（Unflatten）
+### 6.1 フラットからネストへのマッピング（Unflatten）
 
 ```csharp
 public class Source
@@ -450,7 +426,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 7.2 ネストからフラットへのマッピング（Flatten）
+### 6.2 ネストからフラットへのマッピング（Flatten）
 
 ```csharp
 public class SourceChild
@@ -490,7 +466,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 7.3 深いネストのマッピング
+### 6.3 深いネストのマッピング
 
 ```csharp
 [Mapper]
@@ -509,15 +485,15 @@ public static partial void Map(DeepSource source, DeepNestedDestination destinat
 }
 ```
 
-### 7.4 注意事項
+### 6.4 注意事項
 
 - **ターゲット側のネスト**: 中間オブジェクトが`null`の場合、自動的にインスタンスが生成されます（`??= new`）
 - **ソース側のネスト**: 中間オブジェクトがnullableの場合、nullチェックが追加され、nullの場合はマッピングがスキップされます
 - 既存のインスタンスは保持され、プロパティのみが更新されます
 
-## 8. Null処理
+## 7. Null処理
 
-### 8.1 Nullableプロパティの動作
+### 7.1 Nullableプロパティの動作
 
 | ソース型 | ターゲット型 | 動作 |
 |----------|-------------|------|
@@ -526,7 +502,7 @@ public static partial void Map(DeepSource source, DeepNestedDestination destinat
 | `T` | `T?` | そのままコピー |
 | `T` | `T` | そのままコピー |
 
-### 8.2 ネストプロパティのnull処理
+### 7.2 ネストプロパティのnull処理
 
 ソース側のネストプロパティの**中間パス**がnullableの場合、処理をスキップします：
 
@@ -546,7 +522,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 8.3 末端要素の nullable → non-nullable マッピング
+### 7.3 末端要素の nullable → non-nullable マッピング
 
 末端の要素がnullの場合は `default!` を代入します：
 
@@ -578,14 +554,14 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-## 9. 実装済み型変換一覧
+## 8. 実装済み型変換一覧
 
-### 9.1 文字列への変換
+### 8.1 文字列への変換
 
 すべての型から `string` への変換は `ToString()` メソッドを使用します。
 nullable型の場合は `?.ToString()` を使用し、ターゲットがnon-nullableなら `?? default!` を追加します。
 
-### 9.2 文字列からの変換
+### 8.2 文字列からの変換
 
 | 変換先 | 変換方法 |
 |--------|----------|
@@ -605,11 +581,11 @@ nullable型の場合は `?.ToString()` を使用し、ターゲットがnon-null
 | `TimeSpan` | `TimeSpan.Parse()` |
 | `Guid` | `Guid.Parse()` |
 
-### 9.3 数値型間の変換
+### 8.3 数値型間の変換
 
 数値型（`int`, `long`, `short`, `byte`, `float`, `double`, `decimal` 等）間の変換は、明示的なキャストを使用します。
 
-### 9.4 日時型の変換
+### 8.4 日時型の変換
 
 | 変換元 | 変換先 | 変換方法 |
 |--------|--------|----------|
@@ -618,18 +594,18 @@ nullable型の場合は `?.ToString()` を使用し、ターゲットがnon-null
 | `DateTime` | `DateOnly` | `DateOnly.FromDateTime()` |
 | `DateTime` | `TimeOnly` | `TimeOnly.FromDateTime()` |
 
-## 10. カスタムパラメータ
+## 9. カスタムパラメータ
 
 マッパーメソッドに追加のパラメータを指定し、`BeforeMap`/`AfterMap`などのカスタムメソッドで使用できます。
 
-### 10.1 パラメータの識別ルール
+### 9.1 パラメータの識別ルール
 
 | パターン | Source | Destination | カスタムパラメータ |
 |---------|--------|-------------|-------------------|
 | `void Map(A, B, C, D)` | 第1引数 | 第2引数 | 第3引数以降 |
 | `B Map(A, C, D)` | 第1引数 | 戻り値 | 第2引数以降 |
 
-### 10.2 使用例
+### 9.2 使用例
 
 ```csharp
 // カスタムコンテキストを渡すパターン
@@ -663,7 +639,7 @@ public static partial void Map(Source source, Destination destination, IServiceP
 }
 ```
 
-### 10.3 戻り値パターン
+### 9.3 戻り値パターン
 
 ```csharp
 [Mapper]
@@ -676,7 +652,7 @@ private static void OnAfterMap(Source source, Destination destination, CustomCon
 }
 ```
 
-### 10.4 制約事項
+### 9.4 制約事項
 
 - **同じ型の複数パラメータは禁止**: カスタムパラメータに同じ型を複数指定するとコンパイルエラー（ML0003）
 
@@ -687,7 +663,7 @@ public static partial void Map(Source source, Destination destination, string pa
 // → ML0003: Custom parameters must have unique types
 ```
 
-### 10.5 BeforeMap/AfterMap のシグネチャ
+### 9.5 BeforeMap/AfterMap のシグネチャ
 
 | BeforeMap/AfterMapのシグネチャ | 動作 |
 |------------------------------|------|
@@ -697,7 +673,7 @@ public static partial void Map(Source source, Destination destination, string pa
 
 カスタムパラメータを持つバージョンが優先されます。
 
-### 10.6 Converter でのカスタムパラメータ
+### 9.6 Converter でのカスタムパラメータ
 
 `MapProperty`の`Converter`プロパティで指定したカスタムコンバーターでもカスタムパラメータを使用できます。
 
@@ -734,9 +710,9 @@ public static partial void Map(Source source, Destination destination, CustomCon
 | `(SourceType, ...customParams)` | カスタムパラメータを渡して呼び出し |
 | シグネチャ不一致 | コンパイルエラー（ML0006） |
 
-## 11. 条件付きマッピング
+## 10. 条件付きマッピング
 
-### 11.1 グローバル条件
+### 10.1 グローバル条件
 
 マッピング全体に条件を適用します。
 
@@ -764,7 +740,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 11.2 プロパティレベル条件
+### 10.2 プロパティレベル条件
 
 特定のプロパティのマッピングに条件を適用します。
 
@@ -792,7 +768,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 11.3 カスタムパラメータ付き条件
+### 10.3 カスタムパラメータ付き条件
 
 ```csharp
 [Mapper]
@@ -805,7 +781,7 @@ private static bool ShouldMap(Source source, Destination destination, MappingCon
 }
 ```
 
-## 12. Generic MapConstant
+## 11. Generic MapConstant
 
 C# 11以降のGeneric Attribute機能を使用して、型安全な定数マッピングができます。
 
@@ -837,7 +813,7 @@ public static partial void Map(Source source, Destination destination)
 [MapConstant("CreatedAt", null, Expression = "System.DateTime.Now")]
 ```
 
-## 13. 診断メッセージ
+## 12. 診断メッセージ
 
 | コード | 説明 |
 |--------|------|
@@ -854,9 +830,9 @@ public static partial void Map(Source source, Destination destination)
 | ML0011 | MapFromメソッドの戻り値の型がターゲットプロパティの型と一致しません |
 | ML0012 | MapFromMethodメソッドの戻り値の型がターゲットプロパティの型と一致しません |
 
-## 14. 実装ステータス
+## 13. 実装ステータス
 
-### 14.1 実装済み機能
+### 13.1 実装済み機能
 
 | 機能 | ステータス |
 |------|----------|
@@ -883,22 +859,22 @@ public static partial void Map(Source source, Destination destination)
 | MapConverter（カスタム型変換器） | ✅ 実装済み |
 | CollectionConverter（カスタムコレクション変換器） | ✅ 実装済み |
 
-### 14.2 未実装機能
+### 13.2 未実装機能
 
 | 機能 | 説明 | 参考（AutoMapper相当） |
 |------|------|----------------------|
 | NullSubstitute | null値の代替値設定 | `NullSubstitute("N/A")` |
 
-## 15. コレクションマッピング（MapCollection）
+## 14. コレクションマッピング（MapCollection）
 
-### 15.1 設計方針
+### 14.1 設計方針
 
 - **自動マッピングは行わない**: コレクションプロパティが同名でも自動的にはマッピングしない
 - **明示的なマッパーメソッド指定が必須**: 子要素のマッパーメソッドを先に定義し、それを使用する
 - **コレクション変換はDefaultCollectionConverterを使用**: カスタムコレクションコンバーターで差し替え可能
 - **voidマッパーとreturnマッパー両方対応**: 子要素マッパーはどちらのパターンでも使用可能
 
-### 15.2 属性
+### 14.2 属性
 
 ```csharp
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
@@ -917,7 +893,7 @@ public sealed class MapCollectionAttribute : Attribute
 }
 ```
 
-### 15.3 使用例
+### 14.3 使用例
 
 ```csharp
 public class SourceChild
@@ -970,7 +946,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 15.4 コレクション変換器
+### 14.4 コレクション変換器
 
 コレクションの変換には `DefaultCollectionConverter` が使用されます。ターゲットの型に応じて `ToArray()` または `ToList()` が呼び出されます。
 
@@ -984,7 +960,7 @@ destination.Items = DefaultCollectionConverter.ToArray<TSource, TDest>(source.It
 destination.Items = DefaultCollectionConverter.ToList<TSource, TDest>(source.Items, MapChild)!;
 ```
 
-### 15.5 voidマッパーの場合
+### 14.5 voidマッパーの場合
 
 voidマッパーの場合、`Action<TSource, TDest>` を受け取るオーバーロードが使用されます：
 
@@ -1007,13 +983,13 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 15.6 nullハンドリング
+### 14.6 nullハンドリング
 
 ソースコレクションがnullの場合、`DefaultCollectionConverter` が `default` を返し、null-forgiving演算子で `default!` が設定されます。
 
-## 16. 子オブジェクトマッピング（MapNested）
+## 15. 子オブジェクトマッピング（MapNested）
 
-### 16.1 設計方針
+### 15.1 設計方針
 
 - **明示的なマッパーメソッド指定が必須**: コレクションと同様
 - **voidマッパーとreturnマッパー両方対応**: 子オブジェクトマッパーはどちらのパターンでも使用可能
@@ -1022,7 +998,7 @@ public static partial void Map(Source source, Destination destination)
   - `[MapFrom]`: 静的メソッドでソース全体から値を計算
   - `[MapNested]`: 別のマッパーメソッドを呼び出して子オブジェクトを変換
 
-### 16.2 属性
+### 15.2 属性
 
 ```csharp
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
@@ -1041,7 +1017,7 @@ public sealed class MapNestedAttribute : Attribute
 }
 ```
 
-### 16.3 使用例
+### 15.3 使用例
 
 ```csharp
 public class SourceChild
@@ -1097,7 +1073,7 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 16.4 voidマッパーの場合
+### 15.4 voidマッパーの場合
 
 ```csharp
 [Mapper]
@@ -1123,11 +1099,11 @@ public static partial void Map(Source source, Destination destination)
 }
 ```
 
-### 16.5 nullハンドリング
+### 15.5 nullハンドリング
 
 ソースの子オブジェクトがnullの場合、ターゲットには`default!`が設定されます（終端要素として扱い、通常のプロパティマッピングと同じルール）。
 
-## 17. 属性の使い分けまとめ
+## 16. 属性の使い分けまとめ
 
 | 属性 | 用途 | 例 |
 |------|------|-----|
@@ -1139,15 +1115,15 @@ public static partial void Map(Source source, Destination destination)
 | `[MapNested("A", "B", ...)]` | 別マッパーで子オブジェクト変換 | `d.B = MapChild(s.A)` |
 | `[MapCollection("A", "B", ...)]` | 別マッパーでコレクション変換 | `DefaultCollectionConverter.ToList(...)` |
 
-## 18. カスタム型変換器（MapConverter）
+## 17. カスタム型変換器（MapConverter）
 
-### 18.1 設計方針
+### 17.1 設計方針
 
 - **Generic静的メソッドベース**: インスタンス生成のオーバーヘッドを回避
 - **JIT最適化**: `typeof(T) == typeof(int)` のような条件分岐はJITで最適化される
 - **階層的な適用**: メソッドレベル → クラスレベル → デフォルトの優先順位
 
-### 18.2 デフォルト実装（DefaultMapConverter）
+### 17.2 デフォルト実装（DefaultMapConverter）
 
 型変換が必要な場合、`DefaultMapConverter.Convert<TSource, TDestination>()` が使用されます：
 
@@ -1172,7 +1148,7 @@ public static class DefaultMapConverter
 }
 ```
 
-### 18.3 コンバーターが使用されるケース
+### 17.3 コンバーターが使用されるケース
 
 **コンバーターが使用される（明示的な変換が必要）:**
 
@@ -1210,7 +1186,7 @@ destination.Id = source.Id;
 destination.Value = source.NullableValue!;
 ```
 
-### 18.4 カスタムコンバーターの指定
+### 17.4 カスタムコンバーターの指定
 
 #### 指定レベルと優先順位
 
@@ -1237,7 +1213,7 @@ public sealed class MapConverterAttribute : Attribute
 }
 ```
 
-### 18.5 使用例
+### 17.5 使用例
 
 #### プロパティレベルの指定（MapPropertyのConverterプロパティ）
 
@@ -1295,14 +1271,14 @@ internal static partial class ObjectMapper
 }
 ```
 
-## 19. カスタムコレクション変換器（CollectionConverter）
+## 18. カスタムコレクション変換器（CollectionConverter）
 
-### 19.1 設計方針
+### 18.1 設計方針
 
 - **コレクション変換の統一**: すべてのコレクションマッピングは `DefaultCollectionConverter` を通じて行われる
 - **カスタマイズ可能**: `CollectionConverterAttribute` で差し替え可能
 
-### 19.2 デフォルト実装（DefaultCollectionConverter）
+### 18.2 デフォルト実装（DefaultCollectionConverter）
 
 ```csharp
 public static class DefaultCollectionConverter
@@ -1336,7 +1312,7 @@ public static class DefaultCollectionConverter
 }
 ```
 
-### 19.3 カスタムコレクションコンバーターの指定
+### 18.3 カスタムコレクションコンバーターの指定
 
 #### 属性
 
@@ -1386,7 +1362,7 @@ public static class CustomCollectionConverter
 public static partial void Map(Source source, Destination destination);
 ```
 
-## 20. 未実装機能
+## 19. 未実装機能
 
 | 機能 | 説明 |
 |------|------|
