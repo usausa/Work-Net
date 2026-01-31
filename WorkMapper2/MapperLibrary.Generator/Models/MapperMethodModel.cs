@@ -62,6 +62,11 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     public bool ReturnsDestination { get; set; }
 
     /// <summary>
+    /// Gets or sets the custom parameters (additional parameters beyond source and destination).
+    /// </summary>
+    public List<CustomParameterModel> CustomParameters { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the property mappings.
     /// </summary>
     public List<PropertyMappingModel> PropertyMappings { get; set; } = [];
@@ -82,9 +87,19 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     public string? BeforeMapMethod { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether BeforeMap method accepts custom parameters.
+    /// </summary>
+    public bool BeforeMapAcceptsCustomParameters { get; set; }
+
+    /// <summary>
     /// Gets or sets the method name to call after mapping.
     /// </summary>
     public string? AfterMapMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether AfterMap method accepts custom parameters.
+    /// </summary>
+    public bool AfterMapAcceptsCustomParameters { get; set; }
 
     public bool Equals(MapperMethodModel? other)
     {
@@ -108,11 +123,14 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
                DestinationTypeName == other.DestinationTypeName &&
                DestinationParameterName == other.DestinationParameterName &&
                ReturnsDestination == other.ReturnsDestination &&
+               CustomParameters.SequenceEqual(other.CustomParameters) &&
                PropertyMappings.SequenceEqual(other.PropertyMappings) &&
                IgnoredProperties.SetEquals(other.IgnoredProperties) &&
                ConstantMappings.SequenceEqual(other.ConstantMappings) &&
                BeforeMapMethod == other.BeforeMapMethod &&
-               AfterMapMethod == other.AfterMapMethod;
+               BeforeMapAcceptsCustomParameters == other.BeforeMapAcceptsCustomParameters &&
+               AfterMapMethod == other.AfterMapMethod &&
+               AfterMapAcceptsCustomParameters == other.AfterMapAcceptsCustomParameters;
     }
 
     public override bool Equals(object? obj) => Equals(obj as MapperMethodModel);
@@ -133,7 +151,9 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
             hash = (hash * 31) + (DestinationParameterName?.GetHashCode() ?? 0);
             hash = (hash * 31) + ReturnsDestination.GetHashCode();
             hash = (hash * 31) + (BeforeMapMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + BeforeMapAcceptsCustomParameters.GetHashCode();
             hash = (hash * 31) + (AfterMapMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + AfterMapAcceptsCustomParameters.GetHashCode();
             return hash;
         }
     }

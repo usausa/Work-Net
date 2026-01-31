@@ -63,10 +63,10 @@ public sealed class MapperGenerator : IIncrementalGenerator
             return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodDefinition, syntax.GetLocation(), symbol.Name));
         }
 
-        // Validate parameters: must have 1 or 2 parameters
-        // Pattern 1: void Map(Source source, Destination destination) - 2 parameters
-        // Pattern 2: Destination Map(Source source) - 1 parameter with return type
-        if (symbol.Parameters.Length < 1 || symbol.Parameters.Length > 2)
+        // Validate parameters:
+        // Pattern 1: void Map(Source source, Destination destination, ...customParams) - at least 2 parameters
+        // Pattern 2: Destination Map(Source source, ...customParams) - at least 1 parameter with return type
+        if (symbol.Parameters.Length < 1)
         {
             return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
         }
@@ -85,45 +85,293 @@ public sealed class MapperGenerator : IIncrementalGenerator
             MethodName = symbol.Name
         };
 
-        // Get source type and parameter name
+        // Get source type and parameter name (always first parameter)
         var sourceParam = symbol.Parameters[0];
         model.SourceTypeName = sourceParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         model.SourceParameterName = sourceParam.Name;
 
+        ITypeSymbol destinationType;
+        var customParamStartIndex = 0;
+
         // Determine if void method with destination parameter or return type method
-        if (symbol.Parameters.Length == 2)
+        if (symbol.ReturnsVoid)
         {
-            // void Map(Source source, Destination destination)
+            // void Map(Source source, Destination destination, ...customParams)
+            if (symbol.Parameters.Length < 2)
+            {
+                return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
+            }
+
             var destParam = symbol.Parameters[1];
             model.DestinationTypeName = destParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             model.DestinationParameterName = destParam.Name;
             model.ReturnsDestination = false;
+            destinationType = destParam.Type;
+            customParamStartIndex = 2;
         }
         else
         {
-            // Destination Map(Source source)
-            if (symbol.ReturnsVoid)
-            {
-                return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
-            }
+            // Destination Map(Source source, ...customParams)
             model.DestinationTypeName = symbol.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             model.DestinationParameterName = null;
             model.ReturnsDestination = true;
+            destinationType = symbol.ReturnType;
+            customParamStartIndex = 1;
         }
+
+        // Extract custom parameters
+        var customParameters = new List<CustomParameterModel>();
+        for (var i = customParamStartIndex; i < symbol.Parameters.Length; i++)
+        {
+            var param = symbol.Parameters[i];
+            customParameters.Add(new CustomParameterModel
+            {
+                Name = param.Name,
+                TypeName = param.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+            });
+        }
+
+        // Check for duplicate custom parameter types
+        var duplicateType = customParameters
+            .GroupBy(p => p.TypeName)
+            .FirstOrDefault(g => g.Count() > 1);
+
+        if (duplicateType is not null)
+        {
+            return Results.Error<MapperMethodModel>(new DiagnosticInfo(
+                Diagnostics.DuplicateCustomParameterType,
+                syntax.GetLocation(),
+                $"{duplicateType.Key}, {symbol.Name}"));
+        }
+
+        model.CustomParameters = customParameters;
 
         // Parse attributes for MapProperty, MapIgnore, MapConstant, BeforeMap, AfterMap
         ParseMappingAttributes(symbol, model);
 
+        // Validate BeforeMap/AfterMap signatures if specified
+        var validationError = ValidateCallbackMethods(symbol, model, syntax);
+        if (validationError is not null)
+        {
+            return Results.Error<MapperMethodModel>(validationError);
+        }
+
         // Get source and destination properties
         var sourceType = symbol.Parameters[0].Type;
-        var destinationType = symbol.Parameters.Length == 2 ? symbol.Parameters[1].Type : symbol.ReturnType;
 
         BuildPropertyMappings(sourceType, destinationType, model);
+
+        // Validate Converter methods if specified
+        var converterError = ValidateConverterMethods(symbol, model, syntax);
+        if (converterError is not null)
+        {
+            return Results.Error<MapperMethodModel>(converterError);
+        }
 
         // Build constant mappings with type information
         BuildConstantMappings(destinationType, model);
 
         return Results.Success(model);
+    }
+
+    private static DiagnosticInfo? ValidateConverterMethods(IMethodSymbol mapperMethod, MapperMethodModel model, MethodDeclarationSyntax syntax)
+    {
+        var containingType = mapperMethod.ContainingType;
+
+        foreach (var mapping in model.PropertyMappings)
+        {
+            if (string.IsNullOrEmpty(mapping.ConverterMethod))
+            {
+                continue;
+            }
+
+            var converterMethods = containingType.GetMembers(mapping.ConverterMethod!)
+                .OfType<IMethodSymbol>()
+                .Where(m => m.IsStatic)
+                .ToList();
+
+            var matchResult = FindMatchingConverterMethod(converterMethods, mapping, model);
+            if (matchResult == ConverterMatchResult.NoMatch)
+            {
+                return new DiagnosticInfo(
+                    Diagnostics.InvalidConverterSignature,
+                    syntax.GetLocation(),
+                    $"{mapping.ConverterMethod}, {mapping.SourcePath} -> {mapping.TargetPath}");
+            }
+
+            mapping.ConverterAcceptsCustomParameters = matchResult == ConverterMatchResult.MatchWithCustomParams;
+        }
+
+        return null;
+    }
+
+    private enum ConverterMatchResult
+    {
+        NoMatch,
+        MatchWithoutCustomParams,
+        MatchWithCustomParams
+    }
+
+    private static ConverterMatchResult FindMatchingConverterMethod(List<IMethodSymbol> candidates, PropertyMappingModel mapping, MapperMethodModel model)
+    {
+        var hasMatchWithCustomParams = false;
+        var hasMatchWithoutCustomParams = false;
+        var sourceType = mapping.SourceType;
+
+        foreach (var method in candidates)
+        {
+            // Return type must match target type (or be assignable)
+            var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            // Check for match with custom parameters: (SourceType, customParams...)
+            if (model.CustomParameters.Count > 0 &&
+                method.Parameters.Length == 1 + model.CustomParameters.Count)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == sourceType;
+
+                var customParamsMatch = true;
+                for (var i = 0; i < model.CustomParameters.Count; i++)
+                {
+                    if (method.Parameters[i + 1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) != model.CustomParameters[i].TypeName)
+                    {
+                        customParamsMatch = false;
+                        break;
+                    }
+                }
+
+                if (sourceMatch && customParamsMatch)
+                {
+                    hasMatchWithCustomParams = true;
+                }
+            }
+
+            // Check for match without custom parameters: (SourceType)
+            if (method.Parameters.Length == 1)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == sourceType;
+
+                if (sourceMatch)
+                {
+                    hasMatchWithoutCustomParams = true;
+                }
+            }
+        }
+
+        // Prefer match with custom parameters
+        if (hasMatchWithCustomParams)
+        {
+            return ConverterMatchResult.MatchWithCustomParams;
+        }
+
+        if (hasMatchWithoutCustomParams)
+        {
+            return ConverterMatchResult.MatchWithoutCustomParams;
+        }
+
+        return ConverterMatchResult.NoMatch;
+    }
+
+    private static DiagnosticInfo? ValidateCallbackMethods(IMethodSymbol mapperMethod, MapperMethodModel model, MethodDeclarationSyntax syntax)
+    {
+        var containingType = mapperMethod.ContainingType;
+
+        // Validate BeforeMap
+        if (!string.IsNullOrEmpty(model.BeforeMapMethod))
+        {
+            var beforeMapMethods = containingType.GetMembers(model.BeforeMapMethod!)
+                .OfType<IMethodSymbol>()
+                .Where(m => m.IsStatic)
+                .ToList();
+
+            var matchResult = FindMatchingCallbackMethod(beforeMapMethods, model);
+            if (matchResult == CallbackMatchResult.NoMatch)
+            {
+                return new DiagnosticInfo(Diagnostics.InvalidBeforeMapSignature, syntax.GetLocation(), $"{model.BeforeMapMethod!}, {mapperMethod.Name}");
+            }
+            model.BeforeMapAcceptsCustomParameters = matchResult == CallbackMatchResult.MatchWithCustomParams;
+        }
+
+        // Validate AfterMap
+        if (!string.IsNullOrEmpty(model.AfterMapMethod))
+        {
+            var afterMapMethods = containingType.GetMembers(model.AfterMapMethod!)
+                .OfType<IMethodSymbol>()
+                .Where(m => m.IsStatic)
+                .ToList();
+
+            var matchResult = FindMatchingCallbackMethod(afterMapMethods, model);
+            if (matchResult == CallbackMatchResult.NoMatch)
+            {
+                return new DiagnosticInfo(Diagnostics.InvalidAfterMapSignature, syntax.GetLocation(), $"{model.AfterMapMethod!}, {mapperMethod.Name}");
+            }
+            model.AfterMapAcceptsCustomParameters = matchResult == CallbackMatchResult.MatchWithCustomParams;
+        }
+
+        return null;
+    }
+
+    private enum CallbackMatchResult
+    {
+        NoMatch,
+        MatchWithoutCustomParams,
+        MatchWithCustomParams
+    }
+
+    private static CallbackMatchResult FindMatchingCallbackMethod(List<IMethodSymbol> candidates, MapperMethodModel model)
+    {
+        var hasMatchWithCustomParams = false;
+        var hasMatchWithoutCustomParams = false;
+
+        foreach (var method in candidates)
+        {
+            // Check for match with custom parameters: (Source, Destination, customParams...)
+            if (model.CustomParameters.Count > 0 &&
+                method.Parameters.Length == 2 + model.CustomParameters.Count)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == model.SourceTypeName;
+                var destMatch = method.Parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == model.DestinationTypeName;
+
+                var customParamsMatch = true;
+                for (var i = 0; i < model.CustomParameters.Count; i++)
+                {
+                    if (method.Parameters[i + 2].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) != model.CustomParameters[i].TypeName)
+                    {
+                        customParamsMatch = false;
+                        break;
+                    }
+                }
+
+                if (sourceMatch && destMatch && customParamsMatch)
+                {
+                    hasMatchWithCustomParams = true;
+                }
+            }
+
+            // Check for match without custom parameters: (Source, Destination)
+            if (method.Parameters.Length == 2)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == model.SourceTypeName;
+                var destMatch = method.Parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == model.DestinationTypeName;
+
+                if (sourceMatch && destMatch)
+                {
+                    hasMatchWithoutCustomParams = true;
+                }
+            }
+        }
+
+        // Prefer match with custom parameters
+        if (hasMatchWithCustomParams)
+        {
+            return CallbackMatchResult.MatchWithCustomParams;
+        }
+
+        if (hasMatchWithoutCustomParams)
+        {
+            return CallbackMatchResult.MatchWithoutCustomParams;
+        }
+
+        return CallbackMatchResult.NoMatch;
     }
 
     private static void ParseMappingAttributes(IMethodSymbol symbol, MapperMethodModel model)
@@ -140,12 +388,23 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     var sourceName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
                     var targetName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
 
-                    // Store custom mapping (will be used in BuildPropertyMappings)
-                    model.PropertyMappings.Add(new PropertyMappingModel
+                    var mapping = new PropertyMappingModel
                     {
                         SourceName = sourceName,
                         TargetName = targetName
-                    });
+                    };
+
+                    // Check for Converter named argument
+                    foreach (var namedArg in attribute.NamedArguments)
+                    {
+                        if (namedArg.Key == "Converter" && namedArg.Value.Value is string converter)
+                        {
+                            mapping.ConverterMethod = converter;
+                        }
+                    }
+
+                    // Store custom mapping (will be used in BuildPropertyMappings)
+                    model.PropertyMappings.Add(mapping);
                 }
             }
             else if (attributeName == MapIgnoreAttributeName)
@@ -265,6 +524,9 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
         }
 
+        // Preserve original mappings with Converter info
+        var originalMappings = model.PropertyMappings.ToDictionary(m => m.TargetPath, m => m);
+
         // Clear and rebuild property mappings
         var mappings = new List<PropertyMappingModel>();
 
@@ -278,7 +540,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
 
             // Skip if there's a nested mapping for this target
-            if (nestedMappings.Any(m => m.TargetPath.StartsWith(destProp.Name + ".") || m.TargetPath == destProp.Name))
+            if (nestedMappings.Any(m => m.TargetPath.StartsWith(destProp.Name + ".", StringComparison.Ordinal) || m.TargetPath == destProp.Name))
             {
                 continue;
             }
@@ -291,12 +553,19 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
             string? sourcePropPath = null;
             ITypeSymbol? sourcePropertyType = null;
+            string? converterMethod = null;
 
             // Check for custom mapping first
             if (customMappings.TryGetValue(destProp.Name, out var customSourcePath))
             {
                 sourcePropPath = customSourcePath;
                 sourcePropertyType = ResolvePropertyType(sourceType, customSourcePath);
+
+                // Preserve converter info from original mapping
+                if (originalMappings.TryGetValue(destProp.Name, out var originalMapping))
+                {
+                    converterMethod = originalMapping.ConverterMethod;
+                }
             }
             else
             {
@@ -308,6 +577,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     sourcePropertyType = sourceProp.Type;
                 }
             }
+
 
             if (sourcePropPath is not null && sourcePropertyType is not null)
             {
@@ -322,7 +592,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     TargetType = destTypeName,
                     RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type),
                     IsSourceNullable = IsNullableSymbol(sourcePropertyType),
-                    IsTargetNullable = IsNullableSymbol(destProp.Type)
+                    IsTargetNullable = IsNullableSymbol(destProp.Type),
+                    ConverterMethod = converterMethod
                 };
 
                 mappings.Add(mapping);
@@ -562,19 +833,33 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
         if (method.ReturnsDestination)
         {
-            // Destination Map(Source source)
+            // Destination Map(Source source, ...customParams)
             builder.Append(method.DestinationTypeName).Append(" ");
             builder.Append(method.MethodName).Append("(");
             builder.Append(method.SourceTypeName).Append(" ").Append(method.SourceParameterName);
+
+            // Add custom parameters
+            foreach (var customParam in method.CustomParameters)
+            {
+                builder.Append(", ").Append(customParam.TypeName).Append(" ").Append(customParam.Name);
+            }
+
             builder.Append(")").NewLine();
         }
         else
         {
-            // void Map(Source source, Destination destination)
+            // void Map(Source source, Destination destination, ...customParams)
             builder.Append("void ");
             builder.Append(method.MethodName).Append("(");
             builder.Append(method.SourceTypeName).Append(" ").Append(method.SourceParameterName).Append(", ");
             builder.Append(method.DestinationTypeName).Append(" ").Append(method.DestinationParameterName!);
+
+            // Add custom parameters
+            foreach (var customParam in method.CustomParameters)
+            {
+                builder.Append(", ").Append(customParam.TypeName).Append(" ").Append(customParam.Name);
+            }
+
             builder.Append(")").NewLine();
         }
 
@@ -592,7 +877,15 @@ public sealed class MapperGenerator : IIncrementalGenerator
         // Call BeforeMap if specified
         if (!string.IsNullOrEmpty(method.BeforeMapMethod))
         {
-            builder.Indent().Append(method.BeforeMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
+            builder.Indent().Append(method.BeforeMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName);
+            if (method.BeforeMapAcceptsCustomParameters)
+            {
+                foreach (var customParam in method.CustomParameters)
+                {
+                    builder.Append(", ").Append(customParam.Name);
+                }
+            }
+            builder.Append(");").NewLine();
         }
 
         // Collect all nested paths that need auto-instantiation (excluding those with nullable source paths)
@@ -628,7 +921,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
         // Generate property mappings without null check
         foreach (var mapping in mappingsWithoutNullCheck)
         {
-            BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName);
+            BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName, method);
         }
 
         // Generate property mappings with null check (grouped by source null check condition)
@@ -662,7 +955,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
             foreach (var mapping in group)
             {
-                BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName, nullChecked: true);
+                BuildPropertyAssignment(builder, mapping, method.SourceParameterName, destVarName, method, nullChecked: true);
             }
 
             builder.EndScope();
@@ -691,7 +984,15 @@ public sealed class MapperGenerator : IIncrementalGenerator
         // Call AfterMap if specified
         if (!string.IsNullOrEmpty(method.AfterMapMethod))
         {
-            builder.Indent().Append(method.AfterMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName).Append(");").NewLine();
+            builder.Indent().Append(method.AfterMapMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName);
+            if (method.AfterMapAcceptsCustomParameters)
+            {
+                foreach (var customParam in method.CustomParameters)
+                {
+                    builder.Append(", ").Append(customParam.Name);
+                }
+            }
+            builder.Append(");").NewLine();
         }
 
         // Return destination if needed
@@ -703,12 +1004,29 @@ public sealed class MapperGenerator : IIncrementalGenerator
         builder.EndScope();
     }
 
-    private static void BuildPropertyAssignment(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, string destVarName, bool nullChecked = false)
+    private static void BuildPropertyAssignment(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, string destVarName, MapperMethodModel method, bool nullChecked = false)
     {
         builder.Indent();
         builder.Append(destVarName).Append(".").Append(mapping.TargetPath).Append(" = ");
 
-        if (mapping.RequiresConversion)
+        // Use custom converter if specified
+        if (mapping.HasConverter)
+        {
+            var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
+            builder.Append(mapping.ConverterMethod!).Append("(").Append(sourceAccessor);
+
+            // Add custom parameters if converter accepts them
+            if (mapping.ConverterAcceptsCustomParameters)
+            {
+                foreach (var customParam in method.CustomParameters)
+                {
+                    builder.Append(", ").Append(customParam.Name);
+                }
+            }
+
+            builder.Append(")");
+        }
+        else if (mapping.RequiresConversion)
         {
             BuildTypeConversion(builder, mapping, sourceParamName, nullChecked);
         }

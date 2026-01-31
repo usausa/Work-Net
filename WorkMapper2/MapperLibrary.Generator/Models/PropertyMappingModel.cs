@@ -76,6 +76,21 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
     /// </summary>
     public bool RequiresNullCoalescing => IsSourceNullable && !IsTargetNullable;
 
+    /// <summary>
+    /// Gets or sets the converter method name for custom type conversion.
+    /// </summary>
+    public string? ConverterMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the converter method accepts custom parameters.
+    /// </summary>
+    public bool ConverterAcceptsCustomParameters { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether a custom converter is specified.
+    /// </summary>
+    public bool HasConverter => !string.IsNullOrEmpty(ConverterMethod);
+
     // Legacy property names for compatibility
     public string SourceName
     {
@@ -108,6 +123,8 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
                RequiresConversion == other.RequiresConversion &&
                IsSourceNullable == other.IsSourceNullable &&
                IsTargetNullable == other.IsTargetNullable &&
+               ConverterMethod == other.ConverterMethod &&
+               ConverterAcceptsCustomParameters == other.ConverterAcceptsCustomParameters &&
                TargetPathSegments.SequenceEqual(other.TargetPathSegments) &&
                SourcePathSegments.SequenceEqual(other.SourcePathSegments);
     }
@@ -126,6 +143,8 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
             hash = (hash * 31) + RequiresConversion.GetHashCode();
             hash = (hash * 31) + IsSourceNullable.GetHashCode();
             hash = (hash * 31) + IsTargetNullable.GetHashCode();
+            hash = (hash * 31) + (ConverterMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + ConverterAcceptsCustomParameters.GetHashCode();
             return hash;
         }
     }

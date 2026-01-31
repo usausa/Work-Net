@@ -502,3 +502,130 @@ nullable型の場合は `?.ToString()` を使用し、ターゲットがnon-null
 | `DateTime` | `DateOnly` | `DateOnly.FromDateTime()` |
 | `DateTime` | `TimeOnly` | `TimeOnly.FromDateTime()` |
 
+## 10. カスタムパラメータ
+
+マッパーメソッドに追加のパラメータを指定し、`BeforeMap`/`AfterMap`などのカスタムメソッドで使用できます。
+
+### 10.1 パラメータの識別ルール
+
+| パターン | Source | Destination | カスタムパラメータ |
+|---------|--------|-------------|-------------------|
+| `void Map(A, B, C, D)` | 第1引数 | 第2引数 | 第3引数以降 |
+| `B Map(A, C, D)` | 第1引数 | 戻り値 | 第2引数以降 |
+
+### 10.2 使用例
+
+```csharp
+// カスタムコンテキストを渡すパターン
+[Mapper]
+[BeforeMap(nameof(OnBeforeMap))]
+[AfterMap(nameof(OnAfterMap))]
+public static partial void Map(Source source, Destination destination, IServiceProvider services);
+
+// カスタムパラメータを受け取るコールバック
+private static void OnBeforeMap(Source source, Destination destination, IServiceProvider services)
+{
+    // servicesを使った処理
+}
+
+// カスタムパラメータなしのコールバック（後方互換）
+private static void OnAfterMap(Source source, Destination destination)
+{
+    // 基本的な処理
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination, IServiceProvider services)
+{
+    OnBeforeMap(source, destination, services);  // カスタムパラメータを渡す
+    destination.Name = source.Name;
+    // ...
+    OnAfterMap(source, destination);  // カスタムパラメータなしで呼び出し
+}
+```
+
+### 10.3 戻り値パターン
+
+```csharp
+[Mapper]
+[AfterMap(nameof(OnAfterMap))]
+public static partial Destination Map(Source source, CustomContext context);
+
+private static void OnAfterMap(Source source, Destination destination, CustomContext context)
+{
+    context.MappingComplete = true;
+}
+```
+
+### 10.4 制約事項
+
+- **同じ型の複数パラメータは禁止**: カスタムパラメータに同じ型を複数指定するとコンパイルエラー（ML0003）
+
+```csharp
+// NG: 同じ型 (string) が複数ある
+[Mapper]
+public static partial void Map(Source source, Destination destination, string param1, string param2);
+// → ML0003: Custom parameters must have unique types
+```
+
+### 10.5 BeforeMap/AfterMap のシグネチャ
+
+| BeforeMap/AfterMapのシグネチャ | 動作 |
+|------------------------------|------|
+| `(Source, Destination)` | カスタムパラメータなしで呼び出し |
+| `(Source, Destination, ...customParams)` | カスタムパラメータを渡して呼び出し |
+| シグネチャ不一致 | コンパイルエラー（ML0004/ML0005） |
+
+カスタムパラメータを持つバージョンが優先されます。
+
+### 10.6 Converter でのカスタムパラメータ
+
+`MapProperty`の`Converter`プロパティで指定したカスタムコンバーターでもカスタムパラメータを使用できます。
+
+```csharp
+[Mapper]
+[MapProperty(nameof(Source.Value), nameof(Destination.ConvertedValue), Converter = nameof(ConvertWithContext))]
+public static partial void Map(Source source, Destination destination, CustomContext context);
+
+// カスタムパラメータなしのコンバーター
+private static string ConvertIntToString(int value)
+{
+    return $"Value: {value}";
+}
+
+// カスタムパラメータありのコンバーター（優先される）
+private static string ConvertWithContext(int value, CustomContext context)
+{
+    return $"Value: {value}, Context: {context.Value}";
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination, CustomContext context)
+{
+    destination.ConvertedValue = ConvertWithContext(source.Value, context);
+}
+```
+
+| Converterのシグネチャ | 動作 |
+|---------------------|------|
+| `(SourceType)` | カスタムパラメータなしで呼び出し |
+| `(SourceType, ...customParams)` | カスタムパラメータを渡して呼び出し |
+| シグネチャ不一致 | コンパイルエラー（ML0006） |
+
+## 11. 診断メッセージ
+
+| コード | 説明 |
+|--------|------|
+| ML0001 | Mapperメソッドは static partial である必要があります |
+| ML0002 | Mapperメソッドのパラメータ数が不正です |
+| ML0003 | カスタムパラメータに同じ型が複数指定されています |
+| ML0004 | BeforeMapメソッドのシグネチャが一致しません |
+| ML0005 | AfterMapメソッドのシグネチャが一致しません |
+| ML0006 | Converterメソッドのシグネチャが一致しません |
+

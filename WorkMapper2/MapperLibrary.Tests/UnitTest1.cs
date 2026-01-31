@@ -265,6 +265,19 @@ public class NullableIntToStringDestination
     public string IntValue { get; set; } = "original";
 }
 
+// Converter test models
+public class ConverterSource
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+}
+
+public class ConverterDestination
+{
+    public string ConvertedValue { get; set; } = string.Empty;
+    public string FormattedText { get; set; } = string.Empty;
+}
+
 #endregion
 
 #region Mappers
@@ -385,6 +398,79 @@ internal static partial class TestMappers
     // Null handling: nullable int to non-nullable string
     [Mapper]
     public static partial void Map(NullableIntToStringSource source, NullableIntToStringDestination destination);
+
+    // Custom parameter: with IServiceProvider
+    [Mapper]
+    [BeforeMap(nameof(OnBeforeMapWithContext))]
+    [AfterMap(nameof(OnAfterMapWithContext))]
+    public static partial void MapWithContext(BasicSource source, BasicDestination destination, CustomMappingContext context);
+
+    // Custom parameter: BeforeMap without custom parameters (backward compatibility)
+    [Mapper]
+    [BeforeMap(nameof(OnBeforeMapBasic))]
+    [AfterMap(nameof(OnAfterMapWithContext))]
+    public static partial void MapWithContextMixed(BasicSource source, BasicDestination destination, CustomMappingContext context);
+
+    // Custom parameter: return type pattern
+    [Mapper]
+    [AfterMap(nameof(OnAfterMapWithContextForReturn))]
+    public static partial BasicDestination MapToNewWithContext(BasicSource source, CustomMappingContext context);
+
+    // Converter: without custom parameters
+    [Mapper]
+    [MapProperty(nameof(ConverterSource.Value), nameof(ConverterDestination.ConvertedValue), Converter = nameof(ConvertIntToString))]
+    public static partial void MapWithConverter(ConverterSource source, ConverterDestination destination);
+
+    // Converter: with custom parameters
+    [Mapper]
+    [MapProperty(nameof(ConverterSource.Value), nameof(ConverterDestination.ConvertedValue), Converter = nameof(ConvertIntToStringWithContext))]
+    [MapProperty(nameof(ConverterSource.Text), nameof(ConverterDestination.FormattedText), Converter = nameof(FormatTextWithContext))]
+    public static partial void MapWithConverterAndContext(ConverterSource source, ConverterDestination destination, CustomMappingContext context);
+
+    private static void OnBeforeMapWithContext(BasicSource source, BasicDestination destination, CustomMappingContext context)
+    {
+        context.BeforeMapCalled = true;
+    }
+
+    private static void OnAfterMapWithContext(BasicSource source, BasicDestination destination, CustomMappingContext context)
+    {
+        context.AfterMapCalled = true;
+    }
+
+    private static void OnBeforeMapBasic(BasicSource source, BasicDestination destination)
+    {
+        // Basic version without context
+    }
+
+    private static void OnAfterMapWithContextForReturn(BasicSource source, BasicDestination destination, CustomMappingContext context)
+    {
+        context.AfterMapCalled = true;
+        destination.Description = $"Modified by AfterMap: {context.ContextValue}";
+    }
+
+    // Converter methods
+    private static string ConvertIntToString(int value)
+    {
+        return $"Value: {value}";
+    }
+
+    private static string ConvertIntToStringWithContext(int value, CustomMappingContext context)
+    {
+        return $"Value: {value}, Context: {context.ContextValue}";
+    }
+
+    private static string FormatTextWithContext(string text, CustomMappingContext context)
+    {
+        return $"{text} (formatted with {context.ContextValue})";
+    }
+}
+
+// Custom context for testing
+public class CustomMappingContext
+{
+    public bool BeforeMapCalled { get; set; }
+    public bool AfterMapCalled { get; set; }
+    public string ContextValue { get; set; } = string.Empty;
 }
 
 #endregion
@@ -1031,6 +1117,119 @@ public class NullHandlingTests
 
         // Assert
         Assert.Equal("42", destination.IntValue);
+    }
+}
+
+// Custom parameter tests
+public class CustomParameterTests
+{
+    [Fact]
+    public void MapWithContext_CallsBeforeMapAndAfterMapWithContext()
+    {
+        // Arrange
+        var source = new BasicSource
+        {
+            Id = 1,
+            Name = "Test",
+            Description = "Desc"
+        };
+        var destination = new BasicDestination();
+        var context = new CustomMappingContext { ContextValue = "TestContext" };
+
+        // Act
+        TestMappers.MapWithContext(source, destination, context);
+
+        // Assert
+        Assert.True(context.BeforeMapCalled);
+        Assert.True(context.AfterMapCalled);
+        Assert.Equal(1, destination.Id);
+        Assert.Equal("Test", destination.Name);
+    }
+
+    [Fact]
+    public void MapWithContextMixed_CallsBeforeMapWithoutContextAndAfterMapWithContext()
+    {
+        // Arrange
+        var source = new BasicSource
+        {
+            Id = 2,
+            Name = "Mixed",
+            Description = "Desc"
+        };
+        var destination = new BasicDestination();
+        var context = new CustomMappingContext();
+
+        // Act
+        TestMappers.MapWithContextMixed(source, destination, context);
+
+        // Assert
+        Assert.False(context.BeforeMapCalled); // Basic version doesn't set this
+        Assert.True(context.AfterMapCalled);
+        Assert.Equal(2, destination.Id);
+    }
+
+    [Fact]
+    public void MapToNewWithContext_ReturnsNewObjectAndCallsAfterMapWithContext()
+    {
+        // Arrange
+        var source = new BasicSource
+        {
+            Id = 3,
+            Name = "Return",
+            Description = "Original"
+        };
+        var context = new CustomMappingContext { ContextValue = "ReturnContext" };
+
+        // Act
+        var destination = TestMappers.MapToNewWithContext(source, context);
+
+        // Assert
+        Assert.True(context.AfterMapCalled);
+        Assert.Equal(3, destination.Id);
+        Assert.Equal("Return", destination.Name);
+        Assert.Equal("Modified by AfterMap: ReturnContext", destination.Description);
+    }
+}
+
+// Converter tests
+public class ConverterTests
+{
+    [Fact]
+    public void MapWithConverter_UsesCustomConverter()
+    {
+        // Arrange
+        var source = new ConverterSource
+        {
+            Value = 42,
+            Text = "Hello"
+        };
+        var destination = new ConverterDestination();
+
+        // Act
+        TestMappers.MapWithConverter(source, destination);
+
+        // Assert
+        Assert.Equal("Value: 42", destination.ConvertedValue);
+    }
+
+    [Fact]
+    public void MapWithConverterAndContext_UsesCustomConverterWithContext()
+    {
+        // Arrange
+        var source = new ConverterSource
+        {
+            Value = 100,
+            Text = "Hello"
+        };
+        var destination = new ConverterDestination();
+        var context = new CustomMappingContext { ContextValue = "TestContext" };
+
+        // Act
+        TestMappers.MapWithConverterAndContext(source, destination, context);
+
+        // Assert
+        Assert.Equal("Value: 100, Context: TestContext", destination.ConvertedValue);
+        Assert.Equal("Hello (formatted with TestContext)", destination.FormattedText);
     }
 }
 
