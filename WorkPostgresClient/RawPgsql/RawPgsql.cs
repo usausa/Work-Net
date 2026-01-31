@@ -102,12 +102,101 @@ public sealed class RawPgClient : IAsyncDisposable
     }
 
     /// <summary>
-    /// SELECTクエリを実行し、結果をRawResultReaderで読み取る
+    /// SELECTクエリを実行し、結果をRawResultReaderで読み取る（テキストフォーマット）
     /// </summary>
     public async Task<RawResultReader> ExecuteQueryAsync(string sql, CancellationToken cancellationToken = default)
     {
         await SendQueryMessageAsync(sql, cancellationToken).ConfigureAwait(false);
-        return new RawResultReader(this, cancellationToken);
+        return new RawResultReader(this, cancellationToken, useBinaryFormat: false);
+    }
+
+    /// <summary>
+    /// SELECTクエリを実行し、結果をRawResultReaderで読み取る（バイナリフォーマット）
+    /// Extended Query Protocolを使用
+    /// </summary>
+    public async Task<RawResultReader> ExecuteQueryBinaryAsync(string sql, CancellationToken cancellationToken = default)
+    {
+        await SendExtendedQueryAsync(sql, cancellationToken).ConfigureAwait(false);
+        return new RawResultReader(this, cancellationToken, useBinaryFormat: true);
+    }
+
+    /// <summary>
+    /// Extended Query Protocol でクエリを送信（バイナリフォーマット）
+    /// </summary>
+    private async ValueTask SendExtendedQueryAsync(string sql, CancellationToken cancellationToken)
+    {
+        var sqlBytes = Encoding.UTF8.GetBytes(sql);
+
+        // 必要なバッファサイズを計算
+        // Parse: 1 + 4 + 1(name) + sqlLen + 1 + 2(param count)
+        // Bind: 1 + 4 + 1(portal) + 1(stmt) + 2(format count) + 2(param count) + 2(result format count) + 2(result format=1)
+        // Describe: 1 + 4 + 1(type) + 1(name)
+        // Execute: 1 + 4 + 1(portal) + 4(max rows)
+        // Sync: 1 + 4
+        var parseLen = 1 + 4 + 1 + sqlBytes.Length + 1 + 2;
+        var bindLen = 1 + 4 + 1 + 1 + 2 + 2 + 2 + 2;
+        var describeLen = 1 + 4 + 1 + 1;
+        var executeLen = 1 + 4 + 1 + 4;
+        var syncLen = 1 + 4;
+        var totalLen = parseLen + bindLen + describeLen + executeLen + syncLen;
+
+        var buffer = ArrayPool<byte>.Shared.Rent(totalLen);
+        try
+        {
+            var offset = 0;
+
+            // Parse message ('P')
+            buffer[offset++] = (byte)'P';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), parseLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed statement
+            sqlBytes.CopyTo(buffer.AsSpan(offset));
+            offset += sqlBytes.Length;
+            buffer[offset++] = 0; // null terminator
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameter types
+            offset += 2;
+
+            // Bind message ('B')
+            buffer[offset++] = (byte)'B';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), bindLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed portal
+            buffer[offset++] = 0; // unnamed statement
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameter format codes
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameters
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 1); // one result format code
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 1); // binary format for all columns
+            offset += 2;
+
+            // Describe message ('D')
+            buffer[offset++] = (byte)'D';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), describeLen - 1);
+            offset += 4;
+            buffer[offset++] = (byte)'P'; // describe portal
+            buffer[offset++] = 0; // unnamed portal
+
+            // Execute message ('E')
+            buffer[offset++] = (byte)'E';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), executeLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed portal
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), 0); // no row limit
+            offset += 4;
+
+            // Sync message ('S')
+            buffer[offset++] = (byte)'S';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), 4);
+            offset += 4;
+
+            await _socket!.SendAsync(buffer.AsMemory(0, offset), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     private async ValueTask SendStartupMessageAsync(string database, string user, CancellationToken cancellationToken)
@@ -581,15 +670,19 @@ public sealed class RawPgClient : IAsyncDisposable
 /// <summary>
 /// カラム情報（軽量構造体）
 /// </summary>
-public readonly record struct RawColumnInfo(string Name, int TypeOid);
+public readonly record struct RawColumnInfo(string Name, int TypeOid, short FormatCode);
 
 /// <summary>
 /// クエリ結果を直接読み取るリーダー（DbDataReaderを使用しない）
 /// </summary>
 public sealed class RawResultReader : IAsyncDisposable
 {
+    // PostgreSQL epoch (2000-01-01 00:00:00 UTC)
+    private static readonly DateTime PostgresEpoch = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private readonly RawPgClient _client;
     private readonly CancellationToken _cancellationToken;
+    private readonly bool _useBinaryFormat;
     private RawColumnInfo[]? _columns;
     private int _columnCount;
     private bool _completed;
@@ -600,13 +693,15 @@ public sealed class RawResultReader : IAsyncDisposable
     private int[]? _offsets;
     private int[]? _lengths;
 
-    internal RawResultReader(RawPgClient client, CancellationToken cancellationToken)
+    internal RawResultReader(RawPgClient client, CancellationToken cancellationToken, bool useBinaryFormat)
     {
         _client = client;
         _cancellationToken = cancellationToken;
+        _useBinaryFormat = useBinaryFormat;
     }
 
     public int FieldCount => _columnCount;
+    public bool UseBinaryFormat => _useBinaryFormat;
 
     /// <summary>
     /// 次の行を読み取る
@@ -681,6 +776,12 @@ public sealed class RawResultReader : IAsyncDisposable
                     pos += payloadLength;
                     throw new RawPostgresException($"クエリエラー: {error}");
 
+                case '1': // ParseComplete (Extended Query Protocol)
+                case '2': // BindComplete (Extended Query Protocol)
+                case 'n': // NoData (Extended Query Protocol)
+                    pos += payloadLength;
+                    break;
+
                 default:
                     pos += payloadLength;
                     break;
@@ -749,6 +850,16 @@ public sealed class RawResultReader : IAsyncDisposable
                     _client.StreamBufferPos += payloadLength;
                     throw new RawPostgresException($"クエリエラー: {error}");
 
+                case '1': // ParseComplete (Extended Query Protocol)
+                case '2': // BindComplete (Extended Query Protocol)
+                case 'n': // NoData (Extended Query Protocol)
+                    _client.StreamBufferPos += payloadLength;
+                    // 同期パスで継続を試行
+                    syncResult = TryReadSync();
+                    if (syncResult.HasValue)
+                        return syncResult.Value;
+                    break;
+
                 default:
                     _client.StreamBufferPos += payloadLength;
                     // 同期パスで継続を試行
@@ -775,10 +886,12 @@ public sealed class RawResultReader : IAsyncDisposable
             var name = Encoding.UTF8.GetString(payload.Slice(offset, nameEnd));
             offset += nameEnd + 1;
 
+            // テーブルOID (4), 列番号 (2), 型OID (4), 型サイズ (2), 型修飾子 (4), フォーマット (2)
             var typeOid = BinaryPrimitives.ReadInt32BigEndian(payload.Slice(offset + 6));
+            var formatCode = BinaryPrimitives.ReadInt16BigEndian(payload.Slice(offset + 16));
             offset += 18;
 
-            _columns[i] = new RawColumnInfo(name, typeOid);
+            _columns[i] = new RawColumnInfo(name, typeOid, formatCode);
         }
     }
 
@@ -812,12 +925,19 @@ public sealed class RawResultReader : IAsyncDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool IsBinaryColumn(int ordinal) => _useBinaryFormat && _columns![ordinal].FormatCode == 1;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsDBNull(int ordinal) => _lengths![ordinal] == -1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int GetInt32(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt32BigEndian(span);
+        }
         Utf8Parser.TryParse(span, out int value, out _);
         return value;
     }
@@ -826,7 +946,23 @@ public sealed class RawResultReader : IAsyncDisposable
     public long GetInt64(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt64BigEndian(span);
+        }
         Utf8Parser.TryParse(span, out long value, out _);
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public short GetInt16(int ordinal)
+    {
+        var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt16BigEndian(span);
+        }
+        Utf8Parser.TryParse(span, out short value, out _);
         return value;
     }
 
@@ -834,6 +970,10 @@ public sealed class RawResultReader : IAsyncDisposable
     public bool GetBoolean(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return span[0] != 0;
+        }
         return span.Length > 0 && (span[0] == 't' || span[0] == '1');
     }
 
@@ -855,6 +995,13 @@ public sealed class RawResultReader : IAsyncDisposable
     public DateTime GetDateTime(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            // PostgreSQLバイナリ形式: 2000-01-01からのマイクロ秒数 (Int64)
+            var microseconds = BinaryPrimitives.ReadInt64BigEndian(span);
+            return PostgresEpoch.AddTicks(microseconds * 10); // 1 microsecond = 10 ticks
+        }
+        // テキスト形式
         Span<char> chars = stackalloc char[span.Length];
         var charCount = Encoding.UTF8.GetChars(span, chars);
         return DateTime.Parse(chars.Slice(0, charCount));
@@ -864,6 +1011,7 @@ public sealed class RawResultReader : IAsyncDisposable
     public decimal GetDecimal(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        // PostgreSQLのnumericバイナリ形式は複雑なので、テキストパースを使用
         Utf8Parser.TryParse(span, out decimal value, out _);
         return value;
     }
@@ -872,6 +1020,11 @@ public sealed class RawResultReader : IAsyncDisposable
     public double GetDouble(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            var bits = BinaryPrimitives.ReadInt64BigEndian(span);
+            return BitConverter.Int64BitsToDouble(bits);
+        }
         Utf8Parser.TryParse(span, out double value, out _);
         return value;
     }
@@ -880,15 +1033,12 @@ public sealed class RawResultReader : IAsyncDisposable
     public float GetFloat(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            var bits = BinaryPrimitives.ReadInt32BigEndian(span);
+            return BitConverter.Int32BitsToSingle(bits);
+        }
         Utf8Parser.TryParse(span, out float value, out _);
-        return value;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public short GetInt16(int ordinal)
-    {
-        var span = GetValueSpan(ordinal);
-        Utf8Parser.TryParse(span, out short value, out _);
         return value;
     }
 
@@ -896,6 +1046,10 @@ public sealed class RawResultReader : IAsyncDisposable
     public Guid GetGuid(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return new Guid(span);
+        }
         Utf8Parser.TryParse(span, out Guid value, out _);
         return value;
     }
