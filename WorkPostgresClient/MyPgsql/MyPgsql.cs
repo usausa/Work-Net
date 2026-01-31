@@ -1346,7 +1346,12 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
         _user = user;
         _password = password;
 
-        _tcpClient = new TcpClient { NoDelay = true };
+        _tcpClient = new TcpClient
+        {
+            NoDelay = true,
+            ReceiveBufferSize = 65536 * 4,
+            SendBufferSize = 65536
+        };
         await _tcpClient.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
         _stream = _tcpClient.GetStream();
 
@@ -1638,17 +1643,17 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
 
             switch (messageType)
             {
+                case 'D': // DataRow - 最も頻繁なケースを最初に
+                    ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
+                    _streamBufferPos += length;
+                    available -= length;
+                    return PgStreamingReadResult.CreateRow();
+
                 case 'T':
                     var columns = ParseRowDescriptionArray(payload);
                     _streamBufferPos += length;
                     available -= length;
                     return PgStreamingReadResult.CreateColumns(columns);
-
-                case 'D':
-                    ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
-                    _streamBufferPos += length;
-                    available -= length;
-                    return PgStreamingReadResult.CreateRow();
 
                 case 'C':
                     _streamBufferPos += length;
@@ -1693,18 +1698,23 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
 
             switch (messageType)
             {
+                case 'D': // DataRow - 最も頻繁なケースを最初に
+                    ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
+                    _streamBufferPos += length;
+                    return PgStreamingReadResult.CreateRow();
+
                 case 'T':
                     var columns = ParseRowDescriptionArray(payload);
                     _streamBufferPos += length;
                     return PgStreamingReadResult.CreateColumns(columns);
 
-                case 'D':
-                    ParseDataRowIntoReader(payload, payloadOffset, _streamBuffer, reader);
-                    _streamBufferPos += length;
-                    return PgStreamingReadResult.CreateRow();
-
                 case 'C':
                     _streamBufferPos += length;
+                    // 同期パスで継続を試行
+                    var available = _streamBufferLen - _streamBufferPos;
+                    var syncResult = ProcessMessageSync(reader, ref available);
+                    if (syncResult.HasValue)
+                        return syncResult.Value;
                     break;
 
                 case 'Z':
@@ -1757,37 +1767,72 @@ internal sealed class PgProtocolHandler : IAsyncDisposable
         if (available >= count)
             return ValueTask.CompletedTask;
 
-        return EnsureBufferedAsyncCore(count, cancellationToken);
+        return EnsureBufferedAsyncCore(count, available, cancellationToken);
     }
 
-    private async ValueTask EnsureBufferedAsyncCore(int count, CancellationToken cancellationToken)
+    private async ValueTask EnsureBufferedAsyncCore(int count, int available, CancellationToken cancellationToken)
     {
-        var available = _streamBufferLen - _streamBufferPos;
+        var needed = count - available;
+        var freeSpace = _streamBuffer.Length - _streamBufferLen;
 
-        // 残りデータを先頭に移動（Spanを使用）
-        if (available > 0)
+        // 空き容量が足りない場合のみシフトまたは拡張
+        if (freeSpace < needed)
         {
-            _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(_streamBuffer);
+            // バッファ全体で足りるならシフト
+            if (_streamBuffer.Length >= count)
+            {
+                if (available > 0)
+                {
+                    _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(_streamBuffer);
+                }
+                _streamBufferPos = 0;
+                _streamBufferLen = available;
+                freeSpace = _streamBuffer.Length - available;
+            }
+            else
+            {
+                // バッファ拡張が必要
+                var newSize = Math.Max(_streamBuffer.Length * 2, count);
+                var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+                if (available > 0)
+                {
+                    _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(newBuffer);
+                }
+                ArrayPool<byte>.Shared.Return(_streamBuffer);
+                _streamBuffer = newBuffer;
+                _streamBufferPos = 0;
+                _streamBufferLen = available;
+                freeSpace = newBuffer.Length - available;
+            }
         }
-        _streamBufferPos = 0;
-        _streamBufferLen = available;
 
-        // 必要なサイズまでバッファを拡張
-        if (count > _streamBuffer.Length)
+        // 必要な量を読み取る（可能な限り多く読み取る）
+        do
         {
-            var newBuffer = ArrayPool<byte>.Shared.Rent(count);
-            _streamBuffer.AsSpan(0, available).CopyTo(newBuffer);
-            ArrayPool<byte>.Shared.Return(_streamBuffer);
-            _streamBuffer = newBuffer;
-        }
+            var read = await _stream!.ReadAsync(
+                _streamBuffer.AsMemory(_streamBufferLen, freeSpace),
+                cancellationToken).ConfigureAwait(false);
 
-        // 必要な分を読み込み
-        while (_streamBufferLen < count)
-        {
-            var read = await _stream!.ReadAsync(_streamBuffer.AsMemory(_streamBufferLen), cancellationToken).ConfigureAwait(false);
             if (read == 0)
                 throw new PostgresException("接続が閉じられました");
+
             _streamBufferLen += read;
+            freeSpace -= read;
+        }
+        while (_streamBufferLen - _streamBufferPos < count);
+
+        // 追加で利用可能なデータがあれば貪欲に読み取る（ノンブロッキング）
+        while (freeSpace > 0 && _stream!.DataAvailable)
+        {
+            var read = await _stream.ReadAsync(
+                _streamBuffer.AsMemory(_streamBufferLen, freeSpace),
+                cancellationToken).ConfigureAwait(false);
+
+            if (read == 0)
+                break;
+
+            _streamBufferLen += read;
+            freeSpace -= read;
         }
     }
 

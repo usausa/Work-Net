@@ -19,7 +19,7 @@ namespace MyPgsql.Pipelines;
 internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 {
     private const int DefaultBufferSize = 8192;
-    private const int StreamBufferSize = 65536; // 64KB
+    private const int StreamBufferSize = 65536 * 4; // 256KB - より大きなバッファでシフト頻度を減らす
 
     private Socket? _socket;
 
@@ -46,7 +46,7 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         {
             NoDelay = true,  // Nagle アルゴリズム無効化
-            ReceiveBufferSize = 65536,
+            ReceiveBufferSize = 65536 * 4,
             SendBufferSize = 65536
         };
 
@@ -336,7 +336,95 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
     public async Task<PgPipeStreamingQueryContext> ExecuteQueryStreamingAsync(string query, CancellationToken cancellationToken)
     {
         await SendQueryMessageAsync(query, cancellationToken).ConfigureAwait(false);
-        return new PgPipeStreamingQueryContext(this, cancellationToken);
+        return new PgPipeStreamingQueryContext(this, cancellationToken, useBinaryFormat: false);
+    }
+
+    /// <summary>
+    /// Extended Query Protocol でクエリを実行（バイナリフォーマット）
+    /// </summary>
+    public async Task<PgPipeStreamingQueryContext> ExecuteQueryBinaryStreamingAsync(string query, CancellationToken cancellationToken)
+    {
+        await SendExtendedQueryAsync(query, cancellationToken).ConfigureAwait(false);
+        return new PgPipeStreamingQueryContext(this, cancellationToken, useBinaryFormat: true);
+    }
+
+    /// <summary>
+    /// Extended Query Protocol でクエリを送信（バイナリフォーマット）
+    /// </summary>
+    private async ValueTask SendExtendedQueryAsync(string sql, CancellationToken cancellationToken)
+    {
+        var sqlBytes = Encoding.UTF8.GetBytes(sql);
+
+        // 必要なバッファサイズを計算
+        // Parse: 1 + 4 + 1(name) + sqlLen + 1 + 2(param count)
+        // Bind: 1 + 4 + 1(portal) + 1(stmt) + 2(format count) + 2(param count) + 2(result format count) + 2(result format=1)
+        // Describe: 1 + 4 + 1(type) + 1(name)
+        // Execute: 1 + 4 + 1(portal) + 4(max rows)
+        // Sync: 1 + 4
+        var parseLen = 1 + 4 + 1 + sqlBytes.Length + 1 + 2;
+        var bindLen = 1 + 4 + 1 + 1 + 2 + 2 + 2 + 2;
+        var describeLen = 1 + 4 + 1 + 1;
+        var executeLen = 1 + 4 + 1 + 4;
+        var syncLen = 1 + 4;
+        var totalLen = parseLen + bindLen + describeLen + executeLen + syncLen;
+
+        var buffer = ArrayPool<byte>.Shared.Rent(totalLen);
+        try
+        {
+            var offset = 0;
+
+            // Parse message ('P')
+            buffer[offset++] = (byte)'P';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), parseLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed statement
+            sqlBytes.CopyTo(buffer.AsSpan(offset));
+            offset += sqlBytes.Length;
+            buffer[offset++] = 0; // null terminator
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameter types
+            offset += 2;
+
+            // Bind message ('B')
+            buffer[offset++] = (byte)'B';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), bindLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed portal
+            buffer[offset++] = 0; // unnamed statement
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameter format codes
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 0); // no parameters
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 1); // one result format code
+            offset += 2;
+            BinaryPrimitives.WriteInt16BigEndian(buffer.AsSpan(offset), 1); // binary format for all columns
+            offset += 2;
+
+            // Describe message ('D')
+            buffer[offset++] = (byte)'D';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), describeLen - 1);
+            offset += 4;
+            buffer[offset++] = (byte)'P'; // describe portal
+            buffer[offset++] = 0; // unnamed portal
+
+            // Execute message ('E')
+            buffer[offset++] = (byte)'E';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), executeLen - 1);
+            offset += 4;
+            buffer[offset++] = 0; // unnamed portal
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), 0); // no row limit
+            offset += 4;
+
+            // Sync message ('S')
+            buffer[offset++] = (byte)'S';
+            BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(offset), 4);
+            offset += 4;
+
+            await _socket!.SendAsync(buffer.AsMemory(0, offset), cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     internal ValueTask<PgPipeStreamingReadResult> ReadNextRowStreamingAsync(PgPipeDataReader reader, CancellationToken cancellationToken)
@@ -379,17 +467,17 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 
             switch (messageType)
             {
+                case 'D': // DataRow - 最も頻繁なケースを最初に
+                    ParseDataRowIntoReaderSpan(payload, payloadOffset, _streamBuffer, reader);
+                    _streamBufferPos += length;
+                    available -= length;
+                    return PgPipeStreamingReadResult.CreateRow();
+
                 case 'T':
                     var columns = ParseRowDescriptionArraySpan(payload);
                     _streamBufferPos += length;
                     available -= length;
                     return PgPipeStreamingReadResult.CreateColumns(columns);
-
-                case 'D':
-                    ParseDataRowIntoReaderSpan(payload, payloadOffset, _streamBuffer, reader);
-                    _streamBufferPos += length;
-                    available -= length;
-                    return PgPipeStreamingReadResult.CreateRow();
 
                 case 'C':
                     _streamBufferPos += length;
@@ -405,6 +493,13 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
                     var error = ParseErrorMessageSpan(payload);
                     _streamBufferPos += length;
                     throw new PostgresException($"クエリエラー: {error}");
+
+                case '1': // ParseComplete (Extended Query Protocol)
+                case '2': // BindComplete (Extended Query Protocol)
+                case 'n': // NoData (Extended Query Protocol)
+                    _streamBufferPos += length;
+                    available -= length;
+                    break;
 
                 default:
                     _streamBufferPos += length;
@@ -432,18 +527,23 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 
             switch (messageType)
             {
+                case 'D': // DataRow
+                    ParseDataRowIntoReaderSpan(payload, payloadOffset, _streamBuffer, reader);
+                    _streamBufferPos += length;
+                    return PgPipeStreamingReadResult.CreateRow();
+
                 case 'T':
                     var columns = ParseRowDescriptionArraySpan(payload);
                     _streamBufferPos += length;
                     return PgPipeStreamingReadResult.CreateColumns(columns);
 
-                case 'D':
-                    ParseDataRowIntoReaderSpan(payload, payloadOffset, _streamBuffer, reader);
-                    _streamBufferPos += length;
-                    return PgPipeStreamingReadResult.CreateRow();
-
                 case 'C':
                     _streamBufferPos += length;
+                    // 同期パスで継続を試行
+                    var available = _streamBufferLen - _streamBufferPos;
+                    var syncResult = ProcessMessageSync(reader, ref available);
+                    if (syncResult.HasValue)
+                        return syncResult.Value;
                     break;
 
                 case 'Z':
@@ -454,6 +554,17 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
                     var error = ParseErrorMessageSpan(payload);
                     _streamBufferPos += length;
                     throw new PostgresException($"クエリエラー: {error}");
+
+                case '1': // ParseComplete (Extended Query Protocol)
+                case '2': // BindComplete (Extended Query Protocol)
+                case 'n': // NoData (Extended Query Protocol)
+                    _streamBufferPos += length;
+                    // 同期パスで継続を試行
+                    available = _streamBufferLen - _streamBufferPos;
+                    syncResult = ProcessMessageSync(reader, ref available);
+                    if (syncResult.HasValue)
+                        return syncResult.Value;
+                    break;
 
                 default:
                     _streamBufferPos += length;
@@ -494,37 +605,77 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
         if (available >= count)
             return ValueTask.CompletedTask;
 
-        return EnsureBufferedAsyncCore(count, cancellationToken);
+        return EnsureBufferedAsyncCore(count, available, cancellationToken);
     }
 
-    private async ValueTask EnsureBufferedAsyncCore(int count, CancellationToken cancellationToken)
+    private async ValueTask EnsureBufferedAsyncCore(int count, int available, CancellationToken cancellationToken)
     {
-        var available = _streamBufferLen - _streamBufferPos;
+        var needed = count - available;
+        var freeSpace = _streamBuffer.Length - _streamBufferLen;
 
-        // 残りデータを先頭に移動
-        if (available > 0)
+        // 空き容量が足りない場合のみシフトまたは拡張
+        if (freeSpace < needed)
         {
-            _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(_streamBuffer);
+            // バッファ全体で足りるならシフト
+            if (_streamBuffer.Length >= count)
+            {
+                if (available > 0)
+                {
+                    _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(_streamBuffer);
+                }
+                _streamBufferPos = 0;
+                _streamBufferLen = available;
+                freeSpace = _streamBuffer.Length - available;
+            }
+            else
+            {
+                // バッファ拡張が必要
+                var newSize = Math.Max(_streamBuffer.Length * 2, count);
+                var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+                if (available > 0)
+                {
+                    _streamBuffer.AsSpan(_streamBufferPos, available).CopyTo(newBuffer);
+                }
+                ArrayPool<byte>.Shared.Return(_streamBuffer);
+                _streamBuffer = newBuffer;
+                _streamBufferPos = 0;
+                _streamBufferLen = available;
+                freeSpace = newBuffer.Length - available;
+            }
         }
-        _streamBufferPos = 0;
-        _streamBufferLen = available;
 
-        // 必要なサイズまでバッファを拡張
-        if (count > _streamBuffer.Length)
+        // 必要な量を読み取る（可能な限り多く読み取る）
+        do
         {
-            var newBuffer = ArrayPool<byte>.Shared.Rent(count);
-            _streamBuffer.AsSpan(0, available).CopyTo(newBuffer);
-            ArrayPool<byte>.Shared.Return(_streamBuffer);
-            _streamBuffer = newBuffer;
-        }
+            var read = await _socket!.ReceiveAsync(
+                _streamBuffer.AsMemory(_streamBufferLen, freeSpace),
+                cancellationToken).ConfigureAwait(false);
 
-        // 必要な分を読み込み
-        while (_streamBufferLen < count)
-        {
-            var read = await _socket!.ReceiveAsync(_streamBuffer.AsMemory(_streamBufferLen), cancellationToken).ConfigureAwait(false);
             if (read == 0)
                 throw new PostgresException("接続が閉じられました");
+
             _streamBufferLen += read;
+            freeSpace -= read;
+        }
+        while (_streamBufferLen - _streamBufferPos < count);
+
+        // 追加で利用可能なデータがあれば貪欲に読み取る（ノンブロッキング）
+        while (freeSpace > 0)
+        {
+            var socketAvailable = _socket!.Available;
+            if (socketAvailable <= 0)
+                break;
+
+            var toRead = Math.Min(socketAvailable, freeSpace);
+            var extraRead = await _socket.ReceiveAsync(
+                _streamBuffer.AsMemory(_streamBufferLen, toRead),
+                cancellationToken).ConfigureAwait(false);
+
+            if (extraRead == 0)
+                break;
+
+            _streamBufferLen += extraRead;
+            freeSpace -= extraRead;
         }
     }
 
@@ -588,10 +739,10 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
             ArrayPool<byte>.Shared.Return(buffer);
     }
 
-    private static PgColumnInfo[] ParseRowDescriptionArraySpan(ReadOnlySpan<byte> payload)
+    private static PgPipeColumnInfo[] ParseRowDescriptionArraySpan(ReadOnlySpan<byte> payload)
     {
         var fieldCount = BinaryPrimitives.ReadInt16BigEndian(payload);
-        var columns = ArrayPool<PgColumnInfo>.Shared.Rent(fieldCount);
+        var columns = ArrayPool<PgPipeColumnInfo>.Shared.Rent(fieldCount);
         var offset = 2;
 
         for (int i = 0; i < fieldCount; i++)
@@ -600,10 +751,12 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
             var name = Encoding.UTF8.GetString(payload.Slice(offset, nameEnd));
             offset += nameEnd + 1;
 
+            // テーブルOID (4), 列番号 (2), 型OID (4), 型サイズ (2), 型修飾子 (4), フォーマット (2)
             var typeOid = BinaryPrimitives.ReadInt32BigEndian(payload.Slice(offset + 6));
+            var formatCode = BinaryPrimitives.ReadInt16BigEndian(payload.Slice(offset + 16));
             offset += 18;
 
-            columns[i] = new PgColumnInfo(name, typeOid);
+            columns[i] = new PgPipeColumnInfo(name, typeOid, formatCode);
         }
 
         return columns;
@@ -731,18 +884,23 @@ internal sealed class PgPipeProtocolHandler : IAsyncDisposable
 internal readonly struct PgPipeStreamingReadResult
 {
     public readonly PgReadState State;
-    public readonly PgColumnInfo[]? Columns;
+    public readonly PgPipeColumnInfo[]? Columns;
 
-    private PgPipeStreamingReadResult(PgReadState state, PgColumnInfo[]? columns = null)
+    private PgPipeStreamingReadResult(PgReadState state, PgPipeColumnInfo[]? columns = null)
     {
         State = state;
         Columns = columns;
     }
 
-    public static PgPipeStreamingReadResult CreateColumns(PgColumnInfo[] columns) => new(PgReadState.Columns, columns);
+    public static PgPipeStreamingReadResult CreateColumns(PgPipeColumnInfo[] columns) => new(PgReadState.Columns, columns);
     public static PgPipeStreamingReadResult CreateRow() => new(PgReadState.Row);
     public static PgPipeStreamingReadResult CreateEnd() => new(PgReadState.End);
 }
+
+/// <summary>
+/// カラム情報（FormatCode付き）
+/// </summary>
+internal readonly record struct PgPipeColumnInfo(string Name, int TypeOid, short FormatCode);
 
 /// <summary>
 /// ストリーミングクエリコンテキスト
@@ -750,12 +908,16 @@ internal readonly struct PgPipeStreamingReadResult
 internal sealed class PgPipeStreamingQueryContext
 {
     private readonly PgPipeProtocolHandler _handler;
+    private readonly bool _useBinaryFormat;
     private bool _completed;
 
-    public PgPipeStreamingQueryContext(PgPipeProtocolHandler handler, CancellationToken cancellationToken)
+    public PgPipeStreamingQueryContext(PgPipeProtocolHandler handler, CancellationToken cancellationToken, bool useBinaryFormat)
     {
         _handler = handler;
+        _useBinaryFormat = useBinaryFormat;
     }
+
+    public bool UseBinaryFormat => _useBinaryFormat;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<PgPipeStreamingReadResult> ReadNextRowAsync(PgPipeDataReader reader, CancellationToken cancellationToken)
@@ -917,6 +1079,11 @@ public sealed class PgPipeCommand : DbCommand
     private string _commandText = "";
     private readonly PgParameterCollection _parameters = new();
 
+    /// <summary>
+    /// バイナリフォーマットでクエリを実行するかどうか
+    /// </summary>
+    public bool UseBinaryFormat { get; set; }
+
     [AllowNull]
     public override string CommandText
     {
@@ -984,7 +1151,9 @@ public sealed class PgPipeCommand : DbCommand
     {
         ValidateCommand();
         var sql = BuildSql();
-        var context = await _connection!.Protocol.ExecuteQueryStreamingAsync(sql, cancellationToken).ConfigureAwait(false);
+        var context = UseBinaryFormat
+            ? await _connection!.Protocol.ExecuteQueryBinaryStreamingAsync(sql, cancellationToken).ConfigureAwait(false)
+            : await _connection!.Protocol.ExecuteQueryStreamingAsync(sql, cancellationToken).ConfigureAwait(false);
         return new PgPipeDataReader(context, _connection, behavior);
     }
 
@@ -1068,10 +1237,13 @@ public sealed class PgPipeCommand : DbCommand
 /// </summary>
 public sealed class PgPipeDataReader : DbDataReader
 {
+    // PostgreSQL epoch (2000-01-01 00:00:00 UTC)
+    private static readonly DateTime PostgresEpoch = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private readonly PgPipeStreamingQueryContext _context;
     private readonly PgPipeConnection _connection;
     private readonly CommandBehavior _behavior;
-    private PgColumnInfo[]? _columns;
+    private PgPipeColumnInfo[]? _columns;
     private int _columnCount;
     private bool _hasRows;
     private bool _firstRowRead;
@@ -1160,7 +1332,7 @@ public sealed class PgPipeDataReader : DbDataReader
         // プールからのバッファを返却
         if (_columns != null)
         {
-            ArrayPool<PgColumnInfo>.Shared.Return(_columns);
+            ArrayPool<PgPipeColumnInfo>.Shared.Return(_columns);
             _columns = null;
         }
         if (_offsets != null)
@@ -1200,9 +1372,16 @@ public sealed class PgPipeDataReader : DbDataReader
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool IsBinaryColumn(int ordinal) => _context.UseBinaryFormat && _columns![ordinal].FormatCode == 1;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool GetBoolean(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return span[0] != 0;
+        }
         return span.Length > 0 && (span[0] == 't' || span[0] == '1');
     }
 
@@ -1241,6 +1420,13 @@ public sealed class PgPipeDataReader : DbDataReader
     public override DateTime GetDateTime(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            // PostgreSQLバイナリ形式: 2000-01-01からのマイクロ秒数 (Int64)
+            var microseconds = BinaryPrimitives.ReadInt64BigEndian(span);
+            return PostgresEpoch.AddTicks(microseconds * 10); // 1 microsecond = 10 ticks
+        }
+        // テキスト形式
         Span<char> chars = stackalloc char[span.Length];
         var charCount = Encoding.UTF8.GetChars(span, chars);
         return DateTime.Parse(chars.Slice(0, charCount));
@@ -1250,6 +1436,7 @@ public sealed class PgPipeDataReader : DbDataReader
     public override decimal GetDecimal(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        // PostgreSQLのnumericバイナリ形式は複雑なので、テキストパースを使用
         Utf8Parser.TryParse(span, out decimal value, out _);
         return value;
     }
@@ -1258,6 +1445,11 @@ public sealed class PgPipeDataReader : DbDataReader
     public override double GetDouble(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            var bits = BinaryPrimitives.ReadInt64BigEndian(span);
+            return BitConverter.Int64BitsToDouble(bits);
+        }
         Utf8Parser.TryParse(span, out double value, out _);
         return value;
     }
@@ -1266,6 +1458,11 @@ public sealed class PgPipeDataReader : DbDataReader
     public override float GetFloat(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            var bits = BinaryPrimitives.ReadInt32BigEndian(span);
+            return BitConverter.Int32BitsToSingle(bits);
+        }
         Utf8Parser.TryParse(span, out float value, out _);
         return value;
     }
@@ -1274,6 +1471,10 @@ public sealed class PgPipeDataReader : DbDataReader
     public override Guid GetGuid(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return new Guid(span);
+        }
         Utf8Parser.TryParse(span, out Guid value, out _);
         return value;
     }
@@ -1282,6 +1483,10 @@ public sealed class PgPipeDataReader : DbDataReader
     public override short GetInt16(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt16BigEndian(span);
+        }
         Utf8Parser.TryParse(span, out short value, out _);
         return value;
     }
@@ -1290,6 +1495,10 @@ public sealed class PgPipeDataReader : DbDataReader
     public override int GetInt32(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt32BigEndian(span);
+        }
         Utf8Parser.TryParse(span, out int value, out _);
         return value;
     }
@@ -1298,6 +1507,10 @@ public sealed class PgPipeDataReader : DbDataReader
     public override long GetInt64(int ordinal)
     {
         var span = GetValueSpan(ordinal);
+        if (IsBinaryColumn(ordinal))
+        {
+            return BinaryPrimitives.ReadInt64BigEndian(span);
+        }
         Utf8Parser.TryParse(span, out long value, out _);
         return value;
     }
