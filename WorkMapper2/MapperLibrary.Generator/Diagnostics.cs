@@ -5,18 +5,19 @@ using Microsoft.CodeAnalysis;
 internal static class Diagnostics
 {
     public static DiagnosticDescriptor InvalidMethodDefinition { get; } = new(
-        id: "TP0001",
+        id: "ML0001",
         title: "Invalid method definition",
-        messageFormat: "Method must be static partial. method=[{0}]",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        messageFormat: "Mapper method must be static partial. method=[{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     public static DiagnosticDescriptor InvalidMethodParameter { get; } = new(
-        id: "TP0002",
+        id: "ML0002",
         title: "Invalid method parameter",
-        messageFormat: "Method must not have parameters. method=[{0}]",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        messageFormat: "Mapper method must have 1 or 2 parameters. method=[{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 }
+

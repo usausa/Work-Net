@@ -1,14 +1,15 @@
 namespace MapperLibrary.Generator;
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 using MapperLibrary.Generator.Models;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 using SourceGenerateHelper;
@@ -16,7 +17,9 @@ using SourceGenerateHelper;
 [Generator]
 public sealed class MapperGenerator : IIncrementalGenerator
 {
-    private const string AttributeName = "MapperLibrary.CustomMethodAttribute";
+    private const string MapperAttributeName = "MapperLibrary.MapperAttribute";
+    private const string MapPropertyAttributeName = "MapperLibrary.MapPropertyAttribute";
+    private const string MapIgnoreAttributeName = "MapperLibrary.MapIgnoreAttribute";
 
     // ------------------------------------------------------------
     // Initialize
@@ -24,52 +27,45 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var optionProvider = context.AnalyzerConfigOptionsProvider
-            .Select(SelectOption);
-
         var methodProvider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                AttributeName,
+                MapperAttributeName,
                 static (syntax, _) => IsMethodSyntax(syntax),
-                static (context, _) => GetMethodModel(context))
+                static (context, _) => GetMapperMethodModel(context))
             .Collect();
 
         context.RegisterImplementationSourceOutput(
-            optionProvider.Combine(methodProvider),
-            static (context, provider) => Execute(context, provider.Left, provider.Right));
+            methodProvider,
+            static (context, methods) => Execute(context, methods));
     }
 
     // ------------------------------------------------------------
     // Parser
     // ------------------------------------------------------------
 
-    private static OptionModel SelectOption(AnalyzerConfigOptionsProvider provider, CancellationToken token)
-    {
-        var value = provider.GlobalOptions.GetValue<string>("TemplateLibraryGeneratorValue");
-        return new OptionModel(value);
-    }
-
     private static bool IsMethodSyntax(SyntaxNode syntax) =>
         syntax is MethodDeclarationSyntax;
 
-    private static Result<MethodModel> GetMethodModel(GeneratorAttributeSyntaxContext context)
+    private static Result<MapperMethodModel> GetMapperMethodModel(GeneratorAttributeSyntaxContext context)
     {
         var syntax = (MethodDeclarationSyntax)context.TargetNode;
         if (context.SemanticModel.GetDeclaredSymbol(syntax) is not IMethodSymbol symbol)
         {
-            return Results.Error<MethodModel>(null);
+            return Results.Error<MapperMethodModel>(null);
         }
 
         // Validate method definition
         if (!symbol.IsStatic || !symbol.IsPartialDefinition)
         {
-            return Results.Error<MethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodDefinition, syntax.GetLocation(), symbol.Name));
+            return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodDefinition, syntax.GetLocation(), symbol.Name));
         }
 
-        // Validate parameter
-        if (symbol.Parameters.Length != 0)
+        // Validate parameters: must have 1 or 2 parameters
+        // Pattern 1: void Map(Source source, Destination destination) - 2 parameters
+        // Pattern 2: Destination Map(Source source) - 1 parameter with return type
+        if (symbol.Parameters.Length < 1 || symbol.Parameters.Length > 2)
         {
-            return Results.Error<MethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
+            return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
         }
 
         var containingType = symbol.ContainingType;
@@ -77,19 +73,172 @@ public sealed class MapperGenerator : IIncrementalGenerator
             ? string.Empty
             : containingType.ContainingNamespace.ToDisplayString();
 
-        return Results.Success(new MethodModel(
-            ns,
-            containingType.GetClassName(),
-            containingType.IsValueType,
-            symbol.DeclaredAccessibility,
-            symbol.Name));
+        var model = new MapperMethodModel
+        {
+            Namespace = ns,
+            ClassName = containingType.GetClassName(),
+            IsValueType = containingType.IsValueType,
+            MethodAccessibility = symbol.DeclaredAccessibility,
+            MethodName = symbol.Name
+        };
+
+        // Get source type and parameter name
+        var sourceParam = symbol.Parameters[0];
+        model.SourceTypeName = sourceParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        model.SourceParameterName = sourceParam.Name;
+
+        // Determine if void method with destination parameter or return type method
+        if (symbol.Parameters.Length == 2)
+        {
+            // void Map(Source source, Destination destination)
+            var destParam = symbol.Parameters[1];
+            model.DestinationTypeName = destParam.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            model.DestinationParameterName = destParam.Name;
+            model.ReturnsDestination = false;
+        }
+        else
+        {
+            // Destination Map(Source source)
+            if (symbol.ReturnsVoid)
+            {
+                return Results.Error<MapperMethodModel>(new DiagnosticInfo(Diagnostics.InvalidMethodParameter, syntax.GetLocation(), symbol.Name));
+            }
+            model.DestinationTypeName = symbol.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            model.DestinationParameterName = null;
+            model.ReturnsDestination = true;
+        }
+
+        // Parse attributes for MapProperty and MapIgnore
+        ParseMappingAttributes(symbol, model);
+
+        // Get source and destination properties
+        var sourceType = symbol.Parameters[0].Type;
+        var destinationType = symbol.Parameters.Length == 2 ? symbol.Parameters[1].Type : symbol.ReturnType;
+
+        BuildPropertyMappings(sourceType, destinationType, model);
+
+        return Results.Success(model);
+    }
+
+    private static void ParseMappingAttributes(IMethodSymbol symbol, MapperMethodModel model)
+    {
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            var attributeName = attribute.AttributeClass?.ToDisplayString();
+
+            if (attributeName == MapPropertyAttributeName)
+            {
+                // MapProperty(source, target)
+                if (attribute.ConstructorArguments.Length >= 2)
+                {
+                    var sourceName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    var targetName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+
+                    // Store custom mapping (will be used in BuildPropertyMappings)
+                    model.PropertyMappings.Add(new PropertyMappingModel
+                    {
+                        SourceName = sourceName,
+                        TargetName = targetName
+                    });
+                }
+            }
+            else if (attributeName == MapIgnoreAttributeName)
+            {
+                // MapIgnore(target)
+                if (attribute.ConstructorArguments.Length >= 1)
+                {
+                    var targetName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    model.IgnoredProperties.Add(targetName);
+                }
+            }
+        }
+    }
+
+    private static void BuildPropertyMappings(ITypeSymbol sourceType, ITypeSymbol destinationType, MapperMethodModel model)
+    {
+        var sourceProperties = GetAllProperties(sourceType);
+        var destinationProperties = GetAllProperties(destinationType);
+
+        // Create a dictionary of custom mappings (target -> source)
+        var customMappings = model.PropertyMappings.ToDictionary(
+            m => m.TargetName,
+            m => m.SourceName,
+            StringComparer.Ordinal);
+
+        // Clear and rebuild property mappings
+        var mappings = new List<PropertyMappingModel>();
+
+        foreach (var destProp in destinationProperties)
+        {
+            // Skip ignored properties
+            if (model.IgnoredProperties.Contains(destProp.Name))
+            {
+                continue;
+            }
+
+            // Skip read-only properties
+            if (destProp.SetMethod is null)
+            {
+                continue;
+            }
+
+            string? sourcePropName = null;
+            IPropertySymbol? sourceProp = null;
+
+            // Check for custom mapping first
+            if (customMappings.TryGetValue(destProp.Name, out var customSourceName))
+            {
+                sourcePropName = customSourceName;
+                sourceProp = sourceProperties.FirstOrDefault(p => p.Name == customSourceName);
+            }
+            else
+            {
+                // Try to find matching property by name
+                sourceProp = sourceProperties.FirstOrDefault(p => p.Name == destProp.Name);
+                sourcePropName = sourceProp?.Name;
+            }
+
+            if (sourceProp is not null && sourcePropName is not null)
+            {
+                var sourceTypeName = sourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var destTypeName = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                mappings.Add(new PropertyMappingModel
+                {
+                    SourceName = sourcePropName,
+                    TargetName = destProp.Name,
+                    SourceType = sourceTypeName,
+                    TargetType = destTypeName,
+                    RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourceProp.Type, destProp.Type)
+                });
+            }
+        }
+
+        model.PropertyMappings = mappings;
+    }
+
+    private static List<IPropertySymbol> GetAllProperties(ITypeSymbol type)
+    {
+        var properties = new List<IPropertySymbol>();
+        var currentType = type;
+
+        while (currentType is not null)
+        {
+            properties.AddRange(currentType.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(p => !p.IsStatic && p.DeclaredAccessibility == Accessibility.Public));
+
+            currentType = currentType.BaseType;
+        }
+
+        return properties;
     }
 
     // ------------------------------------------------------------
     // Generator
     // ------------------------------------------------------------
 
-    private static void Execute(SourceProductionContext context, OptionModel option, ImmutableArray<Result<MethodModel>> methods)
+    private static void Execute(SourceProductionContext context, ImmutableArray<Result<MapperMethodModel>> methods)
     {
         foreach (var info in methods.SelectError())
         {
@@ -102,7 +251,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             context.CancellationToken.ThrowIfCancellationRequested();
 
             builder.Clear();
-            BuildSource(builder, option, group.ToList());
+            BuildSource(builder, group.ToList());
 
             var filename = MakeFilename(group.Key.Namespace, group.Key.ClassName);
             var source = builder.ToString();
@@ -110,7 +259,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
         }
     }
 
-    private static void BuildSource(SourceBuilder builder, OptionModel option, List<MethodModel> methods)
+    private static void BuildSource(SourceBuilder builder, List<MapperMethodModel> methods)
     {
         var ns = methods[0].Namespace;
         var className = methods[0].ClassName;
@@ -136,8 +285,6 @@ public sealed class MapperGenerator : IIncrementalGenerator
             .NewLine();
         builder.BeginScope();
 
-        builder.Indent().Append("// Option: ").Append(option.Value).NewLine();
-
         var first = true;
         foreach (var method in methods)
         {
@@ -150,25 +297,119 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 builder.NewLine();
             }
 
-            // method
-            builder
-                .Indent()
-                .Append(method.MethodAccessibility.ToText())
-                .Append(" static partial void ")
-                .Append(method.MethodName)
-                .Append("()")
-                .NewLine();
-            builder.BeginScope();
-
-            builder
-                .Indent()
-                .Append("Console.WriteLine(\"Hello world.\");")
-                .NewLine();
-
-            builder.EndScope();
+            BuildMethod(builder, method);
         }
 
         builder.EndScope();
+    }
+
+    private static void BuildMethod(SourceBuilder builder, MapperMethodModel method)
+    {
+        // Method signature
+        builder.Indent().Append(method.MethodAccessibility.ToText()).Append(" static partial ");
+
+        if (method.ReturnsDestination)
+        {
+            // Destination Map(Source source)
+            builder.Append(method.DestinationTypeName).Append(" ");
+            builder.Append(method.MethodName).Append("(");
+            builder.Append(method.SourceTypeName).Append(" ").Append(method.SourceParameterName);
+            builder.Append(")").NewLine();
+        }
+        else
+        {
+            // void Map(Source source, Destination destination)
+            builder.Append("void ");
+            builder.Append(method.MethodName).Append("(");
+            builder.Append(method.SourceTypeName).Append(" ").Append(method.SourceParameterName).Append(", ");
+            builder.Append(method.DestinationTypeName).Append(" ").Append(method.DestinationParameterName!);
+            builder.Append(")").NewLine();
+        }
+
+        builder.BeginScope();
+
+        var destVarName = method.ReturnsDestination ? "destination" : method.DestinationParameterName!;
+
+        // Create destination if returning
+        if (method.ReturnsDestination)
+        {
+            builder.Indent().Append("var ").Append(destVarName).Append(" = new ").Append(method.DestinationTypeName).Append("();").NewLine();
+        }
+
+        // Generate property mappings
+        foreach (var mapping in method.PropertyMappings)
+        {
+            builder.Indent();
+            builder.Append(destVarName).Append(".").Append(mapping.TargetName).Append(" = ");
+
+            if (mapping.RequiresConversion)
+            {
+                // Basic type conversion
+                BuildTypeConversion(builder, mapping, method.SourceParameterName);
+            }
+            else
+            {
+                builder.Append(method.SourceParameterName).Append(".").Append(mapping.SourceName);
+            }
+
+            builder.Append(";").NewLine();
+        }
+
+        // Return destination if needed
+        if (method.ReturnsDestination)
+        {
+            builder.Indent().Append("return ").Append(destVarName).Append(";").NewLine();
+        }
+
+        builder.EndScope();
+    }
+
+    private static void BuildTypeConversion(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName)
+    {
+        // Basic type conversion using ToString() for now
+        // TODO: Implement more sophisticated type conversion in Phase 2
+        var sourceExpr = $"{sourceParamName}.{mapping.SourceName}";
+
+        // Check common conversion patterns
+        if (mapping.TargetType == "string" || mapping.TargetType == "global::System.String")
+        {
+            // Convert to string
+            builder.Append(sourceExpr).Append(".ToString()");
+        }
+        else if (mapping.SourceType == "string" || mapping.SourceType == "global::System.String")
+        {
+            // Convert from string to other types
+            if (mapping.TargetType is "int" or "global::System.Int32")
+            {
+                builder.Append("int.Parse(").Append(sourceExpr).Append(")");
+            }
+            else if (mapping.TargetType is "long" or "global::System.Int64")
+            {
+                builder.Append("long.Parse(").Append(sourceExpr).Append(")");
+            }
+            else if (mapping.TargetType is "double" or "global::System.Double")
+            {
+                builder.Append("double.Parse(").Append(sourceExpr).Append(")");
+            }
+            else if (mapping.TargetType is "decimal" or "global::System.Decimal")
+            {
+                builder.Append("decimal.Parse(").Append(sourceExpr).Append(")");
+            }
+            else if (mapping.TargetType is "bool" or "global::System.Boolean")
+            {
+                builder.Append("bool.Parse(").Append(sourceExpr).Append(")");
+            }
+            else
+            {
+                // Fallback: direct cast
+                builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+            }
+        }
+        else
+        {
+            // Try implicit/explicit conversion
+            builder.Append("(").Append(mapping.TargetType).Append(")").Append(sourceExpr);
+        }
     }
 
     // ------------------------------------------------------------
