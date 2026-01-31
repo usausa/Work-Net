@@ -91,12 +91,30 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
     /// </summary>
     public bool HasConverter => !string.IsNullOrEmpty(ConverterMethod);
 
+    /// <summary>
+    /// Gets or sets the condition method name for conditional mapping.
+    /// </summary>
+    public string? ConditionMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the condition method accepts custom parameters.
+    /// </summary>
+    public bool ConditionAcceptsCustomParameters { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether a condition is specified.
+    /// </summary>
+    public bool HasCondition => !string.IsNullOrEmpty(ConditionMethod);
+
     // Legacy property names for compatibility
     public string SourceName
     {
         get => SourcePath;
         set => SourcePath = value;
     }
+
+
+
 
     public string TargetName
     {
@@ -125,6 +143,8 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
                IsTargetNullable == other.IsTargetNullable &&
                ConverterMethod == other.ConverterMethod &&
                ConverterAcceptsCustomParameters == other.ConverterAcceptsCustomParameters &&
+               ConditionMethod == other.ConditionMethod &&
+               ConditionAcceptsCustomParameters == other.ConditionAcceptsCustomParameters &&
                TargetPathSegments.SequenceEqual(other.TargetPathSegments) &&
                SourcePathSegments.SequenceEqual(other.SourcePathSegments);
     }
@@ -145,6 +165,8 @@ internal sealed class PropertyMappingModel : IEquatable<PropertyMappingModel>
             hash = (hash * 31) + IsTargetNullable.GetHashCode();
             hash = (hash * 31) + (ConverterMethod?.GetHashCode() ?? 0);
             hash = (hash * 31) + ConverterAcceptsCustomParameters.GetHashCode();
+            hash = (hash * 31) + (ConditionMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + ConditionAcceptsCustomParameters.GetHashCode();
             return hash;
         }
     }

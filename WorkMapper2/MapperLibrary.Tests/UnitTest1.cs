@@ -463,6 +463,33 @@ internal static partial class TestMappers
     {
         return $"{text} (formatted with {context.ContextValue})";
     }
+
+    // Condition: Global condition
+    [Mapper]
+    [MapCondition(nameof(ShouldMapCondition))]
+    public static partial void MapWithCondition(ConditionSource source, ConditionDestination destination);
+
+    // Condition: Property-level condition
+    [Mapper]
+    [MapPropertyCondition(nameof(ConditionDestination.Name), nameof(ShouldMapName))]
+    public static partial void MapWithPropertyCondition(ConditionSource source, ConditionDestination destination);
+
+    // Condition: Generic MapConstant test
+    [Mapper]
+    [MapConstant<int>(nameof(ConstantDestination.Version), 2)]
+    [MapConstant<string>(nameof(ConstantDestination.Status), "Pending")]
+    public static partial void MapWithGenericConstant(ConstantSource source, ConstantDestination destination);
+
+    // Condition check methods
+    private static bool ShouldMapCondition(ConditionSource source, ConditionDestination destination)
+    {
+        return source.IsActive;
+    }
+
+    private static bool ShouldMapName(string? name)
+    {
+        return !string.IsNullOrEmpty(name);
+    }
 }
 
 // Custom context for testing
@@ -471,6 +498,21 @@ public class CustomMappingContext
     public bool BeforeMapCalled { get; set; }
     public bool AfterMapCalled { get; set; }
     public string ContextValue { get; set; } = string.Empty;
+}
+
+// Condition test models
+public class ConditionSource
+{
+    public int Value { get; set; }
+    public string? Name { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class ConditionDestination
+{
+    public int Value { get; set; }
+    public string? Name { get; set; }
+    public bool IsActive { get; set; }
 }
 
 #endregion
@@ -1230,6 +1272,115 @@ public class ConverterTests
         // Assert
         Assert.Equal("Value: 100, Context: TestContext", destination.ConvertedValue);
         Assert.Equal("Hello (formatted with TestContext)", destination.FormattedText);
+    }
+}
+
+// Condition tests
+public class ConditionTests
+{
+    [Fact]
+    public void MapWithCondition_WhenConditionTrue_MapsProperties()
+    {
+        // Arrange
+        var source = new ConditionSource
+        {
+            Value = 42,
+            Name = "Test",
+            IsActive = true
+        };
+        var destination = new ConditionDestination();
+
+        // Act
+        TestMappers.MapWithCondition(source, destination);
+
+        // Assert
+        Assert.Equal(42, destination.Value);
+        Assert.Equal("Test", destination.Name);
+        Assert.True(destination.IsActive);
+    }
+
+    [Fact]
+    public void MapWithCondition_WhenConditionFalse_DoesNotMapProperties()
+    {
+        // Arrange
+        var source = new ConditionSource
+        {
+            Value = 42,
+            Name = "Test",
+            IsActive = false
+        };
+        var destination = new ConditionDestination
+        {
+            Value = 100,
+            Name = "Original"
+        };
+
+        // Act
+        TestMappers.MapWithCondition(source, destination);
+
+        // Assert - Values should remain unchanged
+        Assert.Equal(100, destination.Value);
+        Assert.Equal("Original", destination.Name);
+        Assert.False(destination.IsActive);
+    }
+
+    [Fact]
+    public void MapWithPropertyCondition_WhenNameNotNull_MapsName()
+    {
+        // Arrange
+        var source = new ConditionSource
+        {
+            Value = 42,
+            Name = "Test",
+            IsActive = true
+        };
+        var destination = new ConditionDestination();
+
+        // Act
+        TestMappers.MapWithPropertyCondition(source, destination);
+
+        // Assert
+        Assert.Equal(42, destination.Value);
+        Assert.Equal("Test", destination.Name);
+    }
+
+    [Fact]
+    public void MapWithPropertyCondition_WhenNameNull_DoesNotMapName()
+    {
+        // Arrange
+        var source = new ConditionSource
+        {
+            Value = 42,
+            Name = null,
+            IsActive = true
+        };
+        var destination = new ConditionDestination
+        {
+            Name = "Original"
+        };
+
+        // Act
+        TestMappers.MapWithPropertyCondition(source, destination);
+
+        // Assert - Name should remain unchanged
+        Assert.Equal(42, destination.Value);
+        Assert.Equal("Original", destination.Name);
+    }
+
+    [Fact]
+    public void MapWithGenericConstant_SetsGenericConstantValues()
+    {
+        // Arrange
+        var source = new ConstantSource { Name = "Test" };
+        var destination = new ConstantDestination();
+
+        // Act
+        TestMappers.MapWithGenericConstant(source, destination);
+
+        // Assert
+        Assert.Equal("Test", destination.Name);
+        Assert.Equal(2, destination.Version);
+        Assert.Equal("Pending", destination.Status);
     }
 }
 

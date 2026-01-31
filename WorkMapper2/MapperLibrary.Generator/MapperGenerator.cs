@@ -23,10 +23,14 @@ public sealed class MapperGenerator : IIncrementalGenerator
     private const string MapConstantAttributeName = "MapperLibrary.MapConstantAttribute";
     private const string BeforeMapAttributeName = "MapperLibrary.BeforeMapAttribute";
     private const string AfterMapAttributeName = "MapperLibrary.AfterMapAttribute";
+    private const string MapConditionAttributeName = "MapperLibrary.MapConditionAttribute";
+    private const string MapPropertyConditionAttributeName = "MapperLibrary.MapPropertyConditionAttribute";
 
     // ------------------------------------------------------------
     // Initialize
     // ------------------------------------------------------------
+
+
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -144,9 +148,10 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 $"{duplicateType.Key}, {symbol.Name}"));
         }
 
+
         model.CustomParameters = customParameters;
 
-        // Parse attributes for MapProperty, MapIgnore, MapConstant, BeforeMap, AfterMap
+        // Parse attributes for MapProperty, MapIgnore, MapConstant, BeforeMap, AfterMap, MapCondition
         ParseMappingAttributes(symbol, model);
 
         // Validate BeforeMap/AfterMap signatures if specified
@@ -154,6 +159,13 @@ public sealed class MapperGenerator : IIncrementalGenerator
         if (validationError is not null)
         {
             return Results.Error<MapperMethodModel>(validationError);
+        }
+
+        // Validate global condition method if specified
+        var conditionError = ValidateConditionMethod(symbol, model, syntax);
+        if (conditionError is not null)
+        {
+            return Results.Error<MapperMethodModel>(conditionError);
         }
 
         // Get source and destination properties
@@ -168,11 +180,132 @@ public sealed class MapperGenerator : IIncrementalGenerator
             return Results.Error<MapperMethodModel>(converterError);
         }
 
+        // Validate Property Condition methods if specified
+        var propertyConditionError = ValidatePropertyConditionMethods(symbol, model, syntax);
+        if (propertyConditionError is not null)
+        {
+            return Results.Error<MapperMethodModel>(propertyConditionError);
+        }
+
         // Build constant mappings with type information
         BuildConstantMappings(destinationType, model);
 
         return Results.Success(model);
     }
+
+    private static DiagnosticInfo? ValidateConditionMethod(IMethodSymbol mapperMethod, MapperMethodModel model, MethodDeclarationSyntax syntax)
+    {
+        if (string.IsNullOrEmpty(model.ConditionMethod))
+        {
+            return null;
+        }
+
+        var containingType = mapperMethod.ContainingType;
+        var conditionMethods = containingType.GetMembers(model.ConditionMethod!)
+            .OfType<IMethodSymbol>()
+            .Where(m => m.IsStatic && m.ReturnType.SpecialType == SpecialType.System_Boolean)
+            .ToList();
+
+        var matchResult = FindMatchingCallbackMethod(conditionMethods, model);
+        if (matchResult == CallbackMatchResult.NoMatch)
+        {
+            return new DiagnosticInfo(
+                Diagnostics.InvalidConditionSignature,
+                syntax.GetLocation(),
+                $"{model.ConditionMethod}, {mapperMethod.Name}");
+        }
+
+        model.ConditionAcceptsCustomParameters = matchResult == CallbackMatchResult.MatchWithCustomParams;
+        return null;
+    }
+
+    private static DiagnosticInfo? ValidatePropertyConditionMethods(IMethodSymbol mapperMethod, MapperMethodModel model, MethodDeclarationSyntax syntax)
+    {
+        var containingType = mapperMethod.ContainingType;
+
+        foreach (var mapping in model.PropertyMappings)
+        {
+            if (string.IsNullOrEmpty(mapping.ConditionMethod))
+            {
+                continue;
+            }
+
+            var conditionMethods = containingType.GetMembers(mapping.ConditionMethod!)
+                .OfType<IMethodSymbol>()
+                .Where(m => m.IsStatic && m.ReturnType.SpecialType == SpecialType.System_Boolean)
+                .ToList();
+
+            var matchResult = FindMatchingPropertyConditionMethod(conditionMethods, mapping, model);
+            if (matchResult == ConverterMatchResult.NoMatch)
+            {
+                return new DiagnosticInfo(
+                    Diagnostics.InvalidPropertyConditionSignature,
+                    syntax.GetLocation(),
+                    $"{mapping.ConditionMethod}, {mapping.SourcePath} -> {mapping.TargetPath}");
+            }
+
+            mapping.ConditionAcceptsCustomParameters = matchResult == ConverterMatchResult.MatchWithCustomParams;
+        }
+
+        return null;
+    }
+
+    private static ConverterMatchResult FindMatchingPropertyConditionMethod(List<IMethodSymbol> candidates, PropertyMappingModel mapping, MapperMethodModel model)
+    {
+        var hasMatchWithCustomParams = false;
+        var hasMatchWithoutCustomParams = false;
+        var sourceType = mapping.SourceType;
+
+        foreach (var method in candidates)
+        {
+            // Check for match with custom parameters: (SourceType, customParams...)
+            if (model.CustomParameters.Count > 0 &&
+                method.Parameters.Length == 1 + model.CustomParameters.Count)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == sourceType;
+
+                var customParamsMatch = true;
+                for (var i = 0; i < model.CustomParameters.Count; i++)
+                {
+                    if (method.Parameters[i + 1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) != model.CustomParameters[i].TypeName)
+                    {
+                        customParamsMatch = false;
+                        break;
+                    }
+                }
+
+                if (sourceMatch && customParamsMatch)
+                {
+                    hasMatchWithCustomParams = true;
+                }
+            }
+
+            // Check for match without custom parameters: (SourceType)
+            if (method.Parameters.Length == 1)
+            {
+                var sourceMatch = method.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == sourceType;
+
+                if (sourceMatch)
+                {
+                    hasMatchWithoutCustomParams = true;
+                }
+            }
+        }
+
+        // Prefer match with custom parameters
+        if (hasMatchWithCustomParams)
+        {
+            return ConverterMatchResult.MatchWithCustomParams;
+        }
+
+        if (hasMatchWithoutCustomParams)
+        {
+            return ConverterMatchResult.MatchWithoutCustomParams;
+        }
+
+        return ConverterMatchResult.NoMatch;
+    }
+
 
     private static DiagnosticInfo? ValidateConverterMethods(IMethodSymbol mapperMethod, MapperMethodModel model, MethodDeclarationSyntax syntax)
     {
@@ -371,11 +504,14 @@ public sealed class MapperGenerator : IIncrementalGenerator
             return CallbackMatchResult.MatchWithoutCustomParams;
         }
 
+
         return CallbackMatchResult.NoMatch;
     }
 
     private static void ParseMappingAttributes(IMethodSymbol symbol, MapperMethodModel model)
     {
+        var propertyConditions = new Dictionary<string, string?>(StringComparer.Ordinal);
+
         foreach (var attribute in symbol.GetAttributes())
         {
             var attributeName = attribute.AttributeClass?.ToDisplayString();
@@ -416,9 +552,10 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     model.IgnoredProperties.Add(targetName);
                 }
             }
-            else if (attributeName == MapConstantAttributeName)
+            else if (attributeName == MapConstantAttributeName ||
+                     (attributeName is not null && attributeName.StartsWith("MapperLibrary.MapConstantAttribute<", StringComparison.Ordinal)))
             {
-                // MapConstant(target, value) with optional Expression property
+                // MapConstant(target, value) or MapConstant<T>(target, value) with optional Expression property
                 if (attribute.ConstructorArguments.Length >= 2)
                 {
                     var targetName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
@@ -430,7 +567,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
                         Value = FormatConstantValue(value)
                     };
 
-                    // Check for Expression named argument
+                    // Check for Expression named argument (only for non-generic version)
                     foreach (var namedArg in attribute.NamedArguments)
                     {
                         if (namedArg.Key == "Expression" && namedArg.Value.Value is string expression)
@@ -460,6 +597,35 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 {
                     model.AfterMapMethod = attribute.ConstructorArguments[0].Value?.ToString();
                 }
+            }
+            else if (attributeName == MapConditionAttributeName)
+            {
+                // MapCondition(methodName)
+                if (attribute.ConstructorArguments.Length >= 1)
+                {
+                    model.ConditionMethod = attribute.ConstructorArguments[0].Value?.ToString();
+                }
+            }
+            else if (attributeName == MapPropertyConditionAttributeName)
+            {
+                // MapPropertyCondition(target, methodName)
+                if (attribute.ConstructorArguments.Length >= 2)
+                {
+                    var targetName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    var methodName = attribute.ConstructorArguments[1].Value?.ToString();
+
+                    // Store in model for later association with property mapping
+                    model.PropertyConditions[targetName] = methodName;
+                }
+            }
+        }
+
+        // Associate property conditions with mappings from MapProperty attributes
+        foreach (var mapping in model.PropertyMappings)
+        {
+            if (propertyConditions.TryGetValue(mapping.TargetPath, out var conditionMethod))
+            {
+                mapping.ConditionMethod = conditionMethod;
             }
         }
     }
@@ -554,6 +720,7 @@ public sealed class MapperGenerator : IIncrementalGenerator
             string? sourcePropPath = null;
             ITypeSymbol? sourcePropertyType = null;
             string? converterMethod = null;
+            string? conditionMethod = null;
 
             // Check for custom mapping first
             if (customMappings.TryGetValue(destProp.Name, out var customSourcePath))
@@ -561,10 +728,11 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 sourcePropPath = customSourcePath;
                 sourcePropertyType = ResolvePropertyType(sourceType, customSourcePath);
 
-                // Preserve converter info from original mapping
+                // Preserve converter and condition info from original mapping
                 if (originalMappings.TryGetValue(destProp.Name, out var originalMapping))
                 {
                     converterMethod = originalMapping.ConverterMethod;
+                    conditionMethod = originalMapping.ConditionMethod;
                 }
             }
             else
@@ -575,6 +743,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
                 {
                     sourcePropPath = sourceProp.Name;
                     sourcePropertyType = sourceProp.Type;
+
+                    // Check for property condition from originalMappings
+                    if (originalMappings.TryGetValue(destProp.Name, out var originalMapping))
+                    {
+                        conditionMethod = originalMapping.ConditionMethod;
+                    }
                 }
             }
 
@@ -593,7 +767,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     RequiresConversion = !SymbolEqualityComparer.Default.Equals(sourcePropertyType, destProp.Type),
                     IsSourceNullable = IsNullableSymbol(sourcePropertyType),
                     IsTargetNullable = IsNullableSymbol(destProp.Type),
-                    ConverterMethod = converterMethod
+                    ConverterMethod = converterMethod,
+                    ConditionMethod = conditionMethod
                 };
 
                 mappings.Add(mapping);
@@ -603,7 +778,17 @@ public sealed class MapperGenerator : IIncrementalGenerator
         // Add nested mappings
         mappings.AddRange(nestedMappings);
 
+
         model.PropertyMappings = mappings;
+
+        // Apply property conditions from MapPropertyCondition attributes
+        foreach (var mapping in model.PropertyMappings)
+        {
+            if (model.PropertyConditions.TryGetValue(mapping.TargetPath, out var conditionMethod))
+            {
+                mapping.ConditionMethod = conditionMethod;
+            }
+        }
     }
 
     private static bool IsNullableSymbol(ITypeSymbol type)
@@ -874,6 +1059,22 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent().Append("var ").Append(destVarName).Append(" = new ").Append(method.DestinationTypeName).Append("();").NewLine();
         }
 
+        // Global condition check
+        var hasGlobalCondition = !string.IsNullOrEmpty(method.ConditionMethod);
+        if (hasGlobalCondition)
+        {
+            builder.Indent().Append("if (").Append(method.ConditionMethod!).Append("(").Append(method.SourceParameterName).Append(", ").Append(destVarName);
+            if (method.ConditionAcceptsCustomParameters)
+            {
+                foreach (var customParam in method.CustomParameters)
+                {
+                    builder.Append(", ").Append(customParam.Name);
+                }
+            }
+            builder.Append("))").NewLine();
+            builder.BeginScope();
+        }
+
         // Call BeforeMap if specified
         if (!string.IsNullOrEmpty(method.BeforeMapMethod))
         {
@@ -995,6 +1196,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Append(");").NewLine();
         }
 
+        // Close global condition scope if present
+        if (hasGlobalCondition)
+        {
+            builder.EndScope();
+        }
+
         // Return destination if needed
         if (method.ReturnsDestination)
         {
@@ -1006,6 +1213,22 @@ public sealed class MapperGenerator : IIncrementalGenerator
 
     private static void BuildPropertyAssignment(SourceBuilder builder, PropertyMappingModel mapping, string sourceParamName, string destVarName, MapperMethodModel method, bool nullChecked = false)
     {
+        // Property-level condition check
+        if (mapping.HasCondition)
+        {
+            var sourceAccessor = BuildSourceAccessor(mapping.SourcePath, sourceParamName, nullChecked);
+            builder.Indent().Append("if (").Append(mapping.ConditionMethod!).Append("(").Append(sourceAccessor);
+            if (mapping.ConditionAcceptsCustomParameters)
+            {
+                foreach (var customParam in method.CustomParameters)
+                {
+                    builder.Append(", ").Append(customParam.Name);
+                }
+            }
+            builder.Append("))").NewLine();
+            builder.BeginScope();
+        }
+
         builder.Indent();
         builder.Append(destVarName).Append(".").Append(mapping.TargetPath).Append(" = ");
 
@@ -1043,6 +1266,12 @@ public sealed class MapperGenerator : IIncrementalGenerator
         }
 
         builder.Append(";").NewLine();
+
+        // Close property-level condition scope if present
+        if (mapping.HasCondition)
+        {
+            builder.EndScope();
+        }
     }
 
     private static string GetNullCheckCondition(PropertyMappingModel mapping, string sourceParamName)

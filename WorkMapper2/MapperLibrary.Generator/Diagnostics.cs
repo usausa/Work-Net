@@ -51,6 +51,22 @@ internal static class Diagnostics
         category: "MapperLibrary",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidConditionSignature { get; } = new(
+        id: "ML0007",
+        title: "Invalid Condition method signature",
+        messageFormat: "Condition method signature does not match. Expected (Source, Destination) or (Source, Destination, customParams...) returning bool. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidPropertyConditionSignature { get; } = new(
+        id: "ML0008",
+        title: "Invalid Property Condition method signature",
+        messageFormat: "Property condition method signature does not match. Expected (SourceType) or (SourceType, customParams...) returning bool. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }
 
 

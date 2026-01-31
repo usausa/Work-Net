@@ -30,9 +30,12 @@ public static partial Destination Map(Source source);
 | `[MapProperty]` | プロパティ間のマッピング指定 | Method |
 | `[MapFrom]` | 複数プロパティからの合成 | Method |
 | `[MapConstant]` | 固定値の設定 | Method |
+| `[MapConstant<T>]` | 型指定の固定値設定（C# 11+） | Method |
 | `[MapIgnore]` | マッピング除外 | Method |
 | `[AfterMap]` | マッピング後の追加処理 | Method |
 | `[BeforeMap]` | マッピング前の追加処理 | Method |
+| `[MapCondition]` | マッピング全体の条件 | Method |
+| `[MapPropertyCondition]` | プロパティレベルの条件 | Method |
 
 ### 3.2 クラス/アセンブリレベル属性
 
@@ -48,8 +51,8 @@ public static partial Destination Map(Source source);
 internal static partial class ObjectMapper
 {
     [Mapper]
-    [MapProperty("SourceName", "DestinationName")]
-    [MapProperty("Code", "Id")]  // 複数指定可能
+    [MapProperty(nameof(Source.SourceName), nameof(Destination.DestinationName))]
+    [MapProperty(nameof(Source.Code), nameof(Destination.Id))]  // 複数指定可能
     public static partial void Map(Source source, Destination destination);
 }
 ```
@@ -618,7 +621,110 @@ public static partial void Map(Source source, Destination destination, CustomCon
 | `(SourceType, ...customParams)` | カスタムパラメータを渡して呼び出し |
 | シグネチャ不一致 | コンパイルエラー（ML0006） |
 
-## 11. 診断メッセージ
+## 11. 条件付きマッピング
+
+### 11.1 グローバル条件
+
+マッピング全体に条件を適用します。
+
+```csharp
+[Mapper]
+[MapCondition(nameof(ShouldMap))]
+public static partial void Map(Source source, Destination destination);
+
+private static bool ShouldMap(Source source, Destination destination)
+{
+    return source.IsActive;
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    if (ShouldMap(source, destination))
+    {
+        destination.Value = source.Value;
+        destination.Name = source.Name;
+    }
+}
+```
+
+### 11.2 プロパティレベル条件
+
+特定のプロパティのマッピングに条件を適用します。
+
+```csharp
+[Mapper]
+[MapPropertyCondition(nameof(Destination.Name), nameof(ShouldMapName))]
+public static partial void Map(Source source, Destination destination);
+
+private static bool ShouldMapName(string? name)
+{
+    return !string.IsNullOrEmpty(name);
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Value = source.Value;
+    if (ShouldMapName(source.Name))
+    {
+        destination.Name = source.Name;
+    }
+}
+```
+
+### 11.3 カスタムパラメータ付き条件
+
+```csharp
+[Mapper]
+[MapCondition(nameof(ShouldMap))]
+public static partial void Map(Source source, Destination destination, MappingContext context);
+
+private static bool ShouldMap(Source source, Destination destination, MappingContext context)
+{
+    return context.ShouldMap && source.IsActive;
+}
+```
+
+## 12. Generic MapConstant
+
+C# 11以降のGeneric Attribute機能を使用して、型安全な定数マッピングができます。
+
+```csharp
+[Mapper]
+[MapConstant<int>("Version", 1)]
+[MapConstant<string>("Status", "Active")]
+[MapConstant<bool>("IsEnabled", true)]
+public static partial void Map(Source source, Destination destination);
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Name = source.Name;
+    destination.Version = 1;
+    destination.Status = "Active";
+    destination.IsEnabled = true;
+}
+```
+
+従来の非Generic版も引き続き使用できます：
+
+```csharp
+[MapConstant("Status", "Active")]
+[MapConstant("Version", 1)]
+[MapConstant("CreatedAt", null, Expression = "System.DateTime.Now")]
+```
+
+## 13. 診断メッセージ
 
 | コード | 説明 |
 |--------|------|
@@ -628,4 +734,40 @@ public static partial void Map(Source source, Destination destination, CustomCon
 | ML0004 | BeforeMapメソッドのシグネチャが一致しません |
 | ML0005 | AfterMapメソッドのシグネチャが一致しません |
 | ML0006 | Converterメソッドのシグネチャが一致しません |
+| ML0007 | 条件メソッドのシグネチャが一致しません |
+| ML0008 | プロパティ条件メソッドのシグネチャが一致しません |
+
+## 14. 実装ステータス
+
+### 14.1 実装済み機能
+
+| 機能 | ステータス |
+|------|----------|
+| 基本マッピング（同名プロパティ） | ✅ 実装済み |
+| 異なるプロパティ名のマッピング | ✅ 実装済み |
+| MapIgnore | ✅ 実装済み |
+| MapConstant | ✅ 実装済み |
+| MapConstant<T> (Generic) | ✅ 実装済み |
+| BeforeMap / AfterMap | ✅ 実装済み |
+| 型変換（数値、文字列、日時等） | ✅ 実装済み |
+| Flatten（ネストソース→フラット） | ✅ 実装済み |
+| Unflatten（フラット→ネストデスティネーション） | ✅ 実装済み |
+| 多段ネスト対応 | ✅ 実装済み |
+| Null安全処理 | ✅ 実装済み |
+| カスタムパラメータ | ✅ 実装済み |
+| Converter | ✅ 実装済み |
+| 条件付きマッピング（グローバル） | ✅ 実装済み |
+| 条件付きマッピング（プロパティレベル） | ✅ 実装済み |
+
+### 14.2 未実装機能
+
+| 機能 | 説明 |
+|------|------|
+| MapFrom（複数プロパティからの合成） | 複数のソースプロパティを1つのデスティネーションに合成 |
+| MapperConverter（カスタム型変換器） | クラス/アセンブリレベルでのカスタム変換器定義 |
+| コレクション対応 | List, Array等のコレクションマッピング |
+| 継承対応 | 派生クラスのマッピング |
+| 双方向マッピング | SourceとDestination両方向のマッピング生成 |
+| インクルードマッピング | 別のマッパーを呼び出してネストオブジェクトをマッピング |
+| NullSubstitute | null値の代替値設定 |
 

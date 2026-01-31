@@ -77,6 +77,11 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     public HashSet<string> IgnoredProperties { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the property condition mappings (target property -> condition method name).
+    /// </summary>
+    public Dictionary<string, string?> PropertyConditions { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets or sets the constant mappings.
     /// </summary>
     public List<ConstantMappingModel> ConstantMappings { get; set; } = [];
@@ -101,12 +106,23 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     /// </summary>
     public bool AfterMapAcceptsCustomParameters { get; set; }
 
+    /// <summary>
+    /// Gets or sets the global condition method name for the entire mapping.
+    /// </summary>
+    public string? ConditionMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the global condition method accepts custom parameters.
+    /// </summary>
+    public bool ConditionAcceptsCustomParameters { get; set; }
+
     public bool Equals(MapperMethodModel? other)
     {
         if (other is null)
         {
             return false;
         }
+
 
         if (ReferenceEquals(this, other))
         {
@@ -130,7 +146,9 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
                BeforeMapMethod == other.BeforeMapMethod &&
                BeforeMapAcceptsCustomParameters == other.BeforeMapAcceptsCustomParameters &&
                AfterMapMethod == other.AfterMapMethod &&
-               AfterMapAcceptsCustomParameters == other.AfterMapAcceptsCustomParameters;
+               AfterMapAcceptsCustomParameters == other.AfterMapAcceptsCustomParameters &&
+               ConditionMethod == other.ConditionMethod &&
+               ConditionAcceptsCustomParameters == other.ConditionAcceptsCustomParameters;
     }
 
     public override bool Equals(object? obj) => Equals(obj as MapperMethodModel);
@@ -154,6 +172,8 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
             hash = (hash * 31) + BeforeMapAcceptsCustomParameters.GetHashCode();
             hash = (hash * 31) + (AfterMapMethod?.GetHashCode() ?? 0);
             hash = (hash * 31) + AfterMapAcceptsCustomParameters.GetHashCode();
+            hash = (hash * 31) + (ConditionMethod?.GetHashCode() ?? 0);
+            hash = (hash * 31) + ConditionAcceptsCustomParameters.GetHashCode();
             return hash;
         }
     }
