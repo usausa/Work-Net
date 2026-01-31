@@ -878,55 +878,274 @@ public static partial void Map(Source source, Destination destination)
 | MapFrom（静的メソッドによる値の合成） | ✅ 実装済み |
 | MapFromMethod（ソースオブジェクトのメソッド呼び出し） | ✅ 実装済み |
 | AutoMap = false（自動マッピング無効化） | ✅ 実装済み |
+| MapCollection（コレクションマッピング） | ✅ 実装済み |
+| MapNested（子オブジェクトマッピング） | ✅ 実装済み |
 
 ### 14.2 未実装機能
 
 | 機能 | 説明 | 参考（AutoMapper相当） |
 |------|------|----------------------|
 | MapperConverter（カスタム型変換器） | クラス/アセンブリレベルでのカスタム変換器定義 | `CreateMap<string, double>().ConvertUsing<StringToDoubleConverter>()` |
-| コレクション対応 | List, Array等のコレクションマッピング | `CreateMap<List<A>, List<B>>()` |
-| 入れ子クラスのマッピング（自動検出） | 別のマッパーを呼び出してネストオブジェクトをマッピング | `CreateMap<A, B>()` with nested mapper |
-| 継承対応 | 派生クラスのマッピング | `Include<DerivedSource, DerivedDest>()` |
-| 双方向マッピング | SourceとDestination両方向のマッピング生成 | `ReverseMap()` |
 | NullSubstitute | null値の代替値設定 | `NullSubstitute("N/A")` |
 
-## 15. 未実装機能の参考実装案
+## 15. コレクションマッピング（MapCollection）
 
-### 15.1 コレクションマッピング
+### 15.1 設計方針
 
-AutoMapperでの使用例：
+- **自動マッピングは行わない**: コレクションプロパティが同名でも自動的にはマッピングしない
+- **明示的なマッパーメソッド指定が必須**: 子要素のマッパーメソッドを先に定義し、それを使用する
+- **コレクション型の変換は自動判断**: ターゲットの型に応じて `.ToArray()` / `.ToList()` を自動選択
+- **voidマッパーとreturnマッパー両方対応**: 子要素マッパーはどちらのパターンでも使用可能
+
+### 15.2 属性
 
 ```csharp
-// AutoMapper: 配列・リストの自動マッピング
-CreateMap<SourceItem, DestItem>();
-CreateMap<Source, Destination>()
-    .ForMember(d => d.Items, opt => opt.MapFrom(s => s.Items));  // List<SourceItem> → List<DestItem>
-
-// 使用例（元のMappingProfile.csより）
-.ForMember(x => x.Entries, o => o.MapFrom(s => s.AsVoltageEntry()))
-.AfterMap((_, d) => d.Entries.WithNos());
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class MapCollectionAttribute : Attribute
+{
+    /// <summary>ソースプロパティ名</summary>
+    public string Source { get; }
+    
+    /// <summary>ターゲットプロパティ名</summary>
+    public string Target { get; }
+    
+    /// <summary>子要素のマッパーメソッド名（必須）</summary>
+    public string MapperMethod { get; set; }
+    
+    public MapCollectionAttribute(string source, string target) { ... }
+}
 ```
 
-MapperLibraryでの想定実装：
+### 15.3 使用例
 
 ```csharp
-// 案1: 自動検出（同一クラス内にアイテムマッパーがあれば自動使用）
-internal static partial class ObjectMapper
+public class SourceChild
 {
-    [Mapper]
-    public static partial void Map(Source source, Destination destination);  // Items自動マッピング
-    
-    [Mapper]
-    public static partial void Map(SourceItem source, DestItem destination);  // アイテムのマッパー
+    public int Value { get; set; }
 }
 
-// 案2: 明示的指定
+public class Source
+{
+    public SourceChild[] Children { get; set; }
+}
+
+public class DestinationChild
+{
+    public int Value { get; set; }
+}
+
+public class Destination
+{
+    public List<DestinationChild> Children { get; set; }
+}
+
+internal static partial class ObjectMapper
+{
+    // 1. 子要素のマッパーを定義（必須）
+    [Mapper]
+    public static partial DestinationChild MapChild(SourceChild source);
+    
+    // 2. コレクションマッピングを指定
+    [Mapper]
+    [MapCollection(nameof(Source.Children), nameof(Destination.Children), MapperMethod = nameof(MapChild))]
+    public static partial void Map(Source source, Destination destination);
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial DestinationChild MapChild(SourceChild source)
+{
+    var destination = new DestinationChild();
+    destination.Value = source.Value;
+    return destination;
+}
+
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Children = source.Children is not null 
+        ? source.Children.Select(x => MapChild(x)).ToList() 
+        : default!;
+}
+```
+
+### 15.4 コレクション型の自動変換
+
+| ソース型 | ターゲット型 | 生成コード |
+|----------|-------------|-----------|
+| `T[]` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
+| `T[]` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
+| `List<T>` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
+| `List<T>` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
+| `IEnumerable<T>` | `T[]` | `.Select(x => MapChild(x)).ToArray()` |
+| `IEnumerable<T>` | `List<T>` | `.Select(x => MapChild(x)).ToList()` |
+
+### 15.5 voidマッパーの場合
+
+マッパーメソッドが `void` パターンの場合も対応：
+
+```csharp
 [Mapper]
-[MapCollection(nameof(Destination.Items), ItemMapper = nameof(MapItem))]
+public static partial void MapChild(SourceChild source, DestinationChild destination);
+
+[Mapper]
+[MapCollection(nameof(Source.Children), nameof(Destination.Children), MapperMethod = nameof(MapChild))]
 public static partial void Map(Source source, Destination destination);
 ```
 
-### 15.2 カスタム型変換器（グローバル）
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Children = source.Children is not null 
+        ? source.Children.Select(__item => { 
+            var __dest = new DestinationChild(); 
+            MapChild(__item, __dest); 
+            return __dest; 
+          }).ToList() 
+        : default!;
+}
+```
+
+### 15.6 nullハンドリング
+
+ソースコレクションがnullの場合、ターゲットには`default!`が設定されます（終端要素として扱い、通常のプロパティマッピングと同じルール）。
+
+## 16. 子オブジェクトマッピング（MapNested）
+
+#### 設計方針
+
+### 16.1 設計方針
+
+- **明示的なマッパーメソッド指定が必須**: コレクションと同様
+- **voidマッパーとreturnマッパー両方対応**: 子オブジェクトマッパーはどちらのパターンでも使用可能
+- **MapProperty / MapFrom との使い分け**:
+  - `[MapProperty]`: 単純なプロパティコピー、またはドット記法によるネスト展開
+  - `[MapFrom]`: 静的メソッドでソース全体から値を計算
+  - `[MapNested]`: 別のマッパーメソッドを呼び出して子オブジェクトを変換
+
+### 16.2 属性
+
+```csharp
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class MapNestedAttribute : Attribute
+{
+    /// <summary>ソースプロパティ名</summary>
+    public string Source { get; }
+    
+    /// <summary>ターゲットプロパティ名</summary>
+    public string Target { get; }
+    
+    /// <summary>子オブジェクトのマッパーメソッド名（必須）</summary>
+    public string MapperMethod { get; set; }
+    
+    public MapNestedAttribute(string source, string target) { ... }
+}
+```
+
+### 16.3 使用例
+
+```csharp
+public class SourceChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class Source
+{
+    public SourceChild? Child { get; set; }
+    public SourceChild[]? Children { get; set; }
+}
+
+public class DestinationChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class Destination
+{
+    public DestinationChild? Child { get; set; }
+    public List<DestinationChild>? Children { get; set; }
+}
+
+internal static partial class ObjectMapper
+{
+    // 子要素のマッパーを定義
+    [Mapper]
+    public static partial DestinationChild MapChild(SourceChild source);
+    
+    // 子オブジェクトとコレクション両方を指定
+    [Mapper]
+    [MapNested(nameof(Source.Child), nameof(Destination.Child), MapperMethod = nameof(MapChild))]
+    [MapCollection(nameof(Source.Children), nameof(Destination.Children), MapperMethod = nameof(MapChild))]
+    public static partial void Map(Source source, Destination destination);
+}
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    // 子オブジェクトマッピング
+    destination.Child = source.Child is not null ? MapChild(source.Child!) : default!;
+    
+    // コレクションマッピング
+    destination.Children = source.Children is not null 
+        ? source.Children.Select(x => MapChild(x)).ToList() 
+        : default!;
+}
+```
+
+### 16.4 voidマッパーの場合
+
+```csharp
+[Mapper]
+public static partial void MapChild(SourceChild source, DestinationChild destination);
+
+[Mapper]
+[MapNested(nameof(Source.Child), nameof(Destination.Child), MapperMethod = nameof(MapChild))]
+public static partial void Map(Source source, Destination destination);
+```
+
+**生成コード:**
+
+```csharp
+public static partial void Map(Source source, Destination destination)
+{
+    destination.Child = source.Child is not null 
+        ? ((global::System.Func<DestinationChild>)(() => { 
+            var __nested = new DestinationChild(); 
+            MapChild(source.Child!, __nested); 
+            return __nested; 
+          }))() 
+        : default!;
+}
+```
+
+### 16.5 nullハンドリング
+
+ソースの子オブジェクトがnullの場合、ターゲットには`default!`が設定されます（終端要素として扱い、通常のプロパティマッピングと同じルール）。
+
+## 17. 属性の使い分けまとめ
+
+| 属性 | 用途 | 例 |
+|------|------|-----|
+| `[MapProperty("A", "B")]` | 単純なプロパティコピー | `d.B = s.A` |
+| `[MapProperty("A.X", "B")]` | ソースネストからフラットへ | `d.B = s.A.X` |
+| `[MapProperty("A", "B.X")]` | フラットからターゲットネストへ | `d.B.X = s.A` |
+| `[MapFrom("B", nameof(Method))]` | 静的メソッドでソース全体から計算 | `d.B = Method(s)` |
+| `[MapFromMethod("B", "GetX")]` | ソースのメソッド呼び出し | `d.B = s.GetX()` |
+| `[MapNested("A", "B", ...)]` | 別マッパーで子オブジェクト変換 | `d.B = MapChild(s.A)` |
+| `[MapCollection("A", "B", ...)]` | 別マッパーでコレクション変換 | `d.B = s.A.Select(x => MapChild(x)).ToList()` |
+
+## 18. 未実装機能の参考実装案
+
+### 18.1 カスタム型変換器（グローバル）
 
 AutoMapperでの使用例：
 
@@ -958,23 +1177,11 @@ public static class Converters
 public static partial void Map(Source source, Destination destination);
 ```
 
-### 15.3 AfterMap内でのコレクション/子マッピング
+### 18.2 AfterMap内でのコレクション/子マッピング（代替手段）
 
-AutoMapperでの使用例：
-
-```csharp
-// AutoMapper: AfterMap内でIMapperContextを使用
-.AfterMap((s, d, c) => 
-    d.Apply(s.Entries.Select(x => 
-        c.Mapper.Map<EditVoltageDialog.FormEntry, UpdateGatewayVoltageParameter.VoltageEntry>(x)
-    ).ToArray())
-);
-```
-
-MapperLibraryでの想定実装：
+専用属性を使用せず、AfterMapで対応する方法も引き続きサポートされます：
 
 ```csharp
-// カスタムパラメーターとして明示的にマッパーを渡す
 [Mapper]
 [AfterMap(nameof(OnAfterMap))]
 public static partial void Map(Source source, Destination destination);
@@ -982,12 +1189,15 @@ public static partial void Map(Source source, Destination destination);
 private static void OnAfterMap(Source source, Destination destination)
 {
     // 子要素のマッピングは明示的に呼び出す
-    destination.Entries = source.Entries
-        .Select(x => MapEntry(x))
-        .ToArray();
+    if (source.Children is not null)
+    {
+        destination.Children = source.Children
+            .Select(x => MapChild(x))
+            .ToList();
+    }
 }
 
 [Mapper]
-private static partial EntryDest MapEntry(EntrySource source);
+private static partial DestinationChild MapChild(SourceChild source);
 ```
 

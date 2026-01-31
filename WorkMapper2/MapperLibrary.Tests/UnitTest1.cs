@@ -326,6 +326,80 @@ public class AutoMapDestination
     public int Value { get; set; }
 }
 
+// MapCollection test models
+public class CollectionSourceChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class CollectionSource
+{
+    public CollectionSourceChild[]? Children { get; set; }
+    public List<CollectionSourceChild>? Items { get; set; }
+    public int DirectValue { get; set; }
+}
+
+public class CollectionDestinationChild
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class CollectionDestination
+{
+    public List<CollectionDestinationChild>? Children { get; set; }
+    public CollectionDestinationChild[]? Items { get; set; }
+    public int DirectValue { get; set; }
+}
+
+// MapNested test models
+public class NestedObjectSourceChild
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+}
+
+public class NestedObjectSource
+{
+    public NestedObjectSourceChild? Child { get; set; }
+    public int DirectValue { get; set; }
+}
+
+public class NestedObjectDestinationChild
+{
+    public int Value { get; set; }
+    public string Text { get; set; } = string.Empty;
+}
+
+public class NestedObjectDestination
+{
+    public NestedObjectDestinationChild? Child { get; set; }
+    public int DirectValue { get; set; }
+}
+
+// MapCollection with void mapper test models
+public class VoidMapperSourceChild
+{
+    public int Id { get; set; }
+}
+
+public class VoidMapperSource
+{
+    public VoidMapperSourceChild[]? Children { get; set; }
+}
+
+public class VoidMapperDestinationChild
+{
+    public int Id { get; set; }
+    public string Extra { get; set; } = string.Empty;
+}
+
+public class VoidMapperDestination
+{
+    public List<VoidMapperDestinationChild>? Children { get; set; }
+}
+
 #endregion
 
 #region Mappers
@@ -581,6 +655,52 @@ internal static partial class TestMappers
     [MapProperty(nameof(AutoMapSource.Id), nameof(AutoMapDestination.Id))]
     [MapProperty(nameof(AutoMapSource.Name), nameof(AutoMapDestination.Name))]
     public static partial AutoMapDestination MapExplicitToNew(AutoMapSource source);
+
+    // MapCollection: child mapper (return value pattern)
+    [Mapper]
+    public static partial CollectionDestinationChild MapCollectionChild(CollectionSourceChild source);
+
+    // MapCollection: array to List and List to array
+    [Mapper]
+    [MapCollection(nameof(CollectionSource.Children), nameof(CollectionDestination.Children), MapperMethod = nameof(MapCollectionChild))]
+    [MapCollection(nameof(CollectionSource.Items), nameof(CollectionDestination.Items), MapperMethod = nameof(MapCollectionChild))]
+    public static partial void Map(CollectionSource source, CollectionDestination destination);
+
+    // MapCollection: with return type
+    [Mapper]
+    [MapCollection(nameof(CollectionSource.Children), nameof(CollectionDestination.Children), MapperMethod = nameof(MapCollectionChild))]
+    [MapIgnore(nameof(CollectionDestination.Items))]  // Ignore Items to test single collection mapping
+    public static partial CollectionDestination MapToNew(CollectionSource source);
+
+    // MapNested: child mapper (return value pattern)
+    [Mapper]
+    public static partial NestedObjectDestinationChild MapNestedChild(NestedObjectSourceChild source);
+
+    // MapNested: basic usage
+    [Mapper]
+    [MapNested(nameof(NestedObjectSource.Child), nameof(NestedObjectDestination.Child), MapperMethod = nameof(MapNestedChild))]
+    public static partial void Map(NestedObjectSource source, NestedObjectDestination destination);
+
+    // MapNested: with return type
+    [Mapper]
+    [MapNested(nameof(NestedObjectSource.Child), nameof(NestedObjectDestination.Child), MapperMethod = nameof(MapNestedChild))]
+    public static partial NestedObjectDestination MapToNew(NestedObjectSource source);
+
+    // MapCollection with void mapper
+    [Mapper]
+    public static partial void MapVoidChild(VoidMapperSourceChild source, VoidMapperDestinationChild destination);
+
+    [Mapper]
+    [MapCollection(nameof(VoidMapperSource.Children), nameof(VoidMapperDestination.Children), MapperMethod = nameof(MapVoidChild))]
+    public static partial void Map(VoidMapperSource source, VoidMapperDestination destination);
+
+    // MapNested with void mapper
+    [Mapper]
+    public static partial void MapNestedChildVoid(NestedObjectSourceChild source, NestedObjectDestinationChild destination);
+
+    [Mapper]
+    [MapNested(nameof(NestedObjectSource.Child), nameof(NestedObjectDestination.Child), MapperMethod = nameof(MapNestedChildVoid))]
+    public static partial void MapWithVoidNested(NestedObjectSource source, NestedObjectDestination destination);
 }
 
 // Custom context for testing
@@ -1585,6 +1705,221 @@ public class AutoMapFalseTests
         Assert.Equal(10, destination.Id);  // Explicitly mapped
         Assert.Equal("Explicit", destination.Name);  // Explicitly mapped
         Assert.Equal(0, destination.Value);  // Not mapped
+    }
+}
+
+// MapCollection tests
+public class MapCollectionTests
+{
+    [Fact]
+    public void MapCollection_ArrayToList_MapsElements()
+    {
+        // Arrange
+        var source = new CollectionSource
+        {
+            Children =
+            [
+                new CollectionSourceChild { Id = 1, Name = "Child1" },
+                new CollectionSourceChild { Id = 2, Name = "Child2" }
+            ],
+            DirectValue = 100
+        };
+        var destination = new CollectionDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Children);
+        Assert.Equal(2, destination.Children.Count);
+        Assert.Equal(1, destination.Children[0].Id);
+        Assert.Equal("Child1", destination.Children[0].Name);
+        Assert.Equal(2, destination.Children[1].Id);
+        Assert.Equal("Child2", destination.Children[1].Name);
+        Assert.Equal(100, destination.DirectValue);
+    }
+
+    [Fact]
+    public void MapCollection_ListToArray_MapsElements()
+    {
+        // Arrange
+        var source = new CollectionSource
+        {
+            Items =
+            [
+                new CollectionSourceChild { Id = 10, Name = "Item1" },
+                new CollectionSourceChild { Id = 20, Name = "Item2" },
+                new CollectionSourceChild { Id = 30, Name = "Item3" }
+            ]
+        };
+        var destination = new CollectionDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Items);
+        Assert.Equal(3, destination.Items.Length);
+        Assert.Equal(10, destination.Items[0].Id);
+        Assert.Equal(20, destination.Items[1].Id);
+        Assert.Equal(30, destination.Items[2].Id);
+    }
+
+    [Fact]
+    public void MapCollection_NullSource_SetsDefault()
+    {
+        // Arrange
+        var source = new CollectionSource
+        {
+            Children = null,
+            DirectValue = 50
+        };
+        var destination = new CollectionDestination
+        {
+            Children = [new CollectionDestinationChild { Id = 999 }]
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Null(destination.Children);  // default! assigns null
+        Assert.Equal(50, destination.DirectValue);
+    }
+
+    [Fact]
+    public void MapCollection_WithReturnType_ReturnsNewObject()
+    {
+        // Arrange
+        var source = new CollectionSource
+        {
+            Children =
+            [
+                new CollectionSourceChild { Id = 5, Name = "Test" }
+            ]
+        };
+
+        // Act
+        var destination = TestMappers.MapToNew(source);
+
+        // Assert
+        Assert.NotNull(destination);
+        Assert.NotNull(destination.Children);
+        Assert.Single(destination.Children);
+        Assert.Equal(5, destination.Children[0].Id);
+    }
+
+    [Fact]
+    public void MapCollection_WithVoidMapper_MapsElements()
+    {
+        // Arrange
+        var source = new VoidMapperSource
+        {
+            Children =
+            [
+                new VoidMapperSourceChild { Id = 100 },
+                new VoidMapperSourceChild { Id = 200 }
+            ]
+        };
+        var destination = new VoidMapperDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Children);
+        Assert.Equal(2, destination.Children.Count);
+        Assert.Equal(100, destination.Children[0].Id);
+        Assert.Equal(200, destination.Children[1].Id);
+    }
+}
+
+// MapNested tests
+public class MapNestedTests
+{
+    [Fact]
+    public void MapNested_WithValue_MapsNestedObject()
+    {
+        // Arrange
+        var source = new NestedObjectSource
+        {
+            Child = new NestedObjectSourceChild { Value = 42, Text = "Hello" },
+            DirectValue = 100
+        };
+        var destination = new NestedObjectDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Child);
+        Assert.Equal(42, destination.Child.Value);
+        Assert.Equal("Hello", destination.Child.Text);
+        Assert.Equal(100, destination.DirectValue);
+    }
+
+    [Fact]
+    public void MapNested_NullSource_SetsDefault()
+    {
+        // Arrange
+        var source = new NestedObjectSource
+        {
+            Child = null,
+            DirectValue = 50
+        };
+        var destination = new NestedObjectDestination
+        {
+            Child = new NestedObjectDestinationChild { Value = 999 }
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Null(destination.Child);  // default! assigns null
+        Assert.Equal(50, destination.DirectValue);
+    }
+
+    [Fact]
+    public void MapNested_WithReturnType_ReturnsNewObject()
+    {
+        // Arrange
+        var source = new NestedObjectSource
+        {
+            Child = new NestedObjectSourceChild { Value = 123, Text = "Test" },
+            DirectValue = 456
+        };
+
+        // Act
+        var destination = TestMappers.MapToNew(source);
+
+        // Assert
+        Assert.NotNull(destination);
+        Assert.NotNull(destination.Child);
+        Assert.Equal(123, destination.Child.Value);
+        Assert.Equal("Test", destination.Child.Text);
+        Assert.Equal(456, destination.DirectValue);
+    }
+
+    [Fact]
+    public void MapNested_WithVoidMapper_MapsNestedObject()
+    {
+        // Arrange
+        var source = new NestedObjectSource
+        {
+            Child = new NestedObjectSourceChild { Value = 77, Text = "VoidTest" },
+            DirectValue = 88
+        };
+        var destination = new NestedObjectDestination();
+
+        // Act
+        TestMappers.MapWithVoidNested(source, destination);
+
+        // Assert
+        Assert.NotNull(destination.Child);
+        Assert.Equal(77, destination.Child.Value);
+        Assert.Equal("VoidTest", destination.Child.Text);
+        Assert.Equal(88, destination.DirectValue);
     }
 }
 

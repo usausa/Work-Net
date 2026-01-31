@@ -99,6 +99,23 @@ internal static class Diagnostics
         category: "MapperLibrary",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidMapCollectionMapperMethod { get; } = new(
+        id: "ML0013",
+        title: "Invalid MapCollection mapper method",
+        messageFormat: "MapCollection mapper method not found or signature does not match. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static DiagnosticDescriptor InvalidMapNestedMapperMethod { get; } = new(
+        id: "ML0014",
+        title: "Invalid MapNested mapper method",
+        messageFormat: "MapNested mapper method not found or signature does not match. [{0}]",
+        category: "MapperLibrary",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }
+
 
 

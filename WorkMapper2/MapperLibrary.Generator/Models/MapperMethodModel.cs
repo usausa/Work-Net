@@ -102,6 +102,16 @@ internal sealed class MapperMethodModel : IEquatable<MapperMethodModel>
     public List<MapFromMethodModel> MapFromMethodMappings { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the MapCollection mappings (collection properties using a mapper method).
+    /// </summary>
+    public List<MapCollectionModel> MapCollectionMappings { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the MapNested mappings (nested object properties using a mapper method).
+    /// </summary>
+    public List<MapNestedModel> MapNestedMappings { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the method name to call before mapping.
     /// </summary>
     public string? BeforeMapMethod { get; set; }

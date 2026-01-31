@@ -27,6 +27,8 @@ public sealed class MapperGenerator : IIncrementalGenerator
     private const string MapPropertyConditionAttributeName = "MapperLibrary.MapPropertyConditionAttribute";
     private const string MapFromAttributeName = "MapperLibrary.MapFromAttribute";
     private const string MapFromMethodAttributeName = "MapperLibrary.MapFromMethodAttribute";
+    private const string MapCollectionAttributeName = "MapperLibrary.MapCollectionAttribute";
+    private const string MapNestedAttributeName = "MapperLibrary.MapNestedAttribute";
 
     // ------------------------------------------------------------
     // Initialize
@@ -204,6 +206,20 @@ public sealed class MapperGenerator : IIncrementalGenerator
         if (mapFromMethodError is not null)
         {
             return Results.Error<MapperMethodModel>(mapFromMethodError);
+        }
+
+        // Validate and build MapCollection mappings
+        var mapCollectionError = ValidateAndBuildMapCollectionMappings(symbol, model, sourceType, destinationType, syntax);
+        if (mapCollectionError is not null)
+        {
+            return Results.Error<MapperMethodModel>(mapCollectionError);
+        }
+
+        // Validate and build MapNested mappings
+        var mapNestedError = ValidateAndBuildMapNestedMappings(symbol, model, sourceType, destinationType, syntax);
+        if (mapNestedError is not null)
+        {
+            return Results.Error<MapperMethodModel>(mapNestedError);
         }
 
         return Results.Success(model);
@@ -681,6 +697,62 @@ public sealed class MapperGenerator : IIncrementalGenerator
                     model.IgnoredProperties.Add(targetName);
                 }
             }
+            else if (attributeName == MapCollectionAttributeName)
+            {
+                // MapCollection(source, target) with MapperMethod property
+                if (attribute.ConstructorArguments.Length >= 2)
+                {
+                    var sourceName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    var targetName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+                    var mapperMethod = string.Empty;
+
+                    foreach (var namedArg in attribute.NamedArguments)
+                    {
+                        if (namedArg.Key == "MapperMethod" && namedArg.Value.Value is string method)
+                        {
+                            mapperMethod = method;
+                        }
+                    }
+
+                    model.MapCollectionMappings.Add(new MapCollectionModel
+                    {
+                        SourceName = sourceName,
+                        TargetName = targetName,
+                        MapperMethod = mapperMethod
+                    });
+
+                    // Also add to ignored properties so normal mapping doesn't override
+                    model.IgnoredProperties.Add(targetName);
+                }
+            }
+            else if (attributeName == MapNestedAttributeName)
+            {
+                // MapNested(source, target) with MapperMethod property
+                if (attribute.ConstructorArguments.Length >= 2)
+                {
+                    var sourceName = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
+                    var targetName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
+                    var mapperMethod = string.Empty;
+
+                    foreach (var namedArg in attribute.NamedArguments)
+                    {
+                        if (namedArg.Key == "MapperMethod" && namedArg.Value.Value is string method)
+                        {
+                            mapperMethod = method;
+                        }
+                    }
+
+                    model.MapNestedMappings.Add(new MapNestedModel
+                    {
+                        SourceName = sourceName,
+                        TargetName = targetName,
+                        MapperMethod = mapperMethod
+                    });
+
+                    // Also add to ignored properties so normal mapping doesn't override
+                    model.IgnoredProperties.Add(targetName);
+                }
+            }
         }
 
         // Associate property conditions with mappings from MapProperty attributes
@@ -972,6 +1044,210 @@ public sealed class MapperGenerator : IIncrementalGenerator
             }
 
             mapFromMethod.MethodReturnType = returnType;
+        }
+
+        return null;
+    }
+
+    private static DiagnosticInfo? ValidateAndBuildMapCollectionMappings(
+        IMethodSymbol mapperMethod,
+        MapperMethodModel model,
+        ITypeSymbol sourceType,
+        ITypeSymbol destinationType,
+        MethodDeclarationSyntax syntax)
+    {
+        var containingType = mapperMethod.ContainingType;
+        var sourceProperties = GetAllProperties(sourceType);
+        var destinationProperties = GetAllProperties(destinationType);
+
+        foreach (var mapCollection in model.MapCollectionMappings)
+        {
+            // Find source property
+            var sourceProp = sourceProperties.FirstOrDefault(p => p.Name == mapCollection.SourceName);
+            if (sourceProp is null)
+            {
+                continue;
+            }
+
+            // Find target property
+            var destProp = destinationProperties.FirstOrDefault(p => p.Name == mapCollection.TargetName);
+            if (destProp is null)
+            {
+                continue;
+            }
+
+            // Get element types
+            var sourceElementType = GetCollectionElementType(sourceProp.Type);
+            var targetElementType = GetCollectionElementType(destProp.Type);
+
+            if (sourceElementType is null || targetElementType is null)
+            {
+                continue;
+            }
+
+            mapCollection.SourceType = sourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapCollection.SourceElementType = sourceElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapCollection.TargetType = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapCollection.TargetElementType = targetElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapCollection.IsSourceNullable = IsNullableSymbol(sourceProp.Type);
+            mapCollection.TargetIsArray = destProp.Type is IArrayTypeSymbol;
+
+            // Find mapper method
+            var mapperMethodResult = FindMapperMethod(containingType, mapCollection.MapperMethod, sourceElementType, targetElementType);
+            if (mapperMethodResult is null)
+            {
+                return new DiagnosticInfo(
+                    Diagnostics.InvalidMapCollectionMapperMethod,
+                    syntax.GetLocation(),
+                    $"{mapCollection.MapperMethod}, {mapCollection.SourceName} -> {mapCollection.TargetName}");
+            }
+
+            mapCollection.MapperReturnsValue = mapperMethodResult.ReturnsValue;
+        }
+
+        return null;
+    }
+
+    private static DiagnosticInfo? ValidateAndBuildMapNestedMappings(
+        IMethodSymbol mapperMethod,
+        MapperMethodModel model,
+        ITypeSymbol sourceType,
+        ITypeSymbol destinationType,
+        MethodDeclarationSyntax syntax)
+    {
+        var containingType = mapperMethod.ContainingType;
+        var sourceProperties = GetAllProperties(sourceType);
+        var destinationProperties = GetAllProperties(destinationType);
+
+        foreach (var mapNested in model.MapNestedMappings)
+        {
+            // Find source property
+            var sourceProp = sourceProperties.FirstOrDefault(p => p.Name == mapNested.SourceName);
+            if (sourceProp is null)
+            {
+                continue;
+            }
+
+            // Find target property
+            var destProp = destinationProperties.FirstOrDefault(p => p.Name == mapNested.TargetName);
+            if (destProp is null)
+            {
+                continue;
+            }
+
+            mapNested.SourceType = sourceProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapNested.TargetType = destProp.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            mapNested.IsSourceNullable = IsNullableSymbol(sourceProp.Type);
+
+            // Get the underlying type for nullable reference types
+            var sourceUnderlyingType = sourceProp.Type;
+            if (sourceProp.Type.NullableAnnotation == NullableAnnotation.Annotated &&
+                sourceProp.Type is INamedTypeSymbol namedType &&
+                !namedType.IsValueType)
+            {
+                sourceUnderlyingType = namedType.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+            }
+
+            var targetUnderlyingType = destProp.Type;
+            if (destProp.Type.NullableAnnotation == NullableAnnotation.Annotated &&
+                destProp.Type is INamedTypeSymbol namedDestType &&
+                !namedDestType.IsValueType)
+            {
+                targetUnderlyingType = namedDestType.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+            }
+
+            // Find mapper method
+            var mapperMethodResult = FindMapperMethod(containingType, mapNested.MapperMethod, sourceUnderlyingType, targetUnderlyingType);
+            if (mapperMethodResult is null)
+            {
+                return new DiagnosticInfo(
+                    Diagnostics.InvalidMapNestedMapperMethod,
+                    syntax.GetLocation(),
+                    $"{mapNested.MapperMethod}, {mapNested.SourceName} -> {mapNested.TargetName}");
+            }
+
+            mapNested.MapperReturnsValue = mapperMethodResult.ReturnsValue;
+        }
+
+        return null;
+    }
+
+    private sealed class MapperMethodInfo
+    {
+        public bool ReturnsValue { get; set; }
+    }
+
+    private static MapperMethodInfo? FindMapperMethod(INamedTypeSymbol containingType, string methodName, ITypeSymbol sourceElementType, ITypeSymbol targetElementType)
+    {
+        var sourceTypeName = sourceElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var targetTypeName = targetElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        var methods = containingType.GetMembers(methodName)
+            .OfType<IMethodSymbol>()
+            .Where(m => m.IsStatic)
+            .ToList();
+
+        foreach (var method in methods)
+        {
+            // For partial methods, we need to check the definition
+            var methodToCheck = method.PartialDefinitionPart ?? method;
+
+            // Check for return value pattern: TargetType Method(SourceType source)
+            if (methodToCheck.Parameters.Length == 1 &&
+                !methodToCheck.ReturnsVoid)
+            {
+                var paramType = methodToCheck.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var returnType = methodToCheck.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                if (paramType == sourceTypeName && returnType == targetTypeName)
+                {
+                    return new MapperMethodInfo { ReturnsValue = true };
+                }
+            }
+
+            // Check for void pattern: void Method(SourceType source, TargetType destination)
+            if (methodToCheck.Parameters.Length == 2 &&
+                methodToCheck.ReturnsVoid)
+            {
+                var sourceParamType = methodToCheck.Parameters[0].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                var destParamType = methodToCheck.Parameters[1].Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                if (sourceParamType == sourceTypeName && destParamType == targetTypeName)
+                {
+                    return new MapperMethodInfo { ReturnsValue = false };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static ITypeSymbol? GetCollectionElementType(ITypeSymbol collectionType)
+    {
+        // Handle array types
+        if (collectionType is IArrayTypeSymbol arrayType)
+        {
+            return arrayType.ElementType;
+        }
+
+        // Handle generic types like List<T>, IEnumerable<T>, ICollection<T>, etc.
+        if (collectionType is INamedTypeSymbol namedType && namedType.IsGenericType)
+        {
+            // Check if it implements IEnumerable<T>
+            foreach (var iface in namedType.AllInterfaces)
+            {
+                if (iface.IsGenericType &&
+                    iface.ConstructedFrom.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>")
+                {
+                    return iface.TypeArguments[0];
+                }
+            }
+
+            // Direct generic type like List<T>
+            if (namedType.TypeArguments.Length == 1)
+            {
+                return namedType.TypeArguments[0];
+            }
         }
 
         return null;
@@ -1518,6 +1794,105 @@ public sealed class MapperGenerator : IIncrementalGenerator
             builder.Indent();
             builder.Append(destVarName).Append(".").Append(mapFromMethod.TargetName).Append(" = ");
             builder.Append(method.SourceParameterName).Append(".").Append(mapFromMethod.SourceMethod).Append("();").NewLine();
+        }
+
+        // Generate MapNested mappings (call mapper method for nested objects)
+        foreach (var mapNested in method.MapNestedMappings)
+        {
+            var sourceAccess = $"{method.SourceParameterName}.{mapNested.SourceName}";
+
+            builder.Indent();
+            builder.Append(destVarName).Append(".").Append(mapNested.TargetName).Append(" = ");
+
+            if (mapNested.IsSourceNullable)
+            {
+                // source.Child is not null ? MapChild(source.Child) : default!
+                builder.Append(sourceAccess).Append(" is not null ? ");
+            }
+
+            if (mapNested.MapperReturnsValue)
+            {
+                // Return value pattern: MapChild(source.Child)
+                builder.Append(mapNested.MapperMethod).Append("(").Append(sourceAccess);
+                if (mapNested.IsSourceNullable)
+                {
+                    builder.Append("!");
+                }
+                builder.Append(")");
+            }
+            else
+            {
+                // Void pattern: create new instance, call mapper, return instance
+                // Using inline lambda for simplicity
+                builder.Append("((global::System.Func<").Append(mapNested.TargetType).Append(">)(() => { var __nested = new ").Append(mapNested.TargetType).Append("(); ");
+                builder.Append(mapNested.MapperMethod).Append("(").Append(sourceAccess);
+                if (mapNested.IsSourceNullable)
+                {
+                    builder.Append("!");
+                }
+                builder.Append(", __nested); return __nested; }))()");
+            }
+
+            if (mapNested.IsSourceNullable)
+            {
+                builder.Append(" : default!");
+            }
+
+            builder.Append(";").NewLine();
+        }
+
+        // Generate MapCollection mappings (call mapper method for collection elements)
+        foreach (var mapCollection in method.MapCollectionMappings)
+        {
+            var sourceAccess = $"{method.SourceParameterName}.{mapCollection.SourceName}";
+
+            builder.Indent();
+            builder.Append(destVarName).Append(".").Append(mapCollection.TargetName).Append(" = ");
+
+            if (mapCollection.IsSourceNullable)
+            {
+                // source.Children is not null ? ... : default!
+                builder.Append(sourceAccess).Append(" is not null ? ");
+            }
+
+            // Start the Select expression
+            builder.Append(sourceAccess);
+            if (mapCollection.IsSourceNullable)
+            {
+                builder.Append("!");
+            }
+            builder.Append(".Select(__item => ");
+
+            if (mapCollection.MapperReturnsValue)
+            {
+                // Return value pattern: MapChild(__item)
+                builder.Append(mapCollection.MapperMethod).Append("(__item)");
+            }
+            else
+            {
+                // Void pattern: create new instance, call mapper, return instance
+                builder.Append("{ var __dest = new ").Append(mapCollection.TargetElementType).Append("(); ");
+                builder.Append(mapCollection.MapperMethod).Append("(__item, __dest); return __dest; }");
+            }
+
+            builder.Append(")");
+
+            // Add .ToArray() or .ToList() based on target type
+            if (mapCollection.TargetIsArray)
+            {
+                builder.Append(".ToArray()");
+            }
+            else
+            {
+                builder.Append(".ToList()");
+            }
+
+            if (mapCollection.IsSourceNullable)
+            {
+                builder.Append(" : default!");
+            }
+
+            builder.Append(";").NewLine();
         }
 
         // Call AfterMap if specified
