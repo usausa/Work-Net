@@ -159,6 +159,8 @@ public class FlatDestination
 }
 
 
+
+
 // Deep nested test models
 public class DeepNestedChild
 {
@@ -178,6 +180,31 @@ public class DeepNestedDestination
 public class DeepSource
 {
     public int DeepValue { get; set; }
+}
+
+// Deep nested source test models (for flatten from deep nested source)
+public class DeepSourceInner
+{
+    public int Value { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public class DeepSourceOuter
+{
+    public DeepSourceInner? Inner { get; set; }
+}
+
+public class DeepNestedSource
+{
+    public DeepSourceOuter? Outer { get; set; }
+    public int DirectValue { get; set; }
+}
+
+public class DeepFlatDestination
+{
+    public int OuterInnerValue { get; set; }
+    public string OuterInnerName { get; set; } = string.Empty;
+    public int DirectValue { get; set; }
 }
 
 // Null handling test models - Nested source with nullable child
@@ -248,25 +275,26 @@ internal static partial class TestMappers
     [Mapper]
     public static partial void Map(BasicSource source, BasicDestination destination);
 
+
     // Basic mapping with return type
     [Mapper]
     public static partial BasicDestination MapToNew(BasicSource source);
 
     // Different property names mapping
     [Mapper]
-    [MapProperty("SourceId", "DestId")]
-    [MapProperty("SourceName", "DestName")]
+    [MapProperty(nameof(DifferentPropertySource.SourceId), nameof(DifferentPropertyDestination.DestId))]
+    [MapProperty(nameof(DifferentPropertySource.SourceName), nameof(DifferentPropertyDestination.DestName))]
     public static partial void Map(DifferentPropertySource source, DifferentPropertyDestination destination);
 
     // Different property names mapping with return type
     [Mapper]
-    [MapProperty("SourceId", "DestId")]
-    [MapProperty("SourceName", "DestName")]
+    [MapProperty(nameof(DifferentPropertySource.SourceId), nameof(DifferentPropertyDestination.DestId))]
+    [MapProperty(nameof(DifferentPropertySource.SourceName), nameof(DifferentPropertyDestination.DestName))]
     public static partial DifferentPropertyDestination MapToNew(DifferentPropertySource source);
 
     // Ignore property mapping
     [Mapper]
-    [MapIgnore("Secret")]
+    [MapIgnore(nameof(IgnoreDestination.Secret))]
     public static partial void Map(IgnoreSource source, IgnoreDestination destination);
 
     // Type conversion mapping
@@ -275,9 +303,9 @@ internal static partial class TestMappers
 
     // Phase 2: Constant value mapping
     [Mapper]
-    [MapConstant("Status", "Active")]
-    [MapConstant("Version", 1)]
-    [MapConstant("CreatedAt", null, Expression = "System.DateTime.Now")]
+    [MapConstant(nameof(ConstantDestination.Status), "Active")]
+    [MapConstant(nameof(ConstantDestination.Version), 1)]
+    [MapConstant(nameof(ConstantDestination.CreatedAt), null, Expression = "System.DateTime.Now")]
     public static partial void Map(ConstantSource source, ConstantDestination destination);
 
     // Phase 2: BeforeMap and AfterMap
@@ -306,38 +334,44 @@ internal static partial class TestMappers
 
     // Nested mapping: flat source to nested destination
     [Mapper]
-    [MapProperty("Value1", "Child1.Value")]
-    [MapProperty("Value2", "Child2.Value")]
-    [MapProperty("Value3", "Child3.Value")]
+    [MapProperty(nameof(FlatSource.Value1), $"{nameof(NestedDestination.Child1)}.{nameof(DestinationChild.Value)}")]
+    [MapProperty(nameof(FlatSource.Value2), $"{nameof(NestedDestination.Child2)}.{nameof(DestinationChild.Value)}")]
+    [MapProperty(nameof(FlatSource.Value3), $"{nameof(NestedDestination.Child3)}.{nameof(DestinationChild.Value)}")]
     public static partial void Map(FlatSource source, NestedDestination destination);
 
     // Nested mapping: flat source to nested destination with return type
     [Mapper]
-    [MapProperty("Value1", "Child1.Value")]
-    [MapProperty("Value2", "Child2.Value")]
-    [MapProperty("Value3", "Child3.Value")]
+    [MapProperty(nameof(FlatSource.Value1), $"{nameof(NestedDestination.Child1)}.{nameof(DestinationChild.Value)}")]
+    [MapProperty(nameof(FlatSource.Value2), $"{nameof(NestedDestination.Child2)}.{nameof(DestinationChild.Value)}")]
+    [MapProperty(nameof(FlatSource.Value3), $"{nameof(NestedDestination.Child3)}.{nameof(DestinationChild.Value)}")]
     public static partial NestedDestination MapToNew(FlatSource source);
 
     // Nested mapping: nested source to flat destination (flatten)
     [Mapper]
-    [MapProperty("Child.Id", "ChildId")]
-    [MapProperty("Child.Name", "ChildName")]
+    [MapProperty($"{nameof(NestedSource.Child)}.{nameof(NestedSourceChild.Id)}", nameof(FlatDestination.ChildId))]
+    [MapProperty($"{nameof(NestedSource.Child)}.{nameof(NestedSourceChild.Name)}", nameof(FlatDestination.ChildName))]
     public static partial void Map(NestedSource source, FlatDestination destination);
 
-    // Deep nested mapping
+    // Deep nested mapping: flat source to deep nested destination
     [Mapper]
-    [MapProperty("DeepValue", "Outer.Inner.Value")]
+    [MapProperty(nameof(DeepSource.DeepValue), $"{nameof(DeepNestedDestination.Outer)}.{nameof(DeepNestedParent.Inner)}.{nameof(DeepNestedChild.Value)}")]
     public static partial void Map(DeepSource source, DeepNestedDestination destination);
 
     // Deep nested mapping with return type
     [Mapper]
-    [MapProperty("DeepValue", "Outer.Inner.Value")]
+    [MapProperty(nameof(DeepSource.DeepValue), $"{nameof(DeepNestedDestination.Outer)}.{nameof(DeepNestedParent.Inner)}.{nameof(DeepNestedChild.Value)}")]
     public static partial DeepNestedDestination MapToNew(DeepSource source);
+
+    // Deep nested mapping: deep nested source to flat destination (multi-level flatten)
+    [Mapper]
+    [MapProperty($"{nameof(DeepNestedSource.Outer)}.{nameof(DeepSourceOuter.Inner)}.{nameof(DeepSourceInner.Value)}", nameof(DeepFlatDestination.OuterInnerValue))]
+    [MapProperty($"{nameof(DeepNestedSource.Outer)}.{nameof(DeepSourceOuter.Inner)}.{nameof(DeepSourceInner.Name)}", nameof(DeepFlatDestination.OuterInnerName))]
+    public static partial void Map(DeepNestedSource source, DeepFlatDestination destination);
 
     // Null handling: nested source to flat destination (with nullable source child)
     [Mapper]
-    [MapProperty("Child.Id", "ChildId")]
-    [MapProperty("Child.Name", "ChildName")]
+    [MapProperty($"{nameof(NullableNestedSource.Child)}.{nameof(NullableNestedSourceChild.Id)}", nameof(NullableNestedFlatDestination.ChildId))]
+    [MapProperty($"{nameof(NullableNestedSource.Child)}.{nameof(NullableNestedSourceChild.Name)}", nameof(NullableNestedFlatDestination.ChildName))]
     public static partial void Map(NullableNestedSource source, NullableNestedFlatDestination destination);
 
     // Null handling: simple nullable properties
@@ -694,6 +728,7 @@ public class NestedMappingTests
         Assert.Equal(12345, destination.Outer.Inner.Value);
     }
 
+
     [Fact]
     public void MapToNew_DeepNested_ReturnsDeepNestedObject()
     {
@@ -738,6 +773,84 @@ public class NestedMappingTests
         // Child2 and Child3 should be created
         Assert.NotNull(destination.Child2);
         Assert.NotNull(destination.Child3);
+    }
+
+    [Fact]
+    public void Map_DeepNestedSourceToFlat_FlattensMultipleLevels()
+    {
+        // Arrange
+        var source = new DeepNestedSource
+        {
+            Outer = new DeepSourceOuter
+            {
+                Inner = new DeepSourceInner
+                {
+                    Value = 12345,
+                    Name = "DeepName"
+                }
+            },
+            DirectValue = 100
+        };
+        var destination = new DeepFlatDestination();
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert
+        Assert.Equal(12345, destination.OuterInnerValue);
+        Assert.Equal("DeepName", destination.OuterInnerName);
+        Assert.Equal(100, destination.DirectValue);
+    }
+
+    [Fact]
+    public void Map_DeepNestedSourceWithNullOuter_SkipsNestedProperties()
+    {
+        // Arrange
+        var source = new DeepNestedSource
+        {
+            Outer = null,
+            DirectValue = 200
+        };
+        var destination = new DeepFlatDestination
+        {
+            OuterInnerValue = 999,
+            OuterInnerName = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - DirectValue should be copied, nested properties should be skipped
+        Assert.Equal(200, destination.DirectValue);
+        Assert.Equal(999, destination.OuterInnerValue);
+        Assert.Equal("Original", destination.OuterInnerName);
+    }
+
+    [Fact]
+    public void Map_DeepNestedSourceWithNullInner_SkipsNestedProperties()
+    {
+        // Arrange
+        var source = new DeepNestedSource
+        {
+            Outer = new DeepSourceOuter
+            {
+                Inner = null
+            },
+            DirectValue = 300
+        };
+        var destination = new DeepFlatDestination
+        {
+            OuterInnerValue = 888,
+            OuterInnerName = "Original"
+        };
+
+        // Act
+        TestMappers.Map(source, destination);
+
+        // Assert - DirectValue should be copied, nested properties should be skipped
+        Assert.Equal(300, destination.DirectValue);
+        Assert.Equal(888, destination.OuterInnerValue);
+        Assert.Equal("Original", destination.OuterInnerName);
     }
 }
 
