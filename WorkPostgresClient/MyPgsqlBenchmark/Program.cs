@@ -87,81 +87,81 @@ public class PostgresBenchmarks
         return count;
     }
 
-    [Benchmark(Description = "MyPgsql: SELECT all from data")]
-    public async Task<int> MyPgsql_SelectAllData()
-    {
-        await using var cmd = _myPgsqlConnection.CreateCommand();
-        cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
-        await using var reader = await cmd.ExecuteReaderAsync();
+    //[Benchmark(Description = "MyPgsql: SELECT all from data")]
+    //public async Task<int> MyPgsql_SelectAllData()
+    //{
+    //    await using var cmd = _myPgsqlConnection.CreateCommand();
+    //    cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
+    //    await using var reader = await cmd.ExecuteReaderAsync();
 
-        var count = 0;
-        while (await reader.ReadAsync())
-        {
-            var id = reader.GetInt32(0);
-            var name = reader.GetString(1);
-            var option = reader.IsDBNull(2) ? null : reader.GetString(2);
-            var flag = reader.GetBoolean(3);
-            var createAt = reader.GetDateTime(4);
-            count++;
-        }
-        return count;
-    }
+    //    var count = 0;
+    //    while (await reader.ReadAsync())
+    //    {
+    //        var id = reader.GetInt32(0);
+    //        var name = reader.GetString(1);
+    //        var option = reader.IsDBNull(2) ? null : reader.GetString(2);
+    //        var flag = reader.GetBoolean(3);
+    //        var createAt = reader.GetDateTime(4);
+    //        count++;
+    //    }
+    //    return count;
+    //}
 
-    [Benchmark(Description = "RawPgsql: SELECT all from data")]
-    public async Task<int> RawPgsql_SelectAllData()
-    {
-        await using var reader = await _rawPgsqlClient.ExecuteQueryAsync("SELECT id, name, option, flag, create_at FROM data");
+    //[Benchmark(Description = "RawPgsql: SELECT all from data")]
+    //public async Task<int> RawPgsql_SelectAllData()
+    //{
+    //    await using var reader = await _rawPgsqlClient.ExecuteQueryAsync("SELECT id, name, option, flag, create_at FROM data");
 
-        var count = 0;
-        while (await reader.ReadAsync())
-        {
-            var id = reader.GetInt32(0);
-            var name = reader.GetString(1);
-            var option = reader.GetStringOrNull(2);
-            var flag = reader.GetBoolean(3);
-            var createAt = reader.GetDateTime(4);
-            count++;
-        }
-        return count;
-    }
+    //    var count = 0;
+    //    while (await reader.ReadAsync())
+    //    {
+    //        var id = reader.GetInt32(0);
+    //        var name = reader.GetString(1);
+    //        var option = reader.GetStringOrNull(2);
+    //        var flag = reader.GetBoolean(3);
+    //        var createAt = reader.GetDateTime(4);
+    //        count++;
+    //    }
+    //    return count;
+    //}
 
-    [Benchmark(Description = "RawPgsql-Binary: SELECT all from data")]
-    public async Task<int> RawPgsqlBinary_SelectAllData()
-    {
-        await using var reader = await _rawPgsqlClient.ExecuteQueryBinaryAsync("SELECT id, name, option, flag, create_at FROM data");
+    //[Benchmark(Description = "RawPgsql-Binary: SELECT all from data")]
+    //public async Task<int> RawPgsqlBinary_SelectAllData()
+    //{
+    //    await using var reader = await _rawPgsqlClient.ExecuteQueryBinaryAsync("SELECT id, name, option, flag, create_at FROM data");
 
-        var count = 0;
-        while (await reader.ReadAsync())
-        {
-            var id = reader.GetInt32(0);
-            var name = reader.GetString(1);
-            var option = reader.GetStringOrNull(2);
-            var flag = reader.GetBoolean(3);
-            var createAt = reader.GetDateTime(4);
-            count++;
-        }
-        return count;
-    }
+    //    var count = 0;
+    //    while (await reader.ReadAsync())
+    //    {
+    //        var id = reader.GetInt32(0);
+    //        var name = reader.GetString(1);
+    //        var option = reader.GetStringOrNull(2);
+    //        var flag = reader.GetBoolean(3);
+    //        var createAt = reader.GetDateTime(4);
+    //        count++;
+    //    }
+    //    return count;
+    //}
 
-    [Benchmark(Description = "MyPgsql-Pipe: SELECT all from data")]
-    public async Task<int> MyPgsqlPipe_SelectAllData()
-    {
-        await using var cmd = _myPgsqlPipeConnection.CreateCommand();
-        cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
-        await using var reader = await cmd.ExecuteReaderAsync();
+    //[Benchmark(Description = "MyPgsql-Pipe: SELECT all from data")]
+    //public async Task<int> MyPgsqlPipe_SelectAllData()
+    //{
+    //    await using var cmd = _myPgsqlPipeConnection.CreateCommand();
+    //    cmd.CommandText = "SELECT id, name, option, flag, create_at FROM data";
+    //    await using var reader = await cmd.ExecuteReaderAsync();
 
-        var count = 0;
-        while (await reader.ReadAsync())
-        {
-            var id = reader.GetInt32(0);
-            var name = reader.GetString(1);
-            var option = reader.IsDBNull(2) ? null : reader.GetString(2);
-            var flag = reader.GetBoolean(3);
-            var createAt = reader.GetDateTime(4);
-            count++;
-        }
-        return count;
-    }
+    //    var count = 0;
+    //    while (await reader.ReadAsync())
+    //    {
+    //        var id = reader.GetInt32(0);
+    //        var name = reader.GetString(1);
+    //        var option = reader.IsDBNull(2) ? null : reader.GetString(2);
+    //        var flag = reader.GetBoolean(3);
+    //        var createAt = reader.GetDateTime(4);
+    //        count++;
+    //    }
+    //    return count;
+    //}
 
     [Benchmark(Description = "MyPgsql-Binary: SELECT all from data")]
     public async Task<int> MyPgsqlBinary_SelectAllData()

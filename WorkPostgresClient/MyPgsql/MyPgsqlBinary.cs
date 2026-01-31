@@ -688,8 +688,19 @@ public sealed class PgBinaryDataReader : DbDataReader
 
     public override void Close()
     {
+        CloseAsync().GetAwaiter().GetResult();
+    }
+
+    public override async Task CloseAsync()
+    {
         if (_isClosed) return;
         _isClosed = true;
+
+        // 未完了の場合、ReadyForQueryまで読み飛ばす
+        if (!_completed)
+        {
+            await DrainToReadyForQueryAsync().ConfigureAwait(false);
+        }
 
         // プールからのバッファを返却
         if (_columns != null)
@@ -716,10 +727,36 @@ public sealed class PgBinaryDataReader : DbDataReader
         }
     }
 
-    public override Task CloseAsync()
+    /// <summary>
+    /// ReadyForQuery ('Z') メッセージまで全てのメッセージを読み飛ばす
+    /// </summary>
+    private async ValueTask DrainToReadyForQueryAsync()
     {
-        Close();
-        return Task.CompletedTask;
+        while (true)
+        {
+            await _protocol.EnsureBufferedAsync(5, _cancellationToken).ConfigureAwait(false);
+
+            var buffer = _protocol.StreamBuffer;
+            var pos = _protocol.StreamBufferPos;
+
+            var messageType = (char)buffer[pos];
+            var payloadLength = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(pos + 1)) - 4;
+
+            await _protocol.EnsureBufferedAsync(5 + payloadLength, _cancellationToken).ConfigureAwait(false);
+
+            _protocol.StreamBufferPos += 5 + payloadLength;
+
+            if (messageType == 'Z')
+            {
+                _completed = true;
+                return;
+            }
+
+            if (messageType == 'E')
+            {
+                // エラーは無視して継続（すでにcloseしているため）
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
