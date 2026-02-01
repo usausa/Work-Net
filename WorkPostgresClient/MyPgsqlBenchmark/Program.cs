@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using MyPgsql;
 using MyPgsql.Binary;
-using MyPgsql.Pipelines;
+//using MyPgsql.Pipelines;
 //using MyPgsql.Pipelines;
 using Npgsql;
 using RawPgsql;
@@ -24,10 +24,10 @@ public class PostgresBenchmarks
     private const string ConnectionString = "Host=192.168.100.73;Port=5432;Database=test;Username=test;Password=test";
 
     private NpgsqlConnection _npgsqlConnection = null!;
-    private PgPipeConnection _myPgsqlConnection = null!;
-    private PgPipeConnection _myPgsqlPipeConnection = null!;
+    //private PgPipeConnection _myPgsqlConnection = null!;
+    //private PgPipeConnection _myPgsqlPipeConnection = null!;
     private PgBinaryConnection _myPgsqlBinaryConnection = null!;
-    private RawPgClient _rawPgsqlClient = null!;
+    //private RawPgClient _rawPgsqlClient = null!;
     private int _insertId;
 
     [GlobalSetup]
@@ -38,19 +38,19 @@ public class PostgresBenchmarks
         await _npgsqlConnection.OpenAsync();
 
         // MyPgsql接続 (NetworkStream版)
-        _myPgsqlConnection = new PgPipeConnection(ConnectionString);
-        await _myPgsqlConnection.OpenAsync();
+        //_myPgsqlConnection = new PgPipeConnection(ConnectionString);
+        //await _myPgsqlConnection.OpenAsync();
 
         // MyPgsql接続 (Pipelines版)
-        _myPgsqlPipeConnection = new PgPipeConnection(ConnectionString);
-        await _myPgsqlPipeConnection.OpenAsync();
+        //_myPgsqlPipeConnection = new PgPipeConnection(ConnectionString);
+        //await _myPgsqlPipeConnection.OpenAsync();
 
         // MyPgsql接続 (バイナリプロトコル版)
         _myPgsqlBinaryConnection = new PgBinaryConnection(ConnectionString);
         await _myPgsqlBinaryConnection.OpenAsync();
 
         // RawPgsql接続 (DbConnection非実装版)
-        _rawPgsqlClient = await RawPgClient.CreateAsync(ConnectionString);
+        //_rawPgsqlClient = await RawPgClient.CreateAsync(ConnectionString);
 
         _insertId = 100000;
     }
@@ -59,10 +59,10 @@ public class PostgresBenchmarks
     public async Task Cleanup()
     {
         await _npgsqlConnection.DisposeAsync();
-        await _myPgsqlConnection.DisposeAsync();
-        await _myPgsqlPipeConnection.DisposeAsync();
+        //await _myPgsqlConnection.DisposeAsync();
+        //await _myPgsqlPipeConnection.DisposeAsync();
         await _myPgsqlBinaryConnection.DisposeAsync();
-        await _rawPgsqlClient.DisposeAsync();
+        //await _rawPgsqlClient.DisposeAsync();
     }
 
     #region データ全件取得ベンチマーク
