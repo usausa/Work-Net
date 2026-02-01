@@ -1,14 +1,5 @@
-using System.Buffers;
-using System.Buffers.Binary;
-using System.Collections;
 using System.Data;
-using System.Data.Common;
-using System.Diagnostics.CodeAnalysis;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
-using MyPgsql;
+using MyPgsql.Binary;
 
 namespace WorkPostgresClient;
 
@@ -16,13 +7,13 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("===== ADO.NET PostgreSQL Client Demo =====\n");
+        Console.WriteLine("===== ADO.NET PostgreSQL Client Demo (Binary Protocol) =====\n");
 
         const string connectionString = "Host=192.168.100.73;Port=5432;Database=test;Username=test;Password=test";
 
         try
         {
-            await using var connection = new PgConnection(connectionString);
+            await using var connection = new PgBinaryConnection(connectionString);
             await connection.OpenAsync();
             Console.WriteLine("接続成功！\n");
 
@@ -31,10 +22,10 @@ internal class Program
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "INSERT INTO users (id, name, email, created_at) VALUES (@id, @name, @email, @created_at)";
-                cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = 2001 });
-                cmd.Parameters.Add(new PgParameter("@name", DbType.String) { Value = "ADO.NET User" });
-                cmd.Parameters.Add(new PgParameter("@email", DbType.String) { Value = "adonet@example.com" });
-                cmd.Parameters.Add(new PgParameter("@created_at", DbType.DateTime) { Value = DateTime.Now });
+                cmd.Parameters.Add(new PgBinaryParameter("@id", DbType.Int32) { Value = 2001 });
+                cmd.Parameters.Add(new PgBinaryParameter("@name", DbType.String) { Value = "ADO.NET User" });
+                cmd.Parameters.Add(new PgBinaryParameter("@email", DbType.String) { Value = "adonet@example.com" });
+                cmd.Parameters.Add(new PgBinaryParameter("@created_at", DbType.DateTime) { Value = DateTime.Now });
 
                 var inserted = await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine($"挿入: {inserted} 行\n");
@@ -54,7 +45,7 @@ internal class Program
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT id, name, email, created_at FROM users WHERE id = @id";
-                cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = 2001 });
+                cmd.Parameters.Add(new PgBinaryParameter("@id", DbType.Int32) { Value = 2001 });
 
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -68,9 +59,9 @@ internal class Program
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "UPDATE users SET name = @name, email = @email WHERE id = @id";
-                cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = 2001 });
-                cmd.Parameters.Add(new PgParameter("@name", DbType.String) { Value = "Updated ADO.NET User" });
-                cmd.Parameters.Add(new PgParameter("@email", DbType.String) { Value = "updated.adonet@example.com" });
+                cmd.Parameters.Add(new PgBinaryParameter("@id", DbType.Int32) { Value = 2001 });
+                cmd.Parameters.Add(new PgBinaryParameter("@name", DbType.String) { Value = "Updated ADO.NET User" });
+                cmd.Parameters.Add(new PgBinaryParameter("@email", DbType.String) { Value = "updated.adonet@example.com" });
 
                 var updated = await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine($"更新: {updated} 行\n");
@@ -86,10 +77,10 @@ internal class Program
                     {
                         cmd.Transaction = transaction;
                         cmd.CommandText = "INSERT INTO users (id, name, email, created_at) VALUES (@id, @name, @email, @created_at)";
-                        cmd.Parameters.Add(new PgParameter("@id", DbType.Int32) { Value = 2002 });
-                        cmd.Parameters.Add(new PgParameter("@name", DbType.String) { Value = "Transaction User" });
-                        cmd.Parameters.Add(new PgParameter("@email", DbType.String) { Value = "tx@example.com" });
-                        cmd.Parameters.Add(new PgParameter("@created_at", DbType.DateTime) { Value = DateTime.Now });
+                        cmd.Parameters.Add(new PgBinaryParameter("@id", DbType.Int32) { Value = 2002 });
+                        cmd.Parameters.Add(new PgBinaryParameter("@name", DbType.String) { Value = "Transaction User" });
+                        cmd.Parameters.Add(new PgBinaryParameter("@email", DbType.String) { Value = "tx@example.com" });
+                        cmd.Parameters.Add(new PgBinaryParameter("@created_at", DbType.DateTime) { Value = DateTime.Now });
                         await cmd.ExecuteNonQueryAsync();
                     }
 
@@ -126,8 +117,8 @@ internal class Program
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "DELETE FROM users WHERE id IN (@id1, @id2)";
-                cmd.Parameters.Add(new PgParameter("@id1", DbType.Int32) { Value = 2001 });
-                cmd.Parameters.Add(new PgParameter("@id2", DbType.Int32) { Value = 2002 });
+                cmd.Parameters.Add(new PgBinaryParameter("@id1", DbType.Int32) { Value = 2001 });
+                cmd.Parameters.Add(new PgBinaryParameter("@id2", DbType.Int32) { Value = 2002 });
 
                 var deleted = await cmd.ExecuteNonQueryAsync();
                 Console.WriteLine($"削除: {deleted} 行\n");

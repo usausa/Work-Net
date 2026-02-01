@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="PostgresClient.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MyPgsql\MyPgsql.csproj" />
   </ItemGroup>
 
