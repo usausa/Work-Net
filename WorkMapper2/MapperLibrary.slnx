@@ -15,6 +15,7 @@
     <File Path="MapperLibrary.props" />
     <File Path="MapperLibrary.sln.DotSettings" />
   </Folder>
+  <Project Path="ConvertBenchmark/ConvertBenchmark.csproj" Id="5addf6cd-eae1-422c-9213-fb39a92df6e9" />
   <Project Path="Develop/Develop.csproj" DefaultStartup="true" />
   <Project Path="MapperLibrary/MapperLibrary.csproj">
     <BuildDependency Project="MapperLibrary.Generator/MapperLibrary.Generator.csproj" />
