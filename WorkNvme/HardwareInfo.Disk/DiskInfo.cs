@@ -21,22 +21,22 @@ public static class DiskInfo
         {
             var info = new DiscInfoGeneric
             {
-                Index = Convert.ToUInt32(disk.Properties["Index"].Value, CultureInfo.InvariantCulture),
-                DeviceId = (string)disk.Properties["DeviceID"].Value,
-                PnpDeviceId = (string)disk.Properties["PNPDeviceID"].Value,
-                Status = (string)disk.Properties["Status"].Value,
-                Model = (string)disk.Properties["Model"].Value,
-                SerialNumber = (string)disk.Properties["SerialNumber"].Value,
-                FirmwareRevision = (string)disk.Properties["FirmwareRevision"].Value,
-                Size = Convert.ToUInt64(disk.Properties["Size"].Value, CultureInfo.InvariantCulture),
-                BytesPerSector = Convert.ToUInt32(disk.Properties["BytesPerSector"].Value, CultureInfo.InvariantCulture),
-                SectorsPerTrack = Convert.ToUInt32(disk.Properties["SectorsPerTrack"].Value, CultureInfo.InvariantCulture),
-                TracksPerCylinder = Convert.ToUInt32(disk.Properties["TracksPerCylinder"].Value, CultureInfo.InvariantCulture),
-                TotalHeads = Convert.ToUInt32(disk.Properties["TotalHeads"].Value, CultureInfo.InvariantCulture),
-                TotalCylinders = Convert.ToUInt64(disk.Properties["TotalCylinders"].Value, CultureInfo.InvariantCulture),
-                TotalTracks = Convert.ToUInt64(disk.Properties["TotalTracks"].Value, CultureInfo.InvariantCulture),
-                TotalSectors = Convert.ToUInt64(disk.Properties["TotalSectors"].Value, CultureInfo.InvariantCulture),
-                Partitions = Convert.ToUInt32(disk.Properties["Partitions"].Value, CultureInfo.InvariantCulture)
+                Index = ConvertToUInt32(disk.Properties["Index"].Value),
+                DeviceId = disk.Properties["DeviceID"].Value as string ?? string.Empty,
+                PnpDeviceId = disk.Properties["PNPDeviceID"].Value as string ?? string.Empty,
+                Status = disk.Properties["Status"].Value as string ?? string.Empty,
+                Model = disk.Properties["Model"].Value as string ?? string.Empty,
+                SerialNumber = (disk.Properties["SerialNumber"].Value as string)?.Trim() ?? string.Empty,
+                FirmwareRevision = (disk.Properties["FirmwareRevision"].Value as string)?.Trim() ?? string.Empty,
+                Size = ConvertToUInt64(disk.Properties["Size"].Value),
+                BytesPerSector = ConvertToUInt32(disk.Properties["BytesPerSector"].Value),
+                SectorsPerTrack = ConvertToUInt32(disk.Properties["SectorsPerTrack"].Value),
+                TracksPerCylinder = ConvertToUInt32(disk.Properties["TracksPerCylinder"].Value),
+                TotalHeads = ConvertToUInt32(disk.Properties["TotalHeads"].Value),
+                TotalCylinders = ConvertToUInt64(disk.Properties["TotalCylinders"].Value),
+                TotalTracks = ConvertToUInt64(disk.Properties["TotalTracks"].Value),
+                TotalSectors = ConvertToUInt64(disk.Properties["TotalSectors"].Value),
+                Partitions = ConvertToUInt32(disk.Properties["Partitions"].Value)
             };
             list.Add(info);
 
@@ -51,6 +51,7 @@ public static class DiskInfo
 
             info.BusType = (BusType)descriptor.BusType;
             info.Removable = descriptor.Removable;
+            info.PhysicalBlockSize = descriptor.PhysicalBlockSize;
 
             // Virtual
             if (IsVirtualDisk(info.Model))
@@ -105,7 +106,41 @@ public static class DiskInfo
 
     private static bool IsVirtualDisk(string model)
     {
-        return model.StartsWith("Virtual HD", StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrEmpty(model) && model.StartsWith("Virtual HD", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static uint ConvertToUInt32(object? value)
+    {
+        if (value is null)
+        {
+            return 0;
+        }
+
+        try
+        {
+            return Convert.ToUInt32(value, CultureInfo.InvariantCulture);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static ulong ConvertToUInt64(object? value)
+    {
+        if (value is null)
+        {
+            return 0;
+        }
+
+        try
+        {
+            return Convert.ToUInt64(value, CultureInfo.InvariantCulture);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     //------------------------------------------------------------------------
@@ -115,7 +150,7 @@ public static class DiskInfo
     private static SafeFileHandle OpenDevice(string devicePath) =>
         CreateFile(devicePath, FileAccess.ReadWrite, FileShare.ReadWrite, IntPtr.Zero, FileMode.Open, FileAttributes.Normal, IntPtr.Zero);
 
-    private sealed record StorageDescriptor(STORAGE_BUS_TYPE BusType, bool Removable);
+    private sealed record StorageDescriptor(STORAGE_BUS_TYPE BusType, bool Removable, uint PhysicalBlockSize);
 
     private static unsafe StorageDescriptor? GetStorageDescriptor(string devicePath)
     {
@@ -145,11 +180,34 @@ public static class DiskInfo
             }
 
             var descriptor = (STORAGE_DEVICE_DESCRIPTOR*)ptr;
-            return new StorageDescriptor(descriptor->BusType, descriptor->RemovableMedia);
+            var busType = descriptor->BusType;
+            var removable = descriptor->RemovableMedia;
+
+            // Get physical block size from access alignment descriptor
+            var physicalBlockSize = GetPhysicalBlockSize(handle);
+
+            return new StorageDescriptor(busType, removable, physicalBlockSize);
         }
         finally
         {
             Marshal.FreeHGlobal(ptr);
         }
+    }
+
+    private static uint GetPhysicalBlockSize(SafeFileHandle handle)
+    {
+        var query = new STORAGE_PROPERTY_QUERY
+        {
+            PropertyId = STORAGE_PROPERTY_ID.StorageAccessAlignmentProperty,
+            QueryType = STORAGE_QUERY_TYPE.PropertyStandardQuery
+        };
+
+        var alignment = default(STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR);
+        if (DeviceIoControl(handle, IOCTL_STORAGE_QUERY_PROPERTY, ref query, Marshal.SizeOf(query), ref alignment, Marshal.SizeOf<STORAGE_ACCESS_ALIGNMENT_DESCRIPTOR>(), out _, IntPtr.Zero))
+        {
+            return alignment.BytesPerPhysicalSector;
+        }
+
+        return 0;
     }
 }

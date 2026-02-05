@@ -4,21 +4,23 @@ internal sealed class DiscInfoGeneric : IDiskInfo
 {
     public uint Index { get; set; }
 
-    public string DeviceId { get; set; } = default!;
+    public string DeviceId { get; set; } = string.Empty;
 
-    public string PnpDeviceId { get; set; } = default!;
+    public string PnpDeviceId { get; set; } = string.Empty;
 
-    public string Status { get; set; } = default!;
+    public string Status { get; set; } = string.Empty;
 
-    public string Model { get; set; } = default!;
+    public string Model { get; set; } = string.Empty;
 
-    public string SerialNumber { get; set; } = default!;
+    public string SerialNumber { get; set; } = string.Empty;
 
-    public string FirmwareRevision { get; set; } = default!;
+    public string FirmwareRevision { get; set; } = string.Empty;
 
     public ulong Size { get; set; }
 
     public uint BytesPerSector { get; set; }
+
+    public uint PhysicalBlockSize { get; set; }
 
     public uint SectorsPerTrack { get; set; }
 

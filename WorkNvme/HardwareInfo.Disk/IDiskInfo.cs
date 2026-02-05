@@ -20,6 +20,13 @@ public interface IDiskInfo : IDisposable
 
     public uint BytesPerSector { get; }
 
+    /// <summary>
+    /// Alias for BytesPerSector for cross-platform compatibility.
+    /// </summary>
+    public uint LogicalBlockSize => BytesPerSector;
+
+    public uint PhysicalBlockSize { get; }
+
     public uint SectorsPerTrack { get; } // TotalSectors / TotalTracks
 
     public uint TracksPerCylinder { get; } // TotalTracks / TotalCylinders
