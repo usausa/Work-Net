@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Reference/">
+    <Project Path="ExampleDiskInfo/ExampleDiskInfo.csproj" />
+    <Project Path="HardwareInfo.Disk/HardwareInfo.Disk.csproj" />
+    <Project Path="WorkNvme/WorkNvme.csproj" />
+  </Folder>
+  <Project Path="Example/Example.csproj" />
+  <Project Path="LinuxDotNet.Disk/LinuxDotNet.Disk.csproj" />
+</Solution>
