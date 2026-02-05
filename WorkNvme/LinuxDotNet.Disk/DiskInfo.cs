@@ -48,14 +48,14 @@ public static class DiskInfo
                 continue;
             }
 
-            var busType = GetBusTypeFromMajor(major);
+            var diskType = GetDiskTypeFromMajor(major);
             var devicePath = $"/dev/{deviceName}";
 
             var info = new DiskInfoGeneric
             {
                 Index = index++,
                 DeviceName = devicePath,
-                BusType = busType,
+                DiskType = diskType,
                 Removable = ReadSysfsBool(Path.Combine(SysBlockPath, deviceName, "removable")) ?? false
             };
 
@@ -166,16 +166,16 @@ public static class DiskInfo
         return (major, minor);
     }
 
-    private static BusType GetBusTypeFromMajor(int major)
+    private static DiskType GetDiskTypeFromMajor(int major)
     {
         return major switch
         {
-            MajorNvme => BusType.Nvme,
-            MajorScsi => BusType.Sata,
-            MajorIde1 or MajorIde2 => BusType.Ide,
-            MajorMmc => BusType.Mmc,
-            MajorVirtIO => BusType.VirtIO,
-            _ => BusType.Unknown
+            MajorNvme => DiskType.Nvme,
+            MajorScsi => DiskType.Scsi,
+            MajorIde1 or MajorIde2 => DiskType.Ide,
+            MajorMmc => DiskType.Mmc,
+            MajorVirtIO => DiskType.VirtIO,
+            _ => DiskType.Unknown
         };
     }
 

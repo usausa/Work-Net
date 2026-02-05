@@ -22,7 +22,7 @@ public interface IDiskInfo : IDisposable
 
     public bool Removable { get; }
 
-    public BusType BusType { get; }
+    public DiskType DiskType { get; }
 
     public SmartType SmartType { get; }
 

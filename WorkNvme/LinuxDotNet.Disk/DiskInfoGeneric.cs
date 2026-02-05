@@ -4,13 +4,13 @@ internal sealed class DiskInfoGeneric : IDiskInfo
 {
     public uint Index { get; set; }
 
-    public string DeviceName { get; set; } = default!;
+    public string DeviceName { get; set; } = string.Empty;
 
-    public string Model { get; set; } = default!;
+    public string Model { get; set; } = string.Empty;
 
-    public string SerialNumber { get; set; } = default!;
+    public string SerialNumber { get; set; } = string.Empty;
 
-    public string FirmwareRevision { get; set; } = default!;
+    public string FirmwareRevision { get; set; } = string.Empty;
 
     public ulong Size { get; set; }
 
@@ -22,7 +22,7 @@ internal sealed class DiskInfoGeneric : IDiskInfo
 
     public bool Removable { get; set; }
 
-    public BusType BusType { get; set; }
+    public DiskType DiskType { get; set; }
 
     public SmartType SmartType { get; set; }
 

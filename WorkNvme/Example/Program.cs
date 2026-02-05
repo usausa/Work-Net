@@ -33,7 +33,7 @@ internal static class Program
         Console.WriteLine($"  Serial:         {(string.IsNullOrEmpty(disk.SerialNumber) ? "N/A" : disk.SerialNumber)}");
         Console.WriteLine($"  Firmware:       {(string.IsNullOrEmpty(disk.FirmwareRevision) ? "N/A" : disk.FirmwareRevision)}");
         Console.WriteLine($"  Size:           {FormatSize(disk.Size)}");
-        Console.WriteLine($"  Bus Type:       {disk.BusType}");
+        Console.WriteLine($"  Disk Type:      {disk.DiskType}");
         Console.WriteLine($"  Removable:      {disk.Removable}");
         Console.WriteLine($"  SMART Type:     {disk.SmartType}");
 
