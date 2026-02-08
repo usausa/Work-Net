@@ -1,3 +1,18 @@
+// Program.cs (single file)
+// BlueZ (Linux) BLE scan logger using Tmds.DBus
+//
+// Requirements implemented:
+// - No periodic polling inside BlueZScannerDebug (event-driven only)
+// - Print on:
+//   * Device discovered (InterfacesAdded / initial cached devices at startup)
+//   * Device lost (InterfacesRemoved)
+//   * Device updated (PropertiesChanged) with changed keys
+// - Cache Address/Name/Alias per devicePath so PropertiesChanged lines can show them even for partial updates.
+//
+// Options:
+//   -a, --active   : accepted (note: no 1:1 mapping to Windows active scan)
+//   --debug        : print internal debug logs to stderr
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,64 +47,7 @@ public interface IProperties : IDBusObject
 
 #endregion
 
-internal static class Program
-{
-    static async Task<int> Main(string[] args)
-    {
-        bool active = args.Contains("--active") || args.Contains("-a");
-
-        Console.Error.WriteLine("[DBG] Program start");
-        Console.Error.Flush();
-
-        using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
-
-        using var ctx = await BlueZContext.CreateAsync();
-        await using var scanner = new BlueZScannerDebug(ctx);
-
-        scanner.Debug += msg => { Console.Error.WriteLine(msg); Console.Error.Flush(); };
-
-        scanner.DeviceDiscovered += e =>
-        {
-            Console.WriteLine($"{FmtTs(e.Timestamp)} [{e.Address ?? "(NoAddr)"}] RSSI:{e.Rssi?.ToString() ?? "?"} {e.Name ?? e.Alias ?? "(Unknown)"} <DISCOVER/{e.Source}>");
-            Console.Out.Flush();
-        };
-
-        scanner.DeviceUpdated += e =>
-        {
-            Console.WriteLine($"{FmtTs(e.Timestamp)} [{e.Address ?? "(NoAddr)"}] RSSI:{e.Rssi?.ToString() ?? "?"} {e.Name ?? e.Alias ?? "(Unknown)"} <UPDATE/{e.Source}>");
-            Console.Out.Flush();
-        };
-
-        await scanner.StartAsync(active, cts.Token);
-
-        Console.Error.WriteLine("[DBG] Scanner started. Press Enter to stop.");
-        Console.Error.Flush();
-
-        // Enter wait on background
-        var inputTask = Task.Run(() => Console.ReadLine());
-
-        // Poll loop (to emulate "continuous Received")
-        var pollTask = scanner.StartPollingAsync(
-            interval: TimeSpan.FromSeconds(1),
-            cts.Token);
-
-        await Task.WhenAny(inputTask, Task.Delay(Timeout.Infinite, cts.Token)).ContinueWith(_ => { });
-        cts.Cancel();
-
-        Console.Error.WriteLine("[DBG] Stopping scanner...");
-        Console.Error.Flush();
-
-        await scanner.StopAsync();
-
-        Console.Error.WriteLine("[DBG] Stopped.");
-        Console.Error.Flush();
-
-        return 0;
-    }
-
-    static string FmtTs(DateTimeOffset ts) => ts.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
-}
+#region BlueZ context + scanner (no polling)
 
 public sealed class BlueZContext : IDisposable
 {
@@ -119,10 +77,6 @@ public sealed class BlueZContext : IDisposable
             throw new InvalidOperationException("Bluetooth adapter (org.bluez.Adapter1) not found.");
 
         var adapter = conn.CreateProxy<IAdapter1>("org.bluez", adapterPath);
-
-        Console.Error.WriteLine($"[DBG] Using adapter: {adapterPath}");
-        Console.Error.Flush();
-
         return new BlueZContext(conn, objMgr, adapterPath, adapter);
     }
 
@@ -132,8 +86,13 @@ public sealed class BlueZContext : IDisposable
 public sealed class DeviceEvent
 {
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.Now;
-    public string Source { get; init; } = "";
+
     public string DevicePath { get; init; } = "";
+    public string Source { get; init; } = ""; // InitialDump / InterfacesAdded / PropertiesChanged / InterfacesRemoved
+
+    // Changed keys for PropertiesChanged; for others, may carry a property-key list
+    public IReadOnlyCollection<string> Keys { get; init; } = Array.Empty<string>();
+
     public string? Address { get; init; }
     public string? Name { get; init; }
     public string? Alias { get; init; }
@@ -148,12 +107,11 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
     private IDisposable? _removedSub;
     private readonly ConcurrentDictionary<ObjectPath, IDisposable> _propsSubs = new();
 
-    // for polling diff (so we can say if RSSI changed)
-    private readonly ConcurrentDictionary<ObjectPath, short?> _lastPolledRssi = new();
-
     public event Action<string>? Debug;
-    public event Action<DeviceEvent>? DeviceDiscovered;
-    public event Action<DeviceEvent>? DeviceUpdated;
+
+    public event Action<DeviceEvent>? DeviceDiscovered; // InitialDump / InterfacesAdded
+    public event Action<DeviceEvent>? DeviceLost;       // InterfacesRemoved
+    public event Action<DeviceEvent>? DeviceUpdated;    // PropertiesChanged
 
     public BlueZScannerDebug(BlueZContext ctx) => _ctx = ctx;
 
@@ -168,8 +126,9 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
                 if (!ev.interfaces.TryGetValue("org.bluez.Device1", out var props))
                     return;
 
-                var e = BuildEvent(ev.objectPath, props, "InterfacesAdded");
-                Debug?.Invoke($"[DBG] InterfacesAdded: path={ev.objectPath} addr={e.Address} name={e.Name ?? e.Alias} rssi={e.Rssi?.ToString() ?? "?"}");
+                var e = BuildEvent(ev.objectPath, props, source: "InterfacesAdded", keys: props.Keys);
+                Debug?.Invoke($"[DBG] InterfacesAdded: path={ev.objectPath} keys=[{string.Join(",", props.Keys)}]");
+
                 DeviceDiscovered?.Invoke(e);
 
                 _ = EnsurePropsSubscriptionAsync(ev.objectPath);
@@ -184,10 +143,18 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
         {
             try
             {
-                Debug?.Invoke($"[DBG] InterfacesRemoved: path={ev.objectPath}");
+                Debug?.Invoke($"[DBG] InterfacesRemoved: path={ev.objectPath} ifaces=[{string.Join(",", ev.interfaces)}]");
+
                 if (_propsSubs.TryRemove(ev.objectPath, out var sub))
                     sub.Dispose();
-                _lastPolledRssi.TryRemove(ev.objectPath, out _);
+
+                DeviceLost?.Invoke(new DeviceEvent
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    DevicePath = ev.objectPath.ToString(),
+                    Source = "InterfacesRemoved",
+                    Keys = ev.interfaces
+                });
             }
             catch (Exception ex)
             {
@@ -195,9 +162,8 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
             }
         });
 
+        // One-time snapshot at start (not polling)
         var objects = await _ctx.ObjectManager.GetManagedObjectsAsync();
-        Debug?.Invoke($"[DBG] Initial GetManagedObjects: {objects.Count} objects");
-
         int deviceCount = 0;
         foreach (var kv in objects)
         {
@@ -205,9 +171,9 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
                 continue;
 
             deviceCount++;
-            var e = BuildEvent(kv.Key, props, "InitialDump");
-            Debug?.Invoke($"[DBG] InitialDump Device1: path={kv.Key} addr={e.Address} name={e.Name ?? e.Alias} rssi={e.Rssi?.ToString() ?? "?"}");
+            var e = BuildEvent(kv.Key, props, source: "InitialDump", keys: props.Keys);
             DeviceDiscovered?.Invoke(e);
+
             _ = EnsurePropsSubscriptionAsync(kv.Key);
         }
         Debug?.Invoke($"[DBG] InitialDump Device1 count: {deviceCount}");
@@ -232,67 +198,9 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
         Debug?.Invoke("[DBG] StartAsync exit");
     }
 
-    public Task StartPollingAsync(TimeSpan interval, CancellationToken ct)
-    {
-        return Task.Run(async () =>
-        {
-            int tick = 0;
-            while (!ct.IsCancellationRequested)
-            {
-                tick++;
-                try
-                {
-                    var objects = await _ctx.ObjectManager.GetManagedObjectsAsync();
-
-                    int devices = 0;
-                    int withRssi = 0;
-                    foreach (var kv in objects)
-                    {
-                        if (!kv.Value.TryGetValue("org.bluez.Device1", out var props))
-                            continue;
-
-                        devices++;
-                        var e = BuildEvent(kv.Key, props, "Poll");
-                        if (e.Rssi.HasValue) withRssi++;
-
-                        // emulate "continuous adv": print every tick for every device
-                        // (you can change this to only print for a target MAC etc.)
-                        DeviceUpdated?.Invoke(e);
-
-                        // diff info for RSSI
-                        _lastPolledRssi.TryGetValue(kv.Key, out var last);
-                        if (last != e.Rssi)
-                        {
-                            Debug?.Invoke($"[DBG] Poll RSSI changed path={kv.Key} {last?.ToString() ?? "?"} -> {e.Rssi?.ToString() ?? "?"}");
-                            _lastPolledRssi[kv.Key] = e.Rssi;
-                        }
-                    }
-
-                    Debug?.Invoke($"[DBG] Poll tick={tick} devices={devices} withRSSI={withRssi}");
-                }
-                catch (Exception ex)
-                {
-                    Debug?.Invoke("[DBG] Poll exception: " + ex.Message);
-                }
-
-                try { await Task.Delay(interval, ct); } catch { }
-            }
-        }, ct);
-    }
-
     public async Task StopAsync()
     {
-        Debug?.Invoke("[DBG] StopAsync entered");
-        try
-        {
-            Debug?.Invoke("[DBG] Calling StopDiscovery...");
-            await _ctx.Adapter.StopDiscoveryAsync();
-            Debug?.Invoke("[DBG] StopDiscovery OK");
-        }
-        catch (Exception ex)
-        {
-            Debug?.Invoke("[DBG] StopDiscovery error: " + ex.Message);
-        }
+        try { await _ctx.Adapter.StopDiscoveryAsync(); } catch { }
 
         _addedSub?.Dispose(); _addedSub = null;
         _removedSub?.Dispose(); _removedSub = null;
@@ -300,16 +208,12 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
         foreach (var kv in _propsSubs)
             kv.Value.Dispose();
         _propsSubs.Clear();
-
-        Debug?.Invoke("[DBG] StopAsync exit");
     }
 
     private async Task EnsurePropsSubscriptionAsync(ObjectPath devicePath)
     {
         if (_propsSubs.ContainsKey(devicePath))
             return;
-
-        Debug?.Invoke($"[DBG] EnsurePropsSubscriptionAsync enter: {devicePath}");
 
         var propsProxy = _ctx.Connection.CreateProxy<IProperties>("org.bluez", devicePath);
 
@@ -320,9 +224,13 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
                 if (!string.Equals(ev.iface, "org.bluez.Device1", StringComparison.Ordinal))
                     return;
 
+                // Ignore empty changed set (often seen at stop)
+                if (ev.changed.Count == 0)
+                    return;
+
                 Debug?.Invoke($"[DBG] PropertiesChanged path={devicePath} keys=[{string.Join(",", ev.changed.Keys)}]");
 
-                var e = BuildEvent(devicePath, ev.changed, "PropertiesChanged");
+                var e = BuildEvent(devicePath, ev.changed, source: "PropertiesChanged", keys: ev.changed.Keys);
                 DeviceUpdated?.Invoke(e);
             }
             catch (Exception ex)
@@ -332,22 +240,19 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
         });
 
         if (!_propsSubs.TryAdd(devicePath, sub))
-        {
             sub.Dispose();
-            Debug?.Invoke($"[DBG] EnsurePropsSubscriptionAsync lost race: {devicePath}");
-            return;
-        }
-
-        Debug?.Invoke($"[DBG] Subscribed PropertiesChanged for {devicePath}");
+        else
+            Debug?.Invoke($"[DBG] Subscribed PropertiesChanged for {devicePath}");
     }
 
-    private static DeviceEvent BuildEvent(ObjectPath devicePath, IDictionary<string, object> props, string source)
+    private static DeviceEvent BuildEvent(ObjectPath devicePath, IDictionary<string, object> props, string source, IEnumerable<string> keys)
     {
         return new DeviceEvent
         {
             Timestamp = DateTimeOffset.Now,
-            Source = source,
             DevicePath = devicePath.ToString(),
+            Source = source,
+            Keys = keys.ToArray(),
             Address = props.TryGetValue("Address", out var a) ? a as string : null,
             Name = props.TryGetValue("Name", out var n) ? n as string : null,
             Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
@@ -369,3 +274,144 @@ public sealed class BlueZScannerDebug : IAsyncDisposable
 
     public async ValueTask DisposeAsync() => await StopAsync();
 }
+
+#endregion
+
+#region Program (print discovered/lost/updated; cache identity)
+
+internal sealed class Options
+{
+    public bool Active { get; private set; }
+    public bool Debug { get; private set; }
+
+    public static Options Parse(string[] args)
+    {
+        var o = new Options();
+        foreach (var a in args)
+        {
+            switch (a)
+            {
+                case "--active":
+                case "-a":
+                    o.Active = true;
+                    break;
+                case "--debug":
+                    o.Debug = true;
+                    break;
+            }
+        }
+        return o;
+    }
+}
+
+internal sealed class DeviceCache
+{
+    public string? Address;
+    public string? Name;
+    public string? Alias;
+    public short? Rssi;
+}
+
+internal static class Program
+{
+    static async Task<int> Main(string[] args)
+    {
+        var opt = Options.Parse(args);
+
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
+
+        using var ctx = await BlueZContext.CreateAsync();
+        await using var scanner = new BlueZScannerDebug(ctx);
+
+        var cache = new ConcurrentDictionary<string, DeviceCache>(StringComparer.Ordinal);
+        var gate = new object();
+
+        if (opt.Debug)
+        {
+            scanner.Debug += msg =>
+            {
+                lock (gate)
+                {
+                    Console.Error.WriteLine(msg);
+                    Console.Error.Flush();
+                }
+            };
+        }
+
+        scanner.DeviceDiscovered += e =>
+        {
+            var c = cache.GetOrAdd(e.DevicePath, _ => new DeviceCache());
+            MergeCache(c, e);
+
+            lock (gate)
+            {
+                var ts = FmtTs(e.Timestamp);
+                Console.WriteLine($"{ts} [{c.Address ?? "(NoAddr)"}] RSSI:{(c.Rssi?.ToString() ?? "?")} {c.Name ?? c.Alias ?? "(Unknown)"} <DISCOVER/{e.Source}>");
+                if (opt.Debug)
+                    Console.WriteLine($"    path={e.DevicePath} keys=[{string.Join(",", e.Keys)}]");
+                Console.Out.Flush();
+            }
+        };
+
+        scanner.DeviceLost += e =>
+        {
+            cache.TryRemove(e.DevicePath, out var c);
+
+            lock (gate)
+            {
+                var ts = FmtTs(e.Timestamp);
+                var addr = c?.Address ?? "(NoAddr)";
+                var name = c?.Name ?? c?.Alias ?? "(Unknown)";
+                Console.WriteLine($"{ts} [{addr}] {name} <LOST/{e.Source} ifaces=[{string.Join(",", e.Keys)}]>");
+                Console.Out.Flush();
+            }
+        };
+
+        scanner.DeviceUpdated += e =>
+        {
+            if (e.Source != "PropertiesChanged")
+                return;
+
+            var c = cache.GetOrAdd(e.DevicePath, _ => new DeviceCache());
+            MergeCache(c, e);
+
+            lock (gate)
+            {
+                var ts = FmtTs(e.Timestamp);
+                var addr = c.Address ?? "(NoAddr)";
+                var name = c.Name ?? c.Alias ?? "(Unknown)";
+                var rssi = (e.Rssi ?? c.Rssi)?.ToString(CultureInfo.InvariantCulture) ?? "?";
+
+                Console.WriteLine($"{ts} [{addr}] RSSI:{rssi} {name} <UPDATE/PropertiesChanged keys=[{string.Join(",", e.Keys)}]>");
+                Console.Out.Flush();
+            }
+        };
+
+        await scanner.StartAsync(opt.Active, cts.Token);
+
+        Console.WriteLine("Scanning... Press Enter to stop. (Ctrl+C also works)");
+        Console.Out.Flush();
+
+        // avoid blocking D-Bus dispatch: wait input in background
+        var inputTask = Task.Run(() => Console.ReadLine());
+        await Task.WhenAny(inputTask, Task.Delay(Timeout.Infinite, cts.Token)).ContinueWith(_ => { });
+        cts.Cancel();
+
+        await scanner.StopAsync();
+        return 0;
+    }
+
+    private static void MergeCache(DeviceCache c, DeviceEvent e)
+    {
+        if (e.Address is not null) c.Address = e.Address;
+        if (e.Name is not null) c.Name = e.Name;
+        if (e.Alias is not null) c.Alias = e.Alias;
+        if (e.Rssi is not null) c.Rssi = e.Rssi;
+    }
+
+    private static string FmtTs(DateTimeOffset ts) =>
+        ts.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
+}
+
+#endregion
