@@ -1,34 +1,14 @@
 // Program.cs (single file)
-// BlueZ BLE: Windows-like device/service/characteristic wrappers + scan logger (DISCOVER/LOST/UPDATE)
+// BlueZ BLE scan logger (DISCOVER/LOST/UPDATE) + ManufacturerData dump when received
 // using Tmds.DBus.
 //
-// What this provides:
-// - Wrapper classes (restored):
-//   * BlueZBluetoothLEDevice
-//   * BlueZGattDeviceService
-//   * BlueZGattCharacteristic
-// - Scanner that raises events similar to your debug program:
-//   * Discovered (DISCOVER): Device1 object appeared (InterfacesAdded) or already cached at startup
-//   * Lost      (LOST):      Device object removed (InterfacesRemoved)
-//   * Updated   (UPDATE):    Device1 PropertiesChanged (only when changed keys are non-empty)
-// - Program prints logs for DISCOVER/LOST/UPDATE.
-// - No periodic polling. Updates are only when BlueZ emits PropertiesChanged (same as last request).
+// Adds:
+// - Parse ManufacturerData (org.bluez.Device1 ManufacturerData: a{qv})
+// - When UPDATE(PropertiesChanged) includes ManufacturerData, print a hex dump on the next line.
 //
 // Options:
-//   -a, --active   : accepted (note: no 1:1 mapping to Windows active scan)
-//   --debug        : prints internal debug lines to stderr
-//
-// Notes:
-// - BlueZ D-Bus is not a per-advertisement event stream; UPDATE depends on BlueZ emitting Device1 PropertiesChanged.
-// - PropertiesChanged often contains partial properties (no Address/Name), so Program caches identity by device path.
-//
-// Build:
-//   dotnet new console -n WorkLinuxBleScan
-//   dotnet add package Tmds.DBus
-//   dotnet run -- --debug
-//
-// Run (published):
-//   ./WorkLinuxBleScan --debug
+//   -a, --active
+//   --debug
 
 using System;
 using System.Collections.Concurrent;
@@ -57,7 +37,6 @@ public interface IAdapter1 : IDBusObject
     Task StopDiscoveryAsync();
 }
 
-// Device connect/disconnect for completeness (not used by scan logger directly)
 [DBusInterface("org.bluez.Device1")]
 public interface IDevice1 : IDBusObject
 {
@@ -93,7 +72,6 @@ internal static class BleUtil
             if (ch == ':' || ch == '-') continue;
             sb.Append(char.ToUpperInvariant(ch));
         }
-
         var s = sb.ToString();
         if (s.Length == 12)
         {
@@ -117,13 +95,55 @@ internal static class BleUtil
         };
     }
 
-    public static bool? TryGetBool(IDictionary<string, object> props, string key)
-        => props.TryGetValue(key, out var v) && v is bool b ? b : null;
+    public static string ToHexDump(byte[] data, int bytesPerLine = 16)
+    {
+        const string hexChars = "0123456789ABCDEF";
+        var sb = new StringBuilder();
+        for (int i = 0; i < data.Length; i += bytesPerLine)
+        {
+            int n = Math.Min(bytesPerLine, data.Length - i);
+            sb.Append("    "); // indent (next line)
+            for (int j = 0; j < n; j++)
+            {
+                byte b = data[i + j];
+                sb.Append(hexChars[b >> 4]);
+                sb.Append(hexChars[b & 0xF]);
+                if (j + 1 != n) sb.Append(' ');
+            }
+            if (i + n < data.Length) sb.AppendLine();
+        }
+        return sb.ToString();
+    }
+
+    // ManufacturerData: a{qv} (UInt16 -> variant(byte[]))
+    public static IReadOnlyDictionary<ushort, byte[]>? TryGetManufacturerData(IDictionary<string, object> props)
+    {
+        if (!props.TryGetValue("ManufacturerData", out var v) || v is null)
+            return null;
+
+        if (v is IDictionary<ushort, byte[]> direct)
+            return new Dictionary<ushort, byte[]>(direct);
+
+        if (v is IDictionary<ushort, object> dictObj)
+        {
+            var res = new Dictionary<ushort, byte[]>();
+            foreach (var kv in dictObj)
+            {
+                if (kv.Value is byte[] bytes)
+                    res[kv.Key] = bytes;
+                else if (kv.Value is IEnumerable<byte> eb)
+                    res[kv.Key] = eb.ToArray();
+            }
+            return res;
+        }
+
+        return null;
+    }
 }
 
 #endregion
 
-#region ---- Windows-like wrappers (restored) ----
+#region ---- Windows-like wrappers (restored; not required for scan logger but kept as requested) ----
 
 public sealed class BlueZBluetoothLEDevice : IAsyncDisposable
 {
@@ -147,31 +167,6 @@ public sealed class BlueZBluetoothLEDevice : IAsyncDisposable
     }
 
     public string DevicePath => _devicePath.ToString();
-
-    public static async Task<BlueZBluetoothLEDevice> FromAddressAsync(string address, CancellationToken ct)
-    {
-        // NOTE: This method is preserved; not used by scan logger directly.
-        var target = BleUtil.NormalizeAddress(address);
-
-        var conn = new Connection(Address.System);
-        await conn.ConnectAsync();
-
-        var objMgr = conn.CreateProxy<IObjectManager>("org.bluez", new ObjectPath("/"));
-        var objects = await objMgr.GetManagedObjectsAsync();
-
-        var adapterPath = objects.Keys.FirstOrDefault(p => objects[p].ContainsKey("org.bluez.Adapter1"));
-        if (adapterPath == default)
-            throw new InvalidOperationException("Bluetooth adapter (org.bluez.Adapter1) not found.");
-
-        var adapter = conn.CreateProxy<IAdapter1>("org.bluez", adapterPath);
-
-        // Find existing device by address (cached)
-        var devicePath = FindDeviceByAddress(objects, target);
-        if (devicePath == default)
-            throw new InvalidOperationException("Device not found in cache. Use scanner to discover it first.");
-
-        return new BlueZBluetoothLEDevice(conn, objMgr, adapterPath, adapter, devicePath);
-    }
 
     public async Task ConnectAsync() => await _deviceProxy.ConnectAsync();
     public async Task DisconnectAsync() => await _deviceProxy.DisconnectAsync();
@@ -199,25 +194,7 @@ public sealed class BlueZBluetoothLEDevice : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         try { await DisconnectAsync(); } catch { }
-        _conn.Dispose(); // older Tmds.DBus: no DisposeAsync
-    }
-
-    private static ObjectPath FindDeviceByAddress(
-        IDictionary<ObjectPath, IDictionary<string, IDictionary<string, object>>> objects,
-        string targetAddress)
-    {
-        foreach (var kv in objects)
-        {
-            if (!kv.Value.TryGetValue("org.bluez.Device1", out var props))
-                continue;
-
-            if (!props.TryGetValue("Address", out var addrObj) || addrObj is not string addr)
-                continue;
-
-            if (string.Equals(BleUtil.NormalizeAddress(addr), targetAddress, StringComparison.OrdinalIgnoreCase))
-                return kv.Key;
-        }
-        return default;
+        _conn.Dispose();
     }
 }
 
@@ -277,7 +254,6 @@ public sealed class BlueZGattCharacteristic : IAsyncDisposable
     }
 
     public Guid Uuid { get; }
-
     public event EventHandler<byte[]>? ValueChanged;
 
     public async Task StartNotifyAsync()
@@ -294,9 +270,7 @@ public sealed class BlueZGattCharacteristic : IAsyncDisposable
                 return;
 
             byte[]? bytes = v as byte[];
-            if (bytes is null && v is IEnumerable<byte> eb)
-                bytes = eb.ToArray();
-
+            if (bytes is null && v is IEnumerable<byte> eb) bytes = eb.ToArray();
             if (bytes is null) return;
 
             ValueChanged?.Invoke(this, bytes);
@@ -317,7 +291,7 @@ public sealed class BlueZGattCharacteristic : IAsyncDisposable
 
 #endregion
 
-#region ---- Scan event model using the wrappers ----
+#region ---- Scan session (DISCOVER/LOST/UPDATE) ----
 
 public enum BlueZDeviceEventType
 {
@@ -335,11 +309,14 @@ public sealed class BlueZDeviceEvent
     public string DevicePath { get; init; } = "";
     public IReadOnlyCollection<string> Keys { get; init; } = Array.Empty<string>();
 
-    // May be partial on Update
     public string? Address { get; init; }
     public string? Name { get; init; }
     public string? Alias { get; init; }
     public short? Rssi { get; init; }
+
+    // Only set when present in PropertiesChanged (or if you choose to parse from full props)
+    public IReadOnlyDictionary<ushort, byte[]>? ManufacturerData { get; init; }
+    public bool HasManufacturerDataUpdate { get; init; }
 }
 
 public sealed class BlueZScanSession : IAsyncDisposable
@@ -355,7 +332,6 @@ public sealed class BlueZScanSession : IAsyncDisposable
     private readonly ConcurrentDictionary<ObjectPath, IDisposable> _propsSubs = new();
 
     public event Action<string>? Debug;
-
     public event Action<BlueZDeviceEvent>? DeviceEvent;
 
     private BlueZScanSession(Connection conn, IObjectManager objMgr, ObjectPath adapterPath, IAdapter1 adapter)
@@ -388,7 +364,6 @@ public sealed class BlueZScanSession : IAsyncDisposable
         if (active)
             Debug?.Invoke("[DBG] --active specified (note: no 1:1 mapping on BlueZ)");
 
-        // InterfacesAdded = discover
         _addedSub = await _objMgr.WatchInterfacesAddedAsync(ev =>
         {
             try
@@ -417,7 +392,6 @@ public sealed class BlueZScanSession : IAsyncDisposable
             }
         });
 
-        // InterfacesRemoved = lost
         _removedSub = await _objMgr.WatchInterfacesRemovedAsync(ev =>
         {
             try
@@ -440,7 +414,7 @@ public sealed class BlueZScanSession : IAsyncDisposable
             }
         });
 
-        // Initial dump (cached devices already known to BlueZ)
+        // InitialDump (one-time)
         var objects = await _objMgr.GetManagedObjectsAsync();
         foreach (var kv in objects)
         {
@@ -463,7 +437,6 @@ public sealed class BlueZScanSession : IAsyncDisposable
             _ = EnsureDevicePropsSubscriptionAsync(kv.Key);
         }
 
-        // Start discovery
         try
         {
             Debug?.Invoke("[DBG] Calling StartDiscovery...");
@@ -508,6 +481,9 @@ public sealed class BlueZScanSession : IAsyncDisposable
                 if (ev.changed.Count == 0)
                     return;
 
+                var hasMd = ev.changed.ContainsKey("ManufacturerData");
+                var md = hasMd ? BleUtil.TryGetManufacturerData(ev.changed) : null;
+
                 Emit(new BlueZDeviceEvent
                 {
                     Timestamp = DateTimeOffset.Now,
@@ -518,7 +494,9 @@ public sealed class BlueZScanSession : IAsyncDisposable
                     Address = ev.changed.TryGetValue("Address", out var a) ? a as string : null,
                     Name = ev.changed.TryGetValue("Name", out var n) ? n as string : null,
                     Alias = ev.changed.TryGetValue("Alias", out var al) ? al as string : null,
-                    Rssi = BleUtil.TryGetInt16(ev.changed, "RSSI")
+                    Rssi = BleUtil.TryGetInt16(ev.changed, "RSSI"),
+                    ManufacturerData = md,
+                    HasManufacturerDataUpdate = hasMd
                 });
             }
             catch (Exception ex)
@@ -544,7 +522,7 @@ public sealed class BlueZScanSession : IAsyncDisposable
 
 #endregion
 
-#region ---- Program: log output (DISCOVER/LOST/UPDATE) ----
+#region ---- Program: log output ----
 
 internal sealed class Options
 {
@@ -605,14 +583,10 @@ internal static class Program
 
         session.DeviceEvent += ev =>
         {
-            // Merge cache for better display on partial updates
             if (ev.Type != BlueZDeviceEventType.Lost)
             {
                 var c = cache.GetOrAdd(ev.DevicePath, _ => new DeviceIdentityCache());
-                if (ev.Address is not null) c.Address = ev.Address;
-                if (ev.Name is not null) c.Name = ev.Name;
-                if (ev.Alias is not null) c.Alias = ev.Alias;
-                if (ev.Rssi is not null) c.Rssi = ev.Rssi;
+                MergeCache(c, ev);
             }
 
             lock (gate)
@@ -622,13 +596,33 @@ internal static class Program
                     case BlueZDeviceEventType.Discover:
                         PrintLine(ev, cache, "DISCOVER");
                         break;
+
                     case BlueZDeviceEventType.Update:
                         PrintLine(ev, cache, "UPDATE");
+
+                        // Added requirement: dump ManufacturerData on the next line when received
+                        if (ev.Source == "PropertiesChanged" && ev.HasManufacturerDataUpdate)
+                        {
+                            if (ev.ManufacturerData is null || ev.ManufacturerData.Count == 0)
+                            {
+                                Console.WriteLine("    ManufacturerData: (empty)");
+                            }
+                            else
+                            {
+                                foreach (var md in ev.ManufacturerData)
+                                {
+                                    Console.WriteLine($"    ManufacturerData CompanyId=0x{md.Key:X4} Len={md.Value.Length}");
+                                    Console.WriteLine(BleUtil.ToHexDump(md.Value));
+                                }
+                            }
+                        }
                         break;
+
                     case BlueZDeviceEventType.Lost:
                         PrintLost(ev, cache);
                         break;
                 }
+
                 Console.Out.Flush();
             }
         };
@@ -638,7 +632,6 @@ internal static class Program
         Console.WriteLine("Scanning... Press Enter to stop. (Ctrl+C also works)");
         Console.Out.Flush();
 
-        // Do not block D-Bus dispatch: wait input in background
         var inputTask = Task.Run(() => Console.ReadLine());
         await Task.WhenAny(inputTask, Task.Delay(Timeout.Infinite, cts.Token)).ContinueWith(_ => { });
         cts.Cancel();
@@ -656,7 +649,11 @@ internal static class Program
         var name = ev.Name ?? ev.Alias ?? c?.Name ?? c?.Alias ?? "(Unknown)";
         var rssi = (ev.Rssi ?? c?.Rssi)?.ToString(CultureInfo.InvariantCulture) ?? "?";
 
-        Console.WriteLine($"{ts} [{addr}] RSSI:{rssi} {name} <{tag}/{ev.Source}{FormatKeys(ev)}>");
+        var extra = ev.Source == "PropertiesChanged"
+            ? $" keys=[{string.Join(",", ev.Keys)}]"
+            : "";
+
+        Console.WriteLine($"{ts} [{addr}] RSSI:{rssi} {name} <{tag}/{ev.Source}{extra}>");
     }
 
     private static void PrintLost(BlueZDeviceEvent ev, ConcurrentDictionary<string, DeviceIdentityCache> cache)
@@ -670,11 +667,12 @@ internal static class Program
         Console.WriteLine($"{ts} [{addr}] {name} <LOST/{ev.Source} ifaces=[{string.Join(",", ev.Keys)}]>");
     }
 
-    private static string FormatKeys(BlueZDeviceEvent ev)
+    private static void MergeCache(DeviceIdentityCache c, BlueZDeviceEvent e)
     {
-        if (ev.Source != "PropertiesChanged")
-            return string.Empty;
-        return $" keys=[{string.Join(",", ev.Keys)}]";
+        if (e.Address is not null) c.Address = e.Address;
+        if (e.Name is not null) c.Name = e.Name;
+        if (e.Alias is not null) c.Alias = e.Alias;
+        if (e.Rssi is not null) c.Rssi = e.Rssi;
     }
 }
 
