@@ -1,31 +1,22 @@
 // Program.cs (single file)
 // Linux BLE advertisement logger using BlueZ + Tmds.DBus
 //
-// Features (similar spirit to Windows BluetoothLEAdvertisementWatcher sample):
-// - Passive scan (default) / Active scan option is exposed (note: BlueZ active scanning depends on controller/BlueZ behavior;
-//   here we toggle "DuplicateData"/filter and keep it mostly illustrative.)
-// - Once: show each device once
-// - Info: show known device properties (Address, Name/Alias, RSSI, Paired/Trusted/Connected if available)
-// - Manufacturer: show ManufacturerData (0xFF) from AdvertisingData
-// - Section: show all AD structures from AdvertisingData
+// Changes per request:
+// - Removed --once option
+// - Keep --active option (best-effort; BlueZ doesn't map 1:1 to Windows active scan)
+// - Fix: continuously receive advertisements (the earlier sample could look "one-shot" because it only printed
+//        on InterfacesAdded or did not reliably subscribe to PropertiesChanged for existing devices).
+//
+// Approach for continuous reception:
+// - Start discovery (Adapter1.StartDiscovery)
+// - For every Device1 object (existing and newly added), subscribe to its PropertiesChanged
+// - Print on RSSI updates and/or AdvertisingData/ManufacturerData updates (not only once)
+// - Also print initial snapshot for existing devices, then keep printing as updates arrive
 //
 // Notes:
-// - BlueZ exposes LE advertisements via org.bluez.Device1 property "AdvertisingData" (a{yv}) and "ManufacturerData" (a{qv})
-//   when available. Not all devices/BlueZ versions provide them.
-// - We implement scanning by starting discovery on adapter and then watching:
-//     * ObjectManager.InterfacesAdded (new devices)
-//     * PropertiesChanged on each Device1 to get RSSI/AdvertisingData updates
-// - This avoids Connection.WatchSignalAsync; we use DBusInterface WatchPropertiesChangedAsync (works with older Tmds.DBus).
-//
-// Build:
-//   dotnet new console -n BleAdvLogger
-//   dotnet add package Tmds.DBus
-//   dotnet run -- --once --manufacturer
-//
-// Run example:
-//   dotnet run -- --once --section
-//
-// If you want to use a specific adapter (hci1 etc.), extend adapter selection.
+// - Many devices will repeatedly update RSSI while discovery is running, so you'll see continuous logs.
+// - Some BlueZ configurations may not refresh AdvertisingData on every interval; RSSI is the reliable "heartbeat".
+// - ManufacturerData/AdvertisingData presence depends on BlueZ version and controller capabilities.
 
 using System;
 using System.Collections.Concurrent;
@@ -58,6 +49,7 @@ public interface IAdapter1 : IDBusObject
     Task StopDiscoveryAsync();
 }
 
+// Signal subscription only (avoid Get/Set signature issues across Tmds.DBus versions)
 [DBusInterface("org.freedesktop.DBus.Properties")]
 public interface IProperties : IDBusObject
 {
@@ -67,7 +59,7 @@ public interface IProperties : IDBusObject
 
 #endregion
 
-#region ---- BlueZ wrapper model (adds scanning/advertisement events) ----
+#region ---- BlueZ wrapper scanning/advertisement events ----
 
 public sealed class BlueZContext : IDisposable
 {
@@ -100,10 +92,30 @@ public sealed class BlueZContext : IDisposable
         return new BlueZContext(conn, objMgr, adapterPath, adapter);
     }
 
-    public void Dispose()
-    {
-        Connection.Dispose();
-    }
+    public void Dispose() => Connection.Dispose();
+}
+
+public sealed class BlueZAdvertisementEvent
+{
+    public DateTimeOffset Timestamp { get; init; }
+    public string DevicePath { get; init; } = "";
+
+    public string? Address { get; init; }
+    public string? Name { get; init; }
+    public string? Alias { get; init; }
+
+    public short? Rssi { get; init; }
+    public short? TxPower { get; init; }
+
+    public bool? Connected { get; init; }
+    public bool? Paired { get; init; }
+    public bool? Trusted { get; init; }
+
+    public IReadOnlyDictionary<ushort, byte[]>? ManufacturerData { get; init; }
+    public IReadOnlyDictionary<byte, byte[]>? AdvertisingData { get; init; }
+
+    // Which property caused this event (useful for debugging/understanding update cadence)
+    public string? CauseProperty { get; init; }
 }
 
 public sealed class BlueZLeScanner : IAsyncDisposable
@@ -113,54 +125,58 @@ public sealed class BlueZLeScanner : IAsyncDisposable
     private IDisposable? _ifAddedSub;
     private IDisposable? _ifRemovedSub;
 
-    // WatchPropertiesChanged subscriptions per device
+    // Device PropertiesChanged subscription per Device1 object
     private readonly ConcurrentDictionary<ObjectPath, IDisposable> _devicePropsSubs = new();
 
     public event Action<BlueZAdvertisementEvent>? AdvertisementReceived;
 
-    public BlueZLeScanner(BlueZContext ctx)
-    {
-        _ctx = ctx;
-    }
+    public BlueZLeScanner(BlueZContext ctx) => _ctx = ctx;
 
-    public async Task StartAsync(CancellationToken ct)
+    public async Task StartAsync(bool active, CancellationToken ct)
     {
-        // Subscribe before starting discovery to avoid missing early events
+        // Watch newly added devices
         _ifAddedSub = await _ctx.ObjectManager.WatchInterfacesAddedAsync(ev =>
         {
             try
             {
-                if (!ev.interfaces.ContainsKey("org.bluez.Device1"))
+                if (!ev.interfaces.TryGetValue("org.bluez.Device1", out var props))
                     return;
 
-                // new device object appears; subscribe its PropertiesChanged
+                // subscribe to continuous updates
                 _ = EnsureDeviceSubscriptionAsync(ev.objectPath);
-                // also emit an initial snapshot from InterfacesAdded properties
-                var props = ev.interfaces["org.bluez.Device1"];
-                EmitFromDeviceProps(ev.objectPath, props, timestamp: DateTimeOffset.Now);
+
+                // also emit initial snapshot
+                EmitSnapshot(ev.objectPath, props, "InterfacesAdded");
             }
             catch { /* ignore */ }
         });
 
+        // Cleanup when removed
         _ifRemovedSub = await _ctx.ObjectManager.WatchInterfacesRemovedAsync(ev =>
         {
-            // Cleanup
             if (_devicePropsSubs.TryRemove(ev.objectPath, out var sub))
                 sub.Dispose();
         });
 
-        // Also subscribe existing devices already present (cache)
+        // Subscribe for all existing cached Device1 objects (important for continuous logging)
         var objects = await _ctx.ObjectManager.GetManagedObjectsAsync();
         foreach (var kv in objects)
         {
-            if (kv.Value.ContainsKey("org.bluez.Device1"))
+            if (kv.Value.TryGetValue("org.bluez.Device1", out var props))
             {
                 _ = EnsureDeviceSubscriptionAsync(kv.Key);
-                EmitFromDeviceProps(kv.Key, kv.Value["org.bluez.Device1"], DateTimeOffset.Now);
+                EmitSnapshot(kv.Key, props, "Initial");
             }
         }
 
         // Start discovery
+        // Note: BlueZ doesn't expose a simple per-app active/passive toggle identical to Windows.
+        // We keep the flag; if you need strict control, we can add SetDiscoveryFilter (UUID/RSSI/Transport).
+        if (active)
+        {
+            Console.WriteLine("Note: --active is best-effort on BlueZ (no 1:1 mapping to Windows active scan).");
+        }
+
         try
         {
             await _ctx.Adapter.StartDiscoveryAsync();
@@ -170,18 +186,16 @@ public sealed class BlueZLeScanner : IAsyncDisposable
             // ignore
         }
 
-        _ = ct; // no-op; caller controls lifetime
+        // keep running until cancelled
+        _ = ct;
     }
 
     public async Task StopAsync()
     {
         try { await _ctx.Adapter.StopDiscoveryAsync(); } catch { }
 
-        _ifAddedSub?.Dispose();
-        _ifAddedSub = null;
-
-        _ifRemovedSub?.Dispose();
-        _ifRemovedSub = null;
+        _ifAddedSub?.Dispose(); _ifAddedSub = null;
+        _ifRemovedSub?.Dispose(); _ifRemovedSub = null;
 
         foreach (var kv in _devicePropsSubs)
             kv.Value.Dispose();
@@ -193,7 +207,6 @@ public sealed class BlueZLeScanner : IAsyncDisposable
         if (_devicePropsSubs.ContainsKey(devicePath))
             return;
 
-        // subscribe to PropertiesChanged on the device object itself
         var propsProxy = _ctx.Connection.CreateProxy<IProperties>("org.bluez", devicePath);
 
         IDisposable sub = await propsProxy.WatchPropertiesChangedAsync(ev =>
@@ -203,43 +216,29 @@ public sealed class BlueZLeScanner : IAsyncDisposable
                 if (!string.Equals(ev.iface, "org.bluez.Device1", StringComparison.Ordinal))
                     return;
 
-                // We only got changed properties; build event from them (may be partial)
-                EmitFromDeviceChanged(devicePath, ev.changed, DateTimeOffset.Now);
+                // Continuous updates typically come as RSSI changes.
+                // We'll emit on RSSI OR ManufacturerData OR AdvertisingData OR Name/Alias changes.
+                if (!ShouldEmit(ev.changed, out var cause))
+                    return;
+
+                var adv = BuildEventFromChanged(devicePath, ev.changed, cause);
+                AdvertisementReceived?.Invoke(adv);
             }
-            catch { /* ignore */ }
+            catch
+            {
+                // ignore to keep scanner alive
+            }
         });
 
         if (!_devicePropsSubs.TryAdd(devicePath, sub))
             sub.Dispose();
     }
 
-    private void EmitFromDeviceChanged(ObjectPath devicePath, IDictionary<string, object> changed, DateTimeOffset timestamp)
-    {
-        // For partial updates, fill what we can.
-        var ev = new BlueZAdvertisementEvent
-        {
-            Timestamp = timestamp,
-            DevicePath = devicePath.ToString(),
-            Address = changed.TryGetValue("Address", out var a) ? a as string : null,
-            Name = changed.TryGetValue("Name", out var n) ? n as string : null,
-            Alias = changed.TryGetValue("Alias", out var al) ? al as string : null,
-            Rssi = TryGetInt16(changed, "RSSI"),
-            TxPower = TryGetInt16(changed, "TxPower"),
-            Connected = TryGetBool(changed, "Connected"),
-            Paired = TryGetBool(changed, "Paired"),
-            Trusted = TryGetBool(changed, "Trusted"),
-            ManufacturerData = TryGetManufacturerData(changed),
-            AdvertisingData = TryGetAdvertisingData(changed),
-        };
-
-        AdvertisementReceived?.Invoke(ev);
-    }
-
-    private void EmitFromDeviceProps(ObjectPath devicePath, IDictionary<string, object> props, DateTimeOffset timestamp)
+    private void EmitSnapshot(ObjectPath devicePath, IDictionary<string, object> props, string cause)
     {
         var ev = new BlueZAdvertisementEvent
         {
-            Timestamp = timestamp,
+            Timestamp = DateTimeOffset.Now,
             DevicePath = devicePath.ToString(),
             Address = props.TryGetValue("Address", out var a) ? a as string : null,
             Name = props.TryGetValue("Name", out var n) ? n as string : null,
@@ -251,9 +250,45 @@ public sealed class BlueZLeScanner : IAsyncDisposable
             Trusted = TryGetBool(props, "Trusted"),
             ManufacturerData = TryGetManufacturerData(props),
             AdvertisingData = TryGetAdvertisingData(props),
+            CauseProperty = cause
         };
 
         AdvertisementReceived?.Invoke(ev);
+    }
+
+    private static bool ShouldEmit(IDictionary<string, object> changed, out string cause)
+    {
+        // Emit on changes we care about; RSSI will usually refresh continuously during discovery.
+        if (changed.ContainsKey("RSSI")) { cause = "RSSI"; return true; }
+        if (changed.ContainsKey("AdvertisingData")) { cause = "AdvertisingData"; return true; }
+        if (changed.ContainsKey("ManufacturerData")) { cause = "ManufacturerData"; return true; }
+        if (changed.ContainsKey("Name")) { cause = "Name"; return true; }
+        if (changed.ContainsKey("Alias")) { cause = "Alias"; return true; }
+        if (changed.ContainsKey("TxPower")) { cause = "TxPower"; return true; }
+
+        // If you want truly "any change prints", return true here.
+        cause = "";
+        return false;
+    }
+
+    private BlueZAdvertisementEvent BuildEventFromChanged(ObjectPath devicePath, IDictionary<string, object> changed, string cause)
+    {
+        return new BlueZAdvertisementEvent
+        {
+            Timestamp = DateTimeOffset.Now,
+            DevicePath = devicePath.ToString(),
+            Address = changed.TryGetValue("Address", out var a) ? a as string : null,
+            Name = changed.TryGetValue("Name", out var n) ? n as string : null,
+            Alias = changed.TryGetValue("Alias", out var al) ? al as string : null,
+            Rssi = TryGetInt16(changed, "RSSI"),
+            TxPower = TryGetInt16(changed, "TxPower"),
+            Connected = TryGetBool(changed, "Connected"),
+            Paired = TryGetBool(changed, "Paired"),
+            Trusted = TryGetBool(changed, "Trusted"),
+            ManufacturerData = TryGetManufacturerData(changed),
+            AdvertisingData = TryGetAdvertisingData(changed),
+            CauseProperty = cause
+        };
     }
 
     private static bool? TryGetBool(IDictionary<string, object> props, string key)
@@ -262,8 +297,6 @@ public sealed class BlueZLeScanner : IAsyncDisposable
     private static short? TryGetInt16(IDictionary<string, object> props, string key)
     {
         if (!props.TryGetValue(key, out var v) || v is null) return null;
-
-        // BlueZ often uses Int16 for RSSI/TxPower on D-Bus; but may come as Int32 depending on bindings.
         return v switch
         {
             short s => s,
@@ -273,13 +306,12 @@ public sealed class BlueZLeScanner : IAsyncDisposable
         };
     }
 
-    // ManufacturerData: a{qv} (UInt16 company id -> variant(byte[]))
+    // ManufacturerData: a{qv}
     private static IReadOnlyDictionary<ushort, byte[]>? TryGetManufacturerData(IDictionary<string, object> props)
     {
         if (!props.TryGetValue("ManufacturerData", out var v) || v is null)
             return null;
 
-        // Depending on Tmds.DBus version, it may already be Dictionary<ushort, object> or Dictionary<ushort, byte[]>
         if (v is IDictionary<ushort, byte[]> direct)
             return new Dictionary<ushort, byte[]>(direct);
 
@@ -299,7 +331,7 @@ public sealed class BlueZLeScanner : IAsyncDisposable
         return null;
     }
 
-    // AdvertisingData: a{yv} (byte ad_type -> variant(byte[]))
+    // AdvertisingData: a{yv}
     private static IReadOnlyDictionary<byte, byte[]>? TryGetAdvertisingData(IDictionary<string, object> props)
     {
         if (!props.TryGetValue("AdvertisingData", out var v) || v is null)
@@ -324,33 +356,12 @@ public sealed class BlueZLeScanner : IAsyncDisposable
         return null;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await StopAsync();
-    }
-}
-
-public sealed class BlueZAdvertisementEvent
-{
-    public DateTimeOffset Timestamp { get; init; }
-    public string DevicePath { get; init; } = "";
-    public string? Address { get; init; }
-    public string? Name { get; init; }
-    public string? Alias { get; init; }
-    public short? Rssi { get; init; }
-    public short? TxPower { get; init; }
-
-    public bool? Connected { get; init; }
-    public bool? Paired { get; init; }
-    public bool? Trusted { get; init; }
-
-    public IReadOnlyDictionary<ushort, byte[]>? ManufacturerData { get; init; }
-    public IReadOnlyDictionary<byte, byte[]>? AdvertisingData { get; init; }
+    public async ValueTask DisposeAsync() => await StopAsync();
 }
 
 #endregion
 
-#region ---- App (advertisement logger) ----
+#region ---- App ----
 
 internal static class Program
 {
@@ -361,26 +372,13 @@ internal static class Program
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
 
-        var onceSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var gate = new object();
-
         using var ctx = await BlueZContext.CreateAsync();
         await using var scanner = new BlueZLeScanner(ctx);
 
+        var gate = new object();
+
         scanner.AdvertisementReceived += ev =>
         {
-            // Address may be null in some early events; fallback to device path keying
-            var key = ev.Address ?? ev.DevicePath;
-
-            if (opt.Once)
-            {
-                lock (onceSet)
-                {
-                    if (!onceSet.Add(key))
-                        return;
-                }
-            }
-
             lock (gate)
             {
                 WriteColored(ConsoleColor.Cyan, ev.Timestamp.ToLocalTime().ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture));
@@ -391,6 +389,11 @@ internal static class Program
                 Console.Write(ev.Rssi?.ToString(CultureInfo.InvariantCulture) ?? "?");
                 Console.Write(" ");
                 WriteColored(ConsoleColor.Magenta, ev.Name ?? ev.Alias ?? "(Unknown)");
+                if (!string.IsNullOrEmpty(ev.CauseProperty))
+                {
+                    Console.Write(" ");
+                    WriteColored(ConsoleColor.DarkGray, $"({ev.CauseProperty})");
+                }
                 Console.WriteLine();
 
                 if (opt.Info)
@@ -436,7 +439,6 @@ internal static class Program
                     }
                     else
                     {
-                        // Similar to DataSections in Windows sample: show datatype + raw bytes
                         foreach (var sec in ev.AdvertisingData.OrderBy(k => k.Key))
                         {
                             WriteColored(ConsoleColor.Yellow, "DataType:");
@@ -452,21 +454,11 @@ internal static class Program
             }
         };
 
-        await scanner.StartAsync(cts.Token);
+        await scanner.StartAsync(opt.Active, cts.Token);
 
-        // Like Windows sample: block until Enter. Here also support Ctrl+C.
-        if (!opt.Once)
-        {
-            Console.WriteLine("Scanning... Press Enter to stop.");
-            Console.ReadLine();
-            cts.Cancel();
-        }
-        else
-        {
-            Console.WriteLine("Scanning (once mode)... Press Enter to stop.");
-            Console.ReadLine();
-            cts.Cancel();
-        }
+        Console.WriteLine("Scanning... Press Enter to stop. (Ctrl+C also works)");
+        Console.ReadLine();
+        cts.Cancel();
 
         await scanner.StopAsync();
         return 0;
@@ -496,7 +488,6 @@ internal static class Program
     private static string ToHexString(ReadOnlySpan<byte> source)
     {
         const string hexChars = "0123456789ABCDEF";
-        // format: " xx xx ..."
         var sb = new StringBuilder(source.Length * 3 + 1);
         sb.Append(' ');
         foreach (var b in source)
@@ -512,7 +503,6 @@ internal static class Program
 internal sealed class Options
 {
     public bool Active { get; private set; }
-    public bool Once { get; private set; }
     public bool Info { get; private set; }
     public bool Manufacturer { get; private set; }
     public bool Section { get; private set; }
@@ -527,10 +517,6 @@ internal sealed class Options
                 case "--active":
                 case "-a":
                     o.Active = true;
-                    break;
-                case "--once":
-                case "-o":
-                    o.Once = true;
                     break;
                 case "--info":
                 case "-i":
@@ -551,14 +537,6 @@ internal sealed class Options
                     break;
             }
         }
-
-        // Active scan: BlueZ doesn't expose a simple "active/passive" toggle per app like Windows watcher.
-        // We keep the flag for CLI compatibility; if needed, implement SetDiscoveryFilter/Transport/Pattern/RSSI, etc.
-        if (o.Active)
-        {
-            Console.WriteLine("Note: --active is accepted, but BlueZ discovery mode is not a direct 1:1 mapping to Windows active scan.");
-        }
-
         return o;
     }
 
@@ -567,7 +545,6 @@ internal sealed class Options
         Console.WriteLine("Usage: dotnet run -- [options]");
         Console.WriteLine("Options:");
         Console.WriteLine("  -a, --active         Active scanning (best-effort; BlueZ differs from Windows)");
-        Console.WriteLine("  -o, --once           Scan once per device");
         Console.WriteLine("  -i, --info           Show device information (from Device1 properties)");
         Console.WriteLine("  -m, --manufacturer   Show manufacturer data (if available)");
         Console.WriteLine("  -s, --section        Show advertising data sections (if available)");
