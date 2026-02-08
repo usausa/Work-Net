@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="WorkLinuxBle/WorkLinuxBle.csproj" />
+  <Project Path="WorkLinuxBle2/WorkLinuxBle2.csproj" Id="8d121014-8b2e-428b-a572-8104f7290627" />
 </Solution>
