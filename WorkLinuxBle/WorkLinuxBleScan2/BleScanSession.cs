@@ -108,7 +108,10 @@ public sealed class BleScanSession : IAsyncDisposable
         addedSubscription = await objectManager.WatchInterfacesAddedAsync(ev =>
         {
             if (!ev.Interfaces.TryGetValue("org.bluez.Device1", out var props))
+            {
                 return;
+            }
+
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
@@ -126,8 +129,11 @@ public sealed class BleScanSession : IAsyncDisposable
         // Device removed subscription
         removedSubscription = await objectManager.WatchInterfacesRemovedAsync(ev =>
         {
-            if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var sub))
-                sub.Dispose();
+            if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var subscription))
+            {
+                subscription.Dispose();
+            }
+
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
@@ -138,15 +144,18 @@ public sealed class BleScanSession : IAsyncDisposable
         });
 
         var objects = await objectManager.GetManagedObjectsAsync();
-        foreach (var kv in objects)
+        foreach (var (key, value) in objects)
         {
-            if (!kv.Value.TryGetValue("org.bluez.Device1", out var props))
+            if (!value.TryGetValue("org.bluez.Device1", out var props))
+            {
                 continue;
+            }
+
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
                 Type = BleScanEventType.Discover,
-                DevicePath = kv.Key.ToString(),
+                DevicePath = key.ToString(),
                 Keys = props.Keys.ToArray(),
                 Address = props.TryGetValue("Address", out var a) ? a as string : null,
                 Name = props.TryGetValue("Name", out var n) ? n as string : null,
@@ -154,7 +163,7 @@ public sealed class BleScanSession : IAsyncDisposable
                 Rssi = TryGetInt16(props, "RSSI")
             });
 
-            _ = SubscribeDevicePropertyAsync(kv.Key);
+            _ = SubscribeDevicePropertyAsync(key);
         }
 
         await StartDiscoverySafeAsync();
@@ -231,18 +240,18 @@ public sealed class BleScanSession : IAsyncDisposable
             }
 
             // TODO
-            var hasMd = ev.Changed.ContainsKey("ManufacturerData");
-            var md = hasMd ? TryGetManufacturerData(ev.Changed) : null;
+            var props = ev.Changed;
+            var md = TryGetManufacturerData(props);
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
                 Type = BleScanEventType.Update,
                 DevicePath = devicePath.ToString(),
-                Keys = ev.Changed.Keys.ToArray(),
-                Address = ev.Changed.TryGetValue("Address", out var a) ? a as string : null,
-                Name = ev.Changed.TryGetValue("Name", out var n) ? n as string : null,
-                Alias = ev.Changed.TryGetValue("Alias", out var al) ? al as string : null,
-                Rssi = TryGetInt16(ev.Changed, "RSSI"),
+                Keys = props.Keys.ToArray(),
+                Address = props.TryGetValue("Address", out var a) ? a as string : null,
+                Name = props.TryGetValue("Name", out var n) ? n as string : null,
+                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                Rssi = TryGetInt16(props, "RSSI"),
                 ManufacturerData = md
             });
         });
@@ -255,7 +264,7 @@ public sealed class BleScanSession : IAsyncDisposable
 
     public async Task StopAsync()
     {
-        // TODO async
+        // ReSharper disable once MethodHasAsyncOverload
         keepAliveCts?.Cancel();
 
         if (keepAliveTask is not null)
@@ -270,6 +279,7 @@ public sealed class BleScanSession : IAsyncDisposable
             }
         }
         keepAliveTask = null;
+
         keepAliveCts?.Dispose();
         keepAliveCts = null;
 
