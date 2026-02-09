@@ -95,11 +95,11 @@ public sealed class BleScanSession : IAsyncDisposable
         Debug?.Invoke(message);
     }
 
-    private void LogWarn(string message)
-    {
-        Diagnostics?.Warn(message);
-        Debug?.Invoke(message);
-    }
+    //private void LogWarn(string message)
+    //{
+    //    Diagnostics?.Warn(message);
+    //    Debug?.Invoke(message);
+    //}
 
     private void LogException(Exception ex, string context)
     {
@@ -150,9 +150,9 @@ public sealed class BleScanSession : IAsyncDisposable
                     Type = BleScanEventType.Discover,
                     DevicePath = ev.ObjectPath.ToString(),
                     Keys = props.Keys.ToArray(),
-                    Address = props.TryGetValue("Address", out var a) ? a as string : null,
-                    Name = props.TryGetValue("Name", out var n) ? n as string : null,
-                    Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                    Address = TryGetString(props, "Address"),
+                    Name = TryGetString(props, "Name"),
+                    Alias = TryGetString(props, "Alias"),
                     Rssi = TryGetInt16(props, "RSSI")
                 });
 
@@ -203,9 +203,9 @@ public sealed class BleScanSession : IAsyncDisposable
                 Type = BleScanEventType.Discover,
                 DevicePath = key.ToString(),
                 Keys = props.Keys.ToArray(),
-                Address = props.TryGetValue("Address", out var a) ? a as string : null,
-                Name = props.TryGetValue("Name", out var n) ? n as string : null,
-                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                Address = TryGetString(props, "Address"),
+                Name = TryGetString(props, "Name"),
+                Alias = TryGetString(props, "Alias"),
                 Rssi = TryGetInt16(props, "RSSI")
             });
 
@@ -297,9 +297,9 @@ public sealed class BleScanSession : IAsyncDisposable
                     Type = BleScanEventType.Update,
                     DevicePath = devicePath.ToString(),
                     Keys = props.Keys.ToArray(),
-                    Address = props.TryGetValue("Address", out var a) ? a as string : null,
-                    Name = props.TryGetValue("Name", out var n) ? n as string : null,
-                    Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                    Address = TryGetString(props, "Address"),
+                    Name = TryGetString(props, "Name"),
+                    Alias = TryGetString(props, "Alias"),
                     Rssi = TryGetInt16(props, "RSSI"),
                     ManufacturerData = md
                 });
