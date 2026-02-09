@@ -3,5 +3,4 @@
   <Project Path="WorkLinuxBle2/WorkLinuxBle2.csproj" Id="8d121014-8b2e-428b-a572-8104f7290627" />
   <Project Path="WorkLinuxBleScan/WorkLinuxBleScan.csproj" Id="c39ed5f3-75b5-4350-8d3c-02a4a603ca69" />
   <Project Path="WorkLinuxBleScan2/WorkLinuxBleScan2.csproj" Id="6a106183-f96e-4bf4-b2cd-37b96f90de35" />
-  <Project Path="WorkLinuxBleScan3/WorkLinuxBleScan3.csproj" Id="70505f9f-35b4-485b-ba7f-3f9977e8ea9e" />
 </Solution>
