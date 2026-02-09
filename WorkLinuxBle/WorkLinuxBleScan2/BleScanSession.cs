@@ -41,25 +41,19 @@ public sealed class BleScanSession : IAsyncDisposable
     private readonly Connection connection;
     private readonly IObjectManager objectManager;
     private readonly IAdapter1 adapter;
-    private readonly IProperties adapterProperties;
 
     private IDisposable? addedSubscription;
     private IDisposable? removedSubscription;
-    private IDisposable? adapterPropertySubscriptions;
 
     private readonly ConcurrentDictionary<ObjectPath, IDisposable> devicePropertySubscriptions = new();
 
-    private CancellationTokenSource? keepAliveCts;
-    private Task? keepAliveTask;
-
     private volatile bool discovering;
 
-    private BleScanSession(Connection connection, IObjectManager objectManager, IAdapter1 adapter, IProperties adapterProperties)
+    private BleScanSession(Connection connection, IObjectManager objectManager, IAdapter1 adapter)
     {
         this.connection = connection;
         this.objectManager = objectManager;
         this.adapter = adapter;
-        this.adapterProperties = adapterProperties;
     }
 
     public static async Task<BleScanSession> CreateAsync()
@@ -76,9 +70,8 @@ public sealed class BleScanSession : IAsyncDisposable
         }
 
         var adapter = con.CreateProxy<IAdapter1>("org.bluez", adapterPath);
-        var adapterProperties = con.CreateProxy<IProperties>("org.bluez", adapterPath);
 
-        return new BleScanSession(con, manager, adapter, adapterProperties);
+        return new BleScanSession(con, manager, adapter);
     }
 
     public async ValueTask DisposeAsync()
@@ -109,29 +102,11 @@ public sealed class BleScanSession : IAsyncDisposable
 
     public async Task StartAsync(CancellationToken ct)
     {
-        // Discover changed subscription
-        adapterPropertySubscriptions = await adapterProperties.WatchPropertiesChangedAsync(ev =>
+        if (discovering)
         {
-            try
-            {
-                LogInfo($"[SUB] Adapter PropertiesChanged: interface={ev.Interface}, changedKeys=[{string.Join(",", ev.Changed.Keys)}], invalidatedKeys=[{string.Join(",", ev.Invalidated)}]");
+            return;
+        }
 
-                if (!String.Equals(ev.Interface, "org.bluez.Adapter1", StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                if (ev.Changed.TryGetValue("Discovering", out var v) && v is bool b)
-                {
-                    discovering = b;
-                    LogInfo($"[DBG] Adapter Discovering changed: {discovering}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(ex, "Adapter PropertiesChanged handler");
-            }
-        });
         // Device added subscription
         addedSubscription = await objectManager.WatchInterfacesAddedAsync(ev =>
         {
@@ -212,57 +187,9 @@ public sealed class BleScanSession : IAsyncDisposable
             _ = SubscribeDevicePropertyAsync(key);
         }
 
-        await StartDiscoverySafeAsync();
+        await adapter.StartDiscoveryAsync();
 
-        keepAliveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        // ReSharper disable once MethodSupportsCancellation
-        keepAliveTask = Task.Run(() => KeepAliveLoopAsync(keepAliveCts.Token));
-    }
-
-    private async Task KeepAliveLoopAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                if (!discovering)
-                {
-                    Debug?.Invoke("[DBG] KeepAlive: discovering=false -> StartDiscovery");
-                    await StartDiscoverySafeAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Ignore
-                Debug?.Invoke("[DBG] KeepAlive exception: " + ex.Message);
-            }
-
-            // Wait
-            try
-            {
-                await Task.Delay(1000, ct);
-            }
-            catch
-            {
-                // Ignore
-            }
-        }
-    }
-
-    private async Task StartDiscoverySafeAsync()
-    {
-        try
-        {
-            Debug?.Invoke("[DBG] Calling StartDiscovery...");
-            await adapter.StartDiscoveryAsync();
-            Debug?.Invoke("[DBG] StartDiscovery OK");
-            discovering = true;
-        }
-        catch (DBusException ex) when (ex.ErrorName?.Contains("InProgress", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            Debug?.Invoke("[DBG] StartDiscovery: already in progress");
-            discovering = true;
-        }
+        discovering = true;
     }
 
     private async Task SubscribeDevicePropertyAsync(ObjectPath devicePath)
@@ -318,24 +245,10 @@ public sealed class BleScanSession : IAsyncDisposable
 
     public async Task StopAsync()
     {
-        // ReSharper disable once MethodHasAsyncOverload
-        keepAliveCts?.Cancel();
-
-        if (keepAliveTask is not null)
+        if (!discovering)
         {
-            try
-            {
-                await keepAliveTask;
-            }
-            catch
-            {
-                // Ignore
-            }
+            return;
         }
-        keepAliveTask = null;
-
-        keepAliveCts?.Dispose();
-        keepAliveCts = null;
 
         try
         {
@@ -349,9 +262,6 @@ public sealed class BleScanSession : IAsyncDisposable
             Debug?.Invoke("[DBG] StopDiscovery error: " + ex.Message);
         }
 
-        adapterPropertySubscriptions?.Dispose();
-        adapterPropertySubscriptions = null;
-
         addedSubscription?.Dispose();
         addedSubscription = null;
 
@@ -363,6 +273,8 @@ public sealed class BleScanSession : IAsyncDisposable
             value.Dispose();
         }
         devicePropertySubscriptions.Clear();
+
+        discovering = false;
     }
 
     private static string? TryGetString(IDictionary<string, object>? props, string key)

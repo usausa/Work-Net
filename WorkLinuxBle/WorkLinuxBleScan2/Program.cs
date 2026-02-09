@@ -54,7 +54,7 @@ internal static class Program
                     if (ev.Rssi is not null) device.Rssi = ev.Rssi;
                     device.LastEventTime = ev.Timestamp;
 
-                    device.ManufacturerData.Clear();
+                    //device.ManufacturerData.Clear();
                     if (ev.ManufacturerData is not null)
                     {
                         foreach (var md in ev.ManufacturerData)
