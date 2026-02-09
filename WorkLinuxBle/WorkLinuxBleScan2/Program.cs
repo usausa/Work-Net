@@ -1,8 +1,8 @@
+namespace WorkLinuxBleScan2;
+
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
-
-using WorkLinuxBleScan2;
 
 internal sealed class DeviceInfo
 {
@@ -12,30 +12,25 @@ internal sealed class DeviceInfo
     public string? Alias { get; set; }
     public short? Rssi { get; set; }
     public DateTimeOffset LastEventTime { get; set; }
-    public Dictionary<ushort, byte[]> ManufacturerData { get; set; } = new();
+    public Dictionary<ushort, byte[]> ManufacturerData { get; } = new();
 }
 
 internal static class Program
 {
-    static async Task<int> Main(string[] args)
+    static async Task<int> Main()
     {
         using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (s, e) => { e.Cancel = true; cts.Cancel(); };
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            // ReSharper disable once AccessToDisposedClosure
+            cts.Cancel();
+        };
 
         await using var session = await BleScanSession.CreateAsync();
         var devices = new ConcurrentDictionary<string, DeviceInfo>(StringComparer.Ordinal);
         var gate = new object();
         var needsRedraw = false;
-
-        session.Debug += msg =>
-        {
-            // デバッグメッセージは標準エラー出力へ
-            lock (gate)
-            {
-                Console.Error.WriteLine(msg);
-                Console.Error.Flush();
-            }
-        };
 
         session.DeviceEvent += ev =>
         {
@@ -56,6 +51,7 @@ internal static class Program
                     if (ev.Rssi is not null) device.Rssi = ev.Rssi;
                     device.LastEventTime = ev.Timestamp;
 
+                    device.ManufacturerData.Clear();
                     if (ev.ManufacturerData is not null)
                     {
                         foreach (var md in ev.ManufacturerData)
@@ -72,8 +68,10 @@ internal static class Program
         await session.StartAsync(cts.Token);
 
         // 描画ループ
+        // ReSharper disable once MethodSupportsCancellation
         var drawTask = Task.Run(async () =>
         {
+            // ReSharper disable once AccessToDisposedClosure
             while (!cts.Token.IsCancellationRequested)
             {
                 lock (gate)
@@ -84,18 +82,37 @@ internal static class Program
                         needsRedraw = false;
                     }
                 }
-                try { await Task.Delay(100, cts.Token); } catch { }
+
+                try
+                {
+                    // ReSharper disable once AccessToDisposedClosure
+                    await Task.Delay(100, cts.Token);
+                }
+                catch
+                {
+                    // Ignore
+                }
             }
         });
 
         Console.WriteLine("Scanning... Press Enter to stop. (Ctrl+C also works)");
+        // ReSharper disable once MethodSupportsCancellation
+        // ReSharper disable once ConvertClosureToMethodGroup
         var inputTask = Task.Run(() => Console.ReadLine());
+        // ReSharper disable once MethodSupportsCancellation
         await Task.WhenAny(inputTask, Task.Delay(Timeout.Infinite, cts.Token)).ContinueWith(_ => { });
 
-        cts.Cancel();
+        await cts.CancelAsync();
         await session.StopAsync();
 
-        try { await drawTask; } catch { }
+        try
+        {
+            await drawTask;
+        }
+        catch
+        {
+            // Ignore
+        }
 
         return 0;
     }
@@ -126,7 +143,7 @@ internal static class Program
             var name = device.Name ?? device.Alias ?? "Unknown";
             if (name.Length > 29) name = name.Substring(0, 26) + "...";
 
-            var mdInfo = "";
+            string mdInfo;
             if (device.ManufacturerData.Count > 0)
             {
                 var firstMd = device.ManufacturerData.First();
