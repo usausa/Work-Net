@@ -90,7 +90,6 @@ public sealed class BleScanSession : IAsyncDisposable
 
     public async Task StartAsync(CancellationToken ct)
     {
-        // Discover changed subscription
         adapterPropertySubscriptions = await adapterProperties.WatchPropertiesChangedAsync(ev =>
         {
             if (!String.Equals(ev.Interface, "org.bluez.Adapter1", StringComparison.Ordinal))
@@ -98,42 +97,33 @@ public sealed class BleScanSession : IAsyncDisposable
                 return;
             }
 
-            if (ev.Changed.TryGetValue("Discovering", out var value) && (value is bool boolValue))
+            if (ev.Changed.TryGetValue("Discovering", out var v) && v is bool b)
             {
-                discovering = boolValue;
+                discovering = b;
                 Debug?.Invoke($"[DBG] Adapter Discovering changed: {discovering}");
             }
         });
-        // Device added subscription
         addedSubscription = await objectManager.WatchInterfacesAddedAsync(ev =>
         {
             if (!ev.Interfaces.TryGetValue("org.bluez.Device1", out var props))
-            {
                 return;
-            }
-
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
                 Type = BleScanEventType.Discover,
                 DevicePath = ev.ObjectPath.ToString(),
                 Keys = props.Keys.ToArray(),
-                Address = TryGetString(props, "Address"),
-                Name = TryGetString(props, "Name"),
-                Alias = TryGetString(props, "Alias"),
+                Address = props.TryGetValue("Address", out var a) ? a as string : null,
+                Name = props.TryGetValue("Name", out var n) ? n as string : null,
+                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
                 Rssi = TryGetInt16(props, "RSSI")
             });
-
-            _ = SubscribeDevicePropertyAsync(ev.ObjectPath);
+            _ = EnsureDevicePropsSubscriptionAsync(ev.ObjectPath);
         });
-        // Device removed subscription
         removedSubscription = await objectManager.WatchInterfacesRemovedAsync(ev =>
         {
-            if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var subscriptions))
-            {
-                subscriptions.Dispose();
-            }
-
+            if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var sub))
+                sub.Dispose();
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
@@ -142,78 +132,28 @@ public sealed class BleScanSession : IAsyncDisposable
                 Keys = ev.Interfaces.ToArray()
             });
         });
-
         var objects = await objectManager.GetManagedObjectsAsync();
-        foreach (var (key, value) in objects)
+        foreach (var kv in objects)
         {
-            if (!value.TryGetValue("org.bluez.Device1", out var props))
-            {
+            if (!kv.Value.TryGetValue("org.bluez.Device1", out var props))
                 continue;
-            }
-
             RaiseEvent(new BleScanEvent
             {
                 Timestamp = DateTimeOffset.Now,
                 Type = BleScanEventType.Discover,
-                DevicePath = key.ToString(),
+                DevicePath = kv.Key.ToString(),
                 Keys = props.Keys.ToArray(),
-                Address = TryGetString(props, "Address"),
-                Name = TryGetString(props, "Name"),
-                Alias = TryGetString(props, "Alias"),
+                Address = props.TryGetValue("Address", out var a) ? a as string : null,
+                Name = props.TryGetValue("Name", out var n) ? n as string : null,
+                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
                 Rssi = TryGetInt16(props, "RSSI")
             });
-
-            _ = SubscribeDevicePropertyAsync(key);
+            _ = EnsureDevicePropsSubscriptionAsync(kv.Key);
         }
-
         await StartDiscoverySafeAsync();
-
         keepAliveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        // ReSharper disable once MethodSupportsCancellation
         keepAliveTask = Task.Run(() => KeepAliveLoopAsync(keepAliveCts.Token));
     }
-
-    private async Task SubscribeDevicePropertyAsync(ObjectPath devicePath)
-    {
-        if (devicePropertySubscriptions.ContainsKey(devicePath))
-        {
-            return;
-        }
-
-        var properties = connection.CreateProxy<IProperties>("org.bluez", devicePath);
-        var subscription = await properties.WatchPropertiesChangedAsync(ev =>
-        {
-            if (!String.Equals(ev.Interface, "org.bluez.Device1", StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            if (ev.Changed.Count == 0)
-            {
-                return;
-            }
-
-            var props = ev.Changed;
-            RaiseEvent(new BleScanEvent
-            {
-                Timestamp = DateTimeOffset.Now,
-                Type = BleScanEventType.Update,
-                DevicePath = devicePath.ToString(),
-                Keys = props.Keys.ToArray(),
-                Address = TryGetString(props, "Address"),
-                Name = TryGetString(props, "Name"),
-                Alias = TryGetString(props, "Alias"),
-                Rssi = TryGetInt16(props, "RSSI"),
-                ManufacturerData = TryGetManufacturerData(props)
-            });
-        });
-
-        if (!devicePropertySubscriptions.TryAdd(devicePath, subscription))
-        {
-            subscription.Dispose();
-        }
-    }
-
     private async Task KeepAliveLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -228,22 +168,11 @@ public sealed class BleScanSession : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                // Ignore
                 Debug?.Invoke("[DBG] KeepAlive exception: " + ex.Message);
             }
-
-            // Wait
-            try
-            {
-                await Task.Delay(1000, ct);
-            }
-            catch
-            {
-                // Ignore
-            }
+            try { await Task.Delay(1000, ct); } catch { }
         }
     }
-
     private async Task StartDiscoverySafeAsync()
     {
         try
@@ -259,27 +188,46 @@ public sealed class BleScanSession : IAsyncDisposable
             discovering = true;
         }
     }
+    private async Task EnsureDevicePropsSubscriptionAsync(ObjectPath devicePath)
+    {
+        if (devicePropertySubscriptions.ContainsKey(devicePath))
+            return;
+        var propsProxy = connection.CreateProxy<IProperties>("org.bluez", devicePath);
+        var sub = await propsProxy.WatchPropertiesChangedAsync(ev =>
+        {
+            if (!string.Equals(ev.Interface, "org.bluez.Device1", StringComparison.Ordinal))
+                return;
+            if (ev.Changed.Count == 0)
+                return;
+            var hasMd = ev.Changed.ContainsKey("ManufacturerData");
+            var md = hasMd ? TryGetManufacturerData(ev.Changed) : null;
+            RaiseEvent(new BleScanEvent
+            {
+                Timestamp = DateTimeOffset.Now,
+                Type = BleScanEventType.Update,
+                DevicePath = devicePath.ToString(),
+                Keys = ev.Changed.Keys.ToArray(),
+                Address = ev.Changed.TryGetValue("Address", out var a) ? a as string : null,
+                Name = ev.Changed.TryGetValue("Name", out var n) ? n as string : null,
+                Alias = ev.Changed.TryGetValue("Alias", out var al) ? al as string : null,
+                Rssi = TryGetInt16(ev.Changed, "RSSI"),
+                ManufacturerData = md
+            });
+        });
+        if (!devicePropertySubscriptions.TryAdd(devicePath, sub))
+            sub.Dispose();
+    }
 
     public async Task StopAsync()
     {
-        // TODO async
         keepAliveCts?.Cancel();
-
         if (keepAliveTask is not null)
         {
-            try
-            {
-                await keepAliveTask;
-            }
-            catch
-            {
-                // Ignore
-            }
+            try { await keepAliveTask; } catch { }
         }
         keepAliveTask = null;
         keepAliveCts?.Dispose();
         keepAliveCts = null;
-
         try
         {
             Debug?.Invoke("[DBG] Calling StopDiscovery...");
@@ -288,23 +236,13 @@ public sealed class BleScanSession : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            // Ignore
             Debug?.Invoke("[DBG] StopDiscovery error: " + ex.Message);
         }
-
-        adapterPropertySubscriptions?.Dispose();
-        adapterPropertySubscriptions = null;
-
-        addedSubscription?.Dispose();
-        addedSubscription = null;
-
-        removedSubscription?.Dispose();
-        removedSubscription = null;
-
-        foreach (var (_, value) in devicePropertySubscriptions)
-        {
-            value.Dispose();
-        }
+        adapterPropertySubscriptions?.Dispose(); adapterPropertySubscriptions = null;
+        addedSubscription?.Dispose(); addedSubscription = null;
+        removedSubscription?.Dispose(); removedSubscription = null;
+        foreach (var kv in devicePropertySubscriptions)
+            kv.Value.Dispose();
         devicePropertySubscriptions.Clear();
     }
 
