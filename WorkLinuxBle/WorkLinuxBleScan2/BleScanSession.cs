@@ -154,6 +154,7 @@ public sealed class BleScanSession : IAsyncDisposable
         keepAliveCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         keepAliveTask = Task.Run(() => KeepAliveLoopAsync(keepAliveCts.Token));
     }
+
     private async Task KeepAliveLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -168,11 +169,22 @@ public sealed class BleScanSession : IAsyncDisposable
             }
             catch (Exception ex)
             {
+                // Ignore
                 Debug?.Invoke("[DBG] KeepAlive exception: " + ex.Message);
             }
-            try { await Task.Delay(1000, ct); } catch { }
+
+            // Wait
+            try
+            {
+                await Task.Delay(1000, ct);
+            }
+            catch
+            {
+                // Ignore
+            }
         }
     }
+
     private async Task StartDiscoverySafeAsync()
     {
         try
@@ -188,6 +200,7 @@ public sealed class BleScanSession : IAsyncDisposable
             discovering = true;
         }
     }
+
     private async Task EnsureDevicePropsSubscriptionAsync(ObjectPath devicePath)
     {
         if (devicePropertySubscriptions.ContainsKey(devicePath))
