@@ -19,6 +19,7 @@ internal static class Program
 {
     static async Task<int> Main()
     {
+        await using var diag = new BleDiagnostics();
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
         {
@@ -28,6 +29,8 @@ internal static class Program
         };
 
         await using var session = await BleScanSession.CreateAsync();
+        session.Diagnostics = diag;
+        session.Debug += diag.Info;
         var devices = new ConcurrentDictionary<string, DeviceInfo>(StringComparer.Ordinal);
         var gate = new object();
         var needsRedraw = false;

@@ -1,7 +1,6 @@
 namespace WorkLinuxBleScan2;
 
 using System.Collections.Concurrent;
-
 using Tmds.DBus;
 
 public enum BleScanEventType
@@ -36,6 +35,8 @@ public sealed class BleScanSession : IAsyncDisposable
 {
     public event Action<string>? Debug;
     public event Action<BleScanEvent>? DeviceEvent;
+
+    public BleDiagnostics? Diagnostics { get; set; }
 
     private readonly Connection connection;
     private readonly IObjectManager objectManager;
@@ -88,59 +89,104 @@ public sealed class BleScanSession : IAsyncDisposable
 
     private void RaiseEvent(BleScanEvent e) => DeviceEvent?.Invoke(e);
 
+    private void LogInfo(string message)
+    {
+        Diagnostics?.Info(message);
+        Debug?.Invoke(message);
+    }
+
+    private void LogWarn(string message)
+    {
+        Diagnostics?.Warn(message);
+        Debug?.Invoke(message);
+    }
+
+    private void LogException(Exception ex, string context)
+    {
+        Diagnostics?.Exception(ex, context);
+        Debug?.Invoke($"[EX] {context}: {ex.GetType().Name}: {ex.Message}");
+    }
+
     public async Task StartAsync(CancellationToken ct)
     {
         // Discover changed subscription
         adapterPropertySubscriptions = await adapterProperties.WatchPropertiesChangedAsync(ev =>
         {
-            if (!String.Equals(ev.Interface, "org.bluez.Adapter1", StringComparison.Ordinal))
+            try
             {
-                return;
-            }
+                LogInfo($"[SUB] Adapter PropertiesChanged: interface={ev.Interface}, changedKeys=[{string.Join(",", ev.Changed.Keys)}], invalidatedKeys=[{string.Join(",", ev.Invalidated)}]");
 
-            if (ev.Changed.TryGetValue("Discovering", out var v) && v is bool b)
+                if (!String.Equals(ev.Interface, "org.bluez.Adapter1", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                if (ev.Changed.TryGetValue("Discovering", out var v) && v is bool b)
+                {
+                    discovering = b;
+                    LogInfo($"[DBG] Adapter Discovering changed: {discovering}");
+                }
+            }
+            catch (Exception ex)
             {
-                discovering = b;
-                Debug?.Invoke($"[DBG] Adapter Discovering changed: {discovering}");
+                LogException(ex, "Adapter PropertiesChanged handler");
             }
         });
         // Device added subscription
         addedSubscription = await objectManager.WatchInterfacesAddedAsync(ev =>
         {
-            if (!ev.Interfaces.TryGetValue("org.bluez.Device1", out var props))
+            try
             {
-                return;
+                LogInfo($"[SUB] InterfacesAdded: path={ev.ObjectPath}, interfaces=[{string.Join(",", ev.Interfaces.Keys)}]");
+
+                if (!ev.Interfaces.TryGetValue("org.bluez.Device1", out var props))
+                {
+                    return;
+                }
+
+                RaiseEvent(new BleScanEvent
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    Type = BleScanEventType.Discover,
+                    DevicePath = ev.ObjectPath.ToString(),
+                    Keys = props.Keys.ToArray(),
+                    Address = props.TryGetValue("Address", out var a) ? a as string : null,
+                    Name = props.TryGetValue("Name", out var n) ? n as string : null,
+                    Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                    Rssi = TryGetInt16(props, "RSSI")
+                });
+
+                _ = SubscribeDevicePropertyAsync(ev.ObjectPath);
             }
-
-            RaiseEvent(new BleScanEvent
+            catch (Exception ex)
             {
-                Timestamp = DateTimeOffset.Now,
-                Type = BleScanEventType.Discover,
-                DevicePath = ev.ObjectPath.ToString(),
-                Keys = props.Keys.ToArray(),
-                Address = props.TryGetValue("Address", out var a) ? a as string : null,
-                Name = props.TryGetValue("Name", out var n) ? n as string : null,
-                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
-                Rssi = TryGetInt16(props, "RSSI")
-            });
-
-            _ = SubscribeDevicePropertyAsync(ev.ObjectPath);
+                LogException(ex, $"InterfacesAdded handler ({ev.ObjectPath})");
+            }
         });
         // Device removed subscription
         removedSubscription = await objectManager.WatchInterfacesRemovedAsync(ev =>
         {
-            if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var subscription))
+            try
             {
-                subscription.Dispose();
-            }
+                LogInfo($"[SUB] InterfacesRemoved: path={ev.ObjectPath}, interfaces=[{string.Join(",", ev.Interfaces)}]");
 
-            RaiseEvent(new BleScanEvent
+                if (devicePropertySubscriptions.TryRemove(ev.ObjectPath, out var subscription))
+                {
+                    subscription.Dispose();
+                }
+
+                RaiseEvent(new BleScanEvent
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    Type = BleScanEventType.Lost,
+                    DevicePath = ev.ObjectPath.ToString(),
+                    Keys = ev.Interfaces.ToArray()
+                });
+            }
+            catch (Exception ex)
             {
-                Timestamp = DateTimeOffset.Now,
-                Type = BleScanEventType.Lost,
-                DevicePath = ev.ObjectPath.ToString(),
-                Keys = ev.Interfaces.ToArray()
-            });
+                LogException(ex, $"InterfacesRemoved handler ({ev.ObjectPath})");
+            }
         });
 
         var objects = await objectManager.GetManagedObjectsAsync();
@@ -229,31 +275,39 @@ public sealed class BleScanSession : IAsyncDisposable
         var properties = connection.CreateProxy<IProperties>("org.bluez", devicePath);
         var subscription = await properties.WatchPropertiesChangedAsync(ev =>
         {
-            if (!String.Equals(ev.Interface, "org.bluez.Device1", StringComparison.Ordinal))
+            try
             {
-                return;
-            }
+                LogInfo($"[SUB] Device PropertiesChanged: path={devicePath}, interface={ev.Interface}, changedKeys=[{string.Join(",", ev.Changed.Keys)}], invalidatedKeys=[{string.Join(",", ev.Invalidated)}]");
 
-            if (ev.Changed.Count == 0)
-            {
-                return;
-            }
+                if (!String.Equals(ev.Interface, "org.bluez.Device1", StringComparison.Ordinal))
+                {
+                    return;
+                }
 
-            // TODO
-            var props = ev.Changed;
-            var md = TryGetManufacturerData(props);
-            RaiseEvent(new BleScanEvent
+                if (ev.Changed.Count == 0)
+                {
+                    return;
+                }
+
+                var props = ev.Changed;
+                var md = TryGetManufacturerData(props);
+                RaiseEvent(new BleScanEvent
+                {
+                    Timestamp = DateTimeOffset.Now,
+                    Type = BleScanEventType.Update,
+                    DevicePath = devicePath.ToString(),
+                    Keys = props.Keys.ToArray(),
+                    Address = props.TryGetValue("Address", out var a) ? a as string : null,
+                    Name = props.TryGetValue("Name", out var n) ? n as string : null,
+                    Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
+                    Rssi = TryGetInt16(props, "RSSI"),
+                    ManufacturerData = md
+                });
+            }
+            catch (Exception ex)
             {
-                Timestamp = DateTimeOffset.Now,
-                Type = BleScanEventType.Update,
-                DevicePath = devicePath.ToString(),
-                Keys = props.Keys.ToArray(),
-                Address = props.TryGetValue("Address", out var a) ? a as string : null,
-                Name = props.TryGetValue("Name", out var n) ? n as string : null,
-                Alias = props.TryGetValue("Alias", out var al) ? al as string : null,
-                Rssi = TryGetInt16(props, "RSSI"),
-                ManufacturerData = md
-            });
+                LogException(ex, $"Device PropertiesChanged handler ({devicePath})");
+            }
         });
 
         if (!devicePropertySubscriptions.TryAdd(devicePath, subscription))
