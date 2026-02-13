@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/Example/">
+    <Project Path="Example.SystemInfo.ConsoleApp/Example.SystemInfo.ConsoleApp.csproj" Id="8972d9fe-c816-496c-9c18-9e46010861c8" />
+  </Folder>
+  <Folder Name="/Library/">
+    <Project Path="MacDotNet.SystemInfo/MacDotNet.SystemInfo.csproj" Id="1a5f12bd-fe8b-47e0-86c9-9ecfc5032760" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Analyzers.ruleset" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="LICENSE" />
+    <File Path="MacDotNet.sln.DotSettings" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="LinuxDotNet.SystemInfo/LinuxDotNet.SystemInfo.csproj" />
+  <Project Path="WorkBattery/WorkBattery.csproj" />
+  <Project Path="WorkCpu/WorkCpu.csproj" />
+  <Project Path="WorkFileSystem/WorkFileSystem.csproj" />
+  <Project Path="WorkGpu/WorkGpu.csproj" />
+  <Project Path="WorkHardware/WorkHardware.csproj" />
+  <Project Path="WorkMemory/WorkMemory.csproj" />
+  <Project Path="WorkNetwork/WorkNetwork.csproj" />
+  <Project Path="WorkPower/WorkPower.csproj" />
+  <Project Path="WorkProcess/WorkProcess.csproj" />
+  <Project Path="WorkSmart/WorkSmart.csproj" />
+</Solution>
