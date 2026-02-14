@@ -26,5 +26,4 @@
   <Project Path="WorkNetwork/WorkNetwork.csproj" />
   <Project Path="WorkPower/WorkPower.csproj" />
   <Project Path="WorkProcess/WorkProcess.csproj" />
-  <Project Path="WorkSmart/WorkSmart.csproj" />
 </Solution>
