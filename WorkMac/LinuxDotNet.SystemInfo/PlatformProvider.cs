@@ -34,4 +34,21 @@ public static class PlatformProvider
     public static MainsAdapterDevice GetMainsAdapter() => new();
 
     public static IReadOnlyList<HardwareMonitor> GetHardwareMonitors() => HardwareMonitor.GetMonitors();
+
+    // New APIs
+
+    public static IReadOnlyList<NetworkInterface> GetNetworkInterfaces() => NetworkInfo.GetInterfaces();
+
+    public static NetworkInterface? GetNetworkInterface(string name) => NetworkInfo.GetInterface(name);
+
+    public static IReadOnlyList<ProcessEntry> GetProcesses() => ProcessInfo.GetProcesses();
+
+    public static ProcessEntry? GetProcess(int pid) => ProcessInfo.GetProcess(pid);
+
+    public static HardwareInfo GetHardware() => new();
+
+    public static KernelInfo GetKernel() => new();
+
+    public static IReadOnlyList<FileSystemEntry> GetFileSystems(bool includeVirtual = false) => FileSystemInfo.GetFileSystems(includeVirtual);
 }
+
