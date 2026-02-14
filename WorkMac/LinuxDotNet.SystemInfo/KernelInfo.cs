@@ -2,13 +2,11 @@ namespace LinuxDotNet.SystemInfo;
 
 public sealed class KernelInfo
 {
-    public DateTime UpdateAt { get; private set; }
+    public string OsType { get; }
 
-    public string OsType { get; private set; } = string.Empty;
+    public string OsRelease { get; }
 
-    public string OsRelease { get; private set; } = string.Empty;
-
-    public string KernelVersion { get; private set; } = string.Empty;
+    public string KernelVersion { get; }
 
     public string? OsProductVersion { get; private set; }
 
@@ -18,27 +16,19 @@ public sealed class KernelInfo
 
     public string? OsId { get; private set; }
 
-    public string Hostname { get; private set; } = string.Empty;
-
     public DateTimeOffset BootTime { get; private set; }
 
-    public int MaxProc { get; private set; }
+    public int MaxProc { get; }
 
-    public int MaxFiles { get; private set; }
+    public int MaxFiles { get; }
 
-    public int MaxFilesPerProc { get; private set; }
+    public int MaxFilesPerProc { get; }
 
-    internal KernelInfo()
-    {
-        Update();
-    }
-
-    public bool Update()
+    private KernelInfo()
     {
         OsType = ReadProcFile("sys/kernel/ostype");
         OsRelease = ReadProcFile("sys/kernel/osrelease");
         KernelVersion = ReadProcFile("sys/kernel/version");
-        Hostname = ReadProcFile("sys/kernel/hostname");
 
         ParseOsRelease();
 
@@ -47,11 +37,9 @@ public sealed class KernelInfo
         MaxFilesPerProc = ReadProcFileAsInt32("sys/fs/nr_open");
 
         ParseBootTime();
-
-        UpdateAt = DateTime.Now;
-
-        return true;
     }
+
+    public static KernelInfo Create() => new();
 
     private void ParseOsRelease()
     {

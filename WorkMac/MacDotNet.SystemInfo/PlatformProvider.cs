@@ -11,8 +11,6 @@ public static class PlatformProvider
 
     public static SwapInfo GetSwap() => new();
 
-    public static CpuInfo GetCpu() => new();
-
     public static CpuUsageInfo GetCpuUsage() => new();
 
     public static IReadOnlyList<FileSystemEntry> GetFileSystems() => FileSystemInfo.GetFileSystems();
@@ -23,11 +21,11 @@ public static class PlatformProvider
 
     public static IReadOnlyList<GpuEntry> GetGpus() => GpuInfo.GetGpus();
 
-    public static HardwareInfo GetHardware() => new();
+    public static HardwareInfo GetHardware() => HardwareInfo.Create();
 
     public static IReadOnlyList<PerformanceLevelEntry> GetPerformanceLevels() => HardwareInfo.GetPerformanceLevels();
 
-    public static KernelInfo GetKernel() => new();
+    public static KernelInfo GetKernel() => KernelInfo.Create();
 
     public static BatteryInfo GetBattery() => new();
 

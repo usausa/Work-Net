@@ -86,6 +86,7 @@ public sealed class MemoryInfo
 
     internal MemoryInfo()
     {
+        PhysicalMemory = Helper.GetSysctlUlong("hw.memsize");
         Update();
     }
 
@@ -107,7 +108,6 @@ public sealed class MemoryInfo
         }
 
         PageSize = pageSize;
-        PhysicalMemory = Helper.GetSysctlUlong("hw.memsize");
         ActiveCount = vmStat.active_count;
         InactiveCount = vmStat.inactive_count;
         WireCount = vmStat.wire_count;

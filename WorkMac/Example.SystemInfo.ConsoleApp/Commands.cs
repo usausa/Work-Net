@@ -27,6 +27,8 @@ public static class CommandBuilderExtensions
         commands.AddCommand<BatteryCommand>();
         commands.AddCommand<TemperatureCommand>();
         commands.AddCommand<FanCommand>();
+        commands.AddCommand<PowerCommand>();
+        commands.AddCommand<VoltageCommand>();
     }
 }
 
@@ -106,19 +108,19 @@ public sealed class CpuCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        var cpu = PlatformProvider.GetCpu();
+        var hw = PlatformProvider.GetHardware();
         Console.WriteLine("=== CPU Info ===");
-        Console.WriteLine($"Logical CPU:    {cpu.LogicalCpu}");
-        Console.WriteLine($"Physical CPU:   {cpu.PhysicalCpu}");
-        Console.WriteLine($"Active CPU:     {cpu.ActiveCpu}");
-        if (cpu.BrandString is not null)
+        Console.WriteLine($"Logical CPU:    {hw.LogicalCpu}");
+        Console.WriteLine($"Physical CPU:   {hw.PhysicalCpu}");
+        Console.WriteLine($"Active CPU:     {hw.ActiveCpu}");
+        if (hw.CpuBrandString is not null)
         {
-            Console.WriteLine($"Brand:          {cpu.BrandString}");
+            Console.WriteLine($"Brand:          {hw.CpuBrandString}");
         }
 
-        if (cpu.CpuFrequency > 0)
+        if (hw.CpuFrequency > 0)
         {
-            Console.WriteLine($"Frequency:      {cpu.CpuFrequency / 1_000_000_000.0:F2} GHz");
+            Console.WriteLine($"Frequency:      {hw.CpuFrequency / 1_000_000_000.0:F2} GHz");
         }
 
         Console.WriteLine();
@@ -145,6 +147,8 @@ public sealed class FileSystemCommand : ICommandHandler
             Console.WriteLine("No file systems found.");
             return ValueTask.CompletedTask;
         }
+
+
 
         foreach (var fs in entries)
         {
@@ -362,7 +366,6 @@ public sealed class KernelCommand : ICommandHandler
         Console.WriteLine($"OS Release:       {kern.OsRelease}");
         Console.WriteLine($"OS Version:       {kern.OsVersion}");
         Console.WriteLine($"OS Product Ver:   {kern.OsProductVersion ?? "(unavailable)"}");
-        Console.WriteLine($"Hostname:         {kern.Hostname}");
         Console.WriteLine();
 
         Console.WriteLine("=== Boot Time ===");
@@ -374,6 +377,7 @@ public sealed class KernelCommand : ICommandHandler
 
         return ValueTask.CompletedTask;
     }
+
 }
 
 // Battery
@@ -468,6 +472,58 @@ public sealed class FanCommand : ICommandHandler
         else
         {
             Console.WriteLine("No fans found.");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+// Power
+[Command("power", "Power Readings")]
+public sealed class PowerCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var powers = PlatformProvider.GetPowerReadings();
+        Console.WriteLine("=== Power Readings ===");
+        if (powers.Count > 0)
+        {
+            Console.WriteLine($"{"Key",-6} {"Value",8}  Description");
+            Console.WriteLine(new string('-', 50));
+            foreach (var p in powers)
+            {
+                Console.WriteLine($"{p.Key,-6} {p.Value,7:F2} W  {p.Description}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("No power readings found.");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+// Voltage
+[Command("voltage", "Voltage Readings")]
+public sealed class VoltageCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var voltages = PlatformProvider.GetVoltageReadings();
+        Console.WriteLine("=== Voltage Readings ===");
+        if (voltages.Count > 0)
+        {
+            Console.WriteLine($"{"Key",-6} {"Value",8}  Description");
+            Console.WriteLine(new string('-', 50));
+            foreach (var v in voltages)
+            {
+                Console.WriteLine($"{v.Key,-6} {v.Value,7:F3} V  {v.Description}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("No voltage readings found.");
         }
 
         return ValueTask.CompletedTask;

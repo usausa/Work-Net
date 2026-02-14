@@ -2,19 +2,17 @@ namespace LinuxDotNet.SystemInfo;
 
 public sealed class HardwareInfo
 {
-    public DateTime UpdateAt { get; private set; }
+    public string Model { get; }
 
-    public string Model { get; private set; } = string.Empty;
+    public string Vendor { get; }
 
-    public string Vendor { get; private set; } = string.Empty;
+    public string ProductName { get; }
 
-    public string ProductName { get; private set; } = string.Empty;
+    public string? ProductVersion { get; }
 
-    public string? ProductVersion { get; private set; }
+    public string? SerialNumber { get; }
 
-    public string? SerialNumber { get; private set; }
-
-    public string Machine { get; private set; } = string.Empty;
+    public string Machine { get; }
 
     public string? CpuBrandString { get; private set; }
 
@@ -36,9 +34,9 @@ public sealed class HardwareInfo
 
     public long CpuFrequencyMax { get; private set; }
 
-    public long MemSize { get; private set; }
+    public long MemSize { get; }
 
-    public long PageSize { get; private set; }
+    public long PageSize { get; }
 
     public long CacheLineSize { get; private set; }
 
@@ -50,12 +48,7 @@ public sealed class HardwareInfo
 
     public long L3CacheSize { get; private set; }
 
-    internal HardwareInfo()
-    {
-        Update();
-    }
-
-    public bool Update()
+    private HardwareInfo()
     {
         Model = ReadDmiFile("product_name");
         Vendor = ReadDmiFile("sys_vendor");
@@ -68,11 +61,9 @@ public sealed class HardwareInfo
 
         MemSize = ReadMemInfo("MemTotal") * 1024;
         PageSize = Environment.SystemPageSize;
-
-        UpdateAt = DateTime.Now;
-
-        return true;
     }
+
+    public static HardwareInfo Create() => new();
 
     private void ParseCpuInfo()
     {

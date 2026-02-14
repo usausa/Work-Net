@@ -17,66 +17,59 @@ public sealed record PerformanceLevelEntry
 
 public sealed class HardwareInfo
 {
-    public DateTime UpdateAt { get; private set; }
+    public string Model { get; }
 
-    public string Model { get; private set; } = string.Empty;
+    public string Machine { get; }
 
-    public string Machine { get; private set; } = string.Empty;
+    public string? TargetType { get; }
 
-    public string? TargetType { get; private set; }
+    public string? CpuBrandString { get; }
 
-    public string? CpuBrandString { get; private set; }
+    public int LogicalCpu { get; }
 
-    public int LogicalCpu { get; private set; }
+    public int LogicalCpuMax { get; }
 
-    public int LogicalCpuMax { get; private set; }
+    public int PhysicalCpu { get; }
 
-    public int PhysicalCpu { get; private set; }
+    public int PhysicalCpuMax { get; }
 
-    public int PhysicalCpuMax { get; private set; }
+    public int ActiveCpu { get; }
 
-    public int ActiveCpu { get; private set; }
+    public int Ncpu { get; }
 
-    public int Ncpu { get; private set; }
+    public int CpuCoreCount { get; }
 
-    public int CpuCoreCount { get; private set; }
+    public int CpuThreadCount { get; }
 
-    public int CpuThreadCount { get; private set; }
+    public long CpuFrequency { get; }
 
-    public long CpuFrequency { get; private set; }
+    public long CpuFrequencyMax { get; }
 
-    public long CpuFrequencyMax { get; private set; }
+    public long BusFrequency { get; }
 
-    public long BusFrequency { get; private set; }
+    public long TbFrequency { get; }
 
-    public long TbFrequency { get; private set; }
+    public long MemSize { get; }
 
-    public long MemSize { get; private set; }
+    public long PageSize { get; }
 
-    public long PageSize { get; private set; }
+    public int ByteOrder { get; }
 
-    public int ByteOrder { get; private set; }
+    public long CacheLineSize { get; }
 
-    public long CacheLineSize { get; private set; }
+    public long L1ICacheSize { get; }
 
-    public long L1ICacheSize { get; private set; }
+    public long L1DCacheSize { get; }
 
-    public long L1DCacheSize { get; private set; }
+    public long L2CacheSize { get; }
 
-    public long L2CacheSize { get; private set; }
+    public long L3CacheSize { get; }
 
-    public long L3CacheSize { get; private set; }
+    public int Packages { get; }
 
-    public int Packages { get; private set; }
+    public bool Cpu64BitCapable { get; }
 
-    public bool Cpu64BitCapable { get; private set; }
-
-    internal HardwareInfo()
-    {
-        Update();
-    }
-
-    public bool Update()
+    private HardwareInfo()
     {
         Model = Helper.GetSysctlString("hw.model") ?? string.Empty;
         Machine = Helper.GetSysctlString("hw.machine") ?? string.Empty;
@@ -104,11 +97,9 @@ public sealed class HardwareInfo
         L3CacheSize = Helper.GetSysctlLong("hw.l3cachesize");
         Packages = Helper.GetSysctlInt("hw.packages");
         Cpu64BitCapable = Helper.GetSysctlInt("hw.cpu64bit_capable") != 0;
-
-        UpdateAt = DateTime.Now;
-
-        return true;
     }
+
+    public static HardwareInfo Create() => new();
 
     public static PerformanceLevelEntry[] GetPerformanceLevels()
     {

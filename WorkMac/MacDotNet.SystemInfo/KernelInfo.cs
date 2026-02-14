@@ -2,42 +2,33 @@ namespace MacDotNet.SystemInfo;
 
 public sealed class KernelInfo
 {
-    public DateTime UpdateAt { get; private set; }
+    public string OsType { get; }
 
-    public string OsType { get; private set; } = string.Empty;
+    public string OsRelease { get; }
 
-    public string OsRelease { get; private set; } = string.Empty;
+    public string OsVersion { get; }
 
-    public string OsVersion { get; private set; } = string.Empty;
+    public string? OsProductVersion { get; }
 
-    public string? OsProductVersion { get; private set; }
+    public int OsRevision { get; }
 
-    public int OsRevision { get; private set; }
+    public string KernelVersion { get; }
 
-    public string KernelVersion { get; private set; } = string.Empty;
+    public string Uuid { get; }
 
-    public string Hostname { get; private set; } = string.Empty;
+    public DateTimeOffset BootTime { get; }
 
-    public string Uuid { get; private set; } = string.Empty;
+    public int MaxProc { get; }
 
-    public DateTimeOffset BootTime { get; private set; }
+    public int MaxFiles { get; }
 
-    public int MaxProc { get; private set; }
+    public int MaxFilesPerProc { get; }
 
-    public int MaxFiles { get; private set; }
+    public int ArgMax { get; }
 
-    public int MaxFilesPerProc { get; private set; }
+    public int SecureLevel { get; }
 
-    public int ArgMax { get; private set; }
-
-    public int SecureLevel { get; private set; }
-
-    internal KernelInfo()
-    {
-        Update();
-    }
-
-    public unsafe bool Update()
+    private unsafe KernelInfo()
     {
         var bootTime = DateTimeOffset.MinValue;
         NativeMethods.timeval_boot tv;
@@ -53,7 +44,6 @@ public sealed class KernelInfo
         OsProductVersion = Helper.GetSysctlString("kern.osproductversion");
         OsRevision = Helper.GetSysctlInt("kern.osrevision");
         KernelVersion = Helper.GetSysctlString("kern.version") ?? string.Empty;
-        Hostname = Helper.GetSysctlString("kern.hostname") ?? string.Empty;
         Uuid = Helper.GetSysctlString("kern.uuid") ?? string.Empty;
         BootTime = bootTime;
         MaxProc = Helper.GetSysctlInt("kern.maxproc");
@@ -61,9 +51,7 @@ public sealed class KernelInfo
         MaxFilesPerProc = Helper.GetSysctlInt("kern.maxfilesperproc");
         ArgMax = Helper.GetSysctlInt("kern.argmax");
         SecureLevel = Helper.GetSysctlInt("kern.securelevel");
-
-        UpdateAt = DateTime.Now;
-
-        return true;
     }
+
+    public static KernelInfo Create() => new();
 }

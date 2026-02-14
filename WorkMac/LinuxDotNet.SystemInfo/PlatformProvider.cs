@@ -45,9 +45,9 @@ public static class PlatformProvider
 
     public static ProcessEntry? GetProcess(int pid) => ProcessInfo.GetProcess(pid);
 
-    public static HardwareInfo GetHardware() => new();
+    public static HardwareInfo GetHardware() => HardwareInfo.Create();
 
-    public static KernelInfo GetKernel() => new();
+    public static KernelInfo GetKernel() => KernelInfo.Create();
 
     public static IReadOnlyList<FileSystemEntry> GetFileSystems(bool includeVirtual = false) => FileSystemInfo.GetFileSystems(includeVirtual);
 }
