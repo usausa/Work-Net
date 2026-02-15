@@ -45,13 +45,10 @@ stats-masterで取得している項目で、MacDotNet.SystemInfoにない機能
 | 項目 | 取得方法 | 説明 |
 |------|----------|------|
 | プライマリインターフェース | `SCDynamicStoreCopyValue("State:/Network/Global/IPv4")` | |
-| VPN接続判定 | `CFNetworkCopySystemProxySettings` + ifconfig | utun/tun/tap/ppp/ipsec検出 |
 | 接続タイプ | `SCNetworkInterfaceGetInterfaceType` | Ethernet/WiFi/Bluetooth等 |
 | 帯域幅 (baudrate) | `getifaddrs` → `if_data.ifi_baudrate` | |
-| WiFi SSID | `system_profiler SPAirPortDataType` または `networksetup` | |
-| WiFi規格 | `system_profiler SPAirPortDataType` | 802.11n/ac/ax等 |
-
-**注**: 完全なWiFi情報取得にはCoreWLAN (Objective-C) が必要。本実装ではsystem_profiler経由で代替。
+| IPv4/IPv6アドレス | `getifaddrs` → `inet_ntop` | |
+| MACアドレス | `SCNetworkInterfaceGetHardwareAddressString` | |
 
 ---
 
@@ -93,12 +90,6 @@ stats-masterで取得している項目で、MacDotNet.SystemInfoにない機能
 | ファン速度 | SMC `F{n}Ac` | RPM |
 | 最小/最大速度 | SMC `F{n}Mn`, `F{n}Mx` | RPM |
 
-#### 電流センサー (SMC)
-
-| 項目 | 取得方法 | 説明 |
-|------|----------|------|
-| 電流 | SMC `I*` キー | A |
-
 #### 総消費電力
 
 | 項目 | 取得方法 | 説明 |
@@ -113,20 +104,6 @@ stats-masterで取得している項目で、MacDotNet.SystemInfoにない機能
 |------|----------|------|
 | NVMe SMART対応 | `IORegistryEntryCreateCFProperty("NVMe SMART Capable")` | |
 | ディスクI/O統計 | `IOBlockStorageDriver` → `Statistics` | bytes/operations |
-| パージ可能領域 | `diskutil info` または `CSDiskSpaceGetRecoveryEstimate` | |
-
-**注**: 完全なNVMe SMART情報取得には`IONVMeSMARTInterface`プラグインが必要。複雑なため本実装では基本情報のみ。
-
-#### NVMe SMART (完全実装に必要な項目)
-
-| 項目 | 取得方法 | 説明 |
-|------|----------|------|
-| 温度 | `nvme_smart_log.temperature` | ℃ |
-| 寿命 | 100 - `nvme_smart_log.percent_used` | % |
-| 総読み込み量 | `nvme_smart_log.data_units_read` × 512KB | bytes |
-| 総書き込み量 | `nvme_smart_log.data_units_written` × 512KB | bytes |
-| 電源サイクル数 | `nvme_smart_log.power_cycles` | |
-| 電源オン時間 | `nvme_smart_log.power_on_hours` | hours |
 
 ---
 
@@ -135,10 +112,7 @@ stats-masterで取得している項目で、MacDotNet.SystemInfoにない機能
 | 項目 | 取得方法 | 説明 |
 |------|----------|------|
 | モデルID | `sysctlbyname("hw.model")` | 例: "MacBookPro18,1" |
-| モデル名 | `system_profiler SPHardwareDataType` | 例: "MacBook Pro" |
 | シリアル番号 | `IOPlatformExpertDevice["IOPlatformSerialNumber"]` | |
-| ディスプレイ情報 | `system_profiler SPDisplaysDataType` | 名前、解像度、メイン判定等 |
-| DIMMスロット情報 | `system_profiler SPMemoryDataType` | サイズ、タイプ、速度 |
 | コア周波数 | `hw.perflevel{n}.cpufreq_max` | Apple Silicon用 |
 
 ---
@@ -158,7 +132,7 @@ stats-masterで取得している項目で、MacDotNet.SystemInfoにない機能
 | `SCNetworkInterface` | ネットワークインターフェース |
 | `IOPowerSources` | バッテリー/AC電源 |
 | `IOBlockStorageDriver` | ディスクI/O統計 |
-| `system_profiler` | ハードウェア詳細情報 (JSON出力) |
+| `getifaddrs` | ネットワークIPアドレス、帯域幅 |
 
 ---
 

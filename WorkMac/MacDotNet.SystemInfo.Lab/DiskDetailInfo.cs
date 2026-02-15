@@ -1,7 +1,5 @@
 namespace MacDotNet.SystemInfo.Lab;
 
-using System.Runtime.InteropServices;
-
 using static NativeMethods;
 
 /// <summary>
@@ -12,34 +10,9 @@ public sealed record DiskSmartEntry
     public required string BsdName { get; init; }
 
     /// <summary>
-    /// 温度 (℃)
+    /// SMART対応
     /// </summary>
-    public int? Temperature { get; init; }
-
-    /// <summary>
-    /// 寿命 (%)
-    /// </summary>
-    public int? Life { get; init; }
-
-    /// <summary>
-    /// 総読み込み量 (bytes)
-    /// </summary>
-    public long? TotalRead { get; init; }
-
-    /// <summary>
-    /// 総書き込み量 (bytes)
-    /// </summary>
-    public long? TotalWritten { get; init; }
-
-    /// <summary>
-    /// 電源サイクル数
-    /// </summary>
-    public int? PowerCycles { get; init; }
-
-    /// <summary>
-    /// 電源オン時間 (hours)
-    /// </summary>
-    public int? PowerOnHours { get; init; }
+    public bool SmartCapable { get; init; }
 }
 
 /// <summary>
@@ -59,19 +32,11 @@ public sealed record DiskIoStats
 /// </summary>
 public static class DiskDetailInfo
 {
-    // NVMe SMART UUIDs (IOKit plugin)
-    private static readonly Guid KIONVMeSMARTUserClientTypeID = new("AA0FA6F9-C2D6-457F-B10B-59A13253292F");
-    private static readonly Guid KIONVMeSMARTInterfaceID = new("CCD1DB19-FD9A-4DAF-BF95-12454B230AB6");
-
     /// <summary>
-    /// NVMe SMART情報を取得 (ディスクごと)
+    /// NVMe SMART対応確認 (ディスクごと)
     /// </summary>
     public static DiskSmartEntry? GetSmartInfo(string bsdName)
     {
-        // SMART情報取得にはIONVMeSMARTInterfaceを使用
-        // これは複雑なプラグインインターフェースを必要とするため、
-        // 簡易実装としてIORegistryから一部情報を取得
-
         var matching = IOServiceMatching("IOBlockStorageDevice");
         if (matching == nint.Zero)
         {
@@ -113,25 +78,17 @@ public static class DiskDetailInfo
                     var smartCapablePtr = IORegistryEntryCreateCFProperty(service, smartCapableKey, nint.Zero, 0);
                     CFRelease(smartCapableKey);
 
-                    if (smartCapablePtr == nint.Zero)
+                    var smartCapable = false;
+                    if (smartCapablePtr != nint.Zero)
                     {
-                        continue;
+                        smartCapable = CFBooleanGetValue(smartCapablePtr);
+                        CFRelease(smartCapablePtr);
                     }
 
-                    var smartCapable = CFBooleanGetValue(smartCapablePtr);
-                    CFRelease(smartCapablePtr);
-
-                    if (!smartCapable)
-                    {
-                        continue;
-                    }
-
-                    // SMART情報を読み取り（プラグイン経由が必要なため、ここでは基本情報のみ）
-                    // 完全な実装にはIOCreatePlugInInterfaceForService等が必要
                     return new DiskSmartEntry
                     {
                         BsdName = bsdName,
-                        // 実際のSMART値取得には追加実装が必要
+                        SmartCapable = smartCapable,
                     };
                 }
                 finally
@@ -241,58 +198,6 @@ public static class DiskDetailInfo
             {
                 return result;
             }
-        }
-
-        return 0;
-    }
-
-    /// <summary>
-    /// パージ可能領域を取得 (CSDiskSpaceGetRecoveryEstimate相当)
-    /// </summary>
-    /// <remarks>
-    /// 実際のCSDiskSpaceGetRecoveryEstimateはCoreServices frameworkにあり、
-    /// .NETから直接呼び出すには追加のP/Invokeが必要
-    /// </remarks>
-    public static long GetPurgeableSpace(string mountPoint)
-    {
-        // 簡易実装: diskutil経由で取得
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "/usr/sbin/diskutil",
-                Arguments = $"info \"{mountPoint}\"",
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process is null)
-            {
-                return 0;
-            }
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            // "Purgeable Space:" 行を探す
-            foreach (var line in output.Split('\n'))
-            {
-                if (line.Contains("Purgeable", StringComparison.OrdinalIgnoreCase))
-                {
-                    // 例: "   Purgeable Space:                 5.0 GB (5000000000 Bytes)"
-                    var match = System.Text.RegularExpressions.Regex.Match(line, @"\((\d+)\s*Bytes\)");
-                    if (match.Success && long.TryParse(match.Groups[1].Value, out var bytes))
-                    {
-                        return bytes;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore
         }
 
         return 0;

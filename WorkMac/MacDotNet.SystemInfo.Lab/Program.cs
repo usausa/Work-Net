@@ -86,13 +86,6 @@ Console.WriteLine("### 4. Network Detail Info ###");
 var primaryIface = NetworkDetailInfo.GetPrimaryInterface();
 Console.WriteLine($"  Primary Interface: {primaryIface ?? "N/A"}");
 
-var vpnInfo = NetworkDetailInfo.GetVpnInfo();
-Console.WriteLine($"  VPN Connected:     {vpnInfo.IsVpnConnected}");
-if (vpnInfo.VpnInterfaces.Count > 0)
-{
-    Console.WriteLine($"  VPN Interfaces:    {string.Join(", ", vpnInfo.VpnInterfaces)}");
-}
-
 var interfaces = NetworkDetailInfo.GetNetworkInterfaces();
 foreach (var iface in interfaces)
 {
@@ -108,11 +101,6 @@ foreach (var iface in interfaces)
     if (!string.IsNullOrEmpty(iface.LocalIpV6))
     {
         Console.WriteLine($"    IPv6:        {iface.LocalIpV6}");
-    }
-    if (iface.WiFi is not null)
-    {
-        Console.WriteLine($"    WiFi SSID:   {iface.WiFi.Ssid}");
-        Console.WriteLine($"    WiFi Std:    {iface.WiFi.Standard}");
     }
 }
 Console.WriteLine();
@@ -194,34 +182,13 @@ foreach (var disk in diskIo)
     Console.WriteLine($"    Read:  {disk.ReadBytes / (1024.0 * 1024.0):F2} MB ({disk.ReadOperations} ops)");
     Console.WriteLine($"    Write: {disk.WriteBytes / (1024.0 * 1024.0):F2} MB ({disk.WriteOperations} ops)");
 }
-
-var purgeable = DiskDetailInfo.GetPurgeableSpace("/");
-Console.WriteLine($"  Purgeable Space (/): {purgeable / (1024.0 * 1024.0 * 1024.0):F2} GB");
 Console.WriteLine();
 
 // 8. System Detail Info
 Console.WriteLine("### 8. System Detail Info ###");
 var model = SystemDetailInfo.GetModelInfo();
 Console.WriteLine($"  Model ID:      {model.ModelId}");
-Console.WriteLine($"  Model Name:    {model.ModelName}");
 Console.WriteLine($"  Serial Number: {model.SerialNumber}");
-
-var displays = SystemDetailInfo.GetDisplays();
-Console.WriteLine($"  Displays:      {displays.Length}");
-foreach (var display in displays)
-{
-    Console.WriteLine($"    [{display.DisplayId}] {display.Name}: {display.Width}x{display.Height}{(display.IsMain ? " (Main)" : "")}");
-}
-
-var dimms = SystemDetailInfo.GetDimmSlots();
-if (dimms.Length > 0)
-{
-    Console.WriteLine($"  DIMM Slots:    {dimms.Length}");
-    foreach (var dimm in dimms)
-    {
-        Console.WriteLine($"    {dimm.Size} {dimm.Type} @ {dimm.Speed}");
-    }
-}
 
 var coreFreqs = SystemDetailInfo.GetCoreFrequencies();
 if (coreFreqs.Length > 0)
@@ -229,7 +196,7 @@ if (coreFreqs.Length > 0)
     Console.WriteLine($"  Core Frequencies (Apple Silicon):");
     foreach (var freq in coreFreqs)
     {
-        Console.WriteLine($"    [{freq.PerfLevel}] {freq.Name}: {string.Join(", ", freq.Frequencies.Select(f => $"{f / 1_000_000}MHz"))}");
+        Console.WriteLine($"    [{freq.PerfLevel}] {freq.Name}: {freq.MaxFrequency / 1_000_000}MHz");
     }
 }
 

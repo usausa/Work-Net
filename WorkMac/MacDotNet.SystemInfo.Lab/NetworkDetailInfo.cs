@@ -1,6 +1,5 @@
 namespace MacDotNet.SystemInfo.Lab;
 
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using static NativeMethods;
@@ -18,23 +17,6 @@ public enum NetworkConnectionType
 }
 
 /// <summary>
-/// WiFi詳細情報
-/// </summary>
-public sealed record WiFiDetails
-{
-    public string? Ssid { get; init; }
-    public string? Bssid { get; init; }
-    public string? CountryCode { get; init; }
-    public int? Rssi { get; init; }
-    public int? Noise { get; init; }
-    public string? Standard { get; init; }     // 802.11n, 802.11ac, 802.11ax
-    public string? Security { get; init; }
-    public string? Channel { get; init; }
-    public string? ChannelBand { get; init; }  // 2GHz, 5GHz, 6GHz
-    public string? ChannelWidth { get; init; } // 20MHz, 40MHz, 80MHz, 160MHz
-}
-
-/// <summary>
 /// ネットワークインターフェース詳細情報
 /// </summary>
 public sealed record NetworkDetailEntry
@@ -47,16 +29,6 @@ public sealed record NetworkDetailEntry
     public uint BaudRate { get; init; }
     public string? LocalIpV4 { get; init; }
     public string? LocalIpV6 { get; init; }
-    public WiFiDetails? WiFi { get; init; }
-}
-
-/// <summary>
-/// VPN接続情報
-/// </summary>
-public sealed record VpnConnectionInfo
-{
-    public bool IsVpnConnected { get; init; }
-    public IReadOnlyList<string> VpnInterfaces { get; init; } = [];
 }
 
 /// <summary>
@@ -95,88 +67,6 @@ public static class NetworkDetailInfo
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// VPN接続情報を取得
-    /// </summary>
-    public static VpnConnectionInfo GetVpnInfo()
-    {
-        var proxySettings = CFNetworkCopySystemProxySettings();
-        if (proxySettings == nint.Zero)
-        {
-            return new VpnConnectionInfo();
-        }
-
-        try
-        {
-            var scopedKey = CFStringCreateWithCString(nint.Zero, "__SCOPED__", kCFStringEncodingUTF8);
-            var scopedValue = CFDictionaryGetValue(proxySettings, scopedKey);
-            CFRelease(scopedKey);
-
-            if (scopedValue == nint.Zero || CFGetTypeID(scopedValue) != CFDictionaryGetTypeID())
-            {
-                return new VpnConnectionInfo();
-            }
-
-            // CFDictionaryからキーを列挙するには追加のP/Invokeが必要
-            // ここでは簡易的にnetstat等で判定する代替実装
-            var vpnInterfaces = GetVpnInterfacesFromNetstat();
-            return new VpnConnectionInfo
-            {
-                IsVpnConnected = vpnInterfaces.Count > 0,
-                VpnInterfaces = vpnInterfaces,
-            };
-        }
-        finally
-        {
-            CFRelease(proxySettings);
-        }
-    }
-
-    private static List<string> GetVpnInterfacesFromNetstat()
-    {
-        var vpnInterfaces = new List<string>();
-
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "/sbin/ifconfig",
-                Arguments = "-l",
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                return vpnInterfaces;
-            }
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            var interfaces = output.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            foreach (var iface in interfaces)
-            {
-                if (iface.StartsWith("utun", StringComparison.Ordinal) ||
-                    iface.StartsWith("tun", StringComparison.Ordinal) ||
-                    iface.StartsWith("tap", StringComparison.Ordinal) ||
-                    iface.StartsWith("ppp", StringComparison.Ordinal) ||
-                    iface.StartsWith("ipsec", StringComparison.Ordinal))
-                {
-                    vpnInterfaces.Add(iface);
-                }
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        return vpnInterfaces;
     }
 
     /// <summary>
@@ -231,13 +121,6 @@ public static class NetworkDetailInfo
                 // getifaddrsからIPアドレスとbaudrate取得
                 var (ipv4, ipv6, baudRate) = GetInterfaceAddresses(bsdName);
 
-                // WiFi詳細
-                WiFiDetails? wifiDetails = null;
-                if (connectionType == NetworkConnectionType.WiFi)
-                {
-                    wifiDetails = GetWiFiDetails(bsdName);
-                }
-
                 results.Add(new NetworkDetailEntry
                 {
                     BsdName = bsdName,
@@ -248,7 +131,6 @@ public static class NetworkDetailInfo
                     BaudRate = baudRate,
                     LocalIpV4 = ipv4,
                     LocalIpV6 = ipv6,
-                    WiFi = wifiDetails,
                 });
             }
         }
@@ -319,133 +201,5 @@ public static class NetworkDetailInfo
         }
 
         return (ipv4, ipv6, baudRate);
-    }
-
-    /// <summary>
-    /// WiFi詳細情報を取得 (system_profiler経由)
-    /// </summary>
-    private static WiFiDetails? GetWiFiDetails(string interfaceName)
-    {
-        // CoreWLANはObjective-C frameworkなので、system_profilerで代替
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "/usr/sbin/system_profiler",
-                Arguments = "SPAirPortDataType -json",
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                return null;
-            }
-
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            // JSONパースは簡易実装
-            return ParseWiFiDetailsFromJson(output, interfaceName);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static WiFiDetails? ParseWiFiDetailsFromJson(string json, string interfaceName)
-    {
-        // 簡易的なJSONパース
-        // 本来はSystem.Text.Jsonを使用すべき
-        if (!json.Contains(interfaceName, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        var ssid = ExtractJsonValue(json, "\"_name\"");
-        var phyMode = ExtractJsonValue(json, "\"spairport_network_phymode\"");
-        var countryCode = ExtractJsonValue(json, "\"spairport_network_country_code\"");
-
-        if (ssid is null)
-        {
-            // networksetup経由でSSID取得
-            ssid = GetSsidFromNetworkSetup(interfaceName);
-        }
-
-        return new WiFiDetails
-        {
-            Ssid = ssid,
-            Standard = phyMode,
-            CountryCode = countryCode,
-        };
-    }
-
-    private static string? GetSsidFromNetworkSetup(string interfaceName)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "/usr/sbin/networksetup",
-                Arguments = $"-getairportnetwork {interfaceName}",
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process is null)
-            {
-                return null;
-            }
-
-            var output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-
-            // "Current Wi-Fi Network: SSID_NAME"
-            var colonIndex = output.IndexOf(':');
-            if (colonIndex >= 0)
-            {
-                return output[(colonIndex + 1)..].Trim();
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        return null;
-    }
-
-    private static string? ExtractJsonValue(string json, string key)
-    {
-        var keyIndex = json.IndexOf(key, StringComparison.Ordinal);
-        if (keyIndex < 0)
-        {
-            return null;
-        }
-
-        var colonIndex = json.IndexOf(':', keyIndex);
-        if (colonIndex < 0)
-        {
-            return null;
-        }
-
-        var valueStart = json.IndexOf('"', colonIndex);
-        if (valueStart < 0)
-        {
-            return null;
-        }
-
-        var valueEnd = json.IndexOf('"', valueStart + 1);
-        if (valueEnd < 0)
-        {
-            return null;
-        }
-
-        return json.Substring(valueStart + 1, valueEnd - valueStart - 1);
     }
 }
