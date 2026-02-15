@@ -17,6 +17,7 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="LinuxDotNet.SystemInfo/LinuxDotNet.SystemInfo.csproj" />
+  <Project Path="MacDotNet.SystemInfo.Lab/MacDotNet.SystemInfo.Lab.csproj" />
   <Project Path="WorkBattery/WorkBattery.csproj" />
   <Project Path="WorkCpu/WorkCpu.csproj" />
   <Project Path="WorkFileSystem/WorkFileSystem.csproj" />
