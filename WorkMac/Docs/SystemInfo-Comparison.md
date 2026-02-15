@@ -30,10 +30,14 @@
 |------|-----|-------|-------------|---------------|---------------|-----------------|
 | CPU基本情報 | ✅ `HardwareInfo` | ✅ `CpuDevice` | PlatformProvider | PlatformProvider | Static | - |
 | CPU使用率ティック | ✅ `CpuUsageInfo` | ✅ `StaticsInfo` | PlatformProvider | PlatformProvider | Update() | Update() |
+| CPU使用率詳細 | ✅ `CpuLoadInfo` | ❌ | PlatformProvider | - | Update() | - |
+| User/System/Idle使用率 | ✅ `CpuLoadInfo` | ❌ | PlatformProvider | - | Update() | - |
+| コア毎の使用率 | ✅ `CpuLoadInfo` | ✅ `CpuCore` | PlatformProvider | Instance | Update() | Update() |
+| E-Core/P-Core使用率 | ✅ `CpuLoadInfo` | ❌ | PlatformProvider | - | Update() | - |
 | 論理/物理CPU数 | ✅ | ✅ | - | - | - | - |
 | CPUブランド名 | ✅ | ✅ | - | - | - | - |
 | CPU周波数 | ✅ | ✅ | - | - | - | - |
-| コア毎の周波数 | ❌ | ✅ `CpuCore` | - | Instance | - | Update() |
+| コア毎の周波数 | ✅ `PerformanceLevelEntry` | ✅ `CpuCore` | PlatformProvider | Instance | Static | Update() |
 | CPU電力(RAPL) | ❌ | ✅ `CpuPower` | - | Instance | - | Update() |
 
 ---
@@ -123,6 +127,7 @@
 | カーネル情報 | ✅ `KernelInfo` | ✅ `KernelInfo` | PlatformProvider | PlatformProvider | Static | Static |
 | モデル名 | ✅ | ✅ | - | - | - | - |
 | マシンアーキテクチャ | ✅ | ✅ | - | - | - | - |
+| シリアル番号 | ✅ | ❌ | - | - | - | - |
 | CPUブランド名 | ✅ | ✅ | - | - | - | - |
 | 論理/物理CPU数 | ✅ | ✅ | - | - | - | - |
 | メモリサイズ | ✅ | ✅ | - | - | - | - |
@@ -150,6 +155,10 @@
 | GPU使用率 | ✅ | ❌ | - | - | - | - |
 | GPUメモリ | ✅ | ❌ | - | - | - | - |
 | GPU構成情報 | ✅ | ❌ | - | - | - | - |
+| GPU温度 | ✅ | ❌ | - | - | - | - |
+| GPUファン速度 | ✅ | ❌ | - | - | - | - |
+| GPUコアクロック | ✅ | ❌ | - | - | - | - |
+| GPU電源状態 | ✅ | ❌ | - | - | - | - |
 
 ---
 
@@ -158,12 +167,19 @@
 | 機能 | Mac | Linux | Mac取得方式 | Linux取得方式 | Macデータ更新 | Linuxデータ更新 |
 |------|-----|-------|-------------|---------------|---------------|-----------------|
 | バッテリー情報 | ✅ `BatteryInfo` | ✅ `BatteryDevice` | PlatformProvider | PlatformProvider | Update() | Update() |
+| バッテリー詳細 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
 | AC電源情報 | ✅ (BatteryInfo内) | ✅ `MainsAdapterDevice` | PlatformProvider | PlatformProvider | Update() | Update() |
 | バッテリー残量 | ✅ | ✅ | - | - | - | - |
 | 充電状態 | ✅ | ✅ | - | - | - | - |
 | 充電完了までの時間 | ✅ | ❌ | - | - | - | - |
 | 空になるまでの時間 | ✅ | ❌ | - | - | - | - |
 | バッテリー健康状態 | ✅ | ❌ | - | - | - | - |
+| バッテリー温度 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
+| バッテリー電圧 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
+| バッテリー電流 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
+| サイクルカウント | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
+| ACアダプタワット数 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
+| 最適化充電状態 | ✅ `BatteryDetailInfo` | ❌ | PlatformProvider | - | Update() | - |
 
 ---
 
@@ -175,6 +191,9 @@
 | ファン情報 | ✅ `SmcInfo` | ✅ `HardwareMonitor` | PlatformProvider | PlatformProvider | Snapshot | Update() |
 | 電力読み取り | ✅ `SmcInfo` | ✅ `HardwareMonitor` | PlatformProvider | PlatformProvider | Snapshot | Update() |
 | 電圧読み取り | ✅ `SmcInfo` | ✅ `HardwareMonitor` | PlatformProvider | PlatformProvider | Snapshot | Update() |
+| Apple Silicon電力 | ✅ `AppleSiliconPowerInfo` | ❌ | PlatformProvider | - | Update() | - |
+| CPU/GPU/ANE/RAM電力 | ✅ `AppleSiliconPowerInfo` | ❌ | PlatformProvider | - | Update() | - |
+| 総システム電力(PSTR) | ✅ `SmcInfo` | ❌ | PlatformProvider | - | Snapshot | - |
 
 ---
 

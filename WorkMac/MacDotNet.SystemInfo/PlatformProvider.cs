@@ -13,6 +13,8 @@ public static class PlatformProvider
 
     public static CpuUsageInfo GetCpuUsage() => new();
 
+    public static CpuLoadInfo GetCpuLoad() => CpuLoadInfo.Create();
+
     public static IReadOnlyList<FileSystemEntry> GetFileSystems() => FileSystemInfo.GetFileSystems();
 
     public static IReadOnlyList<NetworkInterfaceEntry> GetNetworkInterfaces() => NetworkInfo.GetNetworkInterfaces();
@@ -29,6 +31,10 @@ public static class PlatformProvider
 
     public static BatteryInfo GetBattery() => new();
 
+    public static BatteryDetailInfo GetBatteryDetail() => BatteryDetailInfo.Create();
+
+    public static AppleSiliconPowerInfo GetAppleSiliconPower() => AppleSiliconPowerInfo.Create();
+
     public static IReadOnlyList<SmcSensorReading> GetTemperatureSensors() => SmcInfo.GetTemperatureSensors();
 
     public static IReadOnlyList<SmcSensorReading> GetPowerReadings() => SmcInfo.GetPowerReadings();
@@ -36,5 +42,7 @@ public static class PlatformProvider
     public static IReadOnlyList<SmcSensorReading> GetVoltageReadings() => SmcInfo.GetVoltageReadings();
 
     public static IReadOnlyList<SmcFanEntry> GetFans() => SmcInfo.GetFanInfo();
+
+    public static double? GetTotalSystemPower() => SmcInfo.GetTotalSystemPower();
 }
 

@@ -538,4 +538,77 @@ internal static class NativeMethods
 
     [DllImport(IOKitLib)]
     public static extern unsafe int IOConnectCallStructMethod(uint connection, uint selector, void* inputStruct, nuint inputStructCnt, void* outputStruct, nuint* outputStructCnt);
+
+    [DllImport(IOKitLib)]
+    public static extern int IORegistryEntryCreateCFProperties(uint entry, out nint properties, nint allocator, uint options);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOPSCopyExternalPowerAdapterDetails();
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportCopyChannelsInGroup([MarshalAs(UnmanagedType.LPUTF8Str)] string? group, [MarshalAs(UnmanagedType.LPUTF8Str)] string? subgroup, ulong a, ulong b, ulong c);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportCreateSubscription(nint a, nint channels, out nint b, ulong c, nint d);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportCreateSamples(nint subscription, nint channels, nint a);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportChannelGetGroup(nint channel);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportChannelGetChannelName(nint channel);
+
+    [DllImport(IOKitLib)]
+    public static extern nint IOReportChannelGetUnitLabel(nint channel);
+
+    [DllImport(IOKitLib)]
+    public static extern long IOReportSimpleGetIntegerValue(nint channel, int idx);
+
+    [DllImport(CoreFoundationLib)]
+    public static extern nuint CFArrayGetTypeID();
+
+    [DllImport(CoreFoundationLib)]
+    public static extern nint CFDictionaryCreateMutableCopy(nint allocator, nint capacity, nint theDict);
+
+    [DllImport(CoreFoundationLib)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool CFNumberGetValue(nint number, int theType, ref double valuePtr);
+
+    // Additional IOPowerSources Keys
+    public const string kIOPSPowerAdapterWattsKey = "Watts";
+
+    // CFNumberType for double
+    public const int kCFNumberFloat64Type = 6;
+
+    //------------------------------------------------------------------------
+    // Helper
+    //------------------------------------------------------------------------
+
+    public static unsafe string? CfStringToManaged(nint cfString)
+    {
+        if (cfString == nint.Zero)
+        {
+            return null;
+        }
+
+        var ptr = CFStringGetCStringPtr(cfString, kCFStringEncodingUTF8);
+        if (ptr != nint.Zero)
+        {
+            return Marshal.PtrToStringUTF8(ptr);
+        }
+
+        var length = CFStringGetLength(cfString);
+        if (length <= 0)
+        {
+            return string.Empty;
+        }
+
+        var bufSize = (length * 4) + 1;
+        var buf = stackalloc byte[(int)bufSize];
+        return CFStringGetCString(cfString, buf, bufSize, kCFStringEncodingUTF8)
+            ? Marshal.PtrToStringUTF8((nint)buf)
+            : null;
+    }
 }

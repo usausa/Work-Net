@@ -18,6 +18,7 @@ public static class CommandBuilderExtensions
         commands.AddCommand<LoadAverageCommand>();
         commands.AddCommand<MemoryCommand>();
         commands.AddCommand<CpuCommand>();
+        commands.AddCommand<CpuLoadCommand>();
         commands.AddCommand<FileSystemCommand>();
         commands.AddCommand<NetworkCommand>();
         commands.AddCommand<ProcessCommand>();
@@ -25,9 +26,11 @@ public static class CommandBuilderExtensions
         commands.AddCommand<HardwareCommand>();
         commands.AddCommand<KernelCommand>();
         commands.AddCommand<BatteryCommand>();
+        commands.AddCommand<BatteryDetailCommand>();
         commands.AddCommand<TemperatureCommand>();
         commands.AddCommand<FanCommand>();
         commands.AddCommand<PowerCommand>();
+        commands.AddCommand<AppleSiliconPowerCommand>();
         commands.AddCommand<VoltageCommand>();
     }
 }
@@ -288,6 +291,31 @@ public sealed class GpuCommand : ICommandHandler
             Console.WriteLine($"Class:            {gpu.ClassName}");
             Console.WriteLine($"Core Count:       {gpu.CoreCount}");
 
+            if (gpu.Temperature.HasValue)
+            {
+                Console.WriteLine($"Temperature:      {gpu.Temperature} °C");
+            }
+
+            if (gpu.FanSpeed.HasValue)
+            {
+                Console.WriteLine($"Fan Speed:        {gpu.FanSpeed}%");
+            }
+
+            if (gpu.CoreClock.HasValue)
+            {
+                Console.WriteLine($"Core Clock:       {gpu.CoreClock} MHz");
+            }
+
+            if (gpu.MemoryClock.HasValue)
+            {
+                Console.WriteLine($"Memory Clock:     {gpu.MemoryClock} MHz");
+            }
+
+            if (gpu.PowerState.HasValue)
+            {
+                Console.WriteLine($"Power State:      {(gpu.PowerState.Value ? "Active" : "Powered Off")}");
+            }
+
             if (gpu.Performance is not null)
             {
                 var perf = gpu.Performance;
@@ -316,6 +344,7 @@ public sealed class HardwareCommand : ICommandHandler
         Console.WriteLine("=== Hardware ===");
         Console.WriteLine($"Model:            {hw.Model}");
         Console.WriteLine($"Machine:          {hw.Machine}");
+        Console.WriteLine($"Serial Number:    {hw.SerialNumber ?? "(unavailable)"}");
         Console.WriteLine($"CPU Brand:        {hw.CpuBrandString ?? "(unavailable)"}");
         Console.WriteLine();
 
@@ -336,7 +365,8 @@ public sealed class HardwareCommand : ICommandHandler
             Console.WriteLine("=== Performance Levels (Apple Silicon) ===");
             foreach (var level in perfLevels)
             {
-                Console.WriteLine($"  [{level.Index}] {level.Name}: {level.PhysicalCpu} physical, {level.LogicalCpu} logical");
+                var freqStr = level.CpuFrequencyMax > 0 ? $", {level.CpuFrequencyMax / 1_000_000}MHz" : "";
+                Console.WriteLine($"  [{level.Index}] {level.Name}: {level.PhysicalCpu} physical, {level.LogicalCpu} logical{freqStr}");
             }
         }
 
@@ -524,6 +554,124 @@ public sealed class VoltageCommand : ICommandHandler
         else
         {
             Console.WriteLine("No voltage readings found.");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+// CPU Load (detailed)
+[Command("cpuload", "CPU Load Info (User/System/Idle, per core)")]
+public sealed class CpuLoadCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var cpuLoad = PlatformProvider.GetCpuLoad();
+
+        Console.WriteLine("=== CPU Load Info ===");
+        Console.WriteLine($"Logical CPUs:       {cpuLoad.LogicalCpu}");
+        Console.WriteLine($"Physical CPUs:      {cpuLoad.PhysicalCpu}");
+        Console.WriteLine($"Hyperthreading:     {cpuLoad.HasHyperthreading}");
+        Console.WriteLine();
+
+        cpuLoad.Update();
+        Thread.Sleep(500);
+        cpuLoad.Update();
+
+        Console.WriteLine("=== Usage ===");
+        Console.WriteLine($"User Load:          {cpuLoad.UserLoad:P1}");
+        Console.WriteLine($"System Load:        {cpuLoad.SystemLoad:P1}");
+        Console.WriteLine($"Idle Load:          {cpuLoad.IdleLoad:P1}");
+        Console.WriteLine($"Total Load:         {cpuLoad.TotalLoad:P1}");
+        Console.WriteLine();
+
+        if (cpuLoad.ECoreUsage.HasValue || cpuLoad.PCoreUsage.HasValue)
+        {
+            Console.WriteLine("=== Apple Silicon Core Usage ===");
+            if (cpuLoad.ECoreUsage.HasValue)
+            {
+                Console.WriteLine($"E-Core Usage:       {cpuLoad.ECoreUsage:P1}");
+            }
+
+            if (cpuLoad.PCoreUsage.HasValue)
+            {
+                Console.WriteLine($"P-Core Usage:       {cpuLoad.PCoreUsage:P1}");
+            }
+
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("=== Per Core Usage ===");
+        for (var i = 0; i < cpuLoad.UsagePerCore.Length; i++)
+        {
+            Console.WriteLine($"  Core {i,2}: {cpuLoad.UsagePerCore[i]:P1}");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+// Battery Detail
+[Command("batterydetail", "Battery Detail Info (IORegistry)")]
+public sealed class BatteryDetailCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var battery = PlatformProvider.GetBatteryDetail();
+        if (!battery.Supported)
+        {
+            Console.WriteLine("No battery (AppleSmartBattery) found.");
+            return ValueTask.CompletedTask;
+        }
+
+        Console.WriteLine("=== Battery Detail (IORegistry) ===");
+        Console.WriteLine($"Voltage:              {battery.Voltage:F3} V");
+        Console.WriteLine($"Amperage:             {battery.Amperage} mA");
+        Console.WriteLine($"Temperature:          {battery.Temperature:F1} °C");
+        Console.WriteLine($"Cycle Count:          {battery.CycleCount}");
+        Console.WriteLine($"Current Capacity:     {battery.CurrentCapacity} mAh");
+        Console.WriteLine($"Max Capacity:         {battery.MaxCapacity} mAh");
+        Console.WriteLine($"Design Capacity:      {battery.DesignCapacity} mAh");
+        Console.WriteLine($"Health:               {battery.Health}%");
+        Console.WriteLine($"AC Watts:             {battery.AcWatts} W");
+        Console.WriteLine($"Charging Current:     {battery.ChargingCurrent} mA");
+        Console.WriteLine($"Charging Voltage:     {battery.ChargingVoltage} mV");
+        Console.WriteLine($"Optimized Charging:   {battery.OptimizedChargingEngaged}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+// Apple Silicon Power
+[Command("aspower", "Apple Silicon Power Info (IOReport)")]
+public sealed class AppleSiliconPowerCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var power = PlatformProvider.GetAppleSiliconPower();
+        if (!power.Supported)
+        {
+            Console.WriteLine("Apple Silicon power reporting not supported (requires ARM64).");
+            return ValueTask.CompletedTask;
+        }
+
+        Console.WriteLine("=== Apple Silicon Power ===");
+        Console.WriteLine("Sampling...");
+        power.Update();
+        Thread.Sleep(1000);
+        power.Update();
+
+        Console.WriteLine($"CPU Power:            {power.CpuPower:F3} W");
+        Console.WriteLine($"GPU Power:            {power.GpuPower:F3} W");
+        Console.WriteLine($"ANE Power:            {power.AnePower:F3} W");
+        Console.WriteLine($"RAM Power:            {power.RamPower:F3} W");
+        Console.WriteLine($"Total Power:          {power.TotalPower:F3} W");
+
+        var totalSystem = PlatformProvider.GetTotalSystemPower();
+        if (totalSystem.HasValue)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Total System (PSTR):  {totalSystem:F2} W");
         }
 
         return ValueTask.CompletedTask;

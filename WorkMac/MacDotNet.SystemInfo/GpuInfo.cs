@@ -25,6 +25,14 @@ public sealed record GpuPerformanceStatistics
     public required long RecoveryCount { get; init; }
 
     public required long SplitSceneCount { get; init; }
+
+    public long Temperature { get; init; }
+
+    public long FanSpeed { get; init; }
+
+    public long CoreClock { get; init; }
+
+    public long MemoryClock { get; init; }
 }
 
 public sealed record GpuConfiguration
@@ -53,6 +61,16 @@ public sealed record GpuEntry
     public required int CoreCount { get; init; }
 
     public required uint VendorId { get; init; }
+
+    public int? Temperature { get; init; }
+
+    public int? FanSpeed { get; init; }
+
+    public int? CoreClock { get; init; }
+
+    public int? MemoryClock { get; init; }
+
+    public bool? PowerState { get; init; }
 
     public GpuPerformanceStatistics? Performance { get; init; }
 
@@ -96,14 +114,56 @@ public static class GpuInfo
 
     private static GpuEntry ReadGpuEntry(uint entry)
     {
+        var ioClass = GetStringProperty(entry, "IOClass");
+        var performance = ReadPerformanceStatistics(entry);
+
+        int? temperature = null;
+        int? fanSpeed = null;
+        int? coreClock = null;
+        int? memoryClock = null;
+        bool? powerState = null;
+
+        if (performance is not null)
+        {
+            temperature = performance.Temperature > 0 && performance.Temperature < 128 ? (int)performance.Temperature : null;
+            fanSpeed = performance.FanSpeed > 0 ? (int)performance.FanSpeed : null;
+            coreClock = performance.CoreClock > 0 ? (int)performance.CoreClock : null;
+            memoryClock = performance.MemoryClock > 0 ? (int)performance.MemoryClock : null;
+        }
+
+        var agcInfo = GetDictionaryProperty(entry, "AGCInfo");
+        if (agcInfo != nint.Zero)
+        {
+            var poweredOff = GetDictNumber(agcInfo, "poweredOffByAGC");
+            powerState = poweredOff == 0;
+            CFRelease(agcInfo);
+        }
+
+        if (temperature is null)
+        {
+            if (ioClass?.Contains("intel", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                temperature = SmcInfo.ReadSmcTemperature("TCGC");
+            }
+            else if (ioClass?.Contains("amd", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                temperature = SmcInfo.ReadSmcTemperature("TGDD");
+            }
+        }
+
         return new GpuEntry
         {
             Model = GetStringProperty(entry, "model") ?? "(unknown)",
-            ClassName = GetStringProperty(entry, "IOClass") ?? "(unknown)",
+            ClassName = ioClass ?? "(unknown)",
             MetalPluginName = GetStringProperty(entry, "MetalPluginName"),
             CoreCount = (int)GetNumberProperty(entry, "gpu-core-count"),
             VendorId = GetDataPropertyAsUInt32LE(entry, "vendor-id"),
-            Performance = ReadPerformanceStatistics(entry),
+            Temperature = temperature,
+            FanSpeed = fanSpeed,
+            CoreClock = coreClock,
+            MemoryClock = memoryClock,
+            PowerState = powerState,
+            Performance = performance,
             Configuration = ReadGpuConfiguration(entry),
         };
     }
@@ -130,6 +190,10 @@ public static class GpuInfo
                 AllocatedPBSize = GetDictNumber(dict, "Allocated PB Size"),
                 RecoveryCount = GetDictNumber(dict, "recoveryCount"),
                 SplitSceneCount = GetDictNumber(dict, "SplitSceneCount"),
+                Temperature = GetDictNumber(dict, "Temperature(C)"),
+                FanSpeed = GetDictNumber(dict, "Fan Speed(%)"),
+                CoreClock = GetDictNumber(dict, "Core Clock(MHz)"),
+                MemoryClock = GetDictNumber(dict, "Memory Clock(MHz)"),
             };
         }
         finally
@@ -343,26 +407,5 @@ public static class GpuInfo
         {
             CFRelease(cfKey);
         }
-    }
-
-    private static unsafe string? CfStringToManaged(nint cfString)
-    {
-        var ptr = CFStringGetCStringPtr(cfString, kCFStringEncodingUTF8);
-        if (ptr != nint.Zero)
-        {
-            return Marshal.PtrToStringUTF8(ptr);
-        }
-
-        var length = CFStringGetLength(cfString);
-        if (length <= 0)
-        {
-            return string.Empty;
-        }
-
-        var bufSize = (length * 4) + 1;
-        var buf = stackalloc byte[(int)bufSize];
-        return CFStringGetCString(cfString, buf, bufSize, kCFStringEncodingUTF8)
-            ? Marshal.PtrToStringUTF8((nint)buf)
-            : null;
     }
 }

@@ -17,12 +17,12 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="LinuxDotNet.SystemInfo/LinuxDotNet.SystemInfo.csproj" />
-  <Project Path="MacDotNet.SystemInfo.Lab/MacDotNet.SystemInfo.Lab.csproj" />
   <Project Path="WorkBattery/WorkBattery.csproj" />
   <Project Path="WorkCpu/WorkCpu.csproj" />
   <Project Path="WorkFileSystem/WorkFileSystem.csproj" />
   <Project Path="WorkGpu/WorkGpu.csproj" />
   <Project Path="WorkHardware/WorkHardware.csproj" />
+  <Project Path="WorkLab/WorkLab.csproj" />
   <Project Path="WorkMemory/WorkMemory.csproj" />
   <Project Path="WorkNetwork/WorkNetwork.csproj" />
   <Project Path="WorkPower/WorkPower.csproj" />

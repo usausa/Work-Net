@@ -1,5 +1,7 @@
 namespace MacDotNet.SystemInfo;
 
+using static MacDotNet.SystemInfo.NativeMethods;
+
 public sealed record PerformanceLevelEntry
 {
     public required int Index { get; init; }
@@ -13,6 +15,8 @@ public sealed record PerformanceLevelEntry
     public required int CpusPerL2 { get; init; }
 
     public required int L2CacheSize { get; init; }
+
+    public int CpuFrequencyMax { get; init; }
 }
 
 public sealed class HardwareInfo
@@ -24,6 +28,8 @@ public sealed class HardwareInfo
     public string? TargetType { get; }
 
     public string? CpuBrandString { get; }
+
+    public string? SerialNumber { get; }
 
     public int LogicalCpu { get; }
 
@@ -75,6 +81,7 @@ public sealed class HardwareInfo
         Machine = Helper.GetSysctlString("hw.machine") ?? string.Empty;
         TargetType = Helper.GetSysctlString("hw.targettype");
         CpuBrandString = Helper.GetSysctlString("machdep.cpu.brand_string");
+        SerialNumber = GetSerialNumber();
         LogicalCpu = Helper.GetSysctlInt("hw.logicalcpu");
         LogicalCpuMax = Helper.GetSysctlInt("hw.logicalcpu_max");
         PhysicalCpu = Helper.GetSysctlInt("hw.physicalcpu");
@@ -120,9 +127,50 @@ public sealed class HardwareInfo
                 LogicalCpu = Helper.GetSysctlInt($"hw.perflevel{i}.logicalcpu"),
                 CpusPerL2 = Helper.GetSysctlInt($"hw.perflevel{i}.cpusperl2"),
                 L2CacheSize = Helper.GetSysctlInt($"hw.perflevel{i}.l2cachesize"),
+                CpuFrequencyMax = Helper.GetSysctlInt($"hw.perflevel{i}.cpufreq_max"),
             };
         }
 
         return levels;
+    }
+
+    private static string? GetSerialNumber()
+    {
+        var matching = IOServiceMatching("IOPlatformExpertDevice");
+        if (matching == nint.Zero)
+        {
+            return null;
+        }
+
+        var service = IOServiceGetMatchingService(0, matching);
+        if (service == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            var key = CFStringCreateWithCString(nint.Zero, "IOPlatformSerialNumber", kCFStringEncodingUTF8);
+            var value = IORegistryEntryCreateCFProperty(service, key, nint.Zero, 0);
+            CFRelease(key);
+
+            if (value == nint.Zero)
+            {
+                return null;
+            }
+
+            try
+            {
+                return CfStringToManaged(value);
+            }
+            finally
+            {
+                CFRelease(value);
+            }
+        }
+        finally
+        {
+            IOObjectRelease(service);
+        }
     }
 }

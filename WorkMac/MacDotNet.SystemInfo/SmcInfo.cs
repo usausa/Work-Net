@@ -39,6 +39,37 @@ public static class SmcInfo
     public static SmcSensorReading[] GetVoltageReadings() =>
         GetSmcReadingsByPrefix('V', GetVoltageDescription);
 
+    public static int? ReadSmcTemperature(string key)
+    {
+        var value = ReadSmcValue(key);
+        if (value is not null && value != 128)
+        {
+            return (int)value;
+        }
+
+        return null;
+    }
+
+    public static double? ReadSmcValue(string key)
+    {
+        if (!TryOpenSmcConnection(out var service, out var conn))
+        {
+            return null;
+        }
+
+        try
+        {
+            return ReadSmcFloat(conn, key);
+        }
+        finally
+        {
+            IOServiceClose(conn);
+            IOObjectRelease(service);
+        }
+    }
+
+    public static double? GetTotalSystemPower() => ReadSmcValue("PSTR");
+
     public static unsafe SmcFanEntry[] GetFanInfo()
     {
         if (!TryOpenSmcConnection(out var service, out var conn))
