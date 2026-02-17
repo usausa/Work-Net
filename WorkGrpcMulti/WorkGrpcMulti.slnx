@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/ソリューション項目/">
+    <File Path="Spec.md" />
+  </Folder>
+  <Project Path="Client/Client.csproj" />
+  <Project Path="Proxy/Proxy.csproj" />
+  <Project Path="Server/Server.csproj" />
+</Solution>
