@@ -68,9 +68,12 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
             catch (OperationCanceledException)
             {
             }
+            catch (ChannelClosedException)
+            {
+            }
             finally
             {
-                await eventChannel.Writer.WriteAsync(new ProxyEvent(ProxyEventType.ClientDisconnected));
+                eventChannel.Writer.TryWrite(new ProxyEvent(ProxyEventType.ClientDisconnected));
             }
         });
 
@@ -89,9 +92,12 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
             catch (OperationCanceledException)
             {
             }
+            catch (ChannelClosedException)
+            {
+            }
             finally
             {
-                await eventChannel.Writer.WriteAsync(new ProxyEvent(ProxyEventType.ServerDisconnected));
+                eventChannel.Writer.TryWrite(new ProxyEvent(ProxyEventType.ServerDisconnected));
             }
         });
 

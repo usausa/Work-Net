@@ -2,7 +2,24 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using ClientProxy;
 
-Console.WriteLine("[Client] Starting...");
+// シミュレーションモード設定
+var simulationMode = SimulationMode.Normal;
+
+// コマンドライン引数でシミュレーションモードを指定可能
+if (args.Length > 0)
+{
+    simulationMode = args[0].ToLower() switch
+    {
+        "cancel" => SimulationMode.Cancel,
+        "timeout" => SimulationMode.Timeout,
+        "slow" => SimulationMode.SlowResponse,
+        _ => SimulationMode.Normal
+    };
+}
+
+Console.WriteLine($"[Client] Starting... (Mode: {simulationMode})");
+Console.WriteLine("[Client] Usage: Client [normal|cancel|timeout|slow]");
+Console.WriteLine();
 
 using var channel = GrpcChannel.ForAddress("http://localhost:5001");
 var client = new ClientProxyService.ClientProxyServiceClient(channel);
@@ -39,8 +56,16 @@ var receiveTask = Task.Run(async () =>
                     Console.WriteLine($"[Client] 制御要求受信: ControlId={message.ControlRequest.ControlId}, " +
                                     $"Command={message.ControlRequest.Command}");
 
-                    // 少しウエイトしてから制御応答を送信
-                    await Task.Delay(100);
+                    // シミュレーションモードに応じた遅延
+                    var delay = simulationMode switch
+                    {
+                        SimulationMode.Timeout => 10000,  // タイムアウトを発生させる（Server側は5秒でタイムアウト）
+                        SimulationMode.SlowResponse => 2000,  // 遅い応答
+                        _ => 100  // 通常
+                    };
+
+                    Console.WriteLine($"[Client] 制御応答待機中... ({delay}ms)");
+                    await Task.Delay(delay);
 
                     Console.WriteLine($"[Client] 制御応答送信: ControlId={message.ControlRequest.ControlId}");
                     await call.RequestStream.WriteAsync(new ClientMessage
@@ -76,22 +101,25 @@ await call.RequestStream.WriteAsync(new ClientMessage
     }
 });
 
-// キャンセルテスト用（コメントアウトを外すとキャンセルをテストできます）
-// _ = Task.Run(async () =>
-// {
-//     await Task.Delay(1000);
-//     if (!processCompleted)
-//     {
-//         Console.WriteLine($"[Client] キャンセル要求送信: RequestId={requestId}");
-//         await call.RequestStream.WriteAsync(new ClientMessage
-//         {
-//             CancelRequest = new CancelRequest
-//             {
-//                 RequestId = requestId
-//             }
-//         });
-//     }
-// });
+// キャンセルシミュレーション
+if (simulationMode == SimulationMode.Cancel)
+{
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(500); // 少し待ってからキャンセル
+        if (!processCompleted)
+        {
+            Console.WriteLine($"[Client] キャンセル要求送信: RequestId={requestId}");
+            await call.RequestStream.WriteAsync(new ClientMessage
+            {
+                CancelRequest = new CancelRequest
+                {
+                    RequestId = requestId
+                }
+            });
+        }
+    });
+}
 
 // 受信タスクの完了を待つ
 await receiveTask;
@@ -100,4 +128,13 @@ await receiveTask;
 await call.RequestStream.CompleteAsync();
 
 Console.WriteLine("[Client] Completed.");
+
+// シミュレーションモード
+enum SimulationMode
+{
+    Normal,      // 通常動作
+    Cancel,      // キャンセル要求を送信
+    Timeout,     // 応答を遅延させてタイムアウトを発生
+    SlowResponse // 遅い応答（タイムアウトはしない）
+}
 
