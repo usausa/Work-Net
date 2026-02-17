@@ -169,6 +169,8 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
         }
 
         await Task.WhenAll(clientReceiveTask, serverReceiveTask);
+
+        _logger.LogInformation("[Proxy] Connection closed");
     }
 
     private async Task HandleClientMessage(

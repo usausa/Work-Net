@@ -194,6 +194,8 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
         }
 
         await receiveTask;
+
+        _logger.LogInformation("[Server] Connection closed");
     }
 
     private enum WaitResult { Received, Cancelled, Timeout, Disconnected }
