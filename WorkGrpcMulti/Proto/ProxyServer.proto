@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option csharp_namespace = "ProxyServer";
+
+package proxyserver;
+
+// Proxy - Server 間の双方向ストリーミングサービス
+service ProxyServerService {
+  rpc Process(stream ProxyMessage) returns (stream ServerMessage);
+}
+
+// Proxy -> Server へのメッセージ
+message ProxyMessage {
+  oneof message {
+    ProcessRequest process_request = 1;
+    CancelRequest cancel_request = 2;
+    ControlResponse control_response = 3;
+  }
+}
+
+// Server -> Proxy へのメッセージ
+message ServerMessage {
+  oneof message {
+    ProcessResponse process_response = 1;
+    SettingNotification setting_notification = 2;
+    ControlRequest control_request = 3;
+  }
+}
+
+// 処理要求 (Proxy -> Server)
+message ProcessRequest {
+  string request_id = 1;
+  int32 control_count = 2;
+}
+
+// 処理応答 (Server -> Proxy)
+message ProcessResponse {
+  string request_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// キャンセル要求 (Proxy -> Server)
+message CancelRequest {
+  string request_id = 1;
+}
+
+// 設定通知 (Server -> Proxy)
+message SettingNotification {
+  string setting_key = 1;
+  string setting_value = 2;
+}
+
+// 制御要求 (Server -> Proxy)
+message ControlRequest {
+  string control_id = 1;
+  string command = 2;
+}
+
+// 制御応答 (Proxy -> Server)
+message ControlResponse {
+  string control_id = 1;
+  string result = 2;
+}
