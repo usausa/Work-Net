@@ -29,6 +29,11 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
         string? currentRequestId = null;
         var controlCount = 0;
 
+        // 処理要求受信を待つためのシグナル
+        var processRequestReceived = new TaskCompletionSource();
+        // 制御応答受信を待つためのシグナル
+        var controlResponseReceived = new SemaphoreSlim(0);
+
         // リクエストを処理するタスク
         var receiveTask = Task.Run(async () =>
         {
@@ -41,6 +46,7 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                         controlCount = message.ProcessRequest.ControlCount;
                         _logger.LogInformation("[Server] 処理要求受信: RequestId={RequestId}, ControlCount={ControlCount}",
                             currentRequestId, controlCount);
+                        processRequestReceived.TrySetResult();
                         break;
 
                     case ProxyServer.ProxyMessage.MessageOneofCase.CancelRequest:
@@ -48,21 +54,20 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                             message.CancelRequest.RequestId);
                         cancelled = true;
                         cancellationTokenSource.Cancel();
+                        controlResponseReceived.Release();
                         break;
 
                     case ProxyServer.ProxyMessage.MessageOneofCase.ControlResponse:
                         _logger.LogInformation("[Server] 制御応答受信: ControlId={ControlId}, Result={Result}",
                             message.ControlResponse.ControlId, message.ControlResponse.Result);
+                        controlResponseReceived.Release();
                         break;
                 }
             }
         });
 
         // 処理要求を待つ
-        while (currentRequestId == null && !context.CancellationToken.IsCancellationRequested)
-        {
-            await Task.Delay(10, context.CancellationToken);
-        }
+        await processRequestReceived.Task.WaitAsync(context.CancellationToken);
 
         if (currentRequestId == null)
         {
@@ -99,16 +104,8 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                     }
                 }, linkedCts.Token);
 
-                // 制御応答を待つ（タイムアウト付き）
-                var timeout = Task.Delay(30000, linkedCts.Token);
-                while (!context.CancellationToken.IsCancellationRequested && !cancelled)
-                {
-                    if (timeout.IsCompleted)
-                    {
-                        break;
-                    }
-                    await Task.Delay(100, linkedCts.Token);
-                }
+                // 制御応答を待つ（タイムアウト5秒）
+                await controlResponseReceived.WaitAsync(TimeSpan.FromSeconds(5), linkedCts.Token);
             }
 
             // 処理応答を送信

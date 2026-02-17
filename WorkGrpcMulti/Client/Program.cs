@@ -40,7 +40,7 @@ var receiveTask = Task.Run(async () =>
                                     $"Command={message.ControlRequest.Command}");
 
                     // 少しウエイトしてから制御応答を送信
-                    await Task.Delay(500);
+                    await Task.Delay(100);
 
                     Console.WriteLine($"[Client] 制御応答送信: ControlId={message.ControlRequest.ControlId}");
                     await call.RequestStream.WriteAsync(new ClientMessage
