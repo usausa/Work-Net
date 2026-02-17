@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Grpc.Core;
 using ProxyServer;
 
@@ -7,6 +8,18 @@ builder.Services.AddGrpc();
 var app = builder.Build();
 app.MapGrpcService<ProxyServerServiceImpl>();
 app.Run();
+
+// Serverイベント種別
+public enum ServerEventType
+{
+    ProcessRequest,
+    ControlResponse,
+    CancelRequest,
+    ClientDisconnected
+}
+
+// Serverイベント
+public record ServerEvent(ServerEventType Type, object? Message = null);
 
 public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
 {
@@ -22,60 +35,74 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
         IServerStreamWriter<ServerMessage> responseStream,
         ServerCallContext context)
     {
-        var cancellationTokenSource = new CancellationTokenSource();
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            context.CancellationToken, cancellationTokenSource.Token);
-        var cancelled = false;
-        string? currentRequestId = null;
-        var controlCount = 0;
+        // 統一イベントチャネル
+        var eventChannel = Channel.CreateUnbounded<ServerEvent>();
 
-        // 処理要求受信を待つためのシグナル
-        var processRequestReceived = new TaskCompletionSource();
-        // 制御応答受信を待つためのシグナル
-        var controlResponseReceived = new SemaphoreSlim(0);
-
-        // リクエストを処理するタスク
+        // メッセージ受信タスク（イベントチャネルへ投入）
         var receiveTask = Task.Run(async () =>
         {
-            await foreach (var message in requestStream.ReadAllAsync(context.CancellationToken))
+            try
             {
-                switch (message.MessageCase)
+                await foreach (var message in requestStream.ReadAllAsync(context.CancellationToken))
                 {
-                    case ProxyServer.ProxyMessage.MessageOneofCase.ProcessRequest:
-                        currentRequestId = message.ProcessRequest.RequestId;
-                        controlCount = message.ProcessRequest.ControlCount;
-                        _logger.LogInformation("[Server] 処理要求受信: RequestId={RequestId}, ControlCount={ControlCount}",
-                            currentRequestId, controlCount);
-                        processRequestReceived.TrySetResult();
-                        break;
+                    var evt = message.MessageCase switch
+                    {
+                        ProxyServer.ProxyMessage.MessageOneofCase.ProcessRequest =>
+                            new ServerEvent(ServerEventType.ProcessRequest, message.ProcessRequest),
+                        ProxyServer.ProxyMessage.MessageOneofCase.ControlResponse =>
+                            new ServerEvent(ServerEventType.ControlResponse, message.ControlResponse),
+                        ProxyServer.ProxyMessage.MessageOneofCase.CancelRequest =>
+                            new ServerEvent(ServerEventType.CancelRequest, message.CancelRequest),
+                        _ => null
+                    };
 
-                    case ProxyServer.ProxyMessage.MessageOneofCase.CancelRequest:
-                        _logger.LogInformation("[Server] キャンセル要求受信: RequestId={RequestId}",
-                            message.CancelRequest.RequestId);
-                        cancelled = true;
-                        cancellationTokenSource.Cancel();
-                        controlResponseReceived.Release();
-                        break;
-
-                    case ProxyServer.ProxyMessage.MessageOneofCase.ControlResponse:
-                        _logger.LogInformation("[Server] 制御応答受信: ControlId={ControlId}, Result={Result}",
-                            message.ControlResponse.ControlId, message.ControlResponse.Result);
-                        controlResponseReceived.Release();
-                        break;
+                    if (evt != null)
+                    {
+                        await eventChannel.Writer.WriteAsync(evt, context.CancellationToken);
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                await eventChannel.Writer.WriteAsync(new ServerEvent(ServerEventType.ClientDisconnected));
+                eventChannel.Writer.Complete();
             }
         });
 
-        // 処理要求を待つ
-        await processRequestReceived.Task.WaitAsync(context.CancellationToken);
-
-        if (currentRequestId == null)
-        {
-            return;
-        }
+        string? currentRequestId = null;
+        var controlCount = 0;
+        var cancelled = false;
 
         try
         {
+            // 処理要求を待つ
+            await foreach (var evt in eventChannel.Reader.ReadAllAsync(context.CancellationToken))
+            {
+                if (evt.Type == ServerEventType.ProcessRequest)
+                {
+                    var req = (ProxyServer.ProcessRequest)evt.Message!;
+                    currentRequestId = req.RequestId;
+                    controlCount = req.ControlCount;
+                    _logger.LogInformation("[Server] 処理要求受信: RequestId={RequestId}, ControlCount={ControlCount}",
+                        currentRequestId, controlCount);
+                    break;
+                }
+
+                if (evt.Type == ServerEventType.ClientDisconnected)
+                {
+                    _logger.LogInformation("[Server] Client disconnected before process request");
+                    return;
+                }
+            }
+
+            if (currentRequestId == null)
+            {
+                return;
+            }
+
             // 設定通知を送信
             _logger.LogInformation("[Server] 設定通知送信");
             await responseStream.WriteAsync(new ServerMessage
@@ -85,13 +112,11 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                     SettingKey = "mode",
                     SettingValue = "normal"
                 }
-            }, linkedCts.Token);
+            }, context.CancellationToken);
 
             // 制御要求を複数回実行
             for (var i = 0; i < controlCount && !cancelled; i++)
             {
-                linkedCts.Token.ThrowIfCancellationRequested();
-
                 var controlId = $"control-{i + 1}";
                 _logger.LogInformation("[Server] 制御要求送信: ControlId={ControlId}", controlId);
 
@@ -102,10 +127,32 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                         ControlId = controlId,
                         Command = $"command-{i + 1}"
                     }
-                }, linkedCts.Token);
+                }, context.CancellationToken);
 
-                // 制御応答を待つ（タイムアウト5秒）
-                await controlResponseReceived.WaitAsync(TimeSpan.FromSeconds(5), linkedCts.Token);
+                // 制御応答を待つ（タイムアウト・キャンセル対応）
+                var waitResult = await WaitForControlResponseAsync(
+                    eventChannel.Reader,
+                    controlId,
+                    TimeSpan.FromSeconds(5),
+                    context.CancellationToken);
+
+                switch (waitResult)
+                {
+                    case WaitResult.Received:
+                        _logger.LogInformation("[Server] 制御応答受信: ControlId={ControlId}", controlId);
+                        break;
+                    case WaitResult.Cancelled:
+                        _logger.LogInformation("[Server] キャンセル要求受信");
+                        cancelled = true;
+                        break;
+                    case WaitResult.Timeout:
+                        _logger.LogWarning("[Server] 制御応答タイムアウト: ControlId={ControlId}", controlId);
+                        cancelled = true;
+                        break;
+                    case WaitResult.Disconnected:
+                        _logger.LogInformation("[Server] Client disconnected");
+                        return;
+                }
             }
 
             // 処理応答を送信
@@ -123,21 +170,75 @@ public class ProxyServerServiceImpl : ProxyServerService.ProxyServerServiceBase
                 }
             }, context.CancellationToken);
         }
-        catch (OperationCanceledException) when (cancelled)
+        catch (OperationCanceledException)
         {
-            // キャンセルされた場合は処理応答を送信
-            _logger.LogInformation("[Server] キャンセルにより処理応答送信");
-            await responseStream.WriteAsync(new ServerMessage
+            if (currentRequestId != null)
             {
-                ProcessResponse = new ProxyServer.ProcessResponse
+                _logger.LogInformation("[Server] キャンセルにより処理応答送信");
+                try
                 {
-                    RequestId = currentRequestId,
-                    Success = false,
-                    Message = "Cancelled"
+                    await responseStream.WriteAsync(new ServerMessage
+                    {
+                        ProcessResponse = new ProxyServer.ProcessResponse
+                        {
+                            RequestId = currentRequestId,
+                            Success = false,
+                            Message = "Cancelled"
+                        }
+                    }, CancellationToken.None);
                 }
-            }, context.CancellationToken);
+                catch
+                {
+                }
+            }
         }
 
         await receiveTask;
+    }
+
+    private enum WaitResult { Received, Cancelled, Timeout, Disconnected }
+
+    private async Task<WaitResult> WaitForControlResponseAsync(
+        ChannelReader<ServerEvent> reader,
+        string expectedControlId,
+        TimeSpan timeout,
+        CancellationToken ct)
+    {
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+        try
+        {
+            while (true)
+            {
+                var evt = await reader.ReadAsync(linkedCts.Token);
+
+                switch (evt.Type)
+                {
+                    case ServerEventType.ControlResponse:
+                        var response = (ProxyServer.ControlResponse)evt.Message!;
+                        if (response.ControlId == expectedControlId)
+                        {
+                            return WaitResult.Received;
+                        }
+                        // 想定外のControlIdの場合は次のイベントを待つ
+                        break;
+
+                    case ServerEventType.CancelRequest:
+                        return WaitResult.Cancelled;
+
+                    case ServerEventType.ClientDisconnected:
+                        return WaitResult.Disconnected;
+
+                    case ServerEventType.ProcessRequest:
+                        // 制御応答待ち中の処理要求は無視
+                        break;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            return WaitResult.Timeout;
+        }
     }
 }
