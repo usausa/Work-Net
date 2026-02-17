@@ -50,6 +50,10 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
         var eventChannel = Channel.CreateUnbounded<ProxyEvent>();
         var serverResponseReceived = false;
 
+        // 受信タスク用のキャンセレーショントークン
+        var receiveCts = new CancellationTokenSource();
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, receiveCts.Token);
+
         // Serverとの双方向ストリームを開始
         using var serverCall = _serverClient.Process(cancellationToken: context.CancellationToken);
 
@@ -58,17 +62,20 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
         {
             try
             {
-                await foreach (var message in requestStream.ReadAllAsync(context.CancellationToken))
+                await foreach (var message in requestStream.ReadAllAsync(linkedCts.Token))
                 {
                     await eventChannel.Writer.WriteAsync(
                         new ProxyEvent(ProxyEventType.ClientMessage, message),
-                        context.CancellationToken);
+                        linkedCts.Token);
                 }
             }
             catch (OperationCanceledException)
             {
             }
             catch (ChannelClosedException)
+            {
+            }
+            catch (RpcException)
             {
             }
             finally
@@ -82,17 +89,20 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
         {
             try
             {
-                await foreach (var message in serverCall.ResponseStream.ReadAllAsync(context.CancellationToken))
+                await foreach (var message in serverCall.ResponseStream.ReadAllAsync(linkedCts.Token))
                 {
                     await eventChannel.Writer.WriteAsync(
                         new ProxyEvent(ProxyEventType.ServerMessage, message),
-                        context.CancellationToken);
+                        linkedCts.Token);
                 }
             }
             catch (OperationCanceledException)
             {
             }
             catch (ChannelClosedException)
+            {
+            }
+            catch (RpcException)
             {
             }
             finally
@@ -107,7 +117,7 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
 
         try
         {
-            await foreach (var evt in eventChannel.Reader.ReadAllAsync(context.CancellationToken))
+            await foreach (var evt in eventChannel.Reader.ReadAllAsync(CancellationToken.None))
             {
                 switch (evt.Type)
                 {
@@ -152,12 +162,12 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
                 }
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
         catch (ChannelClosedException)
         {
         }
+
+        // 受信タスクをキャンセル
+        receiveCts.Cancel();
 
         // Serverへのストリームを閉じる
         try
@@ -168,7 +178,14 @@ public class ClientProxyServiceImpl : ClientProxyService.ClientProxyServiceBase
         {
         }
 
-        await Task.WhenAll(clientReceiveTask, serverReceiveTask);
+        // 受信タスクの完了を待つ（タイムアウト付き）
+        try
+        {
+            await Task.WhenAll(clientReceiveTask, serverReceiveTask).WaitAsync(TimeSpan.FromSeconds(1));
+        }
+        catch (TimeoutException)
+        {
+        }
 
         _logger.LogInformation("[Proxy] Connection closed");
     }
