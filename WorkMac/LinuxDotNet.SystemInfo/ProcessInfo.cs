@@ -1,87 +1,128 @@
 namespace LinuxDotNet.SystemInfo;
 
-using System.Runtime.InteropServices;
+using static LinuxDotNet.SystemInfo.NativeMethods;
 
-public sealed record ProcessEntry
+public enum ProcessState
 {
-    public required int Pid { get; init; }
-
-    public required int ParentPid { get; init; }
-
-    public required string Name { get; init; }
-
-    public string Path { get; init; } = string.Empty;
-
-    public string CommandLine { get; init; } = string.Empty;
-
-    public required uint Uid { get; init; }
-
-    public required uint Gid { get; init; }
-
-    public required int Nice { get; init; }
-
-    public required uint OpenFiles { get; init; }
-
-    public required DateTimeOffset StartTime { get; init; }
-
-    public required int ThreadCount { get; init; }
-
-    public required char State { get; init; }
-
-    public string StateName => State switch
-    {
-        'R' => "Running",
-        'S' => "Sleeping",
-        'D' => "Disk Sleep",
-        'Z' => "Zombie",
-        'T' => "Stopped",
-        't' => "Tracing Stop",
-        'X' or 'x' => "Dead",
-        'K' => "Wakekill",
-        'W' => "Waking",
-        'P' => "Parked",
-        'I' => "Idle",
-        _ => "Unknown",
-    };
-
-    public required ulong VirtualSize { get; init; }
-
-    public required ulong ResidentSize { get; init; }
-
-    public required ulong SharedSize { get; init; }
-
-    public required ulong UserTime { get; init; }
-
-    public required ulong SystemTime { get; init; }
-
-    public required long MinorFaults { get; init; }
-
-    public required long MajorFaults { get; init; }
-
-    public required int Priority { get; init; }
+    Unknown,
+    Running,
+    Sleeping,
+    DiskSleep,
+    Zombie,
+    Stopped,
+    TracingStop,
+    Dead,
+    WakeKill,
+    Waking,
+    Parked,
+    Idle
 }
 
-public static class ProcessInfo
+public sealed record ProcessInfo
 {
-    private static readonly long ClkTck;
-    private static readonly long BootTimeSec;
-    private static readonly long PageSize;
+    private static readonly ulong ClockTick = (ulong)GetClockTick();
+    private static readonly long BootTime = GetBootTime();
+    private static readonly ulong PageSize = (ulong)Environment.SystemPageSize;
 
-    static ProcessInfo()
+    // Basic
+
+    public int ProcessId { get; private init; }
+
+    public int ParentProcessId { get; private set; }
+
+    public string Name { get; init; } = default!;
+
+    // Scheduler
+
+    public int Priority { get; private set; }
+
+    public int Nice { get; private set; }
+
+    // Thread
+
+    public int ThreadCount { get; private set; }
+
+    // CPU
+
+    public ProcessState State { get; private set; }
+
+    public ulong UserTime { get; private set; }
+
+    public ulong SystemTime { get; private set; }
+
+    public DateTimeOffset StartTime { get; private set; }
+
+    // Memory
+
+    public ulong VirtualSize { get; private set; }
+
+    public ulong ResidentSize { get; private set; }
+
+    // I/O
+
+    public long MajorFaults { get; private set; }
+
+    public long MinorFaults { get; private set; }
+
+    // Identify
+
+    public uint UserId { get; private set; }
+
+    public uint GroupId { get; private set; }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
+
+    private static long GetClockTick()
     {
-        ClkTck = GetClkTck();
-        BootTimeSec = GetBootTime();
-        PageSize = Environment.SystemPageSize;
+#pragma warning disable CA1031
+        try
+        {
+            return sysconf(SC_CLK_TCK);
+        }
+        catch
+        {
+            return 100; // Default value
+        }
     }
+#pragma warning restore CA1031
 
-    public static ProcessEntry[] GetProcesses()
+    // ReSharper disable StringLiteralTypo
+    private static long GetBootTime()
     {
-        var result = new List<ProcessEntry>();
+        using var reader = new StreamReader("/proc/stat");
+        while (reader.ReadLine() is { } line)
+        {
+            var span = line.AsSpan();
+            if (span.StartsWith("btime"))
+            {
+                return ExtractInt64(span);
+            }
+        }
+
+        return 0;
+
+        static long ExtractInt64(ReadOnlySpan<char> span)
+        {
+            var range = (Span<Range>)stackalloc Range[3];
+            return (span.Split(range, ' ', StringSplitOptions.RemoveEmptyEntries) > 1) && Int64.TryParse(span[range[1]], out var result) ? result : 0;
+        }
+    }
+    // ReSharper restore StringLiteralTypo
+
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
+
+    public static IReadOnlyList<ProcessInfo> GetProcesses()
+    {
+        var result = new List<ProcessInfo>();
 
         foreach (var dir in Directory.EnumerateDirectories("/proc"))
         {
-            var pidStr = Path.GetFileName(dir);
-            if (!Int32.TryParse(pidStr, out var pid))
+            var name = Path.GetFileName(dir).AsSpan();
+            if (!Int32.TryParse(name, out var pid))
             {
                 continue;
             }
@@ -93,265 +134,118 @@ public static class ProcessInfo
             }
         }
 
-        result.Sort((a, b) => a.Pid.CompareTo(b.Pid));
-        return [.. result];
+        result.Sort(static (x, y) => x.ProcessId.CompareTo(y.ProcessId));
+        return result;
     }
 
-    public static ProcessEntry? GetProcess(int pid)
+    public static ProcessInfo? GetProcess(int processId)
     {
-        var procPath = $"/proc/{pid}";
-
+        var procPath = $"/proc/{processId}";
         if (!Directory.Exists(procPath))
         {
             return null;
         }
 
-        var statPath = Path.Combine(procPath, "stat");
-        if (!File.Exists(statPath))
-        {
-            return null;
-        }
-
+#pragma warning disable CA1031
         try
         {
-            var statContent = File.ReadAllText(statPath);
-            var parsed = ParseStat(statContent);
-            if (parsed is null)
+            var statPath = Path.Combine(procPath, "stat");
+            if (!File.Exists(statPath))
             {
                 return null;
             }
 
-            var statusInfo = ParseStatus(Path.Combine(procPath, "status"));
-
-            var exePath = string.Empty;
-            try
+            var statContent = File.ReadAllText(statPath).AsSpan();
+            var commStart = statContent.IndexOf('(');
+            var commEnd = statContent.LastIndexOf(')');
+            if ((commStart < 0) || (commEnd < 0) || (commEnd <= commStart))
             {
-                var exeLink = Path.Combine(procPath, "exe");
-                if (File.Exists(exeLink))
-                {
-                    exePath = Path.GetFullPath(exeLink);
-                }
-            }
-            catch
-            {
-                // Permission denied
+                return null;
             }
 
-            var cmdLine = string.Empty;
-            try
+            var name = statContent.Slice(commStart + 1, commEnd - commStart - 1);
+            var rest = statContent[(commEnd + 2)..];
+
+            var statRange = (Span<Range>)stackalloc Range[23];
+            var statCount = rest.Split(statRange, ' ', StringSplitOptions.RemoveEmptyEntries);
+            if (statCount < 22)
             {
-                var cmdLinePath = Path.Combine(procPath, "cmdline");
-                if (File.Exists(cmdLinePath))
-                {
-                    cmdLine = File.ReadAllText(cmdLinePath).Replace('\0', ' ').Trim();
-                }
-            }
-            catch
-            {
-                // Permission denied
+                return null;
             }
 
-            uint openFiles = 0;
-            try
+            var result = new ProcessInfo
             {
-                var fdPath = Path.Combine(procPath, "fd");
-                if (Directory.Exists(fdPath))
-                {
-                    openFiles = (uint)Directory.GetFiles(fdPath).Length;
-                }
-            }
-            catch
-            {
-                // Permission denied
-            }
-
-            var startTimeTicks = parsed.StartTime;
-            var startTimeSec = BootTimeSec + (long)(startTimeTicks / (ulong)ClkTck);
-            var startTime = DateTimeOffset.FromUnixTimeSeconds(startTimeSec);
-
-            return new ProcessEntry
-            {
-                Pid = pid,
-                ParentPid = parsed.Ppid,
-                Name = parsed.Comm,
-                Path = exePath,
-                CommandLine = cmdLine,
-                Uid = statusInfo.Uid,
-                Gid = statusInfo.Gid,
-                Nice = parsed.Nice,
-                OpenFiles = openFiles,
-                StartTime = startTime,
-                ThreadCount = statusInfo.Threads,
-                State = parsed.State,
-                VirtualSize = parsed.Vsize,
-                ResidentSize = (ulong)parsed.Rss * (ulong)PageSize,
-                SharedSize = statusInfo.RssShared,
-                UserTime = parsed.Utime,
-                SystemTime = parsed.Stime,
-                MinorFaults = parsed.Minflt,
-                MajorFaults = parsed.Majflt,
-                Priority = parsed.Priority,
+                ProcessId = processId,
+                Name = name.ToString()
             };
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
-    private sealed class StatInfo
-    {
-        public required string Comm { get; init; }
-        public required char State { get; init; }
-        public required int Ppid { get; init; }
-        public required int Priority { get; init; }
-        public required int Nice { get; init; }
-        public required ulong Utime { get; init; }
-        public required ulong Stime { get; init; }
-        public required long Minflt { get; init; }
-        public required long Majflt { get; init; }
-        public required ulong Vsize { get; init; }
-        public required long Rss { get; init; }
-        public required ulong StartTime { get; init; }
-    }
-
-    private static StatInfo? ParseStat(string content)
-    {
-        var commStart = content.IndexOf('(');
-        var commEnd = content.LastIndexOf(')');
-        if (commStart < 0 || commEnd < 0 || commEnd <= commStart)
-        {
-            return null;
-        }
-
-        var comm = content.Substring(commStart + 1, commEnd - commStart - 1);
-        var rest = content[(commEnd + 2)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        if (rest.Length < 20)
-        {
-            return null;
-        }
-
-        return new StatInfo
-        {
-            Comm = comm,
-            State = rest[0].Length > 0 ? rest[0][0] : '?',
-            Ppid = Int32.TryParse(rest[1], out var ppid) ? ppid : 0,
-            Priority = Int32.TryParse(rest[15], out var prio) ? prio : 0,
-            Nice = Int32.TryParse(rest[16], out var nice) ? nice : 0,
-            Utime = UInt64.TryParse(rest[11], out var utime) ? utime : 0,
-            Stime = UInt64.TryParse(rest[12], out var stime) ? stime : 0,
-            Minflt = Int64.TryParse(rest[7], out var minflt) ? minflt : 0,
-            Majflt = Int64.TryParse(rest[9], out var majflt) ? majflt : 0,
-            Vsize = UInt64.TryParse(rest[20], out var vsize) ? vsize : 0,
-            Rss = Int64.TryParse(rest[21], out var rss) ? rss : 0,
-            StartTime = UInt64.TryParse(rest[19], out var starttime) ? starttime : 0,
-        };
-    }
-
-    private sealed class StatusInfo
-    {
-        public uint Uid { get; set; }
-        public uint Gid { get; set; }
-        public int Threads { get; set; }
-        public ulong RssShared { get; set; }
-    }
-
-    private static StatusInfo ParseStatus(string path)
-    {
-        var info = new StatusInfo();
-
-        if (!File.Exists(path))
-        {
-            return info;
-        }
-
-        try
-        {
-            using var reader = new StreamReader(path);
-            while (reader.ReadLine() is { } line)
+            var stateChar = rest[statRange[0]].Length > 0 ? rest[statRange[0]][0] : '?';
+            result.State = stateChar switch
             {
-                var span = line.AsSpan();
+                'R' => ProcessState.Running,
+                'S' => ProcessState.Sleeping,
+                'D' => ProcessState.DiskSleep,
+                'Z' => ProcessState.Zombie,
+                'T' => ProcessState.Stopped,
+                't' => ProcessState.TracingStop,
+                'X' or 'x' => ProcessState.Dead,
+                'K' => ProcessState.WakeKill,
+                'W' => ProcessState.Waking,
+                'P' => ProcessState.Parked,
+                'I' => ProcessState.Idle,
+                _ => ProcessState.Unknown
+            };
 
-                if (span.StartsWith("Uid:"))
+            result.ParentProcessId = Int32.TryParse(rest[statRange[1]], out var parentProcessId) ? parentProcessId : 0;
+            result.MinorFaults = Int64.TryParse(rest[statRange[7]], out var minorFault) ? minorFault : 0;
+            result.MajorFaults = Int64.TryParse(rest[statRange[9]], out var majorFault) ? majorFault : 0;
+            result.UserTime = UInt64.TryParse(rest[statRange[11]], out var userTime) ? userTime : 0;
+            result.SystemTime = UInt64.TryParse(rest[statRange[12]], out var systemTime) ? systemTime : 0;
+            result.Priority = Int32.TryParse(rest[statRange[15]], out var priority) ? priority : 0;
+            result.Nice = Int32.TryParse(rest[statRange[16]], out var nice) ? nice : 0;
+            result.ThreadCount = Int32.TryParse(rest[statRange[17]], out var threadCount) ? threadCount : 0;
+            result.StartTime = UInt64.TryParse(rest[statRange[19]], out var startTimeTicks)
+                ? DateTimeOffset.FromUnixTimeSeconds(BootTime + (long)(startTimeTicks / ClockTick))
+                : DateTimeOffset.MinValue;
+            result.VirtualSize = UInt64.TryParse(rest[statRange[20]], out var virtualSize) ? virtualSize : 0;
+            result.ResidentSize = Int64.TryParse(rest[statRange[21]], out var rss) ? (ulong)rss * PageSize : 0;
+
+            // Status
+            var statusPath = Path.Combine(procPath, "status");
+            if (File.Exists(statusPath))
+            {
+                using var reader = new StreamReader(statusPath);
+                while (reader.ReadLine() is { } line)
                 {
-                    var parts = line.Split('\t', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && UInt32.TryParse(parts[1], out var uid))
+                    var span = line.AsSpan();
+
+                    if (span.StartsWith("Uid:"))
                     {
-                        info.Uid = uid;
+                        result.UserId = ExtractStatUInt32(span);
                     }
-                }
-                else if (span.StartsWith("Gid:"))
-                {
-                    var parts = line.Split('\t', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && UInt32.TryParse(parts[1], out var gid))
+                    else if (span.StartsWith("Gid:"))
                     {
-                        info.Gid = gid;
-                    }
-                }
-                else if (span.StartsWith("Threads:"))
-                {
-                    var parts = line.Split('\t', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && Int32.TryParse(parts[1], out var threads))
-                    {
-                        info.Threads = threads;
-                    }
-                }
-                else if (span.StartsWith("RssShmem:"))
-                {
-                    var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && UInt64.TryParse(parts[1], out var rssShared))
-                    {
-                        info.RssShared = rssShared * 1024;
+                        result.GroupId = ExtractStatUInt32(span);
                     }
                 }
             }
+
+            return result;
         }
         catch
         {
-            // Ignore errors
+            return null;
         }
-
-        return info;
+#pragma warning restore CA1031
     }
 
-    private static long GetClkTck()
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
+
+    private static uint ExtractStatUInt32(ReadOnlySpan<char> span)
     {
-        try
-        {
-            return sysconf(2); // _SC_CLK_TCK = 2
-        }
-        catch
-        {
-            return 100; // Default value
-        }
+        var range = (Span<Range>)stackalloc Range[3];
+        return (span.Split(range, '\t', StringSplitOptions.RemoveEmptyEntries) > 1) && UInt32.TryParse(span[range[1]], out var result) ? result : 0;
     }
-
-    private static long GetBootTime()
-    {
-        try
-        {
-            using var reader = new StreamReader("/proc/stat");
-            while (reader.ReadLine() is { } line)
-            {
-                if (line.StartsWith("btime ", StringComparison.Ordinal))
-                {
-                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && Int64.TryParse(parts[1], out var btime))
-                    {
-                        return btime;
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        return 0;
-    }
-
-    [DllImport("libc", SetLastError = true)]
-    private static extern long sysconf(int name);
 }

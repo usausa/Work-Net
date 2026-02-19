@@ -15,6 +15,10 @@ public sealed class HardwareSensor
 
     public long Value { get; private set; }
 
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
     internal HardwareSensor(string valuePath, string type, string label)
     {
         this.valuePath = valuePath;
@@ -22,6 +26,10 @@ public sealed class HardwareSensor
         Label = label;
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public bool Update()
     {
@@ -35,11 +43,15 @@ public sealed class HardwareSensor
 
 public sealed partial class HardwareMonitor
 {
-    public string Name { get; set; }
+    public string Name { get; }
 
-    public string Type { get; set; }
+    public string Type { get; }
 
     public IReadOnlyList<HardwareSensor> Sensors { get; }
+
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
 
     internal HardwareMonitor(string name, string type, IReadOnlyList<HardwareSensor> sensors)
     {
@@ -47,6 +59,10 @@ public sealed partial class HardwareMonitor
         Type = type;
         Sensors = sensors;
     }
+
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
 
     internal static IReadOnlyList<HardwareMonitor> GetMonitors()
     {
@@ -65,9 +81,10 @@ public sealed partial class HardwareMonitor
                 {
                     var filename = Path.GetFileName(file);
                     var sensorType = ExtractSensorType(filename);
-                    var sensorLabel = ReadFile(Path.Combine(dir, file.Replace("_input", "_label", StringComparison.Ordinal)));
+                    var labelPath = Path.Combine(dir, filename.Replace("_input", "_label", StringComparison.Ordinal));
+                    var sensorLabel = ReadFile(labelPath);
 
-                    sensors.Add(new HardwareSensor(Path.Combine(dir, file), sensorType, sensorLabel));
+                    sensors.Add(new HardwareSensor(file, sensorType, sensorLabel));
                 }
             }
 
@@ -76,6 +93,10 @@ public sealed partial class HardwareMonitor
 
         return monitors;
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private static string ReadFile(string path)
     {
@@ -93,6 +114,6 @@ public sealed partial class HardwareMonitor
         return match.Success ? match.Value.TrimEnd('_') : filename;
     }
 
-    [GeneratedRegex(@"^\d+")]
+    [GeneratedRegex("^[a-zA-Z]+")]
     private static partial Regex SensorTypePattern();
 }

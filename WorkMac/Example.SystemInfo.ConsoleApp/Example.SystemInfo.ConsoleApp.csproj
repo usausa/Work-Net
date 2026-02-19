@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MacDotNet.SystemInfo\MacDotNet.SystemInfo.csproj" />
+    <ProjectReference Include="..\LinuxDotNet.SystemInfo\LinuxDotNet.SystemInfo.csproj" />
   </ItemGroup>
 
 </Project>

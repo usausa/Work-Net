@@ -1,12 +1,8 @@
-// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
-// ReSharper disable ClassNeverInstantiated.Global
-// ReSharper disable MemberCanBeProtected.Global
-// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable StringLiteralTypo
+// ReSharper disable IdentifierTypo
 namespace Example.SystemInfo.ConsoleApp;
 
-using System.Globalization;
-
-using MacDotNet.SystemInfo;
+using LinuxDotNet.SystemInfo;
 
 using Smart.CommandLine.Hosting;
 
@@ -14,667 +10,657 @@ public static class CommandBuilderExtensions
 {
     public static void AddCommands(this ICommandBuilder commands)
     {
-        commands.AddCommand<UptimeCommand>();
-        commands.AddCommand<LoadAverageCommand>();
-        commands.AddCommand<MemoryCommand>();
-        commands.AddCommand<CpuCommand>();
-        commands.AddCommand<CpuLoadCommand>();
-        commands.AddCommand<FileSystemCommand>();
-        commands.AddCommand<NetworkCommand>();
-        commands.AddCommand<ProcessCommand>();
-        commands.AddCommand<GpuCommand>();
         commands.AddCommand<HardwareCommand>();
         commands.AddCommand<KernelCommand>();
+        commands.AddCommand<UptimeCommand>();
+        commands.AddCommand<StatCommand>();
+        commands.AddCommand<LoadCommand>();
+        commands.AddCommand<MemoryCommand>();
+        commands.AddCommand<VirtualCommand>();
+        commands.AddCommand<PartitionCommand>();
+        commands.AddCommand<MountCommand>();
+        commands.AddCommand<DiskCommand>();
+        commands.AddCommand<NetworkCommand>();
+        commands.AddCommand<TcpCommand>();
+        commands.AddCommand<Tcp6Command>();
+        commands.AddCommand<ProcessCommand>();
+        commands.AddCommand<ProcessesCommand>();
+        commands.AddCommand<FdCommand>();
+        commands.AddCommand<CpuCommand>();
+        commands.AddCommand<AcCommand>();
         commands.AddCommand<BatteryCommand>();
-        commands.AddCommand<BatteryDetailCommand>();
-        commands.AddCommand<TemperatureCommand>();
-        commands.AddCommand<FanCommand>();
-        commands.AddCommand<PowerCommand>();
-        commands.AddCommand<AppleSiliconPowerCommand>();
-        commands.AddCommand<VoltageCommand>();
+        commands.AddCommand<HwmonCommand>();
     }
 }
 
-// Uptime
-[Command("uptime", "Uptime")]
-public sealed class UptimeCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var uptime = PlatformProvider.GetUptime();
-        Console.WriteLine($"Uptime: {uptime.Uptime}");
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Load Average
-[Command("load", "Load Average")]
-public sealed class LoadAverageCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var load = PlatformProvider.GetLoadAverage();
-        Console.WriteLine("=== Load Average ===");
-        Console.WriteLine($"1 min:  {load.Average1:F2}");
-        Console.WriteLine($"5 min:  {load.Average5:F2}");
-        Console.WriteLine($"15 min: {load.Average15:F2}");
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Memory
-[Command("memory", "Memory Info")]
-public sealed class MemoryCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var mem = PlatformProvider.GetMemory();
-        Console.WriteLine("=== Memory Info ===");
-        Console.WriteLine($"Physical Memory:  {FormatBytes(mem.PhysicalMemory)}");
-        Console.WriteLine($"Page Size:        {mem.PageSize} bytes");
-        Console.WriteLine($"Used:             {FormatBytes(mem.UsedBytes)}");
-        Console.WriteLine($"Free:             {FormatBytes(mem.FreeBytes)}");
-        Console.WriteLine($"Usage:            {mem.UsagePercent:F1}%");
-        Console.WriteLine($"Active:           {FormatBytes(mem.ActiveBytes)}");
-        Console.WriteLine($"Wired:            {FormatBytes(mem.WiredBytes)}");
-        Console.WriteLine($"Compressor:       {FormatBytes(mem.CompressorBytes)}");
-
-        var swap = PlatformProvider.GetSwap();
-        if (swap.Supported)
-        {
-            Console.WriteLine();
-            Console.WriteLine("=== Swap Info ===");
-            Console.WriteLine($"Total:            {FormatBytes(swap.TotalBytes)}");
-            Console.WriteLine($"Used:             {FormatBytes(swap.UsedBytes)}");
-            Console.WriteLine($"Available:        {FormatBytes(swap.AvailableBytes)}");
-            Console.WriteLine($"Usage:            {swap.UsagePercent:F1}%");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static string FormatBytes(ulong bytes) => bytes switch
-    {
-        >= 1UL << 40 => $"{bytes / (double)(1UL << 40):F2} TiB",
-        >= 1UL << 30 => $"{bytes / (double)(1UL << 30):F2} GiB",
-        >= 1UL << 20 => $"{bytes / (double)(1UL << 20):F2} MiB",
-        >= 1UL << 10 => $"{bytes / (double)(1UL << 10):F2} KiB",
-        _ => $"{bytes} B"
-    };
-}
-
-// CPU
-[Command("cpu", "CPU Info")]
-public sealed class CpuCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var hw = PlatformProvider.GetHardware();
-        Console.WriteLine("=== CPU Info ===");
-        Console.WriteLine($"Logical CPU:    {hw.LogicalCpu}");
-        Console.WriteLine($"Physical CPU:   {hw.PhysicalCpu}");
-        Console.WriteLine($"Active CPU:     {hw.ActiveCpu}");
-        if (hw.CpuBrandString is not null)
-        {
-            Console.WriteLine($"Brand:          {hw.CpuBrandString}");
-        }
-
-        if (hw.CpuFrequency > 0)
-        {
-            Console.WriteLine($"Frequency:      {hw.CpuFrequency / 1_000_000_000.0:F2} GHz");
-        }
-
-        Console.WriteLine();
-
-        var load = PlatformProvider.GetLoadAverage();
-        Console.WriteLine("=== Load Average ===");
-        Console.WriteLine($"1 min:  {load.Average1:F2}");
-        Console.WriteLine($"5 min:  {load.Average5:F2}");
-        Console.WriteLine($"15 min: {load.Average15:F2}");
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// FileSystem
-[Command("fs", "File System Info")]
-public sealed class FileSystemCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var entries = PlatformProvider.GetFileSystems();
-        if (entries.Count == 0)
-        {
-            Console.WriteLine("No file systems found.");
-            return ValueTask.CompletedTask;
-        }
-
-
-
-        foreach (var fs in entries)
-        {
-            Console.WriteLine($"Mount Point:    {fs.MountPoint}");
-            Console.WriteLine($"Device:         {fs.DeviceName}");
-            Console.WriteLine($"Type:           {fs.TypeName}");
-            Console.WriteLine($"Total Size:     {FormatBytes(fs.TotalSize)}");
-            Console.WriteLine($"Free Size:      {FormatBytes(fs.FreeSize)}");
-            Console.WriteLine($"Usage:          {fs.UsagePercent:F1}%");
-            Console.WriteLine($"Read Only:      {fs.IsReadOnly}");
-            Console.WriteLine();
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static string FormatBytes(ulong bytes) => bytes switch
-    {
-        >= 1UL << 40 => $"{bytes / (double)(1UL << 40):F2} TiB",
-        >= 1UL << 30 => $"{bytes / (double)(1UL << 30):F2} GiB",
-        >= 1UL << 20 => $"{bytes / (double)(1UL << 20):F2} MiB",
-        >= 1UL << 10 => $"{bytes / (double)(1UL << 10):F2} KiB",
-        _ => $"{bytes} B"
-    };
-}
-
-// Network
-[Command("network", "Network Info")]
-public sealed class NetworkCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var interfaces = PlatformProvider.GetNetworkInterfaces();
-        if (interfaces.Count == 0)
-        {
-            Console.WriteLine("No network interfaces found.");
-            return ValueTask.CompletedTask;
-        }
-
-        foreach (var iface in interfaces)
-        {
-            Console.WriteLine($"=== {iface.Name} ({iface.InterfaceTypeName}) ===");
-            Console.WriteLine($"  State:           {iface.State}");
-            if (iface.MacAddress is not null)
-            {
-                Console.WriteLine($"  MAC Address:     {iface.MacAddress}");
-            }
-
-            Console.WriteLine($"  MTU:             {iface.Mtu}");
-
-            foreach (var addr in iface.IPv4Addresses)
-            {
-                Console.WriteLine($"  IPv4:            {addr.Address}/{addr.PrefixLength}");
-            }
-
-            foreach (var addr in iface.IPv6Addresses)
-            {
-                Console.WriteLine($"  IPv6:            {addr.Address}/{addr.PrefixLength}");
-            }
-
-            Console.WriteLine($"  Rx Bytes:        {iface.RxBytes:N0}");
-            Console.WriteLine($"  Tx Bytes:        {iface.TxBytes:N0}");
-            Console.WriteLine();
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Process
-[Command("process", "Process Info")]
-public sealed class ProcessCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var processes = PlatformProvider.GetProcesses();
-        if (processes.Count == 0)
-        {
-            Console.WriteLine("No processes found.");
-            return ValueTask.CompletedTask;
-        }
-
-        var totalThreads = 0;
-        foreach (var p in processes)
-        {
-            totalThreads += p.ThreadCount;
-        }
-
-        Console.WriteLine($"Total Processes: {processes.Count}");
-        Console.WriteLine($"Total Threads:   {totalThreads}");
-        Console.WriteLine();
-
-        Console.WriteLine($"{"PID",6} {"PPID",6} {"THR",4} {"RSS",10} {"NAME"}");
-        Console.WriteLine(new string('-', 50));
-
-        foreach (var p in processes.Take(20))
-        {
-            Console.WriteLine($"{p.Pid,6} {p.ParentPid,6} {p.ThreadCount,4} {FormatBytes(p.ResidentSize),10} {p.Name}");
-        }
-
-        if (processes.Count > 20)
-        {
-            Console.WriteLine($"... and {processes.Count - 20} more processes");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static string FormatBytes(ulong bytes) => bytes switch
-    {
-        >= 1UL << 30 => $"{bytes / (double)(1UL << 30):F1} GiB",
-        >= 1UL << 20 => $"{bytes / (double)(1UL << 20):F1} MiB",
-        >= 1UL << 10 => $"{bytes / (double)(1UL << 10):F1} KiB",
-        _ => $"{bytes} B"
-    };
-}
-
-// GPU
-[Command("gpu", "GPU Info")]
-public sealed class GpuCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var gpus = PlatformProvider.GetGpus();
-        if (gpus.Count == 0)
-        {
-            Console.WriteLine("No GPU (IOAccelerator) found.");
-            return ValueTask.CompletedTask;
-        }
-
-        for (var i = 0; i < gpus.Count; i++)
-        {
-            var gpu = gpus[i];
-
-            Console.WriteLine($"=== GPU [{i}] ===");
-            Console.WriteLine($"Model:            {gpu.Model}");
-            Console.WriteLine($"Class:            {gpu.ClassName}");
-            Console.WriteLine($"Core Count:       {gpu.CoreCount}");
-
-            if (gpu.Temperature.HasValue)
-            {
-                Console.WriteLine($"Temperature:      {gpu.Temperature} °C");
-            }
-
-            if (gpu.FanSpeed.HasValue)
-            {
-                Console.WriteLine($"Fan Speed:        {gpu.FanSpeed}%");
-            }
-
-            if (gpu.CoreClock.HasValue)
-            {
-                Console.WriteLine($"Core Clock:       {gpu.CoreClock} MHz");
-            }
-
-            if (gpu.MemoryClock.HasValue)
-            {
-                Console.WriteLine($"Memory Clock:     {gpu.MemoryClock} MHz");
-            }
-
-            if (gpu.PowerState.HasValue)
-            {
-                Console.WriteLine($"Power State:      {(gpu.PowerState.Value ? "Active" : "Powered Off")}");
-            }
-
-            if (gpu.Performance is not null)
-            {
-                var perf = gpu.Performance;
-                Console.WriteLine();
-                Console.WriteLine("--- Performance ---");
-                Console.WriteLine($"Device Utilization:   {perf.DeviceUtilization}%");
-                Console.WriteLine($"Renderer Utilization: {perf.RendererUtilization}%");
-                Console.WriteLine($"Tiler Utilization:    {perf.TilerUtilization}%");
-            }
-
-            Console.WriteLine();
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-
+//--------------------------------------------------------------------------------
 // Hardware
-[Command("hardware", "Hardware Info")]
+//--------------------------------------------------------------------------------
+[Command("hardware", "Get hardware information")]
 public sealed class HardwareCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
         var hw = PlatformProvider.GetHardware();
 
-        Console.WriteLine("=== Hardware ===");
-        Console.WriteLine($"Model:            {hw.Model}");
-        Console.WriteLine($"Machine:          {hw.Machine}");
-        Console.WriteLine($"Serial Number:    {hw.SerialNumber ?? "(unavailable)"}");
-        Console.WriteLine($"CPU Brand:        {hw.CpuBrandString ?? "(unavailable)"}");
-        Console.WriteLine();
+        Console.WriteLine("[DMI]");
+        Console.WriteLine($"Vendor:         {hw.Vendor}");
+        Console.WriteLine($"ProductName:    {hw.ProductName}");
+        Console.WriteLine($"ProductVersion: {hw.ProductVersion}");
+        Console.WriteLine($"SerialNumber:   {hw.SerialNumber}");
 
-        Console.WriteLine("=== CPU ===");
-        Console.WriteLine($"Physical CPU:     {hw.PhysicalCpu}");
-        Console.WriteLine($"Logical CPU:      {hw.LogicalCpu}");
-        Console.WriteLine($"Active CPU:       {hw.ActiveCpu}");
-        Console.WriteLine();
+        Console.WriteLine("[BIOS]");
+        Console.WriteLine($"Vendor:         {hw.BiosVendor}");
+        Console.WriteLine($"Version:        {hw.BiosVersion}");
+        Console.WriteLine($"Date:           {hw.BiosDate}");
+        Console.WriteLine($"Release:        {hw.BiosRelease}");
 
-        Console.WriteLine("=== Memory ===");
-        Console.WriteLine($"Physical Memory:  {FormatBytes((ulong)hw.MemSize)}");
-        Console.WriteLine($"Page Size:        {hw.PageSize} bytes");
-        Console.WriteLine();
+        Console.WriteLine("[Board]");
+        Console.WriteLine($"Vendor:         {hw.BoardVendor}");
+        Console.WriteLine($"Name:           {hw.BoardName}");
+        Console.WriteLine($"Version:        {hw.BoardVersion}");
+        Console.WriteLine("[CPU]");
+        Console.WriteLine($"Brand:          {hw.CpuBrandString}");
+        Console.WriteLine($"Vendor:         {hw.CpuVendor}");
+        Console.WriteLine($"Family:         {hw.CpuFamily}");
+        Console.WriteLine($"Model:          {hw.CpuModel}");
+        Console.WriteLine($"Stepping:       {hw.CpuStepping}");
+        Console.WriteLine($"Logical:        {hw.LogicalCpu}");
+        Console.WriteLine($"Physical:       {hw.PhysicalCpu}");
+        Console.WriteLine($"CoresPerSocket: {hw.CoresPerSocket}");
+        Console.WriteLine($"FrequencyMax:   {hw.CpuFrequencyMax / 1_000_000.0:F0} MHz");
 
-        var perfLevels = PlatformProvider.GetPerformanceLevels();
-        if (perfLevels.Count > 0)
-        {
-            Console.WriteLine("=== Performance Levels (Apple Silicon) ===");
-            foreach (var level in perfLevels)
-            {
-                var freqStr = level.CpuFrequencyMax > 0 ? $", {level.CpuFrequencyMax / 1_000_000}MHz" : "";
-                Console.WriteLine($"  [{level.Index}] {level.Name}: {level.PhysicalCpu} physical, {level.LogicalCpu} logical{freqStr}");
-            }
-        }
+        Console.WriteLine("[Cache]");
+        Console.WriteLine($"L1D:            {hw.L1DCacheSize / 1024} KB");
+        Console.WriteLine($"L1I:            {hw.L1ICacheSize / 1024} KB");
+        Console.WriteLine($"L2:             {hw.L2CacheSize / 1024} KB");
+        Console.WriteLine($"L3:             {hw.L3CacheSize / 1024} KB");
+
+        Console.WriteLine("[Memory]");
+        Console.WriteLine($"MemoryTotal:    {hw.MemoryTotal / 1024 / 1024} MB");
+        Console.WriteLine($"PageSize:       {hw.PageSize} bytes");
 
         return ValueTask.CompletedTask;
     }
-
-    private static string FormatBytes(ulong bytes) => bytes switch
-    {
-        >= 1UL << 40 => $"{bytes / (double)(1UL << 40):F2} TiB",
-        >= 1UL << 30 => $"{bytes / (double)(1UL << 30):F2} GiB",
-        >= 1UL << 20 => $"{bytes / (double)(1UL << 20):F2} MiB",
-        >= 1UL << 10 => $"{bytes / (double)(1UL << 10):F2} KiB",
-        _ => $"{bytes} B"
-    };
 }
 
+//--------------------------------------------------------------------------------
 // Kernel
-[Command("kernel", "Kernel Info")]
+//--------------------------------------------------------------------------------
+[Command("kernel", "Get kernel information")]
 public sealed class KernelCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        var kern = PlatformProvider.GetKernel();
+        var kernel = PlatformProvider.GetKernel();
 
-        Console.WriteLine("=== Kernel ===");
-        Console.WriteLine($"OS Type:          {kern.OsType}");
-        Console.WriteLine($"OS Release:       {kern.OsRelease}");
-        Console.WriteLine($"OS Version:       {kern.OsVersion}");
-        Console.WriteLine($"OS Product Ver:   {kern.OsProductVersion ?? "(unavailable)"}");
+        Console.WriteLine($"OsType:                 {kernel.OsType}");
+        Console.WriteLine($"OsRelease:              {kernel.OsRelease}");
+        Console.WriteLine($"KernelVersion:          {kernel.KernelVersion}");
+        Console.WriteLine($"OsProductVersion:       {kernel.OsProductVersion}");
+        Console.WriteLine($"OsName:                 {kernel.OsName}");
+        Console.WriteLine($"OsPrettyName:           {kernel.OsPrettyName}");
+        Console.WriteLine($"OsId:                   {kernel.OsId}");
+        Console.WriteLine($"BootTime:               {kernel.BootTime}");
+        Console.WriteLine($"MaxProcessCount:        {kernel.MaxProcessCount}");
+        Console.WriteLine($"MaxFileCount:           {kernel.MaxFileCount}");
+        Console.WriteLine($"MaxFileCountPerProcess: {kernel.MaxFileCountPerProcess}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Uptime
+//--------------------------------------------------------------------------------
+[Command("uptime", "Get uptime")]
+public sealed class UptimeCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var uptime = PlatformProvider.GetUptime();
+
+        Console.WriteLine($"Elapsed: {uptime.Elapsed}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Stat
+//--------------------------------------------------------------------------------
+[Command("stat", "Get system stat")]
+public sealed class StatCommand : ICommandHandler
+{
+    public async ValueTask ExecuteAsync(CommandContext context)
+    {
+        var stat = PlatformProvider.GetSystemStat();
+
+        Console.WriteLine($"Interrupt:      {stat.Interrupt}");
+        Console.WriteLine($"ContextSwitch:  {stat.ContextSwitch}");
+        Console.WriteLine($"SoftIrq:        {stat.SoftIrq}");
+        Console.WriteLine($"Forks:          {stat.Forks}");
+        Console.WriteLine($"RunnableTasks:  {stat.RunnableTasks}");
+        Console.WriteLine($"BlockedTasks:   {stat.BlockedTasks}");
+
+        Console.WriteLine($"User:           {stat.CpuTotal.User}");
+        Console.WriteLine($"Nice:           {stat.CpuTotal.Nice}");
+        Console.WriteLine($"System:         {stat.CpuTotal.System}");
+        Console.WriteLine($"Idle:           {stat.CpuTotal.Idle}");
+        Console.WriteLine($"IoWait:         {stat.CpuTotal.IoWait}");
+        Console.WriteLine($"Irq:            {stat.CpuTotal.Irq}");
+        Console.WriteLine($"SoftIrq:        {stat.CpuTotal.SoftIrq}");
+        Console.WriteLine($"Steal:          {stat.CpuTotal.Steal}");
+        Console.WriteLine($"Guest:          {stat.CpuTotal.Guest}");
+        Console.WriteLine($"GuestNice:      {stat.CpuTotal.GuestNice}");
+
         Console.WriteLine();
 
-        Console.WriteLine("=== Boot Time ===");
-        if (kern.BootTime != DateTimeOffset.MinValue)
+        for (var i = 0; i < 10; i++)
         {
-            Console.WriteLine($"Boot Time:        {kern.BootTime:yyyy-MM-dd HH:mm:ss zzz}");
-            Console.WriteLine($"Uptime:           {DateTimeOffset.UtcNow - kern.BootTime:d\\.hh\\:mm\\:ss}");
+            var previousValues = stat.CpuCores
+                .Select(x =>
+                {
+                    var nonIdle = CalcCpuNonIdle(x);
+                    var total = nonIdle + CalcCpuIdle(x);
+                    return new
+                    {
+                        NonIdle = nonIdle,
+                        Total = total
+                    };
+                })
+                .ToList();
+
+            await Task.Delay(1000);
+
+            stat.Update();
+
+            for (var j = 0; j < stat.CpuCores.Count; j++)
+            {
+                var core = stat.CpuCores[j];
+                var nonIdle = CalcCpuNonIdle(core);
+                var total = nonIdle + CalcCpuIdle(core);
+
+                var nonIdleDiff = nonIdle - previousValues[j].NonIdle;
+                var totalDiff = total - previousValues[j].Total;
+                var usage = totalDiff > 0 ? (int)Math.Ceiling((double)nonIdleDiff / totalDiff * 100.0) : 0;
+
+                Console.WriteLine($"Name:  {core.Name}");
+                Console.WriteLine($"Usage: {usage}");
+            }
+        }
+
+        static long CalcCpuIdle(CpuStat cpu)
+        {
+            return cpu.Idle + cpu.IoWait;
+        }
+
+        static long CalcCpuNonIdle(CpuStat cpu)
+        {
+            return cpu.User + cpu.Nice + cpu.System + cpu.Irq + cpu.SoftIrq + cpu.Steal;
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------
+// LoadAverage
+//--------------------------------------------------------------------------------
+[Command("load", "Get load average")]
+public sealed class LoadCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var load = PlatformProvider.GetLoadAverage();
+
+        Console.WriteLine($"Average1:  {load.Average1:F2}");
+        Console.WriteLine($"Average5:  {load.Average5:F2}");
+        Console.WriteLine($"Average15: {load.Average15:F2}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Memory
+//--------------------------------------------------------------------------------
+[Command("memory", "Get memory stat")]
+public sealed class MemoryCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var memory = PlatformProvider.GetMemoryStat();
+        var usage = (int)Math.Ceiling((double)(memory.MemoryTotal - memory.MemoryAvailable) / memory.MemoryTotal * 100);
+
+        Console.WriteLine($"MemoryTotal:     {memory.MemoryTotal}");
+        Console.WriteLine($"MemoryAvailable: {memory.MemoryAvailable}");
+        Console.WriteLine($"Buffers:         {memory.Buffers}");
+        Console.WriteLine($"Cached:          {memory.Cached}");
+        Console.WriteLine($"Usage:           {usage}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// VirtualMemory
+//--------------------------------------------------------------------------------
+[Command("virtual", "Get virtual memory stat")]
+public sealed class VirtualCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var vm = PlatformProvider.GetVirtualMemoryStat();
+
+        Console.WriteLine($"PageIn:            {vm.PageIn}");
+        Console.WriteLine($"PageOut:           {vm.PageOut}");
+        Console.WriteLine($"SwapIn:            {vm.SwapIn}");
+        Console.WriteLine($"SwapOut:           {vm.SwapOut}");
+        Console.WriteLine($"PageFaults:        {vm.PageFaults}");
+        Console.WriteLine($"MajorPageFaults:   {vm.MajorPageFaults}");
+        Console.WriteLine($"OutOfMemoryKiller: {vm.OutOfMemoryKiller}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Partition
+//--------------------------------------------------------------------------------
+[Command("partition", "Get partition")]
+public sealed class PartitionCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var partitions = PlatformProvider.GetPartitions();
+        foreach (var partition in partitions)
+        {
+            Console.WriteLine($"Name:          {partition.Name}");
+            Console.WriteLine($"DeviceClass:   {partition.DeviceClass} ({(int)partition.DeviceClass})");
+            Console.WriteLine($"No:            {partition.No}");
+            Console.WriteLine($"Blocks:        {partition.Blocks}");
+
+            var mounts = partition.GetMounts();
+            if (mounts.Count > 0)
+            {
+                Console.WriteLine($"MountPoint:    {String.Join(' ', mounts.Select(m => m.MountPoint))}");
+            }
+
+            Console.WriteLine();
         }
 
         return ValueTask.CompletedTask;
     }
-
 }
 
+//--------------------------------------------------------------------------------
+// Mount
+//--------------------------------------------------------------------------------
+[Command("mount", "Get mount points")]
+public sealed class MountCommand : ICommandHandler
+{
+    [Option("--virtual", "-v", Description = "Include virtual file systems")]
+    public bool IncludeVirtual { get; set; }
+
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var mounts = PlatformProvider.GetMounts(IncludeVirtual);
+        foreach (var mount in mounts)
+        {
+            Console.WriteLine($"Device:        {mount.DeviceName}");
+            Console.WriteLine($"MountPoint:    {mount.MountPoint}");
+            Console.WriteLine($"FileSystem:    {mount.FileSystem}");
+            Console.WriteLine($"Options:       {mount.Option}");
+            Console.WriteLine($"IsLocal:       {mount.IsLocal}");
+
+            var usage = mount.GetUsage();
+            if (usage is not null)
+            {
+                var used = usage.TotalSize - usage.FreeSize;
+                var usagePercent = (used + usage.AvailableSize) > 0
+                    ? (int)Math.Ceiling((double)used / (used + usage.AvailableSize) * 100)
+                    : 0;
+                Console.WriteLine($"TotalSize:     {usage.TotalSize}");
+                Console.WriteLine($"FreeSize:      {usage.FreeSize}");
+                Console.WriteLine($"AvailableSize: {usage.AvailableSize}");
+                Console.WriteLine($"Usage:         {usagePercent}%");
+                Console.WriteLine($"TotalFiles:    {usage.TotalFiles}");
+                Console.WriteLine($"FreeFiles:     {usage.FreeFiles}");
+            }
+
+            Console.WriteLine();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// DiskStat
+//--------------------------------------------------------------------------------
+[Command("disk", "Get disk stat")]
+public sealed class DiskCommand : ICommandHandler
+{
+    public async ValueTask ExecuteAsync(CommandContext context)
+    {
+        var disk = PlatformProvider.GetDiskStat();
+        foreach (var device in disk.Devices)
+        {
+            Console.WriteLine($"Name:           {device.Name}");
+            Console.WriteLine($"ReadCompleted:  {device.ReadCompleted}");
+            Console.WriteLine($"ReadMerged:     {device.ReadMerged}");
+            Console.WriteLine($"ReadSectors:    {device.ReadSectors}");
+            Console.WriteLine($"ReadTime:       {device.ReadTime}");
+            Console.WriteLine($"WriteCompleted: {device.WriteCompleted}");
+            Console.WriteLine($"WriteMerged:    {device.WriteMerged}");
+            Console.WriteLine($"WriteSectors:   {device.WriteSectors}");
+            Console.WriteLine($"WriteTime:      {device.WriteTime}");
+            Console.WriteLine($"IosInProgress:  {device.IosInProgress}");
+            Console.WriteLine($"IoTime:         {device.IoTime}");
+            Console.WriteLine($"WeightIoTime:   {device.WeightIoTime}");
+        }
+
+        Console.WriteLine();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var previousUpdateAt = disk.UpdateAt;
+            var previousValues = disk.Devices
+                .Select(x => new
+                {
+                    x.ReadCompleted,
+                    x.WriteCompleted
+                })
+                .ToList();
+
+            await Task.Delay(1000);
+
+            disk.Update();
+
+            var timespan = (disk.UpdateAt - previousUpdateAt).TotalSeconds;
+            for (var j = 0; j < disk.Devices.Count; j++)
+            {
+                var device = disk.Devices[j];
+                var readPerSec = (int)Math.Ceiling((device.ReadCompleted - previousValues[j].ReadCompleted) / timespan);
+                var writePerSec = (int)Math.Ceiling((device.WriteCompleted - previousValues[j].WriteCompleted) / timespan);
+
+                Console.WriteLine($"Name:        {device.Name}");
+                Console.WriteLine($"ReadPerSec:  {readPerSec}");
+                Console.WriteLine($"WritePerSec: {writePerSec}");
+            }
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------
+// NetworkStat
+//--------------------------------------------------------------------------------
+[Command("network", "Get network stat")]
+public sealed class NetworkCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var network = PlatformProvider.GetNetworkStat();
+        foreach (var nif in network.Interfaces)
+        {
+            Console.WriteLine($"Interface:    {nif.Interface}");
+            Console.WriteLine($"RxBytes:      {nif.RxBytes}");
+            Console.WriteLine($"RxPackets:    {nif.RxPackets}");
+            Console.WriteLine($"RxErrors:     {nif.RxErrors}");
+            Console.WriteLine($"RxDropped:    {nif.RxDropped}");
+            Console.WriteLine($"RxFifo:       {nif.RxFifo}");
+            Console.WriteLine($"RxFrame:      {nif.RxFrame}");
+            Console.WriteLine($"RxCompressed: {nif.RxCompressed}");
+            Console.WriteLine($"RxMulticast:  {nif.RxMulticast}");
+            Console.WriteLine($"TxBytes:      {nif.TxBytes}");
+            Console.WriteLine($"TxPackets:    {nif.TxPackets}");
+            Console.WriteLine($"TxErrors:     {nif.TxErrors}");
+            Console.WriteLine($"TxDropped:    {nif.TxDropped}");
+            Console.WriteLine($"TxFifo:       {nif.TxFifo}");
+            Console.WriteLine($"TxCollisions: {nif.TxCollisions}");
+            Console.WriteLine($"TxCarrier:    {nif.TxCarrier}");
+            Console.WriteLine($"TxCompressed: {nif.TxCompressed}");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Tcp
+//--------------------------------------------------------------------------------
+[Command("tcp", "Get tcp stat")]
+public sealed class TcpCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var tcp = PlatformProvider.GetTcpStat();
+
+        Console.WriteLine($"Established: {tcp.Established}");
+        Console.WriteLine($"SynSent:     {tcp.SynSent}");
+        Console.WriteLine($"SynRecv:     {tcp.SynRecv}");
+        Console.WriteLine($"FinWait1:    {tcp.FinWait1}");
+        Console.WriteLine($"FinWait2:    {tcp.FinWait2}");
+        Console.WriteLine($"TimeWait:    {tcp.TimeWait}");
+        Console.WriteLine($"Close:       {tcp.Close}");
+        Console.WriteLine($"CloseWait:   {tcp.CloseWait}");
+        Console.WriteLine($"LastAck:     {tcp.LastAck}");
+        Console.WriteLine($"Listen:      {tcp.Listen}");
+        Console.WriteLine($"Closing:     {tcp.Closing}");
+        Console.WriteLine($"Total:       {tcp.Total}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Tcp6
+//--------------------------------------------------------------------------------
+[Command("tcp6", "Get tcp6 stat")]
+public sealed class Tcp6Command : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var tcp = PlatformProvider.GetTcp6Stat();
+
+        Console.WriteLine($"Established: {tcp.Established}");
+        Console.WriteLine($"SynSent:     {tcp.SynSent}");
+        Console.WriteLine($"SynRecv:     {tcp.SynRecv}");
+        Console.WriteLine($"FinWait1:    {tcp.FinWait1}");
+        Console.WriteLine($"FinWait2:    {tcp.FinWait2}");
+        Console.WriteLine($"TimeWait:    {tcp.TimeWait}");
+        Console.WriteLine($"Close:       {tcp.Close}");
+        Console.WriteLine($"CloseWait:   {tcp.CloseWait}");
+        Console.WriteLine($"LastAck:     {tcp.LastAck}");
+        Console.WriteLine($"Listen:      {tcp.Listen}");
+        Console.WriteLine($"Closing:     {tcp.Closing}");
+        Console.WriteLine($"Total:       {tcp.Total}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// ProcessSummary
+//--------------------------------------------------------------------------------
+[Command("process", "Get process")]
+public sealed class ProcessCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var process = PlatformProvider.GetProcessSummary();
+
+        Console.WriteLine($"ProcessCount: {process.ProcessCount}");
+        Console.WriteLine($"ThreadCount:  {process.ThreadCount}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Processes
+//--------------------------------------------------------------------------------
+[Command("processes", "Get all processes")]
+public sealed class ProcessesCommand : ICommandHandler
+{
+    [Option<int>("--top", "-t", Description = "Top", DefaultValue = 100)]
+    public int Top { get; set; }
+
+    [Option<string>("--sort", "-s", Description = "Sort", Completions = ["pid", "name", "cpu", "memory"], DefaultValue = "pid")]
+    public string Sort { get; set; } = default!;
+
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var processes = PlatformProvider.GetProcesses();
+
+#pragma warning disable CA1308
+        var sorted = Sort.ToLowerInvariant() switch
+        {
+            "name" => processes.OrderBy(p => p.Name),
+            "cpu" => processes.OrderByDescending(p => p.UserTime + p.SystemTime),
+            "memory" => processes.OrderByDescending(p => p.ResidentSize),
+            _ => processes.OrderBy(p => p.ProcessId)
+        };
+#pragma warning restore CA1308
+
+        var topProcesses = sorted.Take(Top).ToList();
+
+        Console.WriteLine($"{"PID",-6} {"Name",-20} {"State",-12} {"User",-5} {"Threads",7} {"RSS (MB)",10} {"CPU Time",10}");
+        Console.WriteLine(new string('-', 76));
+
+        foreach (var p in topProcesses)
+        {
+            var rss = (double)p.ResidentSize / 1024 / 1024;
+            var cpuTime = (p.UserTime + p.SystemTime) / 100.0;
+
+            Console.WriteLine($"{p.ProcessId,-6} {TruncateName(p.Name, 20),-20} {p.State,-12} {p.UserId,-5} {p.ThreadCount,7} {rss,10:F2} {cpuTime,10:F2}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"Total processes: {processes.Count}");
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static string TruncateName(string name, int maxLength)
+    {
+        return name.Length <= maxLength ? name : name[..(maxLength - 3)] + "...";
+    }
+}
+
+//--------------------------------------------------------------------------------
+// FileDescriptor
+//--------------------------------------------------------------------------------
+[Command("fd", "Get file descriptor")]
+public sealed class FdCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var fd = PlatformProvider.GetFileHandleStat();
+
+        Console.WriteLine($"Allocated: {fd.Allocated}");
+        Console.WriteLine($"Used:      {fd.Used}");
+        Console.WriteLine($"Max:       {fd.Max}");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// Cpu
+//--------------------------------------------------------------------------------
+[Command("cpu", "Get cpu device")]
+public sealed class CpuCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var cpu = PlatformProvider.GetCpuDevice();
+
+        Console.WriteLine("Frequency");
+        foreach (var core in cpu.Cores)
+        {
+            Console.WriteLine($"{core.Name}: {core.Frequency}");
+        }
+
+        if (cpu.Powers.Count > 0)
+        {
+            Console.WriteLine("Power");
+            foreach (var power in cpu.Powers)
+            {
+                Console.WriteLine($"{power.Name}: {power.Energy / 1000.0}");
+            }
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
+// MainsAdapter
+//--------------------------------------------------------------------------------
+[Command("ac", "Get A/C device")]
+public sealed class AcCommand : ICommandHandler
+{
+    public ValueTask ExecuteAsync(CommandContext context)
+    {
+        var adapter = PlatformProvider.GetMainsDevice();
+
+        Console.WriteLine(adapter.Supported ? $"Online: {adapter.Online}" : "No adapter found");
+
+        return ValueTask.CompletedTask;
+    }
+}
+
+//--------------------------------------------------------------------------------
 // Battery
-[Command("battery", "Battery Info")]
+//--------------------------------------------------------------------------------
+[Command("battery", "Get battery device")]
 public sealed class BatteryCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        var battery = PlatformProvider.GetBattery();
-        if (!battery.Supported)
+        var battery = PlatformProvider.GetBatteryDevice();
+
+        if (battery.Supported)
         {
-            Console.WriteLine("No battery found.");
-            return ValueTask.CompletedTask;
-        }
-
-        Console.WriteLine("=== Battery ===");
-        Console.WriteLine($"Name:                  {battery.Name}");
-        Console.WriteLine($"Type:                  {battery.Type}");
-        Console.WriteLine($"Is Present:            {battery.IsPresent}");
-        Console.WriteLine($"Power Source State:    {battery.PowerSourceState}");
-        Console.WriteLine($"Is Charging:           {battery.IsCharging}");
-        Console.WriteLine($"Is Charged:            {battery.IsCharged}");
-        Console.WriteLine($"Current Capacity:      {battery.CurrentCapacity}");
-        Console.WriteLine($"Max Capacity:          {battery.MaxCapacity}");
-        Console.WriteLine($"Battery Percent:       {battery.BatteryPercent}%");
-        Console.WriteLine($"Time to Empty:         {FormatMinutes(battery.TimeToEmpty)}");
-        Console.WriteLine($"Time to Full Charge:   {FormatMinutes(battery.TimeToFullCharge)}");
-        Console.WriteLine($"Battery Health:        {battery.BatteryHealth ?? "N/A"}");
-        Console.WriteLine($"Design Cycle Count:    {(battery.DesignCycleCount >= 0 ? battery.DesignCycleCount.ToString(CultureInfo.InvariantCulture) : "N/A")}");
-
-        return ValueTask.CompletedTask;
-    }
-
-    private static string FormatMinutes(int minutes) => minutes switch
-    {
-        -1 => "Unknown",
-        _ => $"{minutes} min"
-    };
-}
-
-// Temperature
-[Command("temp", "Temperature Sensors")]
-public sealed class TemperatureCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var temps = PlatformProvider.GetTemperatureSensors();
-        Console.WriteLine("=== Temperature Sensors ===");
-        if (temps.Count > 0)
-        {
-            Console.WriteLine($"{"Key",-6} {"Value",8}  Description");
-            Console.WriteLine(new string('-', 50));
-            foreach (var s in temps.Take(30))
-            {
-                Console.WriteLine($"{s.Key,-6} {s.Value,7:F1} C  {s.Description}");
-            }
-
-            if (temps.Count > 30)
-            {
-                Console.WriteLine($"... and {temps.Count - 30} more sensors");
-            }
+            Console.WriteLine($"Capacity:   {battery.Capacity}");
+            Console.WriteLine($"Status:     {battery.Status}");
+            Console.WriteLine($"Voltage:    {battery.Voltage / 1000.0:F2}");
+            Console.WriteLine($"Current:    {battery.Current / 1000.0:F2}");
+            Console.WriteLine($"Charge:     {battery.Charge / 1000.0:F2}");
+            Console.WriteLine($"ChargeFull: {battery.ChargeFull / 1000.0:F2}");
         }
         else
         {
-            Console.WriteLine("No temperature sensors found.");
+            Console.WriteLine("No battery found");
         }
 
         return ValueTask.CompletedTask;
     }
 }
 
-// Fan
-[Command("fan", "Fan Info")]
-public sealed class FanCommand : ICommandHandler
+//--------------------------------------------------------------------------------
+// HardwareMonitor
+//--------------------------------------------------------------------------------
+[Command("hwmon", "Get hardware monitors")]
+public sealed class HwmonCommand : ICommandHandler
 {
     public ValueTask ExecuteAsync(CommandContext context)
     {
-        var fans = PlatformProvider.GetFans();
-        Console.WriteLine("=== Fan Info ===");
-        if (fans.Count > 0)
+        var monitors = PlatformProvider.GetHardwareMonitors();
+        foreach (var monitor in monitors)
         {
-            Console.WriteLine($"Fan count: {fans.Count}");
-            foreach (var fan in fans)
+            Console.WriteLine($"Monitor: {monitor.Type}");
+            Console.WriteLine($"Name:    {monitor.Name}");
+            foreach (var sensor in monitor.Sensors)
             {
-                Console.WriteLine($"  Fan {fan.Index}:");
-                Console.WriteLine($"    Actual:  {fan.ActualRpm:F0} RPM");
-                Console.WriteLine($"    Min:     {fan.MinRpm:F0} RPM");
-                Console.WriteLine($"    Max:     {fan.MaxRpm:F0} RPM");
-                Console.WriteLine($"    Target:  {fan.TargetRpm:F0} RPM");
-            }
-        }
-        else
-        {
-            Console.WriteLine("No fans found.");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Power
-[Command("power", "Power Readings")]
-public sealed class PowerCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var powers = PlatformProvider.GetPowerReadings();
-        Console.WriteLine("=== Power Readings ===");
-        if (powers.Count > 0)
-        {
-            Console.WriteLine($"{"Key",-6} {"Value",8}  Description");
-            Console.WriteLine(new string('-', 50));
-            foreach (var p in powers)
-            {
-                Console.WriteLine($"{p.Key,-6} {p.Value,7:F2} W  {p.Description}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("No power readings found.");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Voltage
-[Command("voltage", "Voltage Readings")]
-public sealed class VoltageCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var voltages = PlatformProvider.GetVoltageReadings();
-        Console.WriteLine("=== Voltage Readings ===");
-        if (voltages.Count > 0)
-        {
-            Console.WriteLine($"{"Key",-6} {"Value",8}  Description");
-            Console.WriteLine(new string('-', 50));
-            foreach (var v in voltages)
-            {
-                Console.WriteLine($"{v.Key,-6} {v.Value,7:F3} V  {v.Description}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("No voltage readings found.");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// CPU Load (detailed)
-[Command("cpuload", "CPU Load Info (User/System/Idle, per core)")]
-public sealed class CpuLoadCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var cpuLoad = PlatformProvider.GetCpuLoad();
-
-        Console.WriteLine("=== CPU Load Info ===");
-        Console.WriteLine($"Logical CPUs:       {cpuLoad.LogicalCpu}");
-        Console.WriteLine($"Physical CPUs:      {cpuLoad.PhysicalCpu}");
-        Console.WriteLine($"Hyperthreading:     {cpuLoad.HasHyperthreading}");
-        Console.WriteLine();
-
-        cpuLoad.Update();
-        Thread.Sleep(500);
-        cpuLoad.Update();
-
-        Console.WriteLine("=== Usage ===");
-        Console.WriteLine($"User Load:          {cpuLoad.UserLoad:P1}");
-        Console.WriteLine($"System Load:        {cpuLoad.SystemLoad:P1}");
-        Console.WriteLine($"Idle Load:          {cpuLoad.IdleLoad:P1}");
-        Console.WriteLine($"Total Load:         {cpuLoad.TotalLoad:P1}");
-        Console.WriteLine();
-
-        if (cpuLoad.ECoreUsage.HasValue || cpuLoad.PCoreUsage.HasValue)
-        {
-            Console.WriteLine("=== Apple Silicon Core Usage ===");
-            if (cpuLoad.ECoreUsage.HasValue)
-            {
-                Console.WriteLine($"E-Core Usage:       {cpuLoad.ECoreUsage:P1}");
-            }
-
-            if (cpuLoad.PCoreUsage.HasValue)
-            {
-                Console.WriteLine($"P-Core Usage:       {cpuLoad.PCoreUsage:P1}");
+                Console.WriteLine($"Sensor:  {sensor.Type}");
+                Console.WriteLine($"Label:   {sensor.Label}");
+                Console.WriteLine($"Value:   {sensor.Value}");
             }
 
             Console.WriteLine();
         }
 
-        Console.WriteLine("=== Per Core Usage ===");
-        for (var i = 0; i < cpuLoad.UsagePerCore.Length; i++)
-        {
-            Console.WriteLine($"  Core {i,2}: {cpuLoad.UsagePerCore[i]:P1}");
-        }
-
         return ValueTask.CompletedTask;
     }
 }
-
-// Battery Detail
-[Command("batterydetail", "Battery Detail Info (IORegistry)")]
-public sealed class BatteryDetailCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var battery = PlatformProvider.GetBatteryDetail();
-        if (!battery.Supported)
-        {
-            Console.WriteLine("No battery (AppleSmartBattery) found.");
-            return ValueTask.CompletedTask;
-        }
-
-        Console.WriteLine("=== Battery Detail (IORegistry) ===");
-        Console.WriteLine($"Voltage:              {battery.Voltage:F3} V");
-        Console.WriteLine($"Amperage:             {battery.Amperage} mA");
-        Console.WriteLine($"Temperature:          {battery.Temperature:F1} °C");
-        Console.WriteLine($"Cycle Count:          {battery.CycleCount}");
-        Console.WriteLine($"Current Capacity:     {battery.CurrentCapacity} mAh");
-        Console.WriteLine($"Max Capacity:         {battery.MaxCapacity} mAh");
-        Console.WriteLine($"Design Capacity:      {battery.DesignCapacity} mAh");
-        Console.WriteLine($"Health:               {battery.Health}%");
-        Console.WriteLine($"AC Watts:             {battery.AcWatts} W");
-        Console.WriteLine($"Charging Current:     {battery.ChargingCurrent} mA");
-        Console.WriteLine($"Charging Voltage:     {battery.ChargingVoltage} mV");
-        Console.WriteLine($"Optimized Charging:   {battery.OptimizedChargingEngaged}");
-
-        return ValueTask.CompletedTask;
-    }
-}
-
-// Apple Silicon Power
-[Command("aspower", "Apple Silicon Power Info (IOReport)")]
-public sealed class AppleSiliconPowerCommand : ICommandHandler
-{
-    public ValueTask ExecuteAsync(CommandContext context)
-    {
-        var power = PlatformProvider.GetAppleSiliconPower();
-        if (!power.Supported)
-        {
-            Console.WriteLine("Apple Silicon power reporting not supported (requires ARM64).");
-            return ValueTask.CompletedTask;
-        }
-
-        Console.WriteLine("=== Apple Silicon Power ===");
-        Console.WriteLine("Sampling...");
-        power.Update();
-        Thread.Sleep(1000);
-        power.Update();
-
-        Console.WriteLine($"CPU Power:            {power.CpuPower:F3} W");
-        Console.WriteLine($"GPU Power:            {power.GpuPower:F3} W");
-        Console.WriteLine($"ANE Power:            {power.AnePower:F3} W");
-        Console.WriteLine($"RAM Power:            {power.RamPower:F3} W");
-        Console.WriteLine($"Total Power:          {power.TotalPower:F3} W");
-
-        var totalSystem = PlatformProvider.GetTotalSystemPower();
-        if (totalSystem.HasValue)
-        {
-            Console.WriteLine();
-            Console.WriteLine($"Total System (PSTR):  {totalSystem:F2} W");
-        }
-
-        return ValueTask.CompletedTask;
-    }
-}
-

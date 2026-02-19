@@ -3,7 +3,7 @@ namespace LinuxDotNet.SystemInfo;
 using System;
 using System.Globalization;
 
-public sealed class LoadAverageInfo
+public sealed class LoadAverage
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -13,10 +13,18 @@ public sealed class LoadAverageInfo
 
     public double Average15 { get; private set; }
 
-    internal LoadAverageInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal LoadAverage()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     // ReSharper disable StringLiteralTypo
     public bool Update()

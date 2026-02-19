@@ -1,6 +1,6 @@
 namespace LinuxDotNet.SystemInfo;
 
-public sealed class DiskStatics
+public sealed class DiskStatEntry
 {
     internal bool Live { get; set; }
 
@@ -28,30 +28,38 @@ public sealed class DiskStatics
 
     public long WeightIoTime { get; internal set; }
 
-    internal DiskStatics(string name)
+    internal DiskStatEntry(string name)
     {
         Name = name;
     }
 }
 
-public sealed class DiskStaticsInfo
+public sealed class DiskStat
 {
-    private readonly List<DiskStatics> devices = new();
+    private readonly List<DiskStatEntry> devices = new();
 
     public DateTime UpdateAt { get; internal set; }
 
-    public IReadOnlyList<DiskStatics> Devices => devices;
+    public IReadOnlyList<DiskStatEntry> Devices => devices;
 
-    internal DiskStaticsInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal DiskStat()
     {
         Update();
     }
 
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
+
     public bool Update()
     {
-        foreach (var device in devices)
+        foreach (var item in devices)
         {
-            device.Live = false;
+            item.Live = false;
         }
 
         var range = (Span<Range>)stackalloc Range[21];
@@ -65,14 +73,14 @@ public sealed class DiskStaticsInfo
                 continue;
             }
 
-            var major = Int32.TryParse(span[range[0]], out var m) ? m : 0;
-            if (!Helper.IsTargetDriveType(major))
+            var deviceClass = Int32.TryParse(span[range[0]], out var m) ? (DeviceClass)m : DeviceClass.Unknown;
+            if (!deviceClass.IsPhysicalStorage())
             {
                 continue;
             }
 
             var name = span[range[2]];
-            var device = default(DiskStatics);
+            var device = default(DiskStatEntry);
             foreach (var item in devices)
             {
                 if (item.Name == name)
@@ -84,7 +92,7 @@ public sealed class DiskStaticsInfo
 
             if (device == null)
             {
-                device = new DiskStatics(name.ToString());
+                device = new DiskStatEntry(name.ToString());
                 devices.Add(device);
             }
 

@@ -3,7 +3,7 @@ namespace LinuxDotNet.SystemInfo;
 using System;
 using System.Globalization;
 
-public sealed class FileDescriptorInfo
+public sealed class FileHandleStat
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -13,10 +13,18 @@ public sealed class FileDescriptorInfo
 
     public long Max { get; private set; }
 
-    internal FileDescriptorInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal FileHandleStat()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public bool Update()
     {
@@ -31,6 +39,10 @@ public sealed class FileDescriptorInfo
 
         return true;
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private static long ParseInt64(ReadOnlySpan<char> source)
     {

@@ -7,7 +7,7 @@ builder.ConfigureCommands(commands =>
 {
     commands.ConfigureRootCommand(root =>
     {
-        root.WithDescription("Platform info");
+        root.WithDescription("SystemInfo example");
     });
 
     commands.AddCommands();

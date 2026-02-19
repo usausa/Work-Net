@@ -18,13 +18,18 @@ public sealed class KernelInfo
 
     public DateTimeOffset BootTime { get; private set; }
 
-    public int MaxProc { get; }
+    public long MaxProcessCount { get; }
 
-    public int MaxFiles { get; }
+    public long MaxFileCount { get; }
 
-    public int MaxFilesPerProc { get; }
+    public long MaxFileCountPerProcess { get; }
 
-    private KernelInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    // ReSharper disable StringLiteralTypo
+    internal KernelInfo()
     {
         OsType = ReadProcFile("sys/kernel/ostype");
         OsRelease = ReadProcFile("sys/kernel/osrelease");
@@ -32,14 +37,17 @@ public sealed class KernelInfo
 
         ParseOsRelease();
 
-        MaxProc = ReadProcFileAsInt32("sys/kernel/pid_max");
-        MaxFiles = ReadProcFileAsInt32("sys/fs/file-max");
-        MaxFilesPerProc = ReadProcFileAsInt32("sys/fs/nr_open");
+        MaxProcessCount = ReadProcFileAsInt64("sys/kernel/pid_max");
+        MaxFileCount = ReadProcFileAsInt64("sys/fs/file-max");
+        MaxFileCountPerProcess = ReadProcFileAsInt64("sys/fs/nr_open");
 
         ParseBootTime();
     }
+    // ReSharper restore StringLiteralTypo
 
-    public static KernelInfo Create() => new();
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private void ParseOsRelease()
     {
@@ -49,90 +57,82 @@ public sealed class KernelInfo
             return;
         }
 
-        try
+        using var reader = new StreamReader(path);
+        while (reader.ReadLine() is { } line)
         {
-            using var reader = new StreamReader(path);
-            while (reader.ReadLine() is { } line)
+            var span = line.AsSpan();
+
+            var index = span.IndexOf('=');
+            if (index < 0)
             {
-                var eqIndex = line.IndexOf('=');
-                if (eqIndex < 0)
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                var key = line[..eqIndex];
-                var value = line[(eqIndex + 1)..].Trim('"');
-
-                switch (key)
-                {
-                    case "VERSION_ID":
-                        OsProductVersion = value;
-                        break;
-                    case "NAME":
-                        OsName = value;
-                        break;
-                    case "PRETTY_NAME":
-                        OsPrettyName = value;
-                        break;
-                    case "ID":
-                        OsId = value;
-                        break;
-                }
+            switch (span[..index])
+            {
+                case "VERSION_ID":
+                    OsProductVersion = ExtractValue(line, index);
+                    break;
+                case "NAME":
+                    OsName = ExtractValue(line, index);
+                    break;
+                case "PRETTY_NAME":
+                    OsPrettyName = ExtractValue(line, index);
+                    break;
+                case "ID":
+                    OsId = ExtractValue(line, index);
+                    break;
             }
         }
-        catch
+
+        return;
+
+        static string ExtractValue(ReadOnlySpan<char> span, int index)
         {
-            // Ignore
+            return span[(index + 1)..].Trim('"').ToString();
         }
     }
 
+    // ReSharper disable StringLiteralTypo
     private void ParseBootTime()
     {
-        try
+        using var reader = new StreamReader("/proc/stat");
+        while (reader.ReadLine() is { } line)
         {
-            using var reader = new StreamReader("/proc/stat");
-            while (reader.ReadLine() is { } line)
+            var span = line.AsSpan();
+            if (span.StartsWith("btime"))
             {
-                if (line.StartsWith("btime ", StringComparison.Ordinal))
-                {
-                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && Int64.TryParse(parts[1], out var btime))
-                    {
-                        BootTime = DateTimeOffset.FromUnixTimeSeconds(btime);
-                        return;
-                    }
-                }
+                BootTime = DateTimeOffset.FromUnixTimeSeconds(ExtractInt64(span));
+                return;
             }
-        }
-        catch
-        {
-            // Ignore
         }
 
         BootTime = DateTimeOffset.MinValue;
-    }
 
-    private static string ReadProcFile(string relativePath)
+        return;
+
+        static long ExtractInt64(ReadOnlySpan<char> span)
+        {
+            var range = (Span<Range>)stackalloc Range[3];
+            return (span.Split(range, ' ', StringSplitOptions.RemoveEmptyEntries) > 1) && Int64.TryParse(span[range[1]], out var result) ? result : 0;
+        }
+    }
+    // ReSharper restore StringLiteralTypo
+
+    private static string ReadProcFile(string file)
     {
-        var path = $"/proc/{relativePath}";
+        var path = $"/proc/{file}";
         if (File.Exists(path))
         {
-            try
-            {
-                return File.ReadAllText(path).Trim();
-            }
-            catch
-            {
-                return string.Empty;
-            }
+            return File.ReadAllText(path).Trim();
         }
 
         return string.Empty;
     }
 
-    private static int ReadProcFileAsInt32(string relativePath)
+    private static long ReadProcFileAsInt64(string file)
     {
-        var value = ReadProcFile(relativePath);
-        return Int32.TryParse(value, out var result) ? result : 0;
+        var value = ReadProcFile(file);
+        return Int64.TryParse(value, out var result) ? result : 0;
     }
 }

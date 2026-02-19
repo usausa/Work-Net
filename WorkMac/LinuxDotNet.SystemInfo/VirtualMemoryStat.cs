@@ -2,7 +2,7 @@ namespace LinuxDotNet.SystemInfo;
 
 using System;
 
-public class VirtualMemoryInfo
+public sealed class VirtualMemoryStat
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -40,10 +40,18 @@ public class VirtualMemoryInfo
 
     public long OutOfMemoryKiller { get; internal set; }
 
-    internal VirtualMemoryInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal VirtualMemoryStat()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     // ReSharper disable StringLiteralTypo
     public bool Update()
@@ -103,6 +111,10 @@ public class VirtualMemoryInfo
         return true;
     }
     // ReSharper restore StringLiteralTypo
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private static long ExtractInt64(ReadOnlySpan<char> span)
     {

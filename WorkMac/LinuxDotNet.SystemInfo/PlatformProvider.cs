@@ -3,52 +3,85 @@ namespace LinuxDotNet.SystemInfo;
 #pragma warning disable CA1024
 public static class PlatformProvider
 {
-    public static UptimeInfo GetUptime() => new();
+    //--------------------------------------------------------------------------------
+    // System
+    //--------------------------------------------------------------------------------
 
-    public static StaticsInfo GetStatics() => new();
+    public static HardwareInfo GetHardware() => new();
 
-    public static LoadAverageInfo GetLoadAverage() => new();
+    public static KernelInfo GetKernel() => new();
 
-    public static MemoryInfo GetMemory() => new();
+    public static Uptime GetUptime() => new();
 
-    public static VirtualMemoryInfo GetVirtualMemory() => new();
+    //--------------------------------------------------------------------------------
+    // Load
+    //--------------------------------------------------------------------------------
 
-    public static IReadOnlyList<Partition> GetPartitions() => Partition.GetPartitions();
+    public static SystemStat GetSystemStat() => new();
 
-    public static DiskStaticsInfo GetDiskStatics() => new();
+    public static LoadAverage GetLoadAverage() => new();
 
-    public static FileDescriptorInfo GetFileDescriptor() => new();
+    //--------------------------------------------------------------------------------
+    // Memory
+    //--------------------------------------------------------------------------------
 
-    public static NetworkStaticInfo GetNetworkStatic() => new();
+    public static MemoryStat GetMemoryStat() => new();
 
-    public static TcpInfo GetTcp() => new();
+    public static VirtualMemoryStat GetVirtualMemoryStat() => new();
 
-    public static TcpInfo GetTcp6() => new(6);
+    //--------------------------------------------------------------------------------
+    // Storage
+    //--------------------------------------------------------------------------------
 
-    public static ProcessSummaryInfo GetProcessSummary() => new();
+    public static DiskStat GetDiskStat() => new();
 
-    public static CpuDevice GetCpu() => new();
+    public static IReadOnlyList<PartitionInfo> GetPartitions(bool includeAll = false) => PartitionInfo.GetPartitions(includeAll);
 
-    public static BatteryDevice GetBattery() => new();
+    public static IReadOnlyList<MountInfo> GetMounts(bool includeVirtual = false) => MountInfo.GetMounts(includeVirtual);
 
-    public static MainsAdapterDevice GetMainsAdapter() => new();
+    //--------------------------------------------------------------------------------
+    // Network
+    //--------------------------------------------------------------------------------
+
+    public static NetworkStat GetNetworkStat() => new();
+
+    public static TcpStat GetTcpStat() => new();
+
+    public static TcpStat GetTcp6Stat() => new(6);
+
+    //--------------------------------------------------------------------------------
+    // Process
+    //--------------------------------------------------------------------------------
+
+    public static ProcessSummary GetProcessSummary() => new();
+
+    public static IReadOnlyList<ProcessInfo> GetProcesses() => ProcessInfo.GetProcesses();
+
+    public static ProcessInfo? GetProcess(int pid) => ProcessInfo.GetProcess(pid);
+
+    //--------------------------------------------------------------------------------
+    // File
+    //--------------------------------------------------------------------------------
+
+    public static FileHandleStat GetFileHandleStat() => new();
+
+    //--------------------------------------------------------------------------------
+    // CPU
+    //--------------------------------------------------------------------------------
+
+    public static CpuDevice GetCpuDevice() => new();
+
+    //--------------------------------------------------------------------------------
+    // Power
+    //--------------------------------------------------------------------------------
+
+    public static MainsDevice GetMainsDevice() => new();
+
+    public static BatteryDevice GetBatteryDevice() => new();
+
+    //--------------------------------------------------------------------------------
+    // Sensor
+    //--------------------------------------------------------------------------------
 
     public static IReadOnlyList<HardwareMonitor> GetHardwareMonitors() => HardwareMonitor.GetMonitors();
-
-    // New APIs
-
-    public static IReadOnlyList<NetworkInterface> GetNetworkInterfaces() => NetworkInfo.GetInterfaces();
-
-    public static NetworkInterface? GetNetworkInterface(string name) => NetworkInfo.GetInterface(name);
-
-    public static IReadOnlyList<ProcessEntry> GetProcesses() => ProcessInfo.GetProcesses();
-
-    public static ProcessEntry? GetProcess(int pid) => ProcessInfo.GetProcess(pid);
-
-    public static HardwareInfo GetHardware() => HardwareInfo.Create();
-
-    public static KernelInfo GetKernel() => KernelInfo.Create();
-
-    public static IReadOnlyList<FileSystemEntry> GetFileSystems(bool includeVirtual = false) => FileSystemInfo.GetFileSystems(includeVirtual);
 }
-

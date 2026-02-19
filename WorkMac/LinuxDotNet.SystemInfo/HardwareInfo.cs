@@ -2,21 +2,35 @@ namespace LinuxDotNet.SystemInfo;
 
 public sealed class HardwareInfo
 {
-    public string Model { get; }
+    // DMI
 
     public string Vendor { get; }
 
     public string ProductName { get; }
 
-    public string? ProductVersion { get; }
+    public string ProductVersion { get; }
 
-    public string? SerialNumber { get; }
+    public string SerialNumber { get; }
 
-    public string Machine { get; }
+    public string BiosVendor { get; }
 
-    public string? CpuBrandString { get; private set; }
+    public string BiosVersion { get; }
 
-    public string? CpuVendor { get; private set; }
+    public string BiosDate { get; }
+
+    public string BiosRelease { get; }
+
+    public string BoardName { get; }
+
+    public string BoardVendor { get; }
+
+    public string BoardVersion { get; }
+
+    // CPU
+
+    public string CpuBrandString { get; private set; } = string.Empty;
+
+    public string CpuVendor { get; private set; } = string.Empty;
 
     public int CpuFamily { get; private set; }
 
@@ -30,15 +44,7 @@ public sealed class HardwareInfo
 
     public int CoresPerSocket { get; private set; }
 
-    public long CpuFrequency { get; private set; }
-
     public long CpuFrequencyMax { get; private set; }
-
-    public long MemSize { get; }
-
-    public long PageSize { get; }
-
-    public long CacheLineSize { get; private set; }
 
     public long L1DCacheSize { get; private set; }
 
@@ -48,131 +54,122 @@ public sealed class HardwareInfo
 
     public long L3CacheSize { get; private set; }
 
-    private HardwareInfo()
+    // Memory
+
+    public long MemoryTotal { get; }
+
+    // PageSize
+
+    public long PageSize { get; }
+
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal HardwareInfo()
     {
-        Model = ReadDmiFile("product_name");
         Vendor = ReadDmiFile("sys_vendor");
         ProductName = ReadDmiFile("product_name");
-        ProductVersion = ReadDmiFileOrNull("product_version");
-        SerialNumber = ReadDmiFileOrNull("product_serial");
-        Machine = ReadFile("/proc/sys/kernel/arch") ?? Environment.GetEnvironmentVariable("HOSTTYPE") ?? "unknown";
+        ProductVersion = ReadDmiFile("product_version");
+        SerialNumber = ReadDmiFile("product_serial");
+
+        BiosVendor = ReadDmiFile("bios_vendor");
+        BiosVersion = ReadDmiFile("bios_version");
+        BiosDate = ReadDmiFile("bios_date");
+        BiosRelease = ReadDmiFile("bios_release");
+
+        BoardName = ReadDmiFile("board_name");
+        BoardVendor = ReadDmiFile("board_vendor");
+        BoardVersion = ReadDmiFile("board_version");
 
         ParseCpuInfo();
 
-        MemSize = ReadMemInfo("MemTotal") * 1024;
+        MemoryTotal = ReadMemoryTotal();
+
         PageSize = Environment.SystemPageSize;
     }
-
-    public static HardwareInfo Create() => new();
 
     private void ParseCpuInfo()
     {
         var physicalIds = new HashSet<int>();
         var processors = 0;
-        var coresPerSocket = 0;
 
-        try
+        using var reader = new StreamReader("/proc/cpuinfo");
+        while (reader.ReadLine() is { } line)
         {
-            using var reader = new StreamReader("/proc/cpuinfo");
-            while (reader.ReadLine() is { } line)
+            var span = line.AsSpan();
+            var colonIndex = span.IndexOf(':');
+            if (colonIndex < 0)
             {
-                var span = line.AsSpan();
-                var colonIndex = span.IndexOf(':');
-                if (colonIndex < 0)
-                {
+                continue;
+            }
+
+            var key = span[..colonIndex].Trim().ToString();
+            var value = span[(colonIndex + 1)..].Trim();
+
+            switch (key)
+            {
+                case "processor":
+                    processors++;
                     continue;
-                }
+                case "physical id":
+                    if (Int32.TryParse(value, out var physId))
+                    {
+                        physicalIds.Add(physId);
+                    }
+                    continue;
+            }
 
-                var key = span[..colonIndex].Trim().ToString();
-                var value = span[(colonIndex + 1)..].Trim().ToString();
-
+            if (processors <= 1)
+            {
                 switch (key)
                 {
                     case "model name":
-                        CpuBrandString ??= value;
+                        CpuBrandString = value.ToString();
                         break;
                     case "vendor_id":
-                        CpuVendor ??= value;
+                        CpuVendor = value.ToString();
                         break;
                     case "cpu family":
-                        if (CpuFamily == 0 && Int32.TryParse(value, out var family))
-                        {
-                            CpuFamily = family;
-                        }
-
+                        CpuFamily = Int32.TryParse(value, out var family) ?  family : 0;
                         break;
                     case "model":
-                        if (CpuModel == 0 && Int32.TryParse(value, out var model))
-                        {
-                            CpuModel = model;
-                        }
-
+                        CpuModel = Int32.TryParse(value, out var model) ? model : 0;
                         break;
                     case "stepping":
-                        if (CpuStepping == 0 && Int32.TryParse(value, out var stepping))
-                        {
-                            CpuStepping = stepping;
-                        }
-
-                        break;
-                    case "processor":
-                        processors++;
-                        break;
-                    case "physical id":
-                        if (Int32.TryParse(value, out var physId))
-                        {
-                            physicalIds.Add(physId);
-                        }
-
+                        CpuStepping = Int32.TryParse(value, out var stepping) ? stepping : 0;
                         break;
                     case "cpu cores":
-                        if (coresPerSocket == 0 && Int32.TryParse(value, out var cores))
-                        {
-                            coresPerSocket = cores;
-                        }
-
-                        break;
-                    case "cpu MHz":
-                        if (CpuFrequency == 0 && Double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var mhz))
-                        {
-                            CpuFrequency = (long)(mhz * 1_000_000);
-                        }
-
-                        break;
-                    case "cache size":
-                        if (L3CacheSize == 0)
-                        {
-                            var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                            if (parts.Length > 0 && Int64.TryParse(parts[0], out var cacheKb))
-                            {
-                                L3CacheSize = cacheKb * 1024;
-                            }
-                        }
-
-                        break;
-                    case "clflush size":
-                        if (CacheLineSize == 0 && Int64.TryParse(value, out var clflush))
-                        {
-                            CacheLineSize = clflush;
-                        }
-
+                        CoresPerSocket = Int32.TryParse(value, out var cores) ? cores : 0;
                         break;
                 }
             }
         }
-        catch
-        {
-            // Ignore
-        }
 
         LogicalCpu = processors;
         PhysicalCpu = physicalIds.Count > 0 ? physicalIds.Count : (processors > 0 ? 1 : 0);
-        CoresPerSocket = coresPerSocket;
 
-        CpuFrequencyMax = ReadCpuFreqMax();
+        CpuFrequencyMax = ReadCpuFrequencyMax();
 
         ParseCacheInfo();
     }
+
+    // ReSharper disable StringLiteralTypo
+    private static long ReadCpuFrequencyMax()
+    {
+        var path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq";
+        if (File.Exists(path))
+        {
+            var value = File.ReadAllText(path).Trim();
+            if (Int64.TryParse(value, out var khz))
+            {
+                return khz * 1000;
+            }
+        }
+
+        return 0;
+    }
+    // ReSharper restore StringLiteralTypo
 
     private void ParseCacheInfo()
     {
@@ -182,150 +179,111 @@ public sealed class HardwareInfo
             return;
         }
 
-        try
+        foreach (var indexDir in Directory.GetDirectories(cacheBasePath, "index*"))
         {
-            foreach (var indexDir in Directory.GetDirectories(cacheBasePath, "index*"))
+            if (!Int32.TryParse(ReadFile(Path.Combine(indexDir, "level")), out var level))
             {
-                var levelStr = ReadFile(Path.Combine(indexDir, "level"));
-                var typeStr = ReadFile(Path.Combine(indexDir, "type"));
-                var sizeStr = ReadFile(Path.Combine(indexDir, "size"));
-
-                if (!Int32.TryParse(levelStr, out var level))
-                {
-                    continue;
-                }
-
-                var sizeKb = ParseCacheSize(sizeStr);
-
-                switch (level)
-                {
-                    case 1 when typeStr?.Contains("Data", StringComparison.OrdinalIgnoreCase) == true:
-                        L1DCacheSize = sizeKb * 1024;
-                        break;
-                    case 1 when typeStr?.Contains("Instruction", StringComparison.OrdinalIgnoreCase) == true:
-                        L1ICacheSize = sizeKb * 1024;
-                        break;
-                    case 2:
-                        L2CacheSize = sizeKb * 1024;
-                        break;
-                    case 3:
-                        L3CacheSize = sizeKb * 1024;
-                        break;
-                }
+                continue;
             }
-        }
-        catch
-        {
-            // Ignore
+
+            var sizeKb = ParseCacheSize(ReadFile(Path.Combine(indexDir, "size")));
+
+            switch (level)
+            {
+                case 1:
+                    var type = ReadFile(Path.Combine(indexDir, "type"));
+                    if (type.Contains("Data", StringComparison.OrdinalIgnoreCase))
+                    {
+                        L1DCacheSize = sizeKb * 1024;
+                    }
+                    else if (type.Contains("Instruction", StringComparison.OrdinalIgnoreCase))
+                    {
+                        L1ICacheSize = sizeKb * 1024;
+                    }
+                    break;
+                case 2:
+                    L2CacheSize = sizeKb * 1024;
+                    break;
+                case 3:
+                    L3CacheSize = sizeKb * 1024;
+                    break;
+            }
         }
     }
 
-    private static long ParseCacheSize(string? sizeStr)
+    private static long ParseCacheSize(string size)
     {
-        if (string.IsNullOrEmpty(sizeStr))
+        if (String.IsNullOrEmpty(size))
         {
             return 0;
         }
 
-        sizeStr = sizeStr.Trim().ToUpperInvariant();
-        if (sizeStr.EndsWith('K'))
+        size = size.Trim().ToUpperInvariant();
+        if (size.EndsWith('K'))
         {
-            return Int64.TryParse(sizeStr[..^1], out var kb) ? kb : 0;
+            return Int64.TryParse(size[..^1], out var kb) ? kb : 0;
         }
 
-        if (sizeStr.EndsWith('M'))
+        if (size.EndsWith('M'))
         {
-            return Int64.TryParse(sizeStr[..^1], out var mb) ? mb * 1024 : 0;
+            return Int64.TryParse(size[..^1], out var mb) ? mb * 1024 : 0;
         }
 
-        return Int64.TryParse(sizeStr, out var bytes) ? bytes / 1024 : 0;
+        return Int64.TryParse(size, out var bytes) ? bytes / 1024 : 0;
     }
 
-    private static long ReadCpuFreqMax()
+    private static long ReadMemoryTotal()
     {
-        var path = "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq";
-        if (File.Exists(path))
+        using var reader = new StreamReader("/proc/meminfo");
+        while (reader.ReadLine() is { } line)
         {
-            try
+            var span = line.AsSpan();
+            if (span.StartsWith("MemTotal:"))
             {
-                var value = File.ReadAllText(path).Trim();
-                if (Int64.TryParse(value, out var khz))
-                {
-                    return khz * 1000;
-                }
-            }
-            catch
-            {
-                // Ignore
+                return ExtractInt64(span) * 1024;
             }
         }
 
         return 0;
     }
 
-    private static long ReadMemInfo(string key)
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
+
+    private static string ReadDmiFile(string name)
     {
+        var path = $"/sys/class/dmi/id/{name}";
+#pragma warning disable CA1031
         try
         {
-            using var reader = new StreamReader("/proc/meminfo");
-            while (reader.ReadLine() is { } line)
+            if (File.Exists(path))
             {
-                if (line.StartsWith(key + ":", StringComparison.Ordinal))
-                {
-                    var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1 && Int64.TryParse(parts[1], out var value))
-                    {
-                        return value;
-                    }
-                }
+                return File.ReadAllText(path).Trim();
             }
         }
         catch
         {
             // Ignore
         }
+#pragma warning restore CA1031
 
-        return 0;
+        return string.Empty;
     }
 
-    private static string ReadDmiFile(string name)
+    private static string ReadFile(string path)
     {
-        var path = $"/sys/class/dmi/id/{name}";
         if (File.Exists(path))
         {
-            try
-            {
-                return File.ReadAllText(path).Trim();
-            }
-            catch
-            {
-                return string.Empty;
-            }
+            return File.ReadAllText(path).Trim();
         }
 
         return string.Empty;
     }
 
-    private static string? ReadDmiFileOrNull(string name)
+    private static long ExtractInt64(ReadOnlySpan<char> span)
     {
-        var value = ReadDmiFile(name);
-        return string.IsNullOrEmpty(value) ? null : value;
-    }
-
-    private static string? ReadFile(string path)
-    {
-        if (File.Exists(path))
-        {
-            try
-            {
-                return File.ReadAllText(path).Trim();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        return null;
+        var range = (Span<Range>)stackalloc Range[3];
+        return (span.Split(range, ' ', StringSplitOptions.RemoveEmptyEntries) > 1) && Int64.TryParse(span[range[1]], out var result) ? result : 0;
     }
 }

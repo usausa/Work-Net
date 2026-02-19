@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Example.SystemInfo.ConsoleApp": {
+      "commandName": "Project",
+      "commandLineArgs": "mem"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "commandLineArgs": "\"{OutDir}/Example.SystemInfo.ConsoleApp.dll\" hardware",
+      "distributionName": ""
+    }
+  }
+}
