@@ -2,7 +2,7 @@ namespace MacDotNet.SystemInfo;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class BatteryDetailInfo
+public sealed class BatteryDetail
 {
     public bool Supported { get; private set; }
 
@@ -32,7 +32,11 @@ public sealed class BatteryDetailInfo
 
     private readonly uint batteryService;
 
-    private BatteryDetailInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    private BatteryDetail()
     {
         var matching = IOServiceMatching("AppleSmartBattery");
         if (matching != nint.Zero)
@@ -47,7 +51,15 @@ public sealed class BatteryDetailInfo
         }
     }
 
-    public static BatteryDetailInfo Create() => new();
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
+
+    public static BatteryDetail Create() => new();
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public bool Update()
     {
@@ -82,6 +94,10 @@ public sealed class BatteryDetailInfo
 
         return true;
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private int GetPropertyInt(string name)
     {

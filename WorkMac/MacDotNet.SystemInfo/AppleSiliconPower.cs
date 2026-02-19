@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class AppleSiliconPowerInfo
+public sealed class AppleSiliconPower
 {
     private nint channels;
     private nint subscription;
@@ -26,29 +26,24 @@ public sealed class AppleSiliconPowerInfo
 
     public bool Supported { get; }
 
-    private AppleSiliconPowerInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    private AppleSiliconPower()
     {
         Supported = InitializeReporting();
     }
 
-    public static AppleSiliconPowerInfo Create() => new();
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
 
-    private bool InitializeReporting()
-    {
-        if (RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
-        {
-            return false;
-        }
+    public static AppleSiliconPower Create() => new();
 
-        channels = GetEnergyModelChannels();
-        if (channels == nint.Zero)
-        {
-            return false;
-        }
-
-        subscription = IOReportCreateSubscription(nint.Zero, channels, out _, 0, nint.Zero);
-        return subscription != nint.Zero;
-    }
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public bool Update()
     {
@@ -142,6 +137,27 @@ public sealed class AppleSiliconPowerInfo
         {
             CFRelease(samples);
         }
+    }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
+
+    private bool InitializeReporting()
+    {
+        if (RuntimeInformation.ProcessArchitecture != Architecture.Arm64)
+        {
+            return false;
+        }
+
+        channels = GetEnergyModelChannels();
+        if (channels == nint.Zero)
+        {
+            return false;
+        }
+
+        subscription = IOReportCreateSubscription(nint.Zero, channels, out _, 0, nint.Zero);
+        return subscription != nint.Zero;
     }
 
     private static nint GetEnergyModelChannels()

@@ -28,6 +28,10 @@ public sealed class KernelInfo
 
     public int SecureLevel { get; }
 
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
     private unsafe KernelInfo()
     {
         var bootTime = DateTimeOffset.MinValue;
@@ -52,6 +56,10 @@ public sealed class KernelInfo
         ArgMax = Helper.GetSysctlInt("kern.argmax");
         SecureLevel = Helper.GetSysctlInt("kern.securelevel");
     }
+
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
 
     public static KernelInfo Create() => new();
 }

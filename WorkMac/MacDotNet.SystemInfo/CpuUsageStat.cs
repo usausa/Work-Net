@@ -2,13 +2,17 @@ namespace MacDotNet.SystemInfo;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class CpuLoadInfo
+public readonly record struct CpuLoadTicks(int CpuNumber, uint User, uint System, uint Idle, uint Nice);
+
+public sealed class CpuUsageStat
 {
     private int[]? previousCpuTicks;
     private uint previousUserTicks;
     private uint previousSystemTicks;
     private uint previousIdleTicks;
     private uint previousNiceTicks;
+
+    public DateTime UpdateAt { get; private set; }
 
     public int LogicalCpu { get; }
 
@@ -24,20 +28,34 @@ public sealed class CpuLoadInfo
 
     public double TotalLoad => UserLoad + SystemLoad;
 
+    public CpuLoadTicks[] Ticks { get; private set; } = [];
+
     public double[] UsagePerCore { get; private set; } = [];
 
     public double? ECoreUsage { get; private set; }
 
     public double? PCoreUsage { get; private set; }
 
-    private CpuLoadInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    private CpuUsageStat()
     {
         LogicalCpu = Helper.GetSysctlInt("hw.logicalcpu");
         PhysicalCpu = Helper.GetSysctlInt("hw.physicalcpu");
         HasHyperthreading = LogicalCpu != PhysicalCpu;
     }
 
-    public static CpuLoadInfo Create() => new();
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
+
+    public static CpuUsageStat Create() => new();
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public unsafe bool Update()
     {
@@ -53,6 +71,7 @@ public sealed class CpuLoadInfo
             var ptr = (uint*)info;
 
             uint totalUser = 0, totalSystem = 0, totalIdle = 0, totalNice = 0;
+            var ticks = new CpuLoadTicks[processorCount];
             var usageList = new double[processorCount];
             var currentTicks = new int[processorCount * CPU_STATE_MAX];
 
@@ -63,6 +82,8 @@ public sealed class CpuLoadInfo
                 var system = ptr[offset + CPU_STATE_SYSTEM];
                 var idle = ptr[offset + CPU_STATE_IDLE];
                 var nice = ptr[offset + CPU_STATE_NICE];
+
+                ticks[i] = new CpuLoadTicks(i, user, system, idle, nice);
 
                 currentTicks[offset + CPU_STATE_USER] = (int)user;
                 currentTicks[offset + CPU_STATE_SYSTEM] = (int)system;
@@ -107,9 +128,12 @@ public sealed class CpuLoadInfo
             previousSystemTicks = totalSystem;
             previousIdleTicks = totalIdle;
             previousNiceTicks = totalNice;
+            Ticks = ticks;
             UsagePerCore = usageList;
 
             CalculateAppleSiliconCoreUsage();
+
+            UpdateAt = DateTime.Now;
 
             return true;
         }
@@ -118,6 +142,10 @@ public sealed class CpuLoadInfo
             _ = vm_deallocate(task_self_trap(), info, (nint)(infoCnt * sizeof(int)));
         }
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private void CalculateAppleSiliconCoreUsage()
     {

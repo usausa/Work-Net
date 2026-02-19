@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class MemoryInfo
+public sealed class MemoryStat
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -84,11 +84,19 @@ public sealed class MemoryInfo
         ? (double)TotalUncompressedPagesInCompressor / CompressorPageCount
         : 0;
 
-    internal MemoryInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal MemoryStat()
     {
         PhysicalMemory = Helper.GetSysctlUlong("hw.memsize");
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public unsafe bool Update()
     {

@@ -4,16 +4,24 @@ using System.Runtime.InteropServices;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class UptimeInfo
+public sealed class Uptime
 {
     public DateTime UpdateAt { get; private set; }
 
-    public TimeSpan Uptime { get; private set; }
+    public TimeSpan Elapsed { get; private set; }
 
-    internal UptimeInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal Uptime()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     // ReSharper disable StringLiteralTypo
     public bool Update()
@@ -26,7 +34,7 @@ public sealed class UptimeInfo
         }
 
         var boot = DateTimeOffset.FromUnixTimeMilliseconds((time.tv_sec * 1000) + (time.tv_usec / 1000));
-        Uptime = DateTimeOffset.Now - boot;
+        Elapsed = DateTimeOffset.Now - boot;
 
         UpdateAt = DateTime.Now;
 

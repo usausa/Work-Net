@@ -2,7 +2,7 @@ namespace MacDotNet.SystemInfo;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class LoadAverageInfo
+public sealed class LoadAverage
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -12,10 +12,18 @@ public sealed class LoadAverageInfo
 
     public double Average15 { get; private set; }
 
-    internal LoadAverageInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal LoadAverage()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public unsafe bool Update()
     {

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class BatteryInfo
+public sealed class Battery
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -44,10 +44,18 @@ public sealed class BatteryInfo
 
     public int DesignCycleCount { get; private set; } = -1;
 
-    internal BatteryInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal Battery()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public unsafe bool Update()
     {
@@ -115,6 +123,10 @@ public sealed class BatteryInfo
             CFRelease(blob);
         }
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private static unsafe string? GetStringValue(nint dict, string keyName)
     {

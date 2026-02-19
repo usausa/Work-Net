@@ -1,10 +1,8 @@
 namespace MacDotNet.SystemInfo;
 
-using System.Runtime.InteropServices;
-
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class SwapInfo
+public sealed class SwapStat
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -22,10 +20,18 @@ public sealed class SwapInfo
 
     public double UsagePercent => TotalBytes > 0 ? 100.0 * UsedBytes / TotalBytes : 0;
 
-    internal SwapInfo()
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
+    internal SwapStat()
     {
         Update();
     }
+
+    //--------------------------------------------------------------------------------
+    // Update
+    //--------------------------------------------------------------------------------
 
     public unsafe bool Update()
     {

@@ -75,6 +75,10 @@ public sealed class HardwareInfo
 
     public bool Cpu64BitCapable { get; }
 
+    //--------------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------------
+
     private HardwareInfo()
     {
         Model = Helper.GetSysctlString("hw.model") ?? string.Empty;
@@ -106,6 +110,10 @@ public sealed class HardwareInfo
         Cpu64BitCapable = Helper.GetSysctlInt("hw.cpu64bit_capable") != 0;
     }
 
+    //--------------------------------------------------------------------------------
+    // Factory
+    //--------------------------------------------------------------------------------
+
     public static HardwareInfo Create() => new();
 
     public static PerformanceLevelEntry[] GetPerformanceLevels()
@@ -133,6 +141,10 @@ public sealed class HardwareInfo
 
         return levels;
     }
+
+    //--------------------------------------------------------------------------------
+    // Helper
+    //--------------------------------------------------------------------------------
 
     private static string? GetSerialNumber()
     {
