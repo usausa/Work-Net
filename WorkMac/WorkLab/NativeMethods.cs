@@ -81,62 +81,62 @@ internal static partial class NativeMethods
     public static unsafe partial int host_processor_info(uint host, int flavor, out uint processorCount, out int* processorInfo, out int processorInfoCount);
 
     [LibraryImport("libSystem.dylib")]
-    public static unsafe partial int vm_deallocate(uint task, nint address, nuint size);
+    public static unsafe partial int vm_deallocate(uint task, IntPtr address, nuint size);
 
     // ========================================
     // Sysctl
     // ========================================
 
     [DllImport("libSystem.dylib", CharSet = CharSet.Ansi)]
-    public static extern unsafe int sysctlbyname(string name, void* oldp, ref nint oldlenp, IntPtr newp, nint newlen);
+    public static extern unsafe int sysctlbyname(string name, void* oldp, ref IntPtr oldlenp, IntPtr newp, IntPtr newlen);
 
     // ========================================
     // CoreFoundation
     // ========================================
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial void CFRelease(nint cf);
+    public static partial void CFRelease(IntPtr cf);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFRetain(nint cf);
+    public static partial IntPtr CFRetain(IntPtr cf);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", CharSet = CharSet.Ansi)]
-    public static extern nint CFStringCreateWithCString(nint alloc, string cStr, uint encoding);
+    public static extern IntPtr CFStringCreateWithCString(IntPtr alloc, string cStr, uint encoding);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFStringGetCStringPtr(nint theString, uint encoding);
+    public static partial IntPtr CFStringGetCStringPtr(IntPtr theString, uint encoding);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFStringGetLength(nint theString);
-
-    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static unsafe partial bool CFStringGetCString(nint theString, byte* buffer, nint bufferSize, uint encoding);
-
-    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFDictionaryGetValue(nint theDict, nint key);
-
-    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFDictionaryCreateMutableCopy(nint allocator, nint capacity, nint theDict);
+    public static partial IntPtr CFStringGetLength(IntPtr theString);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool CFNumberGetValue(nint number, int theType, out int valuePtr);
+    public static unsafe partial bool CFStringGetCString(IntPtr theString, byte* buffer, IntPtr bufferSize, uint encoding);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    public static partial IntPtr CFDictionaryGetValue(IntPtr theDict, IntPtr key);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    public static partial IntPtr CFDictionaryCreateMutableCopy(IntPtr allocator, IntPtr capacity, IntPtr theDict);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool CFNumberGetValue(nint number, int theType, ref long valuePtr);
+    public static partial bool CFNumberGetValue(IntPtr number, int theType, out int valuePtr);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool CFNumberGetValue(nint number, int theType, ref double valuePtr);
+    public static partial bool CFNumberGetValue(IntPtr number, int theType, ref long valuePtr);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    public static partial bool CFBooleanGetValue(nint boolean);
+    public static partial bool CFNumberGetValue(IntPtr number, int theType, ref double valuePtr);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nuint CFGetTypeID(nint cf);
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool CFBooleanGetValue(IntPtr boolean);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    public static partial nuint CFGetTypeID(IntPtr cf);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     public static partial nuint CFStringGetTypeID();
@@ -154,29 +154,29 @@ internal static partial class NativeMethods
     public static partial nuint CFArrayGetTypeID();
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFArrayGetCount(nint theArray);
+    public static partial IntPtr CFArrayGetCount(IntPtr theArray);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFArrayGetValueAtIndex(nint theArray, nint idx);
+    public static partial IntPtr CFArrayGetValueAtIndex(IntPtr theArray, IntPtr idx);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFDataGetLength(nint theData);
+    public static partial IntPtr CFDataGetLength(IntPtr theData);
 
     [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static partial nint CFDataGetBytePtr(nint theData);
+    public static partial IntPtr CFDataGetBytePtr(IntPtr theData);
 
     // ========================================
     // IOKit
     // ========================================
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit", CharSet = CharSet.Ansi)]
-    public static extern nint IOServiceMatching(string name);
+    public static extern IntPtr IOServiceMatching(string name);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial uint IOServiceGetMatchingService(uint mainPort, nint matching);
+    public static partial uint IOServiceGetMatchingService(uint mainPort, IntPtr matching);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial int IOServiceGetMatchingServices(uint mainPort, nint matching, ref nint existing);
+    public static partial int IOServiceGetMatchingServices(uint mainPort, IntPtr matching, ref IntPtr existing);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
     public static partial int IOServiceOpen(uint service, uint owningTask, uint type, out uint connect);
@@ -188,19 +188,19 @@ internal static partial class NativeMethods
     public static partial int IOObjectRelease(uint obj);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial uint IOIteratorNext(nint iterator);
+    public static partial uint IOIteratorNext(IntPtr iterator);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial nint IORegistryEntryCreateCFProperty(uint entry, nint key, nint allocator, uint options);
+    public static partial IntPtr IORegistryEntryCreateCFProperty(uint entry, IntPtr key, IntPtr allocator, uint options);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial int IORegistryEntryCreateCFProperties(uint entry, out nint properties, nint allocator, uint options);
+    public static partial int IORegistryEntryCreateCFProperties(uint entry, out IntPtr properties, IntPtr allocator, uint options);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial int IORegistryEntryGetParentEntry(uint entry, nint plane, out uint parent);
+    public static partial int IORegistryEntryGetParentEntry(uint entry, IntPtr plane, out uint parent);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial int IORegistryEntryGetChildIterator(uint entry, nint plane, out nint iterator);
+    public static partial int IORegistryEntryGetChildIterator(uint entry, IntPtr plane, out IntPtr iterator);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit", CharSet = CharSet.Ansi)]
     public static extern int IOObjectConformsTo(uint obj, string className);
@@ -213,16 +213,16 @@ internal static partial class NativeMethods
     // ========================================
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial nint IOPSCopyPowerSourcesInfo();
+    public static partial IntPtr IOPSCopyPowerSourcesInfo();
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial nint IOPSCopyPowerSourcesList(nint blob);
+    public static partial IntPtr IOPSCopyPowerSourcesList(IntPtr blob);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial nint IOPSGetPowerSourceDescription(nint blob, nint ps);
+    public static partial IntPtr IOPSGetPowerSourceDescription(IntPtr blob, IntPtr ps);
 
     [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static partial nint IOPSCopyExternalPowerAdapterDetails();
+    public static partial IntPtr IOPSCopyExternalPowerAdapterDetails();
 
     // IOPowerSources Keys
     public const string kIOPSPowerAdapterWattsKey = "Watts";
@@ -234,53 +234,53 @@ internal static partial class NativeMethods
     private const string LibIOReport = "/usr/lib/libIOReport.dylib";
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportCopyChannelsInGroup(nint group, nint subgroup, ulong a, ulong b, ulong c);
+    public static partial IntPtr IOReportCopyChannelsInGroup(IntPtr group, IntPtr subgroup, ulong a, ulong b, ulong c);
 
     [LibraryImport(LibIOReport)]
-    public static partial int IOReportMergeChannels(nint a, nint b, nint c);
+    public static partial int IOReportMergeChannels(IntPtr a, IntPtr b, IntPtr c);
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportCreateSubscription(nint a, nint channels, out nint b, ulong c, nint d);
+    public static partial IntPtr IOReportCreateSubscription(IntPtr a, IntPtr channels, out IntPtr b, ulong c, IntPtr d);
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportCreateSamples(nint subscription, nint channels, nint a);
+    public static partial IntPtr IOReportCreateSamples(IntPtr subscription, IntPtr channels, IntPtr a);
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportChannelGetGroup(nint channel);
+    public static partial IntPtr IOReportChannelGetGroup(IntPtr channel);
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportChannelGetChannelName(nint channel);
+    public static partial IntPtr IOReportChannelGetChannelName(IntPtr channel);
 
     [LibraryImport(LibIOReport)]
-    public static partial nint IOReportChannelGetUnitLabel(nint channel);
+    public static partial IntPtr IOReportChannelGetUnitLabel(IntPtr channel);
 
     [LibraryImport(LibIOReport)]
-    public static partial long IOReportSimpleGetIntegerValue(nint channel, int idx);
+    public static partial long IOReportSimpleGetIntegerValue(IntPtr channel, int idx);
 
     // ========================================
     // SystemConfiguration
     // ========================================
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCDynamicStoreCopyValue(nint store, nint key);
+    public static partial IntPtr SCDynamicStoreCopyValue(IntPtr store, IntPtr key);
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCNetworkInterfaceCopyAll();
+    public static partial IntPtr SCNetworkInterfaceCopyAll();
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCNetworkInterfaceGetBSDName(nint iface);
+    public static partial IntPtr SCNetworkInterfaceGetBSDName(IntPtr iface);
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCNetworkInterfaceGetInterfaceType(nint iface);
+    public static partial IntPtr SCNetworkInterfaceGetInterfaceType(IntPtr iface);
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCNetworkInterfaceGetLocalizedDisplayName(nint iface);
+    public static partial IntPtr SCNetworkInterfaceGetLocalizedDisplayName(IntPtr iface);
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint SCNetworkInterfaceGetHardwareAddressString(nint iface);
+    public static partial IntPtr SCNetworkInterfaceGetHardwareAddressString(IntPtr iface);
 
     [LibraryImport("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")]
-    public static partial nint CFNetworkCopySystemProxySettings();
+    public static partial IntPtr CFNetworkCopySystemProxySettings();
 
     // SCNetworkInterfaceType constants (as strings)
     public const string kSCNetworkInterfaceTypeEthernet = "Ethernet";
@@ -299,13 +299,13 @@ internal static partial class NativeMethods
     // ========================================
 
     [LibraryImport("libSystem.dylib")]
-    public static partial int getifaddrs(out nint ifap);
+    public static partial int getifaddrs(out IntPtr ifap);
 
     [LibraryImport("libSystem.dylib")]
-    public static partial void freeifaddrs(nint ifap);
+    public static partial void freeifaddrs(IntPtr ifap);
 
     [LibraryImport("libSystem.dylib")]
-    public static unsafe partial nint inet_ntop(int af, void* src, byte* dst, uint size);
+    public static unsafe partial IntPtr inet_ntop(int af, void* src, byte* dst, uint size);
 
     [LibraryImport("libSystem.dylib")]
     public static unsafe partial int getnameinfo(sockaddr* sa, uint salen, byte* host, uint hostlen, byte* serv, uint servlen, int flags);
@@ -365,13 +365,13 @@ internal static partial class NativeMethods
     [StructLayout(LayoutKind.Sequential)]
     public struct ifaddrs
     {
-        public nint ifa_next;
-        public nint ifa_name;
+        public IntPtr ifa_next;
+        public IntPtr ifa_name;
         public uint ifa_flags;
-        public nint ifa_addr;
-        public nint ifa_netmask;
-        public nint ifa_dstaddr;
-        public nint ifa_data;
+        public IntPtr ifa_addr;
+        public IntPtr ifa_netmask;
+        public IntPtr ifa_dstaddr;
+        public IntPtr ifa_data;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -474,7 +474,7 @@ internal static partial class NativeMethods
 
     public static unsafe string? GetSysctlString(string name)
     {
-        var len = (nint)0;
+        var len = (IntPtr)0;
         if (sysctlbyname(name, null, ref len, IntPtr.Zero, 0) != 0 || len <= 0)
         {
             return null;
@@ -482,33 +482,33 @@ internal static partial class NativeMethods
 
         var buffer = stackalloc byte[(int)len];
         return sysctlbyname(name, buffer, ref len, IntPtr.Zero, 0) == 0
-            ? Marshal.PtrToStringUTF8((nint)buffer)
+            ? Marshal.PtrToStringUTF8((IntPtr)buffer)
             : null;
     }
 
     public static unsafe int GetSysctlInt(string name)
     {
         int value;
-        var len = (nint)sizeof(int);
+        var len = (IntPtr)sizeof(int);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 
     public static unsafe long GetSysctlLong(string name)
     {
         long value;
-        var len = (nint)sizeof(long);
+        var len = (IntPtr)sizeof(long);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 
-    public static unsafe string? CfStringToManaged(nint cfString)
+    public static unsafe string? CfStringToManaged(IntPtr cfString)
     {
-        if (cfString == nint.Zero)
+        if (cfString == IntPtr.Zero)
         {
             return null;
         }
 
         var ptr = CFStringGetCStringPtr(cfString, kCFStringEncodingUTF8);
-        if (ptr != nint.Zero)
+        if (ptr != IntPtr.Zero)
         {
             return Marshal.PtrToStringUTF8(ptr);
         }
@@ -522,7 +522,7 @@ internal static partial class NativeMethods
         var bufSize = (length * 4) + 1;
         var buf = stackalloc byte[(int)bufSize];
         return CFStringGetCString(cfString, buf, bufSize, kCFStringEncodingUTF8)
-            ? Marshal.PtrToStringUTF8((nint)buf)
+            ? Marshal.PtrToStringUTF8((IntPtr)buf)
             : null;
     }
 }

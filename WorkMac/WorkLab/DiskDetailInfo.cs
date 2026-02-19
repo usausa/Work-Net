@@ -42,12 +42,12 @@ public static class DiskDetailInfo
     public static DiskSmartEntry? GetSmartInfo(string bsdName)
     {
         var matching = IOServiceMatching("IOBlockStorageDevice");
-        if (matching == nint.Zero)
+        if (matching == IntPtr.Zero)
         {
             return null;
         }
 
-        var iterator = nint.Zero;
+        var iterator = IntPtr.Zero;
         if (IOServiceGetMatchingServices(0, matching, ref iterator) != 0)
         {
             return null;
@@ -61,12 +61,12 @@ public static class DiskDetailInfo
                 try
                 {
                     // BSD名を確認
-                    var nameKey = CFStringCreateWithCString(nint.Zero, "BSD Name", kCFStringEncodingUTF8);
-                    var namePtr = IORegistryEntryCreateCFProperty(service, nameKey, nint.Zero, 0);
+                    var nameKey = CFStringCreateWithCString(IntPtr.Zero, "BSD Name", kCFStringEncodingUTF8);
+                    var namePtr = IORegistryEntryCreateCFProperty(service, nameKey, IntPtr.Zero, 0);
                     CFRelease(nameKey);
 
                     string? currentBsdName = null;
-                    if (namePtr != nint.Zero)
+                    if (namePtr != IntPtr.Zero)
                     {
                         currentBsdName = CfStringToManaged(namePtr);
                         CFRelease(namePtr);
@@ -78,12 +78,12 @@ public static class DiskDetailInfo
                     }
 
                     // NVMe SMART対応確認
-                    var smartCapableKey = CFStringCreateWithCString(nint.Zero, "NVMe SMART Capable", kCFStringEncodingUTF8);
-                    var smartCapablePtr = IORegistryEntryCreateCFProperty(service, smartCapableKey, nint.Zero, 0);
+                    var smartCapableKey = CFStringCreateWithCString(IntPtr.Zero, "NVMe SMART Capable", kCFStringEncodingUTF8);
+                    var smartCapablePtr = IORegistryEntryCreateCFProperty(service, smartCapableKey, IntPtr.Zero, 0);
                     CFRelease(smartCapableKey);
 
                     var smartCapable = false;
-                    if (smartCapablePtr != nint.Zero)
+                    if (smartCapablePtr != IntPtr.Zero)
                     {
                         smartCapable = CFBooleanGetValue(smartCapablePtr);
                         CFRelease(smartCapablePtr);
@@ -117,12 +117,12 @@ public static class DiskDetailInfo
         var results = new List<DiskIoStats>();
 
         var matching = IOServiceMatching("IOBlockStorageDriver");
-        if (matching == nint.Zero)
+        if (matching == IntPtr.Zero)
         {
             return [];
         }
 
-        var iterator = nint.Zero;
+        var iterator = IntPtr.Zero;
         if (IOServiceGetMatchingServices(0, matching, ref iterator) != 0)
         {
             return [];
@@ -137,23 +137,23 @@ public static class DiskDetailInfo
             {
                 try
                 {
-                    if (IORegistryEntryCreateCFProperties(service, out var propsPtr, nint.Zero, 0) != 0)
+                    if (IORegistryEntryCreateCFProperties(service, out var propsPtr, IntPtr.Zero, 0) != 0)
                     {
                         continue;
                     }
 
-                    if (propsPtr == nint.Zero)
+                    if (propsPtr == IntPtr.Zero)
                     {
                         continue;
                     }
 
                     try
                     {
-                        var statsKey = CFStringCreateWithCString(nint.Zero, "Statistics", kCFStringEncodingUTF8);
+                        var statsKey = CFStringCreateWithCString(IntPtr.Zero, "Statistics", kCFStringEncodingUTF8);
                         var statsPtr = CFDictionaryGetValue(propsPtr, statsKey);
                         CFRelease(statsKey);
 
-                        if (statsPtr == nint.Zero)
+                        if (statsPtr == IntPtr.Zero)
                         {
                             continue;
                         }
@@ -201,7 +201,7 @@ public static class DiskDetailInfo
         return [.. results];
     }
 
-    private static string? GetChildBsdName(uint service, nint plane)
+    private static string? GetChildBsdName(uint service, IntPtr plane)
     {
         if (IORegistryEntryGetChildIterator(service, plane, out var childIterator) != 0)
         {
@@ -218,11 +218,11 @@ public static class DiskDetailInfo
 
             try
             {
-                var nameKey = CFStringCreateWithCString(nint.Zero, "BSD Name", kCFStringEncodingUTF8);
-                var namePtr = IORegistryEntryCreateCFProperty(child, nameKey, nint.Zero, 0);
+                var nameKey = CFStringCreateWithCString(IntPtr.Zero, "BSD Name", kCFStringEncodingUTF8);
+                var namePtr = IORegistryEntryCreateCFProperty(child, nameKey, IntPtr.Zero, 0);
                 CFRelease(nameKey);
 
-                if (namePtr == nint.Zero)
+                if (namePtr == IntPtr.Zero)
                 {
                     return null;
                 }
@@ -242,7 +242,7 @@ public static class DiskDetailInfo
         }
     }
 
-    private static (string? ProductName, string? Interconnect, string? Location) GetParentDeviceInfo(uint service, nint plane)
+    private static (string? ProductName, string? Interconnect, string? Location) GetParentDeviceInfo(uint service, IntPtr plane)
     {
         if (IORegistryEntryGetParentEntry(service, plane, out var parent) != 0)
         {
@@ -264,22 +264,22 @@ public static class DiskDetailInfo
 
     private static string? GetNestedDictionaryStringValue(uint entry, string dictKey, string valueKey)
     {
-        var dictCfKey = CFStringCreateWithCString(nint.Zero, dictKey, kCFStringEncodingUTF8);
-        var dictPtr = IORegistryEntryCreateCFProperty(entry, dictCfKey, nint.Zero, 0);
+        var dictCfKey = CFStringCreateWithCString(IntPtr.Zero, dictKey, kCFStringEncodingUTF8);
+        var dictPtr = IORegistryEntryCreateCFProperty(entry, dictCfKey, IntPtr.Zero, 0);
         CFRelease(dictCfKey);
 
-        if (dictPtr == nint.Zero)
+        if (dictPtr == IntPtr.Zero)
         {
             return null;
         }
 
         try
         {
-            var valueCfKey = CFStringCreateWithCString(nint.Zero, valueKey, kCFStringEncodingUTF8);
+            var valueCfKey = CFStringCreateWithCString(IntPtr.Zero, valueKey, kCFStringEncodingUTF8);
             var valuePtr = CFDictionaryGetValue(dictPtr, valueCfKey);
             CFRelease(valueCfKey);
 
-            if (valuePtr == nint.Zero)
+            if (valuePtr == IntPtr.Zero)
             {
                 return null;
             }
@@ -292,13 +292,13 @@ public static class DiskDetailInfo
         }
     }
 
-    private static long GetDictionaryLongValue(nint dict, string keyName)
+    private static long GetDictionaryLongValue(IntPtr dict, string keyName)
     {
-        var key = CFStringCreateWithCString(nint.Zero, keyName, kCFStringEncodingUTF8);
+        var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         var value = CFDictionaryGetValue(dict, key);
         CFRelease(key);
 
-        if (value != nint.Zero && CFGetTypeID(value) == CFNumberGetTypeID())
+        if (value != IntPtr.Zero && CFGetTypeID(value) == CFNumberGetTypeID())
         {
             long result = 0;
             if (CFNumberGetValue(value, kCFNumberSInt64Type, ref result))

@@ -11,8 +11,8 @@ using static NativeMethods;
 public sealed class AppleSiliconPowerInfo
 #pragma warning restore CA1515
 {
-    private nint channels;
-    private nint subscription;
+    private IntPtr channels;
+    private IntPtr subscription;
 
     private double prevCpuEnergy;
     private double prevGpuEnergy;
@@ -65,35 +65,35 @@ public sealed class AppleSiliconPowerInfo
         }
 
         channels = GetEnergyModelChannels();
-        if (channels == nint.Zero)
+        if (channels == IntPtr.Zero)
         {
             return false;
         }
 
-        subscription = IOReportCreateSubscription(nint.Zero, channels, out _, 0, nint.Zero);
-        return subscription != nint.Zero;
+        subscription = IOReportCreateSubscription(IntPtr.Zero, channels, out _, 0, IntPtr.Zero);
+        return subscription != IntPtr.Zero;
     }
 
     public bool Update()
     {
-        if (!Supported || subscription == nint.Zero)
+        if (!Supported || subscription == IntPtr.Zero)
         {
             return false;
         }
 
-        var samples = IOReportCreateSamples(subscription, channels, nint.Zero);
-        if (samples == nint.Zero)
+        var samples = IOReportCreateSamples(subscription, channels, IntPtr.Zero);
+        if (samples == IntPtr.Zero)
         {
             return false;
         }
 
         try
         {
-            var channelsKey = CFStringCreateWithCString(nint.Zero, "IOReportChannels", kCFStringEncodingUTF8);
+            var channelsKey = CFStringCreateWithCString(IntPtr.Zero, "IOReportChannels", kCFStringEncodingUTF8);
             var channelsArray = CFDictionaryGetValue(samples, channelsKey);
             CFRelease(channelsKey);
 
-            if (channelsArray == nint.Zero || CFGetTypeID(channelsArray) != CFArrayGetTypeID())
+            if (channelsArray == IntPtr.Zero || CFGetTypeID(channelsArray) != CFArrayGetTypeID())
             {
                 return false;
             }
@@ -101,30 +101,30 @@ public sealed class AppleSiliconPowerInfo
             double cpuEnergy = 0, gpuEnergy = 0, aneEnergy = 0, ramEnergy = 0;
 
             var count = CFArrayGetCount(channelsArray);
-            for (var i = (nint)0; i < count; i++)
+            for (var i = (IntPtr)0; i < count; i++)
             {
                 var item = CFArrayGetValueAtIndex(channelsArray, i);
-                if (item == nint.Zero)
+                if (item == IntPtr.Zero)
                 {
                     continue;
                 }
 
                 var groupPtr = IOReportChannelGetGroup(item);
-                var group = groupPtr != nint.Zero ? CfStringToManaged(groupPtr) : null;
+                var group = groupPtr != IntPtr.Zero ? CfStringToManaged(groupPtr) : null;
                 if (group != "Energy Model")
                 {
                     continue;
                 }
 
                 var channelNamePtr = IOReportChannelGetChannelName(item);
-                var channelName = channelNamePtr != nint.Zero ? CfStringToManaged(channelNamePtr) : null;
+                var channelName = channelNamePtr != IntPtr.Zero ? CfStringToManaged(channelNamePtr) : null;
                 if (string.IsNullOrEmpty(channelName))
                 {
                     continue;
                 }
 
                 var unitPtr = IOReportChannelGetUnitLabel(item);
-                var unit = unitPtr != nint.Zero ? CfStringToManaged(unitPtr) : null;
+                var unit = unitPtr != IntPtr.Zero ? CfStringToManaged(unitPtr) : null;
 
                 var value = (double)IOReportSimpleGetIntegerValue(item, 0);
                 var power = ConvertToPower(value, unit);
@@ -169,23 +169,23 @@ public sealed class AppleSiliconPowerInfo
         }
     }
 
-    private static nint GetEnergyModelChannels()
+    private static IntPtr GetEnergyModelChannels()
     {
-        var groupStr = CFStringCreateWithCString(nint.Zero, "Energy Model", kCFStringEncodingUTF8);
-        if (groupStr == nint.Zero)
+        var groupStr = CFStringCreateWithCString(IntPtr.Zero, "Energy Model", kCFStringEncodingUTF8);
+        if (groupStr == IntPtr.Zero)
         {
-            return nint.Zero;
+            return IntPtr.Zero;
         }
 
         try
         {
-            var channel = IOReportCopyChannelsInGroup(groupStr, nint.Zero, 0, 0, 0);
-            if (channel == nint.Zero)
+            var channel = IOReportCopyChannelsInGroup(groupStr, IntPtr.Zero, 0, 0, 0);
+            if (channel == IntPtr.Zero)
             {
-                return nint.Zero;
+                return IntPtr.Zero;
             }
 
-            return CFDictionaryCreateMutableCopy(nint.Zero, 0, channel);
+            return CFDictionaryCreateMutableCopy(IntPtr.Zero, 0, channel);
         }
         finally
         {

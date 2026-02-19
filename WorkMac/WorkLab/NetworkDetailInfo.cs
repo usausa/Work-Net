@@ -41,22 +41,22 @@ public static class NetworkDetailInfo
     /// </summary>
     public static string? GetPrimaryInterface()
     {
-        var key = CFStringCreateWithCString(nint.Zero, "State:/Network/Global/IPv4", kCFStringEncodingUTF8);
-        var value = SCDynamicStoreCopyValue(nint.Zero, key);
+        var key = CFStringCreateWithCString(IntPtr.Zero, "State:/Network/Global/IPv4", kCFStringEncodingUTF8);
+        var value = SCDynamicStoreCopyValue(IntPtr.Zero, key);
         CFRelease(key);
 
-        if (value == nint.Zero)
+        if (value == IntPtr.Zero)
         {
             return null;
         }
 
         try
         {
-            var primaryKey = CFStringCreateWithCString(nint.Zero, "PrimaryInterface", kCFStringEncodingUTF8);
+            var primaryKey = CFStringCreateWithCString(IntPtr.Zero, "PrimaryInterface", kCFStringEncodingUTF8);
             var primaryValue = CFDictionaryGetValue(value, primaryKey);
             CFRelease(primaryKey);
 
-            if (primaryValue != nint.Zero && CFGetTypeID(primaryValue) == CFStringGetTypeID())
+            if (primaryValue != IntPtr.Zero && CFGetTypeID(primaryValue) == CFStringGetTypeID())
             {
                 return CfStringToManaged(primaryValue);
             }
@@ -78,7 +78,7 @@ public static class NetworkDetailInfo
         var primaryInterface = GetPrimaryInterface();
 
         var allInterfaces = SCNetworkInterfaceCopyAll();
-        if (allInterfaces == nint.Zero)
+        if (allInterfaces == IntPtr.Zero)
         {
             return [];
         }
@@ -86,29 +86,29 @@ public static class NetworkDetailInfo
         try
         {
             var count = CFArrayGetCount(allInterfaces);
-            for (var i = (nint)0; i < count; i++)
+            for (var i = (IntPtr)0; i < count; i++)
             {
                 var iface = CFArrayGetValueAtIndex(allInterfaces, i);
-                if (iface == nint.Zero)
+                if (iface == IntPtr.Zero)
                 {
                     continue;
                 }
 
                 var bsdNamePtr = SCNetworkInterfaceGetBSDName(iface);
-                var bsdName = bsdNamePtr != nint.Zero ? CfStringToManaged(bsdNamePtr) : null;
+                var bsdName = bsdNamePtr != IntPtr.Zero ? CfStringToManaged(bsdNamePtr) : null;
                 if (string.IsNullOrEmpty(bsdName))
                 {
                     continue;
                 }
 
                 var displayNamePtr = SCNetworkInterfaceGetLocalizedDisplayName(iface);
-                var displayName = displayNamePtr != nint.Zero ? CfStringToManaged(displayNamePtr) : null;
+                var displayName = displayNamePtr != IntPtr.Zero ? CfStringToManaged(displayNamePtr) : null;
 
                 var macAddressPtr = SCNetworkInterfaceGetHardwareAddressString(iface);
-                var macAddress = macAddressPtr != nint.Zero ? CfStringToManaged(macAddressPtr) : null;
+                var macAddress = macAddressPtr != IntPtr.Zero ? CfStringToManaged(macAddressPtr) : null;
 
                 var typePtr = SCNetworkInterfaceGetInterfaceType(iface);
-                var type = typePtr != nint.Zero ? CfStringToManaged(typePtr) : null;
+                var type = typePtr != IntPtr.Zero ? CfStringToManaged(typePtr) : null;
 
                 var connectionType = type switch
                 {
@@ -156,12 +156,12 @@ public static class NetworkDetailInfo
         try
         {
             var current = ifap;
-            while (current != nint.Zero)
+            while (current != IntPtr.Zero)
             {
                 var ifa = Marshal.PtrToStructure<ifaddrs>(current);
-                var name = ifa.ifa_name != nint.Zero ? Marshal.PtrToStringUTF8(ifa.ifa_name) : null;
+                var name = ifa.ifa_name != IntPtr.Zero ? Marshal.PtrToStringUTF8(ifa.ifa_name) : null;
 
-                if (name == bsdName && ifa.ifa_addr != nint.Zero)
+                if (name == bsdName && ifa.ifa_addr != IntPtr.Zero)
                 {
                     var sa = Marshal.PtrToStructure<sockaddr>(ifa.ifa_addr);
 
@@ -170,9 +170,9 @@ public static class NetworkDetailInfo
                         var addrBuf = stackalloc byte[(int)INET_ADDRSTRLEN];
                         var sockaddrIn = (byte*)ifa.ifa_addr;
                         var addrPtr = sockaddrIn + 4; // sin_addr offset
-                        if (inet_ntop(AF_INET, addrPtr, addrBuf, INET_ADDRSTRLEN) != nint.Zero)
+                        if (inet_ntop(AF_INET, addrPtr, addrBuf, INET_ADDRSTRLEN) != IntPtr.Zero)
                         {
-                            ipv4 = Marshal.PtrToStringUTF8((nint)addrBuf);
+                            ipv4 = Marshal.PtrToStringUTF8((IntPtr)addrBuf);
                         }
                     }
                     else if (sa.sa_family == AF_INET6)
@@ -180,12 +180,12 @@ public static class NetworkDetailInfo
                         var addrBuf = stackalloc byte[(int)INET6_ADDRSTRLEN];
                         var sockaddrIn6 = (byte*)ifa.ifa_addr;
                         var addrPtr = sockaddrIn6 + 8; // sin6_addr offset
-                        if (inet_ntop(AF_INET6, addrPtr, addrBuf, INET6_ADDRSTRLEN) != nint.Zero)
+                        if (inet_ntop(AF_INET6, addrPtr, addrBuf, INET6_ADDRSTRLEN) != IntPtr.Zero)
                         {
-                            ipv6 = Marshal.PtrToStringUTF8((nint)addrBuf);
+                            ipv6 = Marshal.PtrToStringUTF8((IntPtr)addrBuf);
                         }
                     }
-                    else if (sa.sa_family == AF_LINK && ifa.ifa_data != nint.Zero)
+                    else if (sa.sa_family == AF_LINK && ifa.ifa_data != IntPtr.Zero)
                     {
                         var ifData = Marshal.PtrToStructure<if_data>(ifa.ifa_data);
                         baudRate = ifData.ifi_baudrate;

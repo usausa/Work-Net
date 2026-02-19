@@ -36,7 +36,7 @@ public sealed class SwapStat
     public unsafe bool Update()
     {
         xsw_usage swap;
-        var len = (nint)sizeof(xsw_usage);
+        var len = (IntPtr)sizeof(xsw_usage);
         if (sysctlbyname("vm.swapusage", &swap, ref len, IntPtr.Zero, 0) != 0)
         {
             Supported = false;

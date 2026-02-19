@@ -211,13 +211,13 @@ internal static class NativeMethods
     [StructLayout(LayoutKind.Sequential)]
     public struct ifaddrs
     {
-        public nint ifa_next;
-        public nint ifa_name;
+        public IntPtr ifa_next;
+        public IntPtr ifa_name;
         public uint ifa_flags;
-        public nint ifa_addr;
-        public nint ifa_netmask;
-        public nint ifa_dstaddr;
-        public nint ifa_data;
+        public IntPtr ifa_addr;
+        public IntPtr ifa_netmask;
+        public IntPtr ifa_dstaddr;
+        public IntPtr ifa_data;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -382,10 +382,10 @@ internal static class NativeMethods
     public static extern uint task_self_trap();
 
     [DllImport("libSystem.dylib")]
-    public static extern int host_processor_info(uint host, int flavor, out int processorCount, out nint processorInfo, out int processorInfoCnt);
+    public static extern int host_processor_info(uint host, int flavor, out int processorCount, out IntPtr processorInfo, out int processorInfoCnt);
 
     [DllImport("libSystem.dylib")]
-    public static extern int vm_deallocate(uint targetTask, nint address, nint size);
+    public static extern int vm_deallocate(uint targetTask, IntPtr address, IntPtr size);
 
     [DllImport("libSystem.dylib")]
     public static extern unsafe int host_statistics64(uint host_priv, int flavor, vm_statistics64* host_info_out, ref int host_info_outCnt);
@@ -401,7 +401,7 @@ internal static class NativeMethods
     public static extern int sysctlbyname([MarshalAs(UnmanagedType.LPStr)] string name, ref timeval oldp, ref int oldlen, IntPtr newp, int newlen);
 
     [DllImport("libc")]
-    public static extern unsafe int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, void* oldp, ref nint oldlenp, nint newp, nint newlen);
+    public static extern unsafe int sysctlbyname([MarshalAs(UnmanagedType.LPUTF8Str)] string name, void* oldp, ref IntPtr oldlenp, IntPtr newp, IntPtr newlen);
 
     [DllImport("libc")]
     public static extern unsafe int getloadavg(double* loadavg, int nelem);
@@ -410,13 +410,13 @@ internal static class NativeMethods
     public static extern unsafe int getfsstat(statfs* buf, int bufsize, int mode);
 
     [DllImport("libc")]
-    public static extern int getifaddrs(out nint ifap);
+    public static extern int getifaddrs(out IntPtr ifap);
 
     [DllImport("libc")]
-    public static extern void freeifaddrs(nint ifa);
+    public static extern void freeifaddrs(IntPtr ifa);
 
     [DllImport("libc")]
-    public static extern unsafe nint inet_ntop(int af, void* src, byte* dst, uint size);
+    public static extern unsafe IntPtr inet_ntop(int af, void* src, byte* dst, uint size);
 
     //------------------------------------------------------------------------
     // libproc
@@ -438,43 +438,43 @@ internal static class NativeMethods
     private const string CoreFoundationLib = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
 
     [DllImport(CoreFoundationLib)]
-    public static extern void CFRelease(nint cf);
+    public static extern void CFRelease(IntPtr cf);
 
     [DllImport(CoreFoundationLib)]
-    public static extern long CFArrayGetCount(nint theArray);
+    public static extern long CFArrayGetCount(IntPtr theArray);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFArrayGetValueAtIndex(nint theArray, long idx);
+    public static extern IntPtr CFArrayGetValueAtIndex(IntPtr theArray, long idx);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFStringCreateWithCString(nint alloc, [MarshalAs(UnmanagedType.LPUTF8Str)] string cStr, uint encoding);
+    public static extern IntPtr CFStringCreateWithCString(IntPtr alloc, [MarshalAs(UnmanagedType.LPUTF8Str)] string cStr, uint encoding);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFStringGetCStringPtr(nint theString, uint encoding);
+    public static extern IntPtr CFStringGetCStringPtr(IntPtr theString, uint encoding);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFStringGetLength(nint theString);
+    public static extern IntPtr CFStringGetLength(IntPtr theString);
 
     [DllImport(CoreFoundationLib)]
-    public static extern unsafe bool CFStringGetCString(nint theString, byte* buffer, nint bufferSize, uint encoding);
+    public static extern unsafe bool CFStringGetCString(IntPtr theString, byte* buffer, IntPtr bufferSize, uint encoding);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFDictionaryGetValue(nint theDict, nint key);
-
-    [DllImport(CoreFoundationLib)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFNumberGetValue(nint number, int theType, out int valuePtr);
+    public static extern IntPtr CFDictionaryGetValue(IntPtr theDict, IntPtr key);
 
     [DllImport(CoreFoundationLib)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFNumberGetValue(nint number, int theType, ref long valuePtr);
+    public static extern bool CFNumberGetValue(IntPtr number, int theType, out int valuePtr);
 
     [DllImport(CoreFoundationLib)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFBooleanGetValue(nint boolean);
+    public static extern bool CFNumberGetValue(IntPtr number, int theType, ref long valuePtr);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nuint CFGetTypeID(nint cf);
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool CFBooleanGetValue(IntPtr boolean);
+
+    [DllImport(CoreFoundationLib)]
+    public static extern nuint CFGetTypeID(IntPtr cf);
 
     [DllImport(CoreFoundationLib)]
     public static extern nuint CFStringGetTypeID();
@@ -489,10 +489,10 @@ internal static class NativeMethods
     public static extern nuint CFDataGetTypeID();
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFDataGetLength(nint theData);
+    public static extern IntPtr CFDataGetLength(IntPtr theData);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFDataGetBytePtr(nint theData);
+    public static extern IntPtr CFDataGetBytePtr(IntPtr theData);
 
     //------------------------------------------------------------------------
     // IOKit
@@ -501,34 +501,34 @@ internal static class NativeMethods
     private const string IOKitLib = "/System/Library/Frameworks/IOKit.framework/IOKit";
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSCopyPowerSourcesInfo();
+    public static extern IntPtr IOPSCopyPowerSourcesInfo();
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSCopyPowerSourcesList(nint blob);
+    public static extern IntPtr IOPSCopyPowerSourcesList(IntPtr blob);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSGetPowerSourceDescription(nint blob, nint ps);
+    public static extern IntPtr IOPSGetPowerSourceDescription(IntPtr blob, IntPtr ps);
 
     [DllImport(IOKitLib)]
-    public static extern int IOServiceGetMatchingServices(uint mainPort, nint matching, ref nint existing);
+    public static extern int IOServiceGetMatchingServices(uint mainPort, IntPtr matching, ref IntPtr existing);
 
     [DllImport(IOKitLib)]
-    public static extern uint IOServiceGetMatchingService(uint mainPort, nint matching);
+    public static extern uint IOServiceGetMatchingService(uint mainPort, IntPtr matching);
 
     [DllImport(IOKitLib)]
-    public static extern uint IOIteratorNext(nint iterator);
+    public static extern uint IOIteratorNext(IntPtr iterator);
 
     [DllImport(IOKitLib)]
-    public static extern int IOObjectRelease(nint @object);
+    public static extern int IOObjectRelease(IntPtr @object);
 
     [DllImport(IOKitLib)]
     public static extern int IOObjectRelease(uint @object);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOServiceMatching([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    public static extern IntPtr IOServiceMatching([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
 
     [DllImport(IOKitLib)]
-    public static extern nint IORegistryEntryCreateCFProperty(uint entry, nint key, nint allocator, uint options);
+    public static extern IntPtr IORegistryEntryCreateCFProperty(uint entry, IntPtr key, IntPtr allocator, uint options);
 
     [DllImport(IOKitLib)]
     public static extern int IOServiceOpen(uint service, uint owningTask, uint type, out uint connect);
@@ -540,41 +540,41 @@ internal static class NativeMethods
     public static extern unsafe int IOConnectCallStructMethod(uint connection, uint selector, void* inputStruct, nuint inputStructCnt, void* outputStruct, nuint* outputStructCnt);
 
     [DllImport(IOKitLib)]
-    public static extern int IORegistryEntryCreateCFProperties(uint entry, out nint properties, nint allocator, uint options);
+    public static extern int IORegistryEntryCreateCFProperties(uint entry, out IntPtr properties, IntPtr allocator, uint options);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSCopyExternalPowerAdapterDetails();
+    public static extern IntPtr IOPSCopyExternalPowerAdapterDetails();
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportCopyChannelsInGroup([MarshalAs(UnmanagedType.LPUTF8Str)] string? group, [MarshalAs(UnmanagedType.LPUTF8Str)] string? subgroup, ulong a, ulong b, ulong c);
+    public static extern IntPtr IOReportCopyChannelsInGroup([MarshalAs(UnmanagedType.LPUTF8Str)] string? group, [MarshalAs(UnmanagedType.LPUTF8Str)] string? subgroup, ulong a, ulong b, ulong c);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportCreateSubscription(nint a, nint channels, out nint b, ulong c, nint d);
+    public static extern IntPtr IOReportCreateSubscription(IntPtr a, IntPtr channels, out IntPtr b, ulong c, IntPtr d);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportCreateSamples(nint subscription, nint channels, nint a);
+    public static extern IntPtr IOReportCreateSamples(IntPtr subscription, IntPtr channels, IntPtr a);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportChannelGetGroup(nint channel);
+    public static extern IntPtr IOReportChannelGetGroup(IntPtr channel);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportChannelGetChannelName(nint channel);
+    public static extern IntPtr IOReportChannelGetChannelName(IntPtr channel);
 
     [DllImport(IOKitLib)]
-    public static extern nint IOReportChannelGetUnitLabel(nint channel);
+    public static extern IntPtr IOReportChannelGetUnitLabel(IntPtr channel);
 
     [DllImport(IOKitLib)]
-    public static extern long IOReportSimpleGetIntegerValue(nint channel, int idx);
+    public static extern long IOReportSimpleGetIntegerValue(IntPtr channel, int idx);
 
     [DllImport(CoreFoundationLib)]
     public static extern nuint CFArrayGetTypeID();
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFDictionaryCreateMutableCopy(nint allocator, nint capacity, nint theDict);
+    public static extern IntPtr CFDictionaryCreateMutableCopy(IntPtr allocator, IntPtr capacity, IntPtr theDict);
 
     [DllImport(CoreFoundationLib)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFNumberGetValue(nint number, int theType, ref double valuePtr);
+    public static extern bool CFNumberGetValue(IntPtr number, int theType, ref double valuePtr);
 
     // Additional IOPowerSources Keys
     public const string kIOPSPowerAdapterWattsKey = "Watts";
@@ -586,15 +586,15 @@ internal static class NativeMethods
     // Helper
     //------------------------------------------------------------------------
 
-    public static unsafe string? CfStringToManaged(nint cfString)
+    public static unsafe string? CfStringToManaged(IntPtr cfString)
     {
-        if (cfString == nint.Zero)
+        if (cfString == IntPtr.Zero)
         {
             return null;
         }
 
         var ptr = CFStringGetCStringPtr(cfString, kCFStringEncodingUTF8);
-        if (ptr != nint.Zero)
+        if (ptr != IntPtr.Zero)
         {
             return Marshal.PtrToStringUTF8(ptr);
         }
@@ -608,7 +608,7 @@ internal static class NativeMethods
         var bufSize = (length * 4) + 1;
         var buf = stackalloc byte[(int)bufSize];
         return CFStringGetCString(cfString, buf, bufSize, kCFStringEncodingUTF8)
-            ? Marshal.PtrToStringUTF8((nint)buf)
+            ? Marshal.PtrToStringUTF8((IntPtr)buf)
             : null;
     }
 }

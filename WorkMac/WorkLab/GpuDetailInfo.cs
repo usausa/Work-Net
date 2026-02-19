@@ -70,12 +70,12 @@ public static class GpuDetailInfo
         var results = new List<GpuDetailEntry>();
 
         var matching = IOServiceMatching(kIOAcceleratorClassName);
-        if (matching == nint.Zero)
+        if (matching == IntPtr.Zero)
         {
             return [];
         }
 
-        var iterator = nint.Zero;
+        var iterator = IntPtr.Zero;
         if (IOServiceGetMatchingServices(0, matching, ref iterator) != 0)
         {
             return [];
@@ -113,12 +113,12 @@ public static class GpuDetailInfo
 
     private static GpuDetailEntry? ReadGpuService(uint service, int index)
     {
-        if (IORegistryEntryCreateCFProperties(service, out var propertiesPtr, nint.Zero, 0) != 0)
+        if (IORegistryEntryCreateCFProperties(service, out var propertiesPtr, IntPtr.Zero, 0) != 0)
         {
             return null;
         }
 
-        if (propertiesPtr == nint.Zero)
+        if (propertiesPtr == IntPtr.Zero)
         {
             return null;
         }
@@ -129,7 +129,7 @@ public static class GpuDetailInfo
             var model = GetDictionaryStringValue(propertiesPtr, "model");
 
             // PerformanceStatistics辞書を取得
-            var perfStatsKey = CFStringCreateWithCString(nint.Zero, "PerformanceStatistics", kCFStringEncodingUTF8);
+            var perfStatsKey = CFStringCreateWithCString(IntPtr.Zero, "PerformanceStatistics", kCFStringEncodingUTF8);
             var perfStatsPtr = CFDictionaryGetValue(propertiesPtr, perfStatsKey);
             CFRelease(perfStatsKey);
 
@@ -141,7 +141,7 @@ public static class GpuDetailInfo
             int? coreClock = null;
             int? memoryClock = null;
 
-            if (perfStatsPtr != nint.Zero)
+            if (perfStatsPtr != IntPtr.Zero)
             {
                 utilization = GetDictionaryIntValue(perfStatsPtr, "Device Utilization %")
                               ?? GetDictionaryIntValue(perfStatsPtr, "GPU Activity(%)");
@@ -155,11 +155,11 @@ public static class GpuDetailInfo
 
             // AGCInfo (電源状態)
             bool? powerState = null;
-            var agcInfoKey = CFStringCreateWithCString(nint.Zero, "AGCInfo", kCFStringEncodingUTF8);
+            var agcInfoKey = CFStringCreateWithCString(IntPtr.Zero, "AGCInfo", kCFStringEncodingUTF8);
             var agcInfoPtr = CFDictionaryGetValue(propertiesPtr, agcInfoKey);
             CFRelease(agcInfoKey);
 
-            if (agcInfoPtr != nint.Zero)
+            if (agcInfoPtr != IntPtr.Zero)
             {
                 var poweredOff = GetDictionaryIntValue(agcInfoPtr, "poweredOffByAGC");
                 if (poweredOff is not null)
@@ -203,13 +203,13 @@ public static class GpuDetailInfo
         }
     }
 
-    private static string? GetDictionaryStringValue(nint dict, string keyName)
+    private static string? GetDictionaryStringValue(IntPtr dict, string keyName)
     {
-        var key = CFStringCreateWithCString(nint.Zero, keyName, kCFStringEncodingUTF8);
+        var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         var value = CFDictionaryGetValue(dict, key);
         CFRelease(key);
 
-        if (value == nint.Zero)
+        if (value == IntPtr.Zero)
         {
             return null;
         }
@@ -223,7 +223,7 @@ public static class GpuDetailInfo
         {
             var length = CFDataGetLength(value);
             var bytes = CFDataGetBytePtr(value);
-            if (bytes != nint.Zero && length > 0)
+            if (bytes != IntPtr.Zero && length > 0)
             {
                 return Marshal.PtrToStringUTF8(bytes, (int)length)?.TrimEnd('\0');
             }
@@ -232,13 +232,13 @@ public static class GpuDetailInfo
         return null;
     }
 
-    private static int? GetDictionaryIntValue(nint dict, string keyName)
+    private static int? GetDictionaryIntValue(IntPtr dict, string keyName)
     {
-        var key = CFStringCreateWithCString(nint.Zero, keyName, kCFStringEncodingUTF8);
+        var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         var value = CFDictionaryGetValue(dict, key);
         CFRelease(key);
 
-        if (value != nint.Zero && CFGetTypeID(value) == CFNumberGetTypeID())
+        if (value != IntPtr.Zero && CFGetTypeID(value) == CFNumberGetTypeID())
         {
             if (CFNumberGetValue(value, kCFNumberSInt32Type, out var intValue))
             {
@@ -294,7 +294,7 @@ internal static class SmcHelper
         initialized = true;
 
         var matching = IOServiceMatching("AppleSMC");
-        if (matching == nint.Zero)
+        if (matching == IntPtr.Zero)
         {
             return false;
         }

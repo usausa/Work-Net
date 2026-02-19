@@ -40,18 +40,18 @@ public static class SystemDetailInfo
 
         // シリアル番号はIOPlatformExpertDevice経由
         var matching = IOServiceMatching("IOPlatformExpertDevice");
-        if (matching != nint.Zero)
+        if (matching != IntPtr.Zero)
         {
             var service = IOServiceGetMatchingService(0, matching);
             if (service != 0)
             {
                 try
                 {
-                    var key = CFStringCreateWithCString(nint.Zero, "IOPlatformSerialNumber", kCFStringEncodingUTF8);
-                    var value = IORegistryEntryCreateCFProperty(service, key, nint.Zero, 0);
+                    var key = CFStringCreateWithCString(IntPtr.Zero, "IOPlatformSerialNumber", kCFStringEncodingUTF8);
+                    var value = IORegistryEntryCreateCFProperty(service, key, IntPtr.Zero, 0);
                     CFRelease(key);
 
-                    if (value != nint.Zero)
+                    if (value != IntPtr.Zero)
                     {
                         serialNumber = CfStringToManaged(value);
                         CFRelease(value);

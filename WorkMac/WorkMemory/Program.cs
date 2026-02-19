@@ -292,7 +292,7 @@ internal static class MemoryInfoProvider
     public static unsafe SwapInfo? GetSwapInfo()
     {
         xsw_usage swap;
-        var len = (nint)sizeof(xsw_usage);
+        var len = (IntPtr)sizeof(xsw_usage);
         if (sysctlbyname("vm.swapusage", &swap, ref len, IntPtr.Zero, 0) != 0)
         {
             return null;
@@ -317,14 +317,14 @@ internal static class MemoryInfoProvider
     private static unsafe int GetSysctlInt(string name)
     {
         int value;
-        var len = (nint)sizeof(int);
+        var len = (IntPtr)sizeof(int);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 
     private static unsafe ulong GetSysctlUlong(string name)
     {
         ulong value;
-        var len = (nint)sizeof(ulong);
+        var len = (IntPtr)sizeof(ulong);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 }
@@ -420,7 +420,7 @@ internal static class NativeMethods
     public static extern unsafe int sysctlbyname(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         void* oldp,
-        ref nint oldlenp,
-        nint newp,
-        nint newlen);
+        ref IntPtr oldlenp,
+        IntPtr newp,
+        IntPtr newlen);
 }

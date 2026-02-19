@@ -39,7 +39,7 @@ public sealed class BatteryDetail
     private BatteryDetail()
     {
         var matching = IOServiceMatching("AppleSmartBattery");
-        if (matching != nint.Zero)
+        if (matching != IntPtr.Zero)
         {
             batteryService = IOServiceGetMatchingService(0, matching);
             Supported = batteryService != 0;
@@ -101,11 +101,11 @@ public sealed class BatteryDetail
 
     private int GetPropertyInt(string name)
     {
-        var keyPtr = CFStringCreateWithCString(nint.Zero, name, kCFStringEncodingUTF8);
-        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, nint.Zero, 0);
+        var keyPtr = CFStringCreateWithCString(IntPtr.Zero, name, kCFStringEncodingUTF8);
+        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, IntPtr.Zero, 0);
         CFRelease(keyPtr);
 
-        if (valuePtr == nint.Zero)
+        if (valuePtr == IntPtr.Zero)
         {
             return 0;
         }
@@ -130,11 +130,11 @@ public sealed class BatteryDetail
 
     private double GetPropertyDouble(string name)
     {
-        var keyPtr = CFStringCreateWithCString(nint.Zero, name, kCFStringEncodingUTF8);
-        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, nint.Zero, 0);
+        var keyPtr = CFStringCreateWithCString(IntPtr.Zero, name, kCFStringEncodingUTF8);
+        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, IntPtr.Zero, 0);
         CFRelease(keyPtr);
 
-        if (valuePtr == nint.Zero)
+        if (valuePtr == IntPtr.Zero)
         {
             return 0;
         }
@@ -165,11 +165,11 @@ public sealed class BatteryDetail
 
     private (int current, int voltage)? GetChargerData()
     {
-        var keyPtr = CFStringCreateWithCString(nint.Zero, "ChargerData", kCFStringEncodingUTF8);
-        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, nint.Zero, 0);
+        var keyPtr = CFStringCreateWithCString(IntPtr.Zero, "ChargerData", kCFStringEncodingUTF8);
+        var valuePtr = IORegistryEntryCreateCFProperty(batteryService, keyPtr, IntPtr.Zero, 0);
         CFRelease(keyPtr);
 
-        if (valuePtr == nint.Zero)
+        if (valuePtr == IntPtr.Zero)
         {
             return null;
         }
@@ -178,21 +178,21 @@ public sealed class BatteryDetail
         {
             if (CFGetTypeID(valuePtr) == CFDictionaryGetTypeID())
             {
-                var currentKey = CFStringCreateWithCString(nint.Zero, "ChargingCurrent", kCFStringEncodingUTF8);
+                var currentKey = CFStringCreateWithCString(IntPtr.Zero, "ChargingCurrent", kCFStringEncodingUTF8);
                 var currentPtr = CFDictionaryGetValue(valuePtr, currentKey);
                 CFRelease(currentKey);
 
-                var voltageKey = CFStringCreateWithCString(nint.Zero, "ChargingVoltage", kCFStringEncodingUTF8);
+                var voltageKey = CFStringCreateWithCString(IntPtr.Zero, "ChargingVoltage", kCFStringEncodingUTF8);
                 var voltagePtr = CFDictionaryGetValue(valuePtr, voltageKey);
                 CFRelease(voltageKey);
 
                 int current = 0, voltage = 0;
-                if (currentPtr != nint.Zero && CFNumberGetValue(currentPtr, kCFNumberSInt32Type, out var c))
+                if (currentPtr != IntPtr.Zero && CFNumberGetValue(currentPtr, kCFNumberSInt32Type, out var c))
                 {
                     current = c;
                 }
 
-                if (voltagePtr != nint.Zero && CFNumberGetValue(voltagePtr, kCFNumberSInt32Type, out var v))
+                if (voltagePtr != IntPtr.Zero && CFNumberGetValue(voltagePtr, kCFNumberSInt32Type, out var v))
                 {
                     voltage = v;
                 }
@@ -211,18 +211,18 @@ public sealed class BatteryDetail
     private static int GetAcAdapterWatts()
     {
         var adapterDetails = IOPSCopyExternalPowerAdapterDetails();
-        if (adapterDetails == nint.Zero)
+        if (adapterDetails == IntPtr.Zero)
         {
             return 0;
         }
 
         try
         {
-            var wattsKey = CFStringCreateWithCString(nint.Zero, kIOPSPowerAdapterWattsKey, kCFStringEncodingUTF8);
+            var wattsKey = CFStringCreateWithCString(IntPtr.Zero, kIOPSPowerAdapterWattsKey, kCFStringEncodingUTF8);
             var wattsPtr = CFDictionaryGetValue(adapterDetails, wattsKey);
             CFRelease(wattsKey);
 
-            if (wattsPtr != nint.Zero && CFNumberGetValue(wattsPtr, kCFNumberSInt32Type, out var watts))
+            if (wattsPtr != IntPtr.Zero && CFNumberGetValue(wattsPtr, kCFNumberSInt32Type, out var watts))
             {
                 return watts;
             }

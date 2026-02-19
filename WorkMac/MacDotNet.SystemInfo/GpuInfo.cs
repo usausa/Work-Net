@@ -81,9 +81,9 @@ public static class GpuInfo
 {
     public static GpuEntry[] GetGpus()
     {
-        var iter = nint.Zero;
+        var iter = IntPtr.Zero;
         var kr = IOServiceGetMatchingServices(0, IOServiceMatching("IOAccelerator"), ref iter);
-        if (kr != KERN_SUCCESS || iter == nint.Zero)
+        if (kr != KERN_SUCCESS || iter == IntPtr.Zero)
         {
             return [];
         }
@@ -132,7 +132,7 @@ public static class GpuInfo
         }
 
         var agcInfo = GetDictionaryProperty(entry, "AGCInfo");
-        if (agcInfo != nint.Zero)
+        if (agcInfo != IntPtr.Zero)
         {
             var poweredOff = GetDictNumber(agcInfo, "poweredOffByAGC");
             powerState = poweredOff == 0;
@@ -171,7 +171,7 @@ public static class GpuInfo
     private static GpuPerformanceStatistics? ReadPerformanceStatistics(uint entry)
     {
         var dict = GetDictionaryProperty(entry, "PerformanceStatistics");
-        if (dict == nint.Zero)
+        if (dict == IntPtr.Zero)
         {
             return null;
         }
@@ -205,7 +205,7 @@ public static class GpuInfo
     private static GpuConfiguration? ReadGpuConfiguration(uint entry)
     {
         var dict = GetDictionaryProperty(entry, "GPUConfigurationVariable");
-        if (dict == nint.Zero)
+        if (dict == IntPtr.Zero)
         {
             return null;
         }
@@ -230,16 +230,16 @@ public static class GpuInfo
 
     private static unsafe string? GetStringProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return null;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return null;
             }
@@ -266,16 +266,16 @@ public static class GpuInfo
 
     private static long GetNumberProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }
@@ -304,16 +304,16 @@ public static class GpuInfo
 
     private static uint GetDataPropertyAsUInt32LE(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }
@@ -348,26 +348,26 @@ public static class GpuInfo
         }
     }
 
-    private static nint GetDictionaryProperty(uint entry, string key)
+    private static IntPtr GetDictionaryProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
-            return nint.Zero;
+            return IntPtr.Zero;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
-                return nint.Zero;
+                return IntPtr.Zero;
             }
 
             if (CFGetTypeID(val) != CFDictionaryGetTypeID())
             {
                 CFRelease(val);
-                return nint.Zero;
+                return IntPtr.Zero;
             }
 
             return val;
@@ -378,10 +378,10 @@ public static class GpuInfo
         }
     }
 
-    private static long GetDictNumber(nint dict, string key)
+    private static long GetDictNumber(IntPtr dict, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
@@ -389,7 +389,7 @@ public static class GpuInfo
         try
         {
             var val = CFDictionaryGetValue(dict, cfKey);
-            if (val == nint.Zero)
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }

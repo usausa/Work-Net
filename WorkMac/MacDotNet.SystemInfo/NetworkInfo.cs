@@ -94,7 +94,7 @@ public static class NetworkInfo
         {
             var map = new Dictionary<string, InterfaceBuilder>(StringComparer.Ordinal);
 
-            for (var ptr = ifap; ptr != nint.Zero;)
+            for (var ptr = ifap; ptr != IntPtr.Zero;)
             {
                 var ifa = Marshal.PtrToStructure<ifaddrs>(ptr);
                 var name = Marshal.PtrToStringUTF8(ifa.ifa_name);
@@ -107,7 +107,7 @@ public static class NetworkInfo
                         map[name] = builder;
                     }
 
-                    if (ifa.ifa_addr != nint.Zero)
+                    if (ifa.ifa_addr != IntPtr.Zero)
                     {
                         var family = ((sockaddr*)ifa.ifa_addr)->sa_family;
                         switch (family)
@@ -138,7 +138,7 @@ public static class NetworkInfo
 
     private static unsafe void ProcessLinkAddress(ifaddrs ifa, InterfaceBuilder builder)
     {
-        if (ifa.ifa_data != nint.Zero)
+        if (ifa.ifa_data != IntPtr.Zero)
         {
             var data = (if_data*)ifa.ifa_data;
             builder.InterfaceType = data->ifi_type;
@@ -188,19 +188,19 @@ public static class NetworkInfo
         var sinAddr = (byte*)ifa.ifa_addr + sockaddr_in.AddrOffset;
         var buf = stackalloc byte[(int)INET_ADDRSTRLEN];
 
-        if (inet_ntop(AF_INET, sinAddr, buf, INET_ADDRSTRLEN) == nint.Zero)
+        if (inet_ntop(AF_INET, sinAddr, buf, INET_ADDRSTRLEN) == IntPtr.Zero)
         {
             return;
         }
 
-        var address = Marshal.PtrToStringUTF8((nint)buf);
+        var address = Marshal.PtrToStringUTF8((IntPtr)buf);
         if (address is null)
         {
             return;
         }
 
         var prefix = 0;
-        if (ifa.ifa_netmask != nint.Zero)
+        if (ifa.ifa_netmask != IntPtr.Zero)
         {
             var maskAddr = (byte*)ifa.ifa_netmask + sockaddr_in.AddrOffset;
             prefix = CountPrefixBits(maskAddr, 4);
@@ -214,12 +214,12 @@ public static class NetworkInfo
         var sin6Addr = (byte*)ifa.ifa_addr + sockaddr_in6.AddrOffset;
         var buf = stackalloc byte[(int)INET6_ADDRSTRLEN];
 
-        if (inet_ntop(AF_INET6, sin6Addr, buf, INET6_ADDRSTRLEN) == nint.Zero)
+        if (inet_ntop(AF_INET6, sin6Addr, buf, INET6_ADDRSTRLEN) == IntPtr.Zero)
         {
             return;
         }
 
-        var address = Marshal.PtrToStringUTF8((nint)buf);
+        var address = Marshal.PtrToStringUTF8((IntPtr)buf);
         if (address is null)
         {
             return;
@@ -232,7 +232,7 @@ public static class NetworkInfo
         }
 
         var prefix = 0;
-        if (ifa.ifa_netmask != nint.Zero)
+        if (ifa.ifa_netmask != IntPtr.Zero)
         {
             var maskAddr = (byte*)ifa.ifa_netmask + sockaddr_in6.AddrOffset;
             prefix = CountPrefixBits(maskAddr, 16);

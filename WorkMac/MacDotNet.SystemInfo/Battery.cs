@@ -128,7 +128,7 @@ public sealed class Battery
     // Helper
     //--------------------------------------------------------------------------------
 
-    private static unsafe string? GetStringValue(nint dict, string keyName)
+    private static unsafe string? GetStringValue(IntPtr dict, string keyName)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)
@@ -146,7 +146,7 @@ public sealed class Battery
 
             var buffer = stackalloc byte[256];
             return CFStringGetCString(value, buffer, 256, kCFStringEncodingUTF8)
-                ? Marshal.PtrToStringUTF8((nint)buffer)
+                ? Marshal.PtrToStringUTF8((IntPtr)buffer)
                 : null;
         }
         finally
@@ -155,7 +155,7 @@ public sealed class Battery
         }
     }
 
-    private static int GetIntValue(nint dict, string keyName, int defaultValue = 0)
+    private static int GetIntValue(IntPtr dict, string keyName, int defaultValue = 0)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)
@@ -179,7 +179,7 @@ public sealed class Battery
         }
     }
 
-    private static bool GetBoolValue(nint dict, string keyName)
+    private static bool GetBoolValue(IntPtr dict, string keyName)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)

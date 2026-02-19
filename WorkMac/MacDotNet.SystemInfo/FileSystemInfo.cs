@@ -72,9 +72,9 @@ public static class FileSystemInfo
             {
                 result[i] = new FileSystemEntry
                 {
-                    MountPoint = Marshal.PtrToStringUTF8((nint)ptr[i].f_mntonname) ?? string.Empty,
-                    TypeName = Marshal.PtrToStringUTF8((nint)ptr[i].f_fstypename) ?? string.Empty,
-                    DeviceName = Marshal.PtrToStringUTF8((nint)ptr[i].f_mntfromname) ?? string.Empty,
+                    MountPoint = Marshal.PtrToStringUTF8((IntPtr)ptr[i].f_mntonname) ?? string.Empty,
+                    TypeName = Marshal.PtrToStringUTF8((IntPtr)ptr[i].f_fstypename) ?? string.Empty,
+                    DeviceName = Marshal.PtrToStringUTF8((IntPtr)ptr[i].f_mntfromname) ?? string.Empty,
                     BlockSize = ptr[i].f_bsize,
                     IOSize = ptr[i].f_iosize,
                     TotalBlocks = ptr[i].f_blocks,

@@ -230,7 +230,7 @@ internal static class NetworkInfoProvider
         {
             var map = new Dictionary<string, InterfaceBuilder>(StringComparer.Ordinal);
 
-            for (var ptr = ifap; ptr != nint.Zero;)
+            for (var ptr = ifap; ptr != IntPtr.Zero;)
             {
                 var ifa = Marshal.PtrToStructure<ifaddrs>(ptr);
                 var name = Marshal.PtrToStringUTF8(ifa.ifa_name);
@@ -243,7 +243,7 @@ internal static class NetworkInfoProvider
                         map[name] = builder;
                     }
 
-                    if (ifa.ifa_addr != nint.Zero)
+                    if (ifa.ifa_addr != IntPtr.Zero)
                     {
                         var family = ((sockaddr*)ifa.ifa_addr)->sa_family;
                         switch (family)
@@ -275,7 +275,7 @@ internal static class NetworkInfoProvider
     private static unsafe void ProcessLinkAddress(ifaddrs ifa, InterfaceBuilder builder)
     {
         // AF_LINKの場合、ifa_dataはif_data構造体を指す (インターフェース統計情報)
-        if (ifa.ifa_data != nint.Zero)
+        if (ifa.ifa_data != IntPtr.Zero)
         {
             var data = (if_data*)ifa.ifa_data;
             builder.InterfaceType = data->ifi_type;
@@ -329,19 +329,19 @@ internal static class NetworkInfoProvider
         var sinAddr = (byte*)ifa.ifa_addr + sockaddr_in.AddrOffset;
         var buf = stackalloc byte[(int)INET_ADDRSTRLEN];
 
-        if (inet_ntop(AF_INET, sinAddr, buf, INET_ADDRSTRLEN) == nint.Zero)
+        if (inet_ntop(AF_INET, sinAddr, buf, INET_ADDRSTRLEN) == IntPtr.Zero)
         {
             return;
         }
 
-        var address = Marshal.PtrToStringUTF8((nint)buf);
+        var address = Marshal.PtrToStringUTF8((IntPtr)buf);
         if (address is null)
         {
             return;
         }
 
         var prefix = 0;
-        if (ifa.ifa_netmask != nint.Zero)
+        if (ifa.ifa_netmask != IntPtr.Zero)
         {
             var maskAddr = (byte*)ifa.ifa_netmask + sockaddr_in.AddrOffset;
             prefix = CountPrefixBits(maskAddr, 4);
@@ -356,12 +356,12 @@ internal static class NetworkInfoProvider
         var sin6Addr = (byte*)ifa.ifa_addr + sockaddr_in6.AddrOffset;
         var buf = stackalloc byte[(int)INET6_ADDRSTRLEN];
 
-        if (inet_ntop(AF_INET6, sin6Addr, buf, INET6_ADDRSTRLEN) == nint.Zero)
+        if (inet_ntop(AF_INET6, sin6Addr, buf, INET6_ADDRSTRLEN) == IntPtr.Zero)
         {
             return;
         }
 
-        var address = Marshal.PtrToStringUTF8((nint)buf);
+        var address = Marshal.PtrToStringUTF8((IntPtr)buf);
         if (address is null)
         {
             return;
@@ -375,7 +375,7 @@ internal static class NetworkInfoProvider
         }
 
         var prefix = 0;
-        if (ifa.ifa_netmask != nint.Zero)
+        if (ifa.ifa_netmask != IntPtr.Zero)
         {
             var maskAddr = (byte*)ifa.ifa_netmask + sockaddr_in6.AddrOffset;
             prefix = CountPrefixBits(maskAddr, 16);
@@ -569,25 +569,25 @@ internal static class NativeMethods
     public struct ifaddrs
     {
         // 次のエントリへのポインタ (リスト終端ではNULL)
-        public nint ifa_next;
+        public IntPtr ifa_next;
 
         // インターフェース名 (例: "en0")
-        public nint ifa_name;
+        public IntPtr ifa_name;
 
         // インターフェースフラグ (IFF_*の組み合わせ)
         public uint ifa_flags;
 
         // アドレス情報 (sa_familyでアドレス種別を判別)
-        public nint ifa_addr;
+        public IntPtr ifa_addr;
 
         // ネットマスク
-        public nint ifa_netmask;
+        public IntPtr ifa_netmask;
 
         // 宛先アドレス (ポイントツーポイントの場合) またはブロードキャストアドレス
-        public nint ifa_dstaddr;
+        public IntPtr ifa_dstaddr;
 
         // アドレスファミリー固有のデータ (AF_LINKの場合はif_data*)
-        public nint ifa_data;
+        public IntPtr ifa_data;
     }
 
     // ソケットアドレス基本構造体 (sys/socket.h)
@@ -735,11 +735,11 @@ internal static class NativeMethods
     // ネットワークインターフェースアドレスの一覧を取得
     // 成功時0を返し、ifapにリンクリストの先頭ポインタを設定する
     [DllImport(LibC)]
-    public static extern int getifaddrs(out nint ifap);
+    public static extern int getifaddrs(out IntPtr ifap);
 
     // getifaddrsで取得したリンクリストを解放する
     [DllImport(LibC)]
-    public static extern void freeifaddrs(nint ifa);
+    public static extern void freeifaddrs(IntPtr ifa);
 
     // ネットワークアドレスのバイナリ表現を文字列に変換する
     // af: アドレスファミリー (AF_INET/AF_INET6)
@@ -748,5 +748,5 @@ internal static class NativeMethods
     // size: 出力バッファのサイズ
     // 成功時dstポインタ、失敗時IntPtr.Zeroを返す
     [DllImport(LibC)]
-    public static extern unsafe nint inet_ntop(int af, void* src, byte* dst, uint size);
+    public static extern unsafe IntPtr inet_ntop(int af, void* src, byte* dst, uint size);
 }

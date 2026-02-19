@@ -132,7 +132,7 @@ public sealed class CpuLoadInfo
         }
         finally
         {
-            vm_deallocate(mach_task_self(), (nint)cpuInfo, (nuint)(cpuInfoCount * sizeof(int)));
+            vm_deallocate(mach_task_self(), (IntPtr)cpuInfo, (nuint)(cpuInfoCount * sizeof(int)));
         }
 
         return true;

@@ -52,7 +52,7 @@ public sealed class MemoryPressureInfo
     public unsafe bool Update()
     {
         int level;
-        var len = (nint)sizeof(int);
+        var len = (IntPtr)sizeof(int);
         if (sysctlbyname("kern.memorystatus_vm_pressure_level", &level, ref len, IntPtr.Zero, 0) == 0)
         {
             Level = level;

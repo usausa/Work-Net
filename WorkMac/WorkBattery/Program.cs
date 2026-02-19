@@ -175,7 +175,7 @@ internal static class BatteryInfoProvider
         }
     }
 
-    private static unsafe string? GetStringValue(nint dict, string keyName)
+    private static unsafe string? GetStringValue(IntPtr dict, string keyName)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)
@@ -193,7 +193,7 @@ internal static class BatteryInfoProvider
 
             var buffer = stackalloc byte[256];
             return CFStringGetCString(value, buffer, 256, kCFStringEncodingUTF8)
-                ? Marshal.PtrToStringUTF8((nint)buffer)
+                ? Marshal.PtrToStringUTF8((IntPtr)buffer)
                 : null;
         }
         finally
@@ -202,7 +202,7 @@ internal static class BatteryInfoProvider
         }
     }
 
-    private static int GetIntValue(nint dict, string keyName, int defaultValue = 0)
+    private static int GetIntValue(IntPtr dict, string keyName, int defaultValue = 0)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)
@@ -226,7 +226,7 @@ internal static class BatteryInfoProvider
         }
     }
 
-    private static bool GetBoolValue(nint dict, string keyName)
+    private static bool GetBoolValue(IntPtr dict, string keyName)
     {
         var key = CFStringCreateWithCString(IntPtr.Zero, keyName, kCFStringEncodingUTF8);
         if (key == IntPtr.Zero)
@@ -289,31 +289,31 @@ internal static class NativeMethods
     private const string CoreFoundationLib = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
 
     [DllImport(CoreFoundationLib)]
-    public static extern void CFRelease(nint cf);
+    public static extern void CFRelease(IntPtr cf);
 
     [DllImport(CoreFoundationLib)]
-    public static extern long CFArrayGetCount(nint theArray);
+    public static extern long CFArrayGetCount(IntPtr theArray);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFArrayGetValueAtIndex(nint theArray, long idx);
+    public static extern IntPtr CFArrayGetValueAtIndex(IntPtr theArray, long idx);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFDictionaryGetValue(nint theDict, nint key);
+    public static extern IntPtr CFDictionaryGetValue(IntPtr theDict, IntPtr key);
 
     [DllImport(CoreFoundationLib)]
-    public static extern nint CFStringCreateWithCString(nint alloc, [MarshalAs(UnmanagedType.LPUTF8Str)] string cStr, uint encoding);
-
-    [DllImport(CoreFoundationLib)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern unsafe bool CFStringGetCString(nint theString, byte* buffer, long bufferSize, uint encoding);
+    public static extern IntPtr CFStringCreateWithCString(IntPtr alloc, [MarshalAs(UnmanagedType.LPUTF8Str)] string cStr, uint encoding);
 
     [DllImport(CoreFoundationLib)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFNumberGetValue(nint number, long theType, out int value);
+    public static extern unsafe bool CFStringGetCString(IntPtr theString, byte* buffer, long bufferSize, uint encoding);
 
     [DllImport(CoreFoundationLib)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFBooleanGetValue(nint boolean);
+    public static extern bool CFNumberGetValue(IntPtr number, long theType, out int value);
+
+    [DllImport(CoreFoundationLib)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool CFBooleanGetValue(IntPtr boolean);
 
     //------------------------------------------------------------------------
     // IOKit Power Sources
@@ -322,12 +322,12 @@ internal static class NativeMethods
     private const string IOKitLib = "/System/Library/Frameworks/IOKit.framework/IOKit";
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSCopyPowerSourcesInfo();
+    public static extern IntPtr IOPSCopyPowerSourcesInfo();
 
     [DllImport(IOKitLib)]
-    public static extern nint IOPSCopyPowerSourcesList(nint blob);
+    public static extern IntPtr IOPSCopyPowerSourcesList(IntPtr blob);
 
     // 戻り値はunowned参照のため、CFReleaseしないこと
     [DllImport(IOKitLib)]
-    public static extern nint IOPSGetPowerSourceDescription(nint blob, nint ps);
+    public static extern IntPtr IOPSGetPowerSourceDescription(IntPtr blob, IntPtr ps);
 }

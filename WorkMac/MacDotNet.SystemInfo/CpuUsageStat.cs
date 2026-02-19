@@ -139,7 +139,7 @@ public sealed class CpuUsageStat
         }
         finally
         {
-            _ = vm_deallocate(task_self_trap(), info, (nint)(infoCnt * sizeof(int)));
+            _ = vm_deallocate(task_self_trap(), info, (IntPtr)(infoCnt * sizeof(int)));
         }
     }
 

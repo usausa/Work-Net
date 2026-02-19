@@ -36,7 +36,7 @@ public sealed class KernelInfo
     {
         var bootTime = DateTimeOffset.MinValue;
         NativeMethods.timeval_boot tv;
-        var len = (nint)sizeof(NativeMethods.timeval_boot);
+        var len = (IntPtr)sizeof(NativeMethods.timeval_boot);
         if (NativeMethods.sysctlbyname("kern.boottime", &tv, ref len, IntPtr.Zero, 0) == 0)
         {
             bootTime = DateTimeOffset.FromUnixTimeSeconds(tv.tv_sec);

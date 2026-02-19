@@ -187,14 +187,14 @@ internal static class ProcessInfoProvider
                 // パス取得
                 var pathLen = proc_pidpath(pid, pathBuffer, PROC_PIDPATHINFO_MAXSIZE);
                 var path = pathLen > 0
-                    ? Marshal.PtrToStringUTF8((nint)pathBuffer) ?? string.Empty
+                    ? Marshal.PtrToStringUTF8((IntPtr)pathBuffer) ?? string.Empty
                     : string.Empty;
 
                 // 名前取得 (pbi_nameを優先、空ならpbi_commを使用)
-                var name = Marshal.PtrToStringUTF8((nint)bsdInfo.pbi_name);
+                var name = Marshal.PtrToStringUTF8((IntPtr)bsdInfo.pbi_name);
                 if (string.IsNullOrEmpty(name))
                 {
-                    name = Marshal.PtrToStringUTF8((nint)bsdInfo.pbi_comm) ?? string.Empty;
+                    name = Marshal.PtrToStringUTF8((IntPtr)bsdInfo.pbi_comm) ?? string.Empty;
                 }
 
                 var startTime = DateTimeOffset.FromUnixTimeSeconds((long)bsdInfo.pbi_start_tvsec)

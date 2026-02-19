@@ -710,7 +710,7 @@ internal static class NativeMethods
     //------------------------------------------------------------------------
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern uint IOServiceGetMatchingService(uint mainPort, nint matching);
+    public static extern uint IOServiceGetMatchingService(uint mainPort, IntPtr matching);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
     public static extern int IOServiceOpen(uint service, uint owningTask, uint type, out uint connect);
@@ -722,7 +722,7 @@ internal static class NativeMethods
     public static extern int IOObjectRelease(uint @object);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern nint IOServiceMatching(
+    public static extern IntPtr IOServiceMatching(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]

@@ -373,7 +373,7 @@ internal static class HardwareInfoProvider
         // kern.boottime は struct timeval (16バイト)
         var bootTime = DateTimeOffset.MinValue;
         timeval tv;
-        var len = (nint)sizeof(timeval);
+        var len = (IntPtr)sizeof(timeval);
         if (sysctlbyname("kern.boottime", &tv, ref len, IntPtr.Zero, 0) == 0)
         {
             bootTime = DateTimeOffset.FromUnixTimeSeconds(tv.tv_sec);
@@ -401,21 +401,21 @@ internal static class HardwareInfoProvider
     private static unsafe int GetSysctlInt(string name)
     {
         int value;
-        var len = (nint)sizeof(int);
+        var len = (IntPtr)sizeof(int);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 
     private static unsafe long GetSysctlLong(string name)
     {
         long value;
-        var len = (nint)sizeof(long);
+        var len = (IntPtr)sizeof(long);
         return sysctlbyname(name, &value, ref len, IntPtr.Zero, 0) == 0 ? value : 0;
     }
 
     private static unsafe string? GetSysctlString(string name)
     {
         // 1回目: サイズ取得
-        var len = (nint)0;
+        var len = (IntPtr)0;
         if (sysctlbyname(name, null, ref len, IntPtr.Zero, 0) != 0 || len <= 0)
         {
             return null;
@@ -431,7 +431,7 @@ internal static class HardwareInfoProvider
         var allocatedSize = len;
         var buffer = stackalloc byte[(int)allocatedSize];
         return sysctlbyname(name, buffer, ref len, IntPtr.Zero, 0) == 0
-            ? Marshal.PtrToStringUTF8((nint)buffer)
+            ? Marshal.PtrToStringUTF8((IntPtr)buffer)
             : null;
     }
 }
@@ -467,7 +467,7 @@ internal static class NativeMethods
     public static extern unsafe int sysctlbyname(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         void* oldp,
-        ref nint oldlenp,
-        nint newp,
-        nint newlen);
+        ref IntPtr oldlenp,
+        IntPtr newp,
+        IntPtr newlen);
 }

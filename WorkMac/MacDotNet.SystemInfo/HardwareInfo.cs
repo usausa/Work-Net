@@ -149,7 +149,7 @@ public sealed class HardwareInfo
     private static string? GetSerialNumber()
     {
         var matching = IOServiceMatching("IOPlatformExpertDevice");
-        if (matching == nint.Zero)
+        if (matching == IntPtr.Zero)
         {
             return null;
         }
@@ -162,11 +162,11 @@ public sealed class HardwareInfo
 
         try
         {
-            var key = CFStringCreateWithCString(nint.Zero, "IOPlatformSerialNumber", kCFStringEncodingUTF8);
-            var value = IORegistryEntryCreateCFProperty(service, key, nint.Zero, 0);
+            var key = CFStringCreateWithCString(IntPtr.Zero, "IOPlatformSerialNumber", kCFStringEncodingUTF8);
+            var value = IORegistryEntryCreateCFProperty(service, key, IntPtr.Zero, 0);
             CFRelease(key);
 
-            if (value == nint.Zero)
+            if (value == IntPtr.Zero)
             {
                 return null;
             }

@@ -175,9 +175,9 @@ internal static class GpuInfoProvider
 {
     public static GpuInfo[] GetGpuInfo()
     {
-        var iter = nint.Zero;
+        var iter = IntPtr.Zero;
         var kr = IOServiceGetMatchingServices(0, IOServiceMatching("IOAccelerator"), ref iter);
-        if (kr != KERN_SUCCESS || iter == nint.Zero)
+        if (kr != KERN_SUCCESS || iter == IntPtr.Zero)
         {
             return [];
         }
@@ -223,7 +223,7 @@ internal static class GpuInfoProvider
     private static GpuPerformanceStatistics? ReadPerformanceStatistics(uint entry)
     {
         var dict = GetDictionaryProperty(entry, "PerformanceStatistics");
-        if (dict == nint.Zero)
+        if (dict == IntPtr.Zero)
         {
             return null;
         }
@@ -253,7 +253,7 @@ internal static class GpuInfoProvider
     private static GpuConfiguration? ReadGpuConfiguration(uint entry)
     {
         var dict = GetDictionaryProperty(entry, "GPUConfigurationVariable");
-        if (dict == nint.Zero)
+        if (dict == IntPtr.Zero)
         {
             return null;
         }
@@ -279,16 +279,16 @@ internal static class GpuInfoProvider
     // IORegistry文字列プロパティ取得
     private static string? GetStringProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return null;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return null;
             }
@@ -316,16 +316,16 @@ internal static class GpuInfoProvider
     // IORegistry数値プロパティ取得
     private static long GetNumberProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }
@@ -355,16 +355,16 @@ internal static class GpuInfoProvider
     // IORegistryデータプロパティからリトルエンディアンuint32を取得
     private static uint GetDataPropertyAsUInt32LE(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }
@@ -400,26 +400,26 @@ internal static class GpuInfoProvider
     }
 
     // IORegistry辞書プロパティ取得 (呼び出し元がCFReleaseすること)
-    private static nint GetDictionaryProperty(uint entry, string key)
+    private static IntPtr GetDictionaryProperty(uint entry, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
-            return nint.Zero;
+            return IntPtr.Zero;
         }
 
         try
         {
-            var val = IORegistryEntryCreateCFProperty(entry, cfKey, nint.Zero, 0);
-            if (val == nint.Zero)
+            var val = IORegistryEntryCreateCFProperty(entry, cfKey, IntPtr.Zero, 0);
+            if (val == IntPtr.Zero)
             {
-                return nint.Zero;
+                return IntPtr.Zero;
             }
 
             if (CFGetTypeID(val) != CFDictionaryGetTypeID())
             {
                 CFRelease(val);
-                return nint.Zero;
+                return IntPtr.Zero;
             }
 
             return val;
@@ -431,10 +431,10 @@ internal static class GpuInfoProvider
     }
 
     // CFDictionaryから数値を取得
-    private static long GetDictNumber(nint dict, string key)
+    private static long GetDictNumber(IntPtr dict, string key)
     {
-        var cfKey = CFStringCreateWithCString(nint.Zero, key, kCFStringEncodingUTF8);
-        if (cfKey == nint.Zero)
+        var cfKey = CFStringCreateWithCString(IntPtr.Zero, key, kCFStringEncodingUTF8);
+        if (cfKey == IntPtr.Zero)
         {
             return 0;
         }
@@ -442,7 +442,7 @@ internal static class GpuInfoProvider
         try
         {
             var val = CFDictionaryGetValue(dict, cfKey);
-            if (val == nint.Zero)
+            if (val == IntPtr.Zero)
             {
                 return 0;
             }
@@ -463,10 +463,10 @@ internal static class GpuInfoProvider
     }
 
     // CFStringをマネージド文字列に変換
-    private static unsafe string? CfStringToManaged(nint cfString)
+    private static unsafe string? CfStringToManaged(IntPtr cfString)
     {
         var ptr = CFStringGetCStringPtr(cfString, kCFStringEncodingUTF8);
-        if (ptr != nint.Zero)
+        if (ptr != IntPtr.Zero)
         {
             return Marshal.PtrToStringUTF8(ptr);
         }
@@ -481,7 +481,7 @@ internal static class GpuInfoProvider
         var bufSize = (length * 4) + 1;
         var buf = stackalloc byte[(int)bufSize];
         return CFStringGetCString(cfString, buf, bufSize, kCFStringEncodingUTF8)
-            ? Marshal.PtrToStringUTF8((nint)buf)
+            ? Marshal.PtrToStringUTF8((IntPtr)buf)
             : null;
     }
 }
@@ -510,26 +510,26 @@ internal static class NativeMethods
     //------------------------------------------------------------------------
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern int IOServiceGetMatchingServices(uint mainPort, nint matching, ref nint existing);
+    public static extern int IOServiceGetMatchingServices(uint mainPort, IntPtr matching, ref IntPtr existing);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern uint IOIteratorNext(nint iterator);
+    public static extern uint IOIteratorNext(IntPtr iterator);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern int IOObjectRelease(nint @object);
+    public static extern int IOObjectRelease(IntPtr @object);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
     public static extern int IOObjectRelease(uint @object);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern nint IOServiceMatching(
+    public static extern IntPtr IOServiceMatching(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
 
     [DllImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    public static extern nint IORegistryEntryCreateCFProperty(
+    public static extern IntPtr IORegistryEntryCreateCFProperty(
         uint entry,
-        nint key,
-        nint allocator,
+        IntPtr key,
+        IntPtr allocator,
         uint options);
 
     //------------------------------------------------------------------------
@@ -537,25 +537,25 @@ internal static class NativeMethods
     //------------------------------------------------------------------------
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFStringCreateWithCString(nint alloc,
+    public static extern IntPtr CFStringCreateWithCString(IntPtr alloc,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string cStr,
         uint encoding);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFStringGetCStringPtr(nint theString, uint encoding);
+    public static extern IntPtr CFStringGetCStringPtr(IntPtr theString, uint encoding);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFStringGetLength(nint theString);
+    public static extern IntPtr CFStringGetLength(IntPtr theString);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern unsafe bool CFStringGetCString(nint theString, byte* buffer, nint bufferSize, uint encoding);
+    public static extern unsafe bool CFStringGetCString(IntPtr theString, byte* buffer, IntPtr bufferSize, uint encoding);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool CFNumberGetValue(nint number, int theType, ref long valuePtr);
+    public static extern bool CFNumberGetValue(IntPtr number, int theType, ref long valuePtr);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nuint CFGetTypeID(nint cf);
+    public static extern nuint CFGetTypeID(IntPtr cf);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     public static extern nuint CFStringGetTypeID();
@@ -570,14 +570,14 @@ internal static class NativeMethods
     public static extern nuint CFDataGetTypeID();
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFDictionaryGetValue(nint theDict, nint key);
+    public static extern IntPtr CFDictionaryGetValue(IntPtr theDict, IntPtr key);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFDataGetLength(nint theData);
+    public static extern IntPtr CFDataGetLength(IntPtr theData);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern nint CFDataGetBytePtr(nint theData);
+    public static extern IntPtr CFDataGetBytePtr(IntPtr theData);
 
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
-    public static extern void CFRelease(nint cf);
+    public static extern void CFRelease(IntPtr cf);
 }
