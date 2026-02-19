@@ -90,7 +90,7 @@ public sealed class MemoryStat
 
     internal MemoryStat()
     {
-        PhysicalMemory = Helper.GetSysctlUlong("hw.memsize");
+        PhysicalMemory = GetSystemControlUInt64("hw.memsize");
         Update();
     }
 

@@ -81,33 +81,33 @@ public sealed class HardwareInfo
 
     private HardwareInfo()
     {
-        Model = Helper.GetSysctlString("hw.model") ?? string.Empty;
-        Machine = Helper.GetSysctlString("hw.machine") ?? string.Empty;
-        TargetType = Helper.GetSysctlString("hw.targettype");
-        CpuBrandString = Helper.GetSysctlString("machdep.cpu.brand_string");
+        Model = GetSystemControlString("hw.model") ?? string.Empty;
+        Machine = GetSystemControlString("hw.machine") ?? string.Empty;
+        TargetType = GetSystemControlString("hw.targettype");
+        CpuBrandString = GetSystemControlString("machdep.cpu.brand_string");
         SerialNumber = GetSerialNumber();
-        LogicalCpu = Helper.GetSysctlInt("hw.logicalcpu");
-        LogicalCpuMax = Helper.GetSysctlInt("hw.logicalcpu_max");
-        PhysicalCpu = Helper.GetSysctlInt("hw.physicalcpu");
-        PhysicalCpuMax = Helper.GetSysctlInt("hw.physicalcpu_max");
-        ActiveCpu = Helper.GetSysctlInt("hw.activecpu");
-        Ncpu = Helper.GetSysctlInt("hw.ncpu");
-        CpuCoreCount = Helper.GetSysctlInt("machdep.cpu.core_count");
-        CpuThreadCount = Helper.GetSysctlInt("machdep.cpu.thread_count");
-        CpuFrequency = Helper.GetSysctlLong("hw.cpufrequency");
-        CpuFrequencyMax = Helper.GetSysctlLong("hw.cpufrequency_max");
-        BusFrequency = Helper.GetSysctlLong("hw.busfrequency");
-        TbFrequency = Helper.GetSysctlLong("hw.tbfrequency");
-        MemSize = Helper.GetSysctlLong("hw.memsize");
-        PageSize = Helper.GetSysctlLong("hw.pagesize");
-        ByteOrder = Helper.GetSysctlInt("hw.byteorder");
-        CacheLineSize = Helper.GetSysctlLong("hw.cachelinesize");
-        L1ICacheSize = Helper.GetSysctlLong("hw.l1icachesize");
-        L1DCacheSize = Helper.GetSysctlLong("hw.l1dcachesize");
-        L2CacheSize = Helper.GetSysctlLong("hw.l2cachesize");
-        L3CacheSize = Helper.GetSysctlLong("hw.l3cachesize");
-        Packages = Helper.GetSysctlInt("hw.packages");
-        Cpu64BitCapable = Helper.GetSysctlInt("hw.cpu64bit_capable") != 0;
+        LogicalCpu = GetSystemControlInt32("hw.logicalcpu");
+        LogicalCpuMax = GetSystemControlInt32("hw.logicalcpu_max");
+        PhysicalCpu = GetSystemControlInt32("hw.physicalcpu");
+        PhysicalCpuMax = GetSystemControlInt32("hw.physicalcpu_max");
+        ActiveCpu = GetSystemControlInt32("hw.activecpu");
+        Ncpu = GetSystemControlInt32("hw.ncpu");
+        CpuCoreCount = GetSystemControlInt32("machdep.cpu.core_count");
+        CpuThreadCount = GetSystemControlInt32("machdep.cpu.thread_count");
+        CpuFrequency = GetSystemControlInt64("hw.cpufrequency");
+        CpuFrequencyMax = GetSystemControlInt64("hw.cpufrequency_max");
+        BusFrequency = GetSystemControlInt64("hw.busfrequency");
+        TbFrequency = GetSystemControlInt64("hw.tbfrequency");
+        MemSize = GetSystemControlInt64("hw.memsize");
+        PageSize = GetSystemControlInt64("hw.pagesize");
+        ByteOrder = GetSystemControlInt32("hw.byteorder");
+        CacheLineSize = GetSystemControlInt64("hw.cachelinesize");
+        L1ICacheSize = GetSystemControlInt64("hw.l1icachesize");
+        L1DCacheSize = GetSystemControlInt64("hw.l1dcachesize");
+        L2CacheSize = GetSystemControlInt64("hw.l2cachesize");
+        L3CacheSize = GetSystemControlInt64("hw.l3cachesize");
+        Packages = GetSystemControlInt32("hw.packages");
+        Cpu64BitCapable = GetSystemControlInt32("hw.cpu64bit_capable") != 0;
     }
 
     //--------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ public sealed class HardwareInfo
 
     public static PerformanceLevelEntry[] GetPerformanceLevels()
     {
-        var count = Helper.GetSysctlInt("hw.nperflevels");
+        var count = GetSystemControlInt32("hw.nperflevels");
         if (count <= 0)
         {
             return [];
@@ -130,12 +130,12 @@ public sealed class HardwareInfo
             levels[i] = new PerformanceLevelEntry
             {
                 Index = i,
-                Name = Helper.GetSysctlString($"hw.perflevel{i}.name") ?? $"Level {i}",
-                PhysicalCpu = Helper.GetSysctlInt($"hw.perflevel{i}.physicalcpu"),
-                LogicalCpu = Helper.GetSysctlInt($"hw.perflevel{i}.logicalcpu"),
-                CpusPerL2 = Helper.GetSysctlInt($"hw.perflevel{i}.cpusperl2"),
-                L2CacheSize = Helper.GetSysctlInt($"hw.perflevel{i}.l2cachesize"),
-                CpuFrequencyMax = Helper.GetSysctlInt($"hw.perflevel{i}.cpufreq_max"),
+                Name = GetSystemControlString($"hw.perflevel{i}.name") ?? $"Level {i}",
+                PhysicalCpu = GetSystemControlInt32($"hw.perflevel{i}.physicalcpu"),
+                LogicalCpu = GetSystemControlInt32($"hw.perflevel{i}.logicalcpu"),
+                CpusPerL2 = GetSystemControlInt32($"hw.perflevel{i}.cpusperl2"),
+                L2CacheSize = GetSystemControlInt32($"hw.perflevel{i}.l2cachesize"),
+                CpuFrequencyMax = GetSystemControlInt32($"hw.perflevel{i}.cpufreq_max"),
             };
         }
 

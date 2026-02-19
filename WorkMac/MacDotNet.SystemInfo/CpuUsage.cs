@@ -14,12 +14,6 @@ public sealed class CpuUsage
 
     public DateTime UpdateAt { get; private set; }
 
-    public int LogicalCpu { get; }
-
-    public int PhysicalCpu { get; }
-
-    public bool HasHyperthreading { get; }
-
     public double UserLoad { get; private set; }
 
     public double SystemLoad { get; private set; }
@@ -35,17 +29,6 @@ public sealed class CpuUsage
     public double? ECoreUsage { get; private set; }
 
     public double? PCoreUsage { get; private set; }
-
-    //--------------------------------------------------------------------------------
-    // Constructor
-    //--------------------------------------------------------------------------------
-
-    private CpuUsage()
-    {
-        LogicalCpu = Helper.GetSysctlInt("hw.logicalcpu");
-        PhysicalCpu = Helper.GetSysctlInt("hw.physicalcpu");
-        HasHyperthreading = LogicalCpu != PhysicalCpu;
-    }
 
     //--------------------------------------------------------------------------------
     // Factory
@@ -149,7 +132,7 @@ public sealed class CpuUsage
 
     private void CalculateAppleSiliconCoreUsage()
     {
-        var nperflevels = Helper.GetSysctlInt("hw.nperflevels");
+        var nperflevels = GetSystemControlInt32("hw.nperflevels");
         if (nperflevels <= 0)
         {
             ECoreUsage = null;
@@ -157,8 +140,8 @@ public sealed class CpuUsage
             return;
         }
 
-        var eCoreCount = Helper.GetSysctlInt("hw.perflevel0.logicalcpu");
-        var pCoreCount = Helper.GetSysctlInt("hw.perflevel1.logicalcpu");
+        var eCoreCount = GetSystemControlInt32("hw.perflevel0.logicalcpu");
+        var pCoreCount = GetSystemControlInt32("hw.perflevel1.logicalcpu");
 
         if (eCoreCount > 0 && UsagePerCore.Length >= eCoreCount)
         {

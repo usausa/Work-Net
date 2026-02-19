@@ -1,5 +1,7 @@
 namespace MacDotNet.SystemInfo;
 
+using static MacDotNet.SystemInfo.NativeMethods;
+
 public sealed class KernelInfo
 {
     public string OsType { get; }
@@ -16,8 +18,6 @@ public sealed class KernelInfo
 
     public string Uuid { get; }
 
-    public DateTimeOffset BootTime { get; }
-
     public int MaxProc { get; }
 
     public int MaxFiles { get; }
@@ -27,6 +27,8 @@ public sealed class KernelInfo
     public int ArgMax { get; }
 
     public int SecureLevel { get; }
+
+    public DateTimeOffset BootTime { get; }
 
     //--------------------------------------------------------------------------------
     // Constructor
@@ -41,20 +43,20 @@ public sealed class KernelInfo
         {
             bootTime = DateTimeOffset.FromUnixTimeSeconds(tv.tv_sec);
         }
-
-        OsType = Helper.GetSysctlString("kern.ostype") ?? string.Empty;
-        OsRelease = Helper.GetSysctlString("kern.osrelease") ?? string.Empty;
-        OsVersion = Helper.GetSysctlString("kern.osversion") ?? string.Empty;
-        OsProductVersion = Helper.GetSysctlString("kern.osproductversion");
-        OsRevision = Helper.GetSysctlInt("kern.osrevision");
-        KernelVersion = Helper.GetSysctlString("kern.version") ?? string.Empty;
-        Uuid = Helper.GetSysctlString("kern.uuid") ?? string.Empty;
         BootTime = bootTime;
-        MaxProc = Helper.GetSysctlInt("kern.maxproc");
-        MaxFiles = Helper.GetSysctlInt("kern.maxfiles");
-        MaxFilesPerProc = Helper.GetSysctlInt("kern.maxfilesperproc");
-        ArgMax = Helper.GetSysctlInt("kern.argmax");
-        SecureLevel = Helper.GetSysctlInt("kern.securelevel");
+
+        OsType = GetSystemControlString("kern.ostype") ?? string.Empty;
+        OsRelease = GetSystemControlString("kern.osrelease") ?? string.Empty;
+        OsVersion = GetSystemControlString("kern.osversion") ?? string.Empty;
+        OsProductVersion = GetSystemControlString("kern.osproductversion");
+        OsRevision = GetSystemControlInt32("kern.osrevision");
+        KernelVersion = GetSystemControlString("kern.version") ?? string.Empty;
+        Uuid = GetSystemControlString("kern.uuid") ?? string.Empty;
+        MaxProc = GetSystemControlInt32("kern.maxproc");
+        MaxFiles = GetSystemControlInt32("kern.maxfiles");
+        MaxFilesPerProc = GetSystemControlInt32("kern.maxfilesperproc");
+        ArgMax = GetSystemControlInt32("kern.argmax");
+        SecureLevel = GetSystemControlInt32("kern.securelevel");
     }
 
     //--------------------------------------------------------------------------------
