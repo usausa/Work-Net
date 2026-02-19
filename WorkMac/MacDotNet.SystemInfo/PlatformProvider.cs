@@ -21,7 +21,7 @@ public static class PlatformProvider
 
     public static LoadAverage GetLoadAverage() => new();
 
-    public static CpuUsageStat GetCpuUsageStat() => CpuUsageStat.Create();
+    public static CpuUsage GetCpuUsageStat() => CpuUsage.Create();
 
     //--------------------------------------------------------------------------------
     // Memory
@@ -29,7 +29,7 @@ public static class PlatformProvider
 
     public static MemoryStat GetMemoryStat() => new();
 
-    public static SwapStat GetSwapStat() => new();
+    public static SwapUsage GetSwapStat() => new();
 
     //--------------------------------------------------------------------------------
     // Storage

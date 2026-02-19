@@ -4,7 +4,7 @@ using static MacDotNet.SystemInfo.NativeMethods;
 
 public readonly record struct CpuLoadTicks(int CpuNumber, uint User, uint System, uint Idle, uint Nice);
 
-public sealed class CpuUsageStat
+public sealed class CpuUsage
 {
     private int[]? previousCpuTicks;
     private uint previousUserTicks;
@@ -40,7 +40,7 @@ public sealed class CpuUsageStat
     // Constructor
     //--------------------------------------------------------------------------------
 
-    private CpuUsageStat()
+    private CpuUsage()
     {
         LogicalCpu = Helper.GetSysctlInt("hw.logicalcpu");
         PhysicalCpu = Helper.GetSysctlInt("hw.physicalcpu");
@@ -51,7 +51,7 @@ public sealed class CpuUsageStat
     // Factory
     //--------------------------------------------------------------------------------
 
-    public static CpuUsageStat Create() => new();
+    public static CpuUsage Create() => new();
 
     //--------------------------------------------------------------------------------
     // Update

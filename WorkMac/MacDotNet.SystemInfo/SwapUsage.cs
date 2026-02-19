@@ -2,7 +2,7 @@ namespace MacDotNet.SystemInfo;
 
 using static MacDotNet.SystemInfo.NativeMethods;
 
-public sealed class SwapStat
+public sealed class SwapUsage
 {
     public DateTime UpdateAt { get; private set; }
 
@@ -24,7 +24,7 @@ public sealed class SwapStat
     // Constructor
     //--------------------------------------------------------------------------------
 
-    internal SwapStat()
+    internal SwapUsage()
     {
         Update();
     }
