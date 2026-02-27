@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Wasm/">
+    <Project Path="MudBlazorWasmApp/MudBlazorWasmApp.Client/MudBlazorWasmApp.Client.csproj" />
+    <Project Path="MudBlazorWasmApp/MudBlazorWasmApp/MudBlazorWasmApp.csproj" />
+  </Folder>
+  <Project Path="MudBlazorMixedApp/MudBlazorMixedApp.Client/MudBlazorMixedApp.Client.csproj" />
+  <Project Path="MudBlazorMixedApp/MudBlazorMixedApp/MudBlazorMixedApp.csproj" />
+  <Project Path="MudBlazorServerApp/MudBlazorServerApp.csproj" />
+</Solution>
