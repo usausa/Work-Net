@@ -16,6 +16,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Rewrite virtual-hosted style requests (e.g. http://bucket.s3.localhost:5128/key)
+// into path-style (e.g. /bucket/key) before any routing occurs.
+app.UseMiddleware<VirtualHostStyleMiddleware>();
+
 // Add S3-compatible response header
 app.Use(async (context, next) =>
 {

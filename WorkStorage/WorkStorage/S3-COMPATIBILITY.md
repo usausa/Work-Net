@@ -99,6 +99,7 @@ AWS S3 REST API との互換性状況をまとめます。
 | S3 XML 名前空間準拠 | `http://s3.amazonaws.com/doc/2006-03-01/` |
 | パストラバーサル防止 | バリデーションとパス正規化 |
 | 階層キー構造 | `/` をディレクトリ構造にマッピング |
+| 仮想ホスト形式 URL | `http://{bucket}.s3.localhost:5128/{key}` 形式に対応（ミドルウェアでパス形式に書き換え） |
 
 ---
 
@@ -130,6 +131,21 @@ AWS S3 REST API との互換性状況をまとめます。
 | Object Restore | ★ | ★★★ | Glacier 復元のシミュレーション。ステータスタイマー管理が必要 |
 | Select Object Content | ★ | ★★★★★ | SQL パーサー + 実行エンジンが必要。非常に複雑で用途も限定的 |
 | Transfer Acceleration | ★ | ★ | ローカルでは意味がない |
+
+---
+
+## URL 形式
+
+パス形式と仮想ホスト形式の両方に対応しています。
+
+| 形式 | URL 例 | SDK 設定 |
+|---|---|---|
+| パス形式（デフォルト） | `http://localhost:5128/{bucket}/{key}` | `ServiceURL = "http://localhost:5128"`, `ForcePathStyle = true` |
+| 仮想ホスト形式 | `http://{bucket}.s3.localhost:5128/{key}` | `ServiceURL = "http://s3.localhost:5128"`, `ForcePathStyle = false` |
+
+仮想ホスト形式はミドルウェア (`VirtualHostStyleMiddleware`) がリクエストをパス形式に書き換えます。ベースホスト名は `Storage:BaseHostname`（デフォルト: `s3.localhost`）で設定可能です。
+
+> **DNS について**: `*.localhost` は多くの環境（Chrome/Edge/Firefox、macOS/Linux）で `127.0.0.1` に解決されます。Windows で解決されない場合は `hosts` ファイルに `127.0.0.1 {bucket}.s3.localhost` を追加するか、パス形式を使用してください。
 
 ---
 

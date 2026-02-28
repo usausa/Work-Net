@@ -404,4 +404,41 @@ Console.WriteLine($"  Deleted {delResp.DeletedObjects.Count} objects");
 await client.DeleteBucketAsync(bucketName);
 Console.WriteLine($"  Bucket deleted: {bucketName}");
 
+// ── 19. Virtual-hosted style access ─────────────────────────────
+// Requires *.s3.localhost to resolve to 127.0.0.1.
+// Most modern browsers and OS resolvers handle *.localhost automatically.
+Console.WriteLine("\n=== Virtual-Hosted Style ===");
+var vhConfig = new AmazonS3Config
+{
+    ServiceURL = "http://s3.localhost:5128",
+    ForcePathStyle = false,
+};
+using var vhClient = new AmazonS3Client(
+    new BasicAWSCredentials("test", "test"), vhConfig);
+
+const string vhBucket = "vh-demo";
+await vhClient.PutBucketAsync(vhBucket);
+Console.WriteLine($"  Created bucket: {vhBucket}");
+
+await vhClient.PutObjectAsync(new PutObjectRequest
+{
+    BucketName = vhBucket,
+    Key = "hello.txt",
+    ContentBody = "Hello from virtual-hosted style!",
+});
+Console.WriteLine("  Uploaded hello.txt via virtual-hosted style");
+
+var vhGet = await vhClient.GetObjectAsync(vhBucket, "hello.txt");
+using (var reader = new StreamReader(vhGet.ResponseStream))
+    Console.WriteLine($"  Content: {await reader.ReadToEndAsync()}");
+
+var vhList = await vhClient.ListObjectsV2Async(
+    new ListObjectsV2Request { BucketName = vhBucket });
+foreach (var obj in vhList.S3Objects)
+    Console.WriteLine($"  Listed: {obj.Key} ({obj.Size} bytes)");
+
+await vhClient.DeleteObjectAsync(vhBucket, "hello.txt");
+await vhClient.DeleteBucketAsync(vhBucket);
+Console.WriteLine($"  Bucket deleted: {vhBucket}");
+
 Console.WriteLine("\n=== All operations completed successfully ===");
