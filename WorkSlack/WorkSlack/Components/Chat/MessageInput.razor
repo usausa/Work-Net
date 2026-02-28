@@ -95,6 +95,25 @@
         MessageText = "";
         _showEmojiPicker = false;
         await OnSend.InvokeAsync(text);
+        await PlaySendSoundAsync();
+    }
+
+    private async Task PlaySendSoundAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "(function(){try{var a=new AudioContext(),o=a.createOscillator(),g=a.createGain();" +
+                "o.type='sine';o.frequency.setValueAtTime(400,a.currentTime);" +
+                "o.frequency.exponentialRampToValueAtTime(800,a.currentTime+0.08);" +
+                "g.gain.setValueAtTime(0.12,a.currentTime);" +
+                "g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+0.1);" +
+                "o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.1)}catch(e){}})()");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during prerender or disconnect
+        }
     }
 
     private void ToggleEmojiPicker()
