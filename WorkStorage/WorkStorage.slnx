@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="WorkStorage/WorkStorage.csproj" />
+  <Project Path="WorkStorageClient/WorkStorageClient.csproj" Id="145bf6fd-215f-45c6-89f0-bf6e813a9ff7" />
 </Solution>
