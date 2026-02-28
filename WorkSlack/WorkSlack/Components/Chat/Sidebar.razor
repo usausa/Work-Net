@@ -11,31 +11,34 @@
                 @_currentUser.DisplayName
             </span>
         </div>
-        <button class="compose-btn" title="New message">
+        <button class="compose-btn" title="New message" @onclick="() => _showComposeDialog = true">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M14.7 1.3a1 1 0 00-1.4 0L6 8.6V10h1.4l7.3-7.3a1 1 0 000-1.4zM5 11V10l-1-1H2v4h4v-2H5z" />
             </svg>
         </button>
     </div>
 
+    <div class="sidebar-search">
+        <div class="sidebar-search-box">
+            <span class="sidebar-search-icon">🔍</span>
+            <input type="text" placeholder="Search WorkSlack" @onfocus="() => OnSearchOpen.InvokeAsync()" />
+        </div>
+    </div>
+
     <div class="sidebar-content">
         <div class="nav-section">
-            <a class="nav-item" href="#">
+            <button class="nav-item" @onclick="() => _showThreadsDialog = true">
                 <span class="nav-icon">💬</span>
                 <span>Threads</span>
-            </a>
-            <a class="nav-item" href="#">
+            </button>
+            <button class="nav-item" @onclick="() => _showDraftsDialog = true">
                 <span class="nav-icon">📨</span>
                 <span>Drafts & Sent</span>
-            </a>
-            <a class="nav-item" href="#">
+            </button>
+            <button class="nav-item" @onclick="() => _showSavedDialog = true">
                 <span class="nav-icon">🔖</span>
                 <span>Saved items</span>
-            </a>
-            <a class="nav-item" href="#">
-                <span class="nav-icon">⋯</span>
-                <span>More</span>
-            </a>
+            </button>
         </div>
 
         <div class="nav-section">
@@ -47,17 +50,21 @@
             {
                 @foreach (var channel in _channels)
                 {
-                    <a class="nav-item channel-item @(channel.Id == SelectedChannelId ? "nav-item-active" : "")"
-                       @onclick="() => OnChannelSelected.InvokeAsync(channel.Id)"
-                       @onclick:preventDefault>
+                    var unread = ChatService.GetUnreadCount(channel.Id);
+                    <button class="nav-item channel-item @(channel.Id == SelectedChannelId ? "nav-item-active" : "") @(unread > 0 ? "nav-item-unread" : "")"
+                            @onclick="() => SelectChannel(channel.Id)">
                         <span class="channel-prefix">#</span>
                         <span class="channel-name">@channel.Name</span>
-                    </a>
+                        @if (unread > 0)
+                        {
+                            <span class="unread-badge">@unread</span>
+                        }
+                    </button>
                 }
-                <a class="nav-item add-item" href="#">
+                <button class="nav-item add-item" @onclick="() => _showAddChannelDialog = true">
                     <span class="nav-icon">+</span>
                     <span>Add channels</span>
-                </a>
+                </button>
             }
         </div>
 
@@ -71,24 +78,137 @@
                 @foreach (var dm in _directMessages)
                 {
                     var dmUser = ChatService.GetUser(dm.DmUserId ?? "");
-                    <a class="nav-item dm-item @(dm.Id == SelectedChannelId ? "nav-item-active" : "")"
-                       @onclick="() => OnChannelSelected.InvokeAsync(dm.Id)"
-                       @onclick:preventDefault>
+                    var unread = ChatService.GetUnreadCount(dm.Id);
+                    <button class="nav-item dm-item @(dm.Id == SelectedChannelId ? "nav-item-active" : "") @(unread > 0 ? "nav-item-unread" : "")"
+                            @onclick="() => SelectChannel(dm.Id)">
                         @if (dmUser is not null)
                         {
                             <UserAvatar User="@dmUser" Size="UserAvatar.AvatarSize.Small" ShowStatus="true" />
                         }
                         <span class="channel-name">@dm.Name</span>
-                    </a>
+                        @if (unread > 0)
+                        {
+                            <span class="unread-badge">@unread</span>
+                        }
+                    </button>
                 }
-                <a class="nav-item add-item" href="#">
+                <button class="nav-item add-item" @onclick="() => _showAddDmDialog = true">
                     <span class="nav-icon">+</span>
                     <span>Add teammates</span>
-                </a>
+                </button>
             }
         </div>
     </div>
 </nav>
+
+@* Stub dialogs *@
+@if (_showComposeDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>New message</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body">
+            <label>To:</label>
+            <input type="text" placeholder="Search for a person or channel" class="modal-input" />
+            <label>Message:</label>
+            <textarea placeholder="Write a message..." rows="3" class="modal-textarea"></textarea>
+        </div>
+        <div class="modal-dialog-footer">
+            <button class="modal-primary-btn" @onclick="CloseAllDialogs">Send</button>
+        </div>
+    </div>
+}
+
+@if (_showAddChannelDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Create a channel</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body">
+            <label>Name</label>
+            <input type="text" placeholder="e.g. plan-budget" class="modal-input" />
+            <label>Description <span class="modal-optional">(optional)</span></label>
+            <input type="text" placeholder="What's this channel about?" class="modal-input" />
+        </div>
+        <div class="modal-dialog-footer">
+            <button class="modal-primary-btn" @onclick="CloseAllDialogs">Create</button>
+        </div>
+    </div>
+}
+
+@if (_showAddDmDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Direct messages</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body">
+            <input type="text" placeholder="Search for people" class="modal-input" />
+            <div class="modal-user-list">
+                @foreach (var user in ChatService.GetAllUsers().Where(u => u.Id != _currentUser.Id))
+                {
+                    <div class="modal-user-row">
+                        <UserAvatar User="@user" Size="UserAvatar.AvatarSize.Small" ShowStatus="true" />
+                        <span>@user.DisplayName</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showThreadsDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Threads</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body modal-dialog-body-empty">
+            <span class="modal-empty-icon">💬</span>
+            <p>Threads you follow will appear here.</p>
+        </div>
+    </div>
+}
+
+@if (_showDraftsDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Drafts & Sent</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body modal-dialog-body-empty">
+            <span class="modal-empty-icon">📨</span>
+            <p>Your drafts and sent messages will appear here.</p>
+        </div>
+    </div>
+}
+
+@if (_showSavedDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Saved items</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body modal-dialog-body-empty">
+            <span class="modal-empty-icon">🔖</span>
+            <p>Your saved messages will appear here.</p>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]
@@ -97,16 +217,41 @@
     [Parameter]
     public EventCallback<string> OnChannelSelected { get; set; }
 
+    [Parameter]
+    public EventCallback OnSearchOpen { get; set; }
+
     private IReadOnlyList<Channel> _channels = [];
     private IReadOnlyList<Channel> _directMessages = [];
     private ChatUser _currentUser = default!;
     private bool _channelsExpanded = true;
     private bool _dmsExpanded = true;
 
+    private bool _showComposeDialog;
+    private bool _showAddChannelDialog;
+    private bool _showAddDmDialog;
+    private bool _showThreadsDialog;
+    private bool _showDraftsDialog;
+    private bool _showSavedDialog;
+
     protected override void OnInitialized()
     {
         _channels = ChatService.GetChannels();
         _directMessages = ChatService.GetDirectMessages();
         _currentUser = ChatService.GetCurrentUser();
+    }
+
+    private async Task SelectChannel(string channelId)
+    {
+        await OnChannelSelected.InvokeAsync(channelId);
+    }
+
+    private void CloseAllDialogs()
+    {
+        _showComposeDialog = false;
+        _showAddChannelDialog = false;
+        _showAddDmDialog = false;
+        _showThreadsDialog = false;
+        _showDraftsDialog = false;
+        _showSavedDialog = false;
     }
 }

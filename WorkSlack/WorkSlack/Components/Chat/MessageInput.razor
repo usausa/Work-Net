@@ -1,14 +1,14 @@
-@using WorkSlack.Models
+@inject IJSRuntime JS
 
 <div class="message-input-container">
     <div class="message-input-wrapper">
         <div class="input-toolbar">
-            <button class="toolbar-btn" title="Bold">𝐁</button>
-            <button class="toolbar-btn" title="Italic">𝐼</button>
-            <button class="toolbar-btn" title="Strikethrough">S̶</button>
+            <button class="toolbar-btn" title="Bold (*text*)" @onclick='() => InsertFormatAsync("*", "*")'>𝐁</button>
+            <button class="toolbar-btn" title="Italic (_text_)" @onclick='() => InsertFormatAsync("_", "_")'>𝐼</button>
+            <button class="toolbar-btn" title="Strikethrough (~text~)" @onclick='() => InsertFormatAsync("~", "~")'>S̶</button>
             <span class="toolbar-divider"></span>
-            <button class="toolbar-btn" title="Link">🔗</button>
-            <button class="toolbar-btn" title="List">☰</button>
+            <button class="toolbar-btn" title="Code" @onclick='() => InsertFormatAsync("`", "`")'>&lt;/&gt;</button>
+            <button class="toolbar-btn" title="Quote (> text)" @onclick='() => InsertFormatAsync("> ", "")'>❝</button>
         </div>
         <div class="input-area">
             <textarea @ref="_inputRef"
@@ -20,9 +20,17 @@
         </div>
         <div class="input-footer">
             <div class="input-actions-left">
-                <button class="footer-btn" title="Attach file">📎</button>
-                <button class="footer-btn" title="Emoji">😊</button>
-                <button class="footer-btn" title="Mention">＠</button>
+                <button class="footer-btn" title="Attach file" @onclick="ToggleAttachDialog">📎</button>
+                <div class="footer-btn-wrapper">
+                    <button class="footer-btn" title="Emoji" @onclick="ToggleEmojiPicker" @onclick:stopPropagation="true">😊</button>
+                    @if (_showEmojiPicker)
+                    {
+                        <div class="emoji-picker-anchor">
+                            <EmojiPicker OnSelect="InsertEmojiAsync" OnClose="CloseEmojiPicker" />
+                        </div>
+                    }
+                </div>
+                <button class="footer-btn" title="Mention" @onclick="InsertMentionAsync">＠</button>
             </div>
             <div class="input-actions-right">
                 <button class="send-btn @(string.IsNullOrWhiteSpace(MessageText) ? "send-btn-disabled" : "")"
@@ -36,6 +44,24 @@
             </div>
         </div>
     </div>
+
+    @if (_showAttachDialog)
+    {
+        <div class="mini-dialog-backdrop" @onclick="() => _showAttachDialog = false"></div>
+        <div class="mini-dialog">
+            <div class="mini-dialog-header">
+                <span>Upload a file</span>
+                <button class="mini-dialog-close" @onclick="() => _showAttachDialog = false">✕</button>
+            </div>
+            <div class="mini-dialog-body">
+                <div class="attach-dropzone">
+                    <span class="attach-dropzone-icon">📁</span>
+                    <p>Drag and drop a file here, or click to browse</p>
+                    <button class="attach-browse-btn">Browse files</button>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -47,6 +73,8 @@
 
     private string MessageText { get; set; } = "";
     private ElementReference _inputRef;
+    private bool _showEmojiPicker;
+    private bool _showAttachDialog;
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {
@@ -65,6 +93,43 @@
 
         var text = MessageText.Trim();
         MessageText = "";
+        _showEmojiPicker = false;
         await OnSend.InvokeAsync(text);
+    }
+
+    private void ToggleEmojiPicker()
+    {
+        _showEmojiPicker = !_showEmojiPicker;
+        _showAttachDialog = false;
+    }
+
+    private void CloseEmojiPicker()
+    {
+        _showEmojiPicker = false;
+    }
+
+    private Task InsertEmojiAsync(string emoji)
+    {
+        MessageText += emoji;
+        _showEmojiPicker = false;
+        return Task.CompletedTask;
+    }
+
+    private void ToggleAttachDialog()
+    {
+        _showAttachDialog = !_showAttachDialog;
+        _showEmojiPicker = false;
+    }
+
+    private Task InsertFormatAsync(string prefix, string suffix)
+    {
+        MessageText += prefix + "text" + suffix;
+        return Task.CompletedTask;
+    }
+
+    private Task InsertMentionAsync()
+    {
+        MessageText += "@";
+        return Task.CompletedTask;
     }
 }

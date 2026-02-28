@@ -1,31 +1,74 @@
 @using WorkSlack.Models
+@using WorkSlack.Helpers
 
 <div class="message-item @(IsFirstInGroup ? "first-in-group" : "continuation")">
+    @* Hover action toolbar *@
+    <div class="message-hover-toolbar">
+        <button class="hover-action-btn" title="Add reaction" @onclick="ToggleReactionPicker" @onclick:stopPropagation="true">😀</button>
+        @if (Message.ReplyCount >= 0)
+        {
+            <button class="hover-action-btn" title="Reply in thread" @onclick="() => OnThreadOpen.InvokeAsync(Message.Id)">💬</button>
+        }
+        <button class="hover-action-btn" title="Bookmark" @onclick="() => _showBookmarkToast = true">🔖</button>
+        @if (Message.AuthorId == CurrentUserId)
+        {
+            <button class="hover-action-btn" title="More actions" @onclick="ToggleMoreMenu" @onclick:stopPropagation="true">⋯</button>
+        }
+    </div>
+
+    @if (_showMoreMenu)
+    {
+        <div class="msg-dropdown-backdrop" @onclick="() => _showMoreMenu = false"></div>
+        <div class="msg-dropdown">
+            <button class="msg-dropdown-item" @onclick="StartEdit">✏️ Edit message</button>
+            <button class="msg-dropdown-item msg-dropdown-danger" @onclick="() => OnDelete.InvokeAsync(Message.Id)">🗑️ Delete message</button>
+        </div>
+    }
+
+    @if (_showReactionPicker)
+    {
+        <div class="msg-reaction-picker-anchor">
+            <EmojiPicker OnSelect="AddReactionAsync" OnClose="() => _showReactionPicker = false" />
+        </div>
+    }
+
     @if (IsFirstInGroup)
     {
         <div class="message-gutter">
-            <UserAvatar User="@Author" />
+            <div @onclick="() => OnProfileOpen.InvokeAsync(Author.Id)" style="cursor:pointer">
+                <UserAvatar User="@Author" />
+            </div>
         </div>
         <div class="message-content">
             <div class="message-header">
-                <span class="message-author">@Author.DisplayName</span>
+                <span class="message-author" @onclick="() => OnProfileOpen.InvokeAsync(Author.Id)">@Author.DisplayName</span>
                 <span class="message-timestamp">@FormatTimestamp(Message.Timestamp)</span>
+                @if (Message.IsEdited)
+                {
+                    <span class="message-edited">(edited)</span>
+                }
             </div>
-            <div class="message-text">@Message.Content</div>
-            @if (Message.Reactions.Count > 0)
+            @if (_isEditing)
             {
-                <div class="message-reactions">
-                    @foreach (var reaction in Message.Reactions)
-                    {
-                        <button class="reaction-chip @(reaction.UserIds.Contains(CurrentUserId) ? "reaction-active" : "")"
-                                @onclick="() => OnReactionClick.InvokeAsync(reaction.Emoji)"
-                                title="@string.Join(", ", reaction.UserIds)">
-                            <span class="reaction-emoji">@reaction.Emoji</span>
-                            <span class="reaction-count">@reaction.UserIds.Count</span>
-                        </button>
-                    }
+                <div class="message-edit-box">
+                    <textarea @bind="_editText" @bind:event="oninput" @onkeydown="HandleEditKeyDownAsync" rows="1"></textarea>
+                    <div class="message-edit-actions">
+                        <button class="edit-cancel-btn" @onclick="CancelEdit">Cancel</button>
+                        <button class="edit-save-btn" @onclick="SaveEditAsync">Save</button>
+                    </div>
                 </div>
             }
+            else
+            {
+                <div class="message-text">@((MarkupString)MessageFormatter.ToHtml(Message.Content))</div>
+            }
+            @if (Message.ReplyCount > 0)
+            {
+                <button class="thread-reply-link" @onclick="() => OnThreadOpen.InvokeAsync(Message.Id)">
+                    💬 @Message.ReplyCount @(Message.ReplyCount == 1 ? "reply" : "replies")
+                </button>
+            }
+            <RenderReactions />
         </div>
     }
     else
@@ -34,22 +77,27 @@
             <span class="hover-timestamp">@Message.Timestamp.ToString("HH:mm")</span>
         </div>
         <div class="message-content">
-            <div class="message-text">@Message.Content</div>
-            @if (Message.Reactions.Count > 0)
+            @if (_isEditing)
             {
-                <div class="message-reactions">
-                    @foreach (var reaction in Message.Reactions)
-                    {
-                        <button class="reaction-chip @(reaction.UserIds.Contains(CurrentUserId) ? "reaction-active" : "")"
-                                @onclick="() => OnReactionClick.InvokeAsync(reaction.Emoji)"
-                                title="@string.Join(", ", reaction.UserIds)">
-                            <span class="reaction-emoji">@reaction.Emoji</span>
-                            <span class="reaction-count">@reaction.UserIds.Count</span>
-                        </button>
-                    }
+                <div class="message-edit-box">
+                    <textarea @bind="_editText" @bind:event="oninput" @onkeydown="HandleEditKeyDownAsync" rows="1"></textarea>
+                    <div class="message-edit-actions">
+                        <button class="edit-cancel-btn" @onclick="CancelEdit">Cancel</button>
+                        <button class="edit-save-btn" @onclick="SaveEditAsync">Save</button>
+                    </div>
                 </div>
             }
+            else
+            {
+                <div class="message-text">@((MarkupString)MessageFormatter.ToHtml(Message.Content))</div>
+            }
+            <RenderReactions />
         </div>
+    }
+
+    @if (_showBookmarkToast)
+    {
+        <div class="bookmark-toast">Saved to your bookmarks</div>
     }
 </div>
 
@@ -69,6 +117,69 @@
     [Parameter]
     public EventCallback<string> OnReactionClick { get; set; }
 
+    [Parameter]
+    public EventCallback<string> OnThreadOpen { get; set; }
+
+    [Parameter]
+    public EventCallback<(string Id, string Content)> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnProfileOpen { get; set; }
+
+    private bool _showReactionPicker;
+    private bool _showMoreMenu;
+    private bool _isEditing;
+    private string _editText = "";
+    private bool _showBookmarkToast;
+
+    private void ToggleReactionPicker()
+    {
+        _showReactionPicker = !_showReactionPicker;
+        _showMoreMenu = false;
+    }
+
+    private void ToggleMoreMenu()
+    {
+        _showMoreMenu = !_showMoreMenu;
+        _showReactionPicker = false;
+    }
+
+    private async Task AddReactionAsync(string emoji)
+    {
+        _showReactionPicker = false;
+        await OnReactionClick.InvokeAsync(emoji);
+    }
+
+    private void StartEdit()
+    {
+        _editText = Message.Content;
+        _isEditing = true;
+        _showMoreMenu = false;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_editText))
+        {
+            await OnEdit.InvokeAsync((Message.Id, _editText));
+        }
+        _isEditing = false;
+    }
+
+    private async Task HandleEditKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CancelEdit();
+        if (e is { Key: "Enter", ShiftKey: false }) await SaveEditAsync();
+    }
+
     private static string FormatTimestamp(DateTimeOffset ts)
     {
         var now = DateTimeOffset.Now;
@@ -78,4 +189,25 @@
             return "Yesterday " + ts.ToString("h:mm tt");
         return ts.ToString("MMM d, h:mm tt");
     }
+
+    private RenderFragment RenderReactions => __builder =>
+    {
+        if (Message.Reactions.Count > 0)
+        {
+            <div class="message-reactions">
+                @foreach (var reaction in Message.Reactions)
+                {
+                    <button class="reaction-chip @(reaction.UserIds.Contains(CurrentUserId) ? "reaction-active" : "")"
+                            @onclick="() => OnReactionClick.InvokeAsync(reaction.Emoji)"
+                            title="@string.Join(", ", reaction.UserIds)">
+                        <span class="reaction-emoji">@reaction.Emoji</span>
+                        <span class="reaction-count">@reaction.UserIds.Count</span>
+                    </button>
+                }
+                <button class="reaction-chip reaction-add-btn" @onclick="ToggleReactionPicker" @onclick:stopPropagation="true" title="Add reaction">
+                    <span class="reaction-emoji">+</span>
+                </button>
+            </div>
+        }
+    };
 }

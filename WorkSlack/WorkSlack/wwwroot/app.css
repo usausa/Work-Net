@@ -749,3 +749,1001 @@ h1:focus {
     color: #aaa;
     cursor: not-allowed;
 }
+
+/* ===================================================================
+   Sidebar search bar
+   =================================================================== */
+
+.sidebar-search {
+    padding: 8px 12px;
+    flex-shrink: 0;
+}
+
+.sidebar-search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #cdbdcf;
+    transition: background-color 0.15s;
+}
+
+.sidebar-search-box:focus-within {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-search-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.sidebar-search-box input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 14px;
+}
+
+.sidebar-search-box input::placeholder {
+    color: #9c8e9e;
+}
+
+/* ===================================================================
+   Unread badges — bold channel names & count bubble
+   =================================================================== */
+
+.nav-item-unread .channel-name {
+    color: #fff;
+    font-weight: 700;
+}
+
+.unread-badge {
+    margin-left: auto;
+    background: #e8455b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 0 6px;
+    line-height: 1.6;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* ===================================================================
+   Date divider — horizontal rule with date label
+   =================================================================== */
+
+.date-divider {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px 4px;
+    gap: 12px;
+}
+
+.date-divider::before,
+.date-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e1e1e5;
+}
+
+.date-divider-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d1c1d;
+    white-space: nowrap;
+    padding: 4px 12px;
+    border: 1px solid #e1e1e5;
+    border-radius: 24px;
+    background: #fff;
+}
+
+/* ===================================================================
+   Message hover action toolbar — floating bar on message hover
+   =================================================================== */
+
+.message-hover-toolbar {
+    display: none;
+    position: absolute;
+    top: -16px;
+    right: 20px;
+    background: #fff;
+    border: 1px solid #e1e1e5;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 2px;
+    gap: 2px;
+    z-index: 10;
+}
+
+.message-item:hover .message-hover-toolbar {
+    display: flex;
+}
+
+.hover-action-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.1s;
+}
+
+.hover-action-btn:hover {
+    background: #f0f0f0;
+}
+
+/* ===================================================================
+   Message more-actions dropdown
+   =================================================================== */
+
+.msg-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+}
+
+.msg-dropdown {
+    position: absolute;
+    top: -16px;
+    right: 20px;
+    z-index: 21;
+    background: #fff;
+    border: 1px solid #e1e1e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 4px 0;
+    min-width: 180px;
+}
+
+.msg-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 16px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    color: #1d1c1d;
+    cursor: pointer;
+    text-align: left;
+}
+
+.msg-dropdown-item:hover {
+    background: #f0f0f0;
+}
+
+.msg-dropdown-danger {
+    color: #e01e5a;
+}
+
+.msg-dropdown-danger:hover {
+    background: #fce4ec;
+}
+
+/* ===================================================================
+   Reaction picker anchor (positioned relative to message)
+   =================================================================== */
+
+.msg-reaction-picker-anchor {
+    position: absolute;
+    top: -16px;
+    right: 20px;
+    z-index: 30;
+}
+
+/* ===================================================================
+   Message edit inline
+   =================================================================== */
+
+.message-edit-box {
+    border: 1px solid #1264a3;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.message-edit-box textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.46;
+}
+
+.message-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 4px 8px;
+    background: #f8f8f8;
+}
+
+.edit-cancel-btn {
+    padding: 4px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.edit-save-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #007a5a;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.edit-save-btn:hover {
+    background: #005e44;
+}
+
+/* ===================================================================
+   Thread reply link — shown under messages with replies
+   =================================================================== */
+
+.thread-reply-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    color: #1264a3;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+    padding: 2px 0;
+}
+
+.thread-reply-link:hover {
+    text-decoration: underline;
+}
+
+/* Edited tag */
+.message-edited {
+    font-size: 12px;
+    color: #92929d;
+    font-style: italic;
+}
+
+/* Reaction add button (+ in reaction row) */
+.reaction-add-btn {
+    border-style: dashed;
+    color: #92929d;
+}
+
+.reaction-add-btn:hover {
+    color: #616061;
+}
+
+/* Bookmark toast */
+.bookmark-toast {
+    position: absolute;
+    bottom: -8px;
+    right: 20px;
+    background: #1d1c1d;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    z-index: 10;
+    animation: fadeout 2s forwards;
+}
+
+@keyframes fadeout {
+    0%, 60% { opacity: 1; }
+    100% { opacity: 0; pointer-events: none; }
+}
+
+/* ===================================================================
+   EmojiPicker — popup grid with categories
+   =================================================================== */
+
+.emoji-picker-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+}
+
+.emoji-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 100;
+    width: 320px;
+    background: #fff;
+    border: 1px solid #e1e1e5;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.emoji-picker-search {
+    padding: 8px 8px 4px;
+}
+
+.emoji-picker-search input {
+    width: 100%;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    outline: none;
+}
+
+.emoji-picker-search input:focus {
+    border-color: #1264a3;
+}
+
+.emoji-picker-header {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    overflow-x: auto;
+}
+
+.emoji-cat-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.1s;
+    flex-shrink: 0;
+}
+
+.emoji-cat-btn:hover {
+    background: #f0f0f0;
+}
+
+.emoji-cat-btn.emoji-cat-active {
+    background: #e0edff;
+}
+
+.emoji-picker-body {
+    padding: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.emoji-cat-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #616061;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.emoji-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 8px;
+}
+
+.emoji-cell {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 22px;
+    transition: background-color 0.1s;
+}
+
+.emoji-cell:hover {
+    background: #f0f0f0;
+}
+
+/* Anchor wrapper in footer */
+.footer-btn-wrapper {
+    position: relative;
+}
+
+.emoji-picker-anchor {
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    z-index: 100;
+}
+
+/* ===================================================================
+   Channel body — main area that holds messages + side panels
+   =================================================================== */
+
+.channel-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.channel-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* ===================================================================
+   Thread panel — side panel for threaded replies
+   =================================================================== */
+
+.thread-panel {
+    width: 380px;
+    flex-shrink: 0;
+    border-left: 1px solid #e1e1e5;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.thread-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 49px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e1e1e5;
+    flex-shrink: 0;
+}
+
+.thread-panel-title {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.thread-panel-close {
+    border: none;
+    background: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #616061;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thread-panel-close:hover {
+    background: #f0f0f0;
+}
+
+.thread-panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.thread-parent-msg {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 12px;
+}
+
+.thread-reply-divider {
+    font-size: 12px;
+    color: #616061;
+    border-top: 1px solid #e1e1e5;
+    padding: 8px 0;
+    font-weight: 600;
+}
+
+.thread-reply-item {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+}
+
+/* ===================================================================
+   Members side panel
+   =================================================================== */
+
+.members-panel {
+    width: 300px;
+    flex-shrink: 0;
+    border-left: 1px solid #e1e1e5;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.members-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 49px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e1e1e5;
+    flex-shrink: 0;
+}
+
+.members-panel-title {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.members-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.member-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.member-row:hover {
+    background: #f8f8f8;
+}
+
+.member-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.member-status-emoji {
+    margin-left: auto;
+    font-size: 14px;
+}
+
+/* Search in members panel */
+.search-input-row {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e1e1e5;
+}
+
+.search-input {
+    flex: 1;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #1264a3;
+}
+
+.search-go-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #007a5a;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.search-result-item {
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.search-result-channel {
+    font-size: 12px;
+    color: #616061;
+}
+
+.search-result-body {
+    font-size: 14px;
+    margin-top: 2px;
+}
+
+.search-no-results {
+    color: #92929d;
+    text-align: center;
+    padding: 24px;
+    font-size: 14px;
+}
+
+/* ===================================================================
+   Profile card — popup when clicking avatar/name
+   =================================================================== */
+
+.profile-card-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+}
+
+.profile-card {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 201;
+    width: 320px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    overflow: hidden;
+}
+
+.profile-card-banner {
+    height: 60px;
+}
+
+.profile-card-avatar {
+    margin-top: -24px;
+    padding-left: 20px;
+}
+
+.profile-card-body {
+    padding: 8px 20px 20px;
+}
+
+.profile-card-body h3 {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 4px 0 0;
+}
+
+.profile-card-status {
+    font-size: 13px;
+    color: #616061;
+    margin: 4px 0 8px;
+}
+
+.profile-card-info {
+    border-top: 1px solid #e1e1e5;
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.profile-card-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.profile-card-label {
+    color: #616061;
+}
+
+.profile-card-dm-btn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: #007a5a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.profile-card-dm-btn:hover {
+    background: #005e44;
+}
+
+/* ===================================================================
+   Modal dialogs — compose, add channel, add DM, etc.
+   =================================================================== */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 500;
+}
+
+.modal-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 501;
+    width: 480px;
+    max-width: 90vw;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.modal-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e1e1e5;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.modal-dialog-close {
+    border: none;
+    background: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #616061;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog-close:hover {
+    background: #f0f0f0;
+}
+
+.modal-dialog-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-dialog-body label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1c1d;
+}
+
+.modal-optional {
+    font-weight: 400;
+    color: #92929d;
+}
+
+.modal-input {
+    width: 100%;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 15px;
+    outline: none;
+}
+
+.modal-input:focus {
+    border-color: #1264a3;
+    box-shadow: 0 0 0 1px #1264a3;
+}
+
+.modal-textarea {
+    width: 100%;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    resize: vertical;
+}
+
+.modal-textarea:focus {
+    border-color: #1264a3;
+    box-shadow: 0 0 0 1px #1264a3;
+}
+
+.modal-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid #e1e1e5;
+}
+
+.modal-primary-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    background: #007a5a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.modal-primary-btn:hover {
+    background: #005e44;
+}
+
+.modal-dialog-body-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #616061;
+}
+
+.modal-empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.modal-user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.modal-user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.modal-user-row:hover {
+    background: #f8f8f8;
+}
+
+/* ===================================================================
+   Mini dialog — attach file placeholder
+   =================================================================== */
+
+.mini-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+}
+
+.mini-dialog {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    z-index: 51;
+    width: 320px;
+    background: #fff;
+    border: 1px solid #e1e1e5;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.mini-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e1e1e5;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.mini-dialog-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #616061;
+}
+
+.mini-dialog-body {
+    padding: 16px;
+}
+
+.attach-dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    color: #616061;
+    font-size: 13px;
+}
+
+.attach-dropzone-icon {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.attach-dropzone p {
+    margin: 0 0 8px;
+}
+
+.attach-browse-btn {
+    padding: 6px 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.attach-browse-btn:hover {
+    background: #f8f8f8;
+}
+
+/* ===================================================================
+   Markdown message styles — code, blockquote, mention
+   =================================================================== */
+
+.msg-code {
+    background: #f4f4f8;
+    border: 1px solid #e1e1e5;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    color: #e01e5a;
+}
+
+.msg-codeblock {
+    background: #f4f4f8;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 4px 0;
+    overflow-x: auto;
+}
+
+.msg-codeblock code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    color: #1d1c1d;
+}
+
+.msg-blockquote {
+    border-left: 4px solid #ddd;
+    margin: 4px 0;
+    padding: 2px 12px;
+    color: #616061;
+}
+
+.msg-mention {
+    background: #e0edff;
+    color: #1264a3;
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 600;
+}
+
+.message-text a {
+    color: #1264a3;
+    text-decoration: none;
+}
+
+.message-text a:hover {
+    text-decoration: underline;
+}
