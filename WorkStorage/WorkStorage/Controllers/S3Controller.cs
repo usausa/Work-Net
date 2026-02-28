@@ -95,13 +95,16 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// GET /{bucket} – List objects in a bucket (supports ListObjectsV2 query parameters).
+    /// GET /{bucket} – List objects in a bucket (supports ListObjectsV2 query parameters
+    /// including delimiter-based hierarchy browsing).
     /// </summary>
     [HttpGet("/{bucket}")]
     public IActionResult ListObjects(
         string bucket,
         [FromQuery] string? prefix,
-        [FromQuery(Name = "max-keys")] int maxKeys = 1000)
+        [FromQuery] string? delimiter,
+        [FromQuery(Name = "max-keys")] int maxKeys = 1000,
+        [FromQuery(Name = "start-after")] string? startAfter = null)
     {
         ValidateBucketName(bucket);
         var bucketPath = ResolveBucketPath(bucket);
@@ -110,32 +113,66 @@ public sealed class S3Controller : ControllerBase
 
         prefix ??= string.Empty;
 
-        var entries = Directory.GetFiles(bucketPath, "*", SearchOption.AllDirectories)
-            .Select(f =>
+        IEnumerable<string> allKeys = Directory.GetFiles(bucketPath, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(bucketPath, f).Replace('\\', '/'))
+            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
+            .OrderBy(k => k, StringComparer.Ordinal);
+
+        if (!string.IsNullOrEmpty(startAfter))
+            allKeys = allKeys.Where(k => string.Compare(k, startAfter, StringComparison.Ordinal) > 0);
+
+        var contents = new List<XElement>();
+        var commonPrefixes = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var key in allKeys)
+        {
+            if (contents.Count + commonPrefixes.Count >= maxKeys)
+                break;
+
+            // When a delimiter is specified, group keys that share a common prefix
+            // (e.g. delimiter="/" turns "folder/file.txt" into CommonPrefix "folder/").
+            if (!string.IsNullOrEmpty(delimiter))
             {
-                var key = Path.GetRelativePath(bucketPath, f).Replace('\\', '/');
-                return new { Key = key, Info = new FileInfo(f) };
-            })
-            .Where(x => x.Key.StartsWith(prefix, StringComparison.Ordinal))
-            .Take(maxKeys)
-            .Select(x => new XElement(S3Ns + "Contents",
-                new XElement(S3Ns + "Key", x.Key),
+                var remaining = key[prefix.Length..];
+                var delimiterIndex = remaining.IndexOf(delimiter, StringComparison.Ordinal);
+                if (delimiterIndex >= 0)
+                {
+                    commonPrefixes.Add(prefix + remaining[..(delimiterIndex + delimiter.Length)]);
+                    continue;
+                }
+            }
+
+            var filePath = Path.Combine(bucketPath, key.Replace('/', Path.DirectorySeparatorChar));
+            var info = new FileInfo(filePath);
+            contents.Add(new XElement(S3Ns + "Contents",
+                new XElement(S3Ns + "Key", key),
                 new XElement(S3Ns + "LastModified",
-                    x.Info.LastWriteTimeUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
-                new XElement(S3Ns + "ETag", $"\"{ComputeETag(x.Info)}\""),
-                new XElement(S3Ns + "Size", x.Info.Length),
-                new XElement(S3Ns + "StorageClass", "STANDARD")))
-            .ToList();
+                    info.LastWriteTimeUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
+                new XElement(S3Ns + "ETag", $"\"{ComputeETag(info)}\""),
+                new XElement(S3Ns + "Size", info.Length),
+                new XElement(S3Ns + "StorageClass", "STANDARD")));
+        }
+
+        var elements = new List<object>
+        {
+            new XElement(S3Ns + "Name", bucket),
+            new XElement(S3Ns + "Prefix", prefix),
+            new XElement(S3Ns + "KeyCount", contents.Count + commonPrefixes.Count),
+            new XElement(S3Ns + "MaxKeys", maxKeys),
+            new XElement(S3Ns + "IsTruncated", "false"),
+        };
+
+        if (!string.IsNullOrEmpty(delimiter))
+            elements.Add(new XElement(S3Ns + "Delimiter", delimiter));
+
+        elements.AddRange(contents);
+        elements.AddRange(commonPrefixes.Select(p =>
+            new XElement(S3Ns + "CommonPrefixes",
+                new XElement(S3Ns + "Prefix", p))));
 
         var xml = new XDocument(
             new XDeclaration("1.0", "UTF-8", null),
-            new XElement(S3Ns + "ListBucketResult",
-                new XElement(S3Ns + "Name", bucket),
-                new XElement(S3Ns + "Prefix", prefix),
-                new XElement(S3Ns + "KeyCount", entries.Count),
-                new XElement(S3Ns + "MaxKeys", maxKeys),
-                new XElement(S3Ns + "IsTruncated", "false"),
-                entries));
+            new XElement(S3Ns + "ListBucketResult", elements));
 
         return XmlContent(xml);
     }
@@ -226,9 +263,13 @@ public sealed class S3Controller : ControllerBase
         ValidateBucketName(bucket);
         ValidateObjectKey(key);
 
+        var bucketPath = ResolveBucketPath(bucket);
         var filePath = ResolveObjectPath(bucket, key);
         if (System.IO.File.Exists(filePath))
+        {
             System.IO.File.Delete(filePath);
+            CleanEmptyDirectories(filePath, bucketPath);
+        }
 
         return NoContent();
     }
@@ -279,6 +320,19 @@ public sealed class S3Controller : ControllerBase
         using var stream = info.OpenRead();
         var hash = MD5.HashData(stream);
         return Convert.ToHexStringLower(hash);
+    }
+
+    private static void CleanEmptyDirectories(string filePath, string bucketPath)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        while (dir is not null
+            && dir.Length > bucketPath.Length
+            && dir.StartsWith(bucketPath, StringComparison.OrdinalIgnoreCase)
+            && !Directory.EnumerateFileSystemEntries(dir).Any())
+        {
+            Directory.Delete(dir);
+            dir = Path.GetDirectoryName(dir);
+        }
     }
 
     private static string ResolveContentType(string key) =>
