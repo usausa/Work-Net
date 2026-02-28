@@ -1,0 +1,63 @@
+@using WorkSlack.Models
+
+<div class="emoji-picker-backdrop" @onclick="Close"></div>
+<div class="emoji-picker" style="@PositionStyle">
+    <div class="emoji-picker-header">
+        @foreach (var cat in _categories)
+        {
+            <button class="emoji-cat-btn @(cat.Name == _activeCategory ? "emoji-cat-active" : "")"
+                    @onclick="() => _activeCategory = cat.Name"
+                    title="@cat.Name">
+                @cat.Icon
+            </button>
+        }
+    </div>
+    <div class="emoji-picker-body">
+        @foreach (var cat in _categories.Where(c => c.Name == _activeCategory))
+        {
+            <div class="emoji-cat-label">@cat.Name</div>
+            <div class="emoji-grid">
+                @foreach (var emoji in cat.Emojis)
+                {
+                    <button class="emoji-cell" @onclick="() => Select(emoji)" title="@emoji">@emoji</button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnSelect { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public string PositionStyle { get; set; } = "";
+
+    private string _activeCategory = "Frequently Used";
+
+    private record EmojiCategory(string Name, string Icon, string[] Emojis);
+
+    private static readonly EmojiCategory[] _categories =
+    [
+        new("Frequently Used", "🕐", ["👍", "❤️", "😂", "🎉", "👀", "🚀", "💯", "✅", "🔥", "👏", "🙌", "💪", "🙏", "⭐", "💡", "✨"]),
+        new("Smileys", "😀", ["😀", "😊", "😄", "😁", "🤣", "😅", "😆", "😉", "😍", "🥰", "😘", "😋", "😛", "🤔", "🤨", "😐", "😑", "🙄", "😏", "😥", "😮", "😯", "😴", "🤤", "😌", "🤗", "🤩", "😎", "🥳", "😤", "😡", "🥺"]),
+        new("People", "👋", ["👋", "🤚", "✋", "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "🤝", "🙏", "💪", "🤷", "🤦", "💁", "🙋", "🙆", "🙅"]),
+        new("Nature", "🌿", ["🌞", "🌙", "⭐", "🔥", "💧", "🌊", "🌈", "☁️", "⛈️", "❄️", "🌸", "🌺", "🌻", "🌿", "🍀", "🍃", "🐱", "🐶", "🐼", "🦊", "🦁", "🐸", "🐧", "🦋", "🐝"]),
+        new("Food", "🍔", ["🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🥑", "🍔", "🍕", "🍜", "🍣", "🍰", "🍩", "🍪", "☕", "🍵", "🧋", "🍺", "🥂", "🧃"]),
+        new("Objects", "💼", ["❤️", "💔", "💬", "💭", "📌", "📎", "✏️", "📝", "📅", "⏰", "🔔", "📢", "💻", "📱", "💼", "📧", "📁", "🗂️", "📊", "📈", "🔑", "🔒", "🛠️", "⚙️", "🎯", "🏆", "🎨", "🎵", "📸", "🎬"]),
+    ];
+
+    private async Task Select(string emoji)
+    {
+        await OnSelect.InvokeAsync(emoji);
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

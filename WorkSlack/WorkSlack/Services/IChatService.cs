@@ -16,4 +16,13 @@ public interface IChatService
     IReadOnlyList<ChatUser> GetAllUsers();
     ChatMessage SendMessage(string channelId, string content);
     void AddReaction(string messageId, string emoji);
+    void RemoveReaction(string messageId, string emoji);
+    void ToggleReaction(string messageId, string emoji);
+    void EditMessage(string messageId, string newContent);
+    void DeleteMessage(string messageId);
+    int GetUnreadCount(string channelId);
+    void MarkAsRead(string channelId);
+    IReadOnlyList<ChatMessage> GetThreadReplies(string parentMessageId);
+    ChatMessage SendThreadReply(string channelId, string parentMessageId, string content);
+    IReadOnlyList<ChatMessage> SearchMessages(string query);
 }

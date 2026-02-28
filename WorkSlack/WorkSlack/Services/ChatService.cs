@@ -10,19 +10,20 @@ internal sealed class ChatService : IChatService
     private readonly Dictionary<string, ChatUser> _users;
     private readonly List<Channel> _channels;
     private readonly Dictionary<string, List<ChatMessage>> _messages;
+    private readonly Dictionary<string, DateTimeOffset> _lastRead;
     private readonly ChatUser _currentUser;
 
     public ChatService()
     {
-        _currentUser = new ChatUser("u1", "Taro Yamada", "#4A90D9", UserStatus.Online);
+        _currentUser = new ChatUser("u1", "Taro Yamada", "#4A90D9", UserStatus.Online, "💻", "Coding");
 
         _users = new Dictionary<string, ChatUser>
         {
             ["u1"] = _currentUser,
-            ["u2"] = new("u2", "Hanako Sato", "#E06B56", UserStatus.Online),
-            ["u3"] = new("u3", "Kenji Tanaka", "#2BAC76", UserStatus.Away),
+            ["u2"] = new("u2", "Hanako Sato", "#E06B56", UserStatus.Online, "📊", "Preparing Q3 report"),
+            ["u3"] = new("u3", "Kenji Tanaka", "#2BAC76", UserStatus.Away, "☕", "On break"),
             ["u4"] = new("u4", "Yuki Suzuki", "#E0A32E", UserStatus.Online),
-            ["u5"] = new("u5", "Akira Watanabe", "#9B59B6", UserStatus.DoNotDisturb),
+            ["u5"] = new("u5", "Akira Watanabe", "#9B59B6", UserStatus.DoNotDisturb, "🎧", "Focus time"),
             ["u6"] = new("u6", "Miki Ito", "#1ABC9C", UserStatus.Offline),
         };
 
@@ -51,7 +52,7 @@ internal sealed class ChatService : IChatService
                     [new("👍", ["u1", "u2", "u3"]), new("📅", ["u5"])]),
                 Msg("m04", "ch-general", "u1", "Thanks for the reminder Yuki! I'll be there.", yesterday.AddHours(9).AddMinutes(18)),
                 Msg("m05", "ch-general", "u5", "The new deployment pipeline is live. Please check your CI/CD configs.", yesterday.AddHours(14).AddMinutes(30)),
-                Msg("m06", "ch-general", "u2", "Has anyone seen the Q3 report yet? I need the updated figures for my presentation.", today.AddHours(8).AddMinutes(45)),
+                Msg("m06", "ch-general", "u2", "Has anyone seen the *Q3 report* yet? I need the updated figures for my presentation.", today.AddHours(8).AddMinutes(45)),
                 Msg("m07", "ch-general", "u4", "@Hanako I uploaded it to the shared drive yesterday. Let me know if you can't find it.", today.AddHours(8).AddMinutes(52)),
                 Msg("m08", "ch-general", "u2", "Found it, thanks Yuki! 🙏", today.AddHours(9)),
             ],
@@ -66,12 +67,12 @@ internal sealed class ChatService : IChatService
             ],
             ["ch-engineering"] =
             [
-                Msg("m20", "ch-engineering", "u5", "I've refactored the authentication module. PR is up for review: #428", yesterday.AddHours(10)),
+                Msg("m20", "ch-engineering", "u5", "I've refactored the authentication module. PR is up for review: `#428`", yesterday.AddHours(10)),
                 Msg("m21", "ch-engineering", "u1", "Looking at it now. The token refresh logic looks much cleaner.", yesterday.AddHours(10).AddMinutes(30)),
                 Msg("m22", "ch-engineering", "u3", "Nice work Akira! I left a few comments on the error handling.", yesterday.AddHours(11),
                     [new("🙌", ["u5"])]),
                 Msg("m23", "ch-engineering", "u5", "Thanks for the review! I've addressed all the comments. Ready for another look.", yesterday.AddHours(15)),
-                Msg("m24", "ch-engineering", "u1", "We need to discuss the database migration strategy for v2.0. Can we set up a meeting this week?", today.AddHours(9).AddMinutes(10)),
+                Msg("m24", "ch-engineering", "u1", "We need to discuss the *database migration strategy* for v2.0. Can we set up a meeting this week?", today.AddHours(9).AddMinutes(10)),
                 Msg("m25", "ch-engineering", "u3", "How about Thursday at 2pm? I'll book the room.", today.AddHours(9).AddMinutes(20)),
                 Msg("m26", "ch-engineering", "u5", "Works for me. I'll prepare the schema diagrams.", today.AddHours(9).AddMinutes(25),
                     [new("👍", ["u1", "u3"])]),
@@ -109,6 +110,26 @@ internal sealed class ChatService : IChatService
                 Msg("m73", "dm-u5", "u1", "Great catch! Let me know when it's deployed.", today.AddHours(8).AddMinutes(2)),
             ],
         };
+
+        // Seed thread replies
+        SeedThreadReply("m03", "ch-general", "u1", "I'll set a reminder. Thanks!", yesterday.AddHours(9).AddMinutes(20));
+        SeedThreadReply("m03", "ch-general", "u2", "Can we also discuss the roadmap?", yesterday.AddHours(9).AddMinutes(25));
+        SeedThreadReply("m20", "ch-engineering", "u1", "The token expiry edge case on line 142 — should we add a retry?", yesterday.AddHours(10).AddMinutes(15));
+        SeedThreadReply("m20", "ch-engineering", "u5", "Good catch. I'll add exponential backoff.", yesterday.AddHours(10).AddMinutes(25));
+        SeedThreadReply("m20", "ch-engineering", "u3", "Also consider adding a circuit breaker pattern here.", yesterday.AddHours(10).AddMinutes(40));
+
+        // Set last-read so some channels appear unread
+        _lastRead = new Dictionary<string, DateTimeOffset>
+        {
+            ["ch-general"] = yesterday.AddHours(14).AddMinutes(30),
+            ["ch-random"] = yesterday.AddHours(13).AddMinutes(45),
+            ["ch-engineering"] = yesterday.AddHours(15),
+            ["ch-design"] = yesterday.AddHours(16),
+            ["ch-marketing"] = yesterday,
+            ["dm-u2"] = yesterday.AddHours(16).AddMinutes(7),
+            ["dm-u3"] = yesterday,
+            ["dm-u5"] = today.AddHours(8).AddMinutes(2),
+        };
     }
 
     public IReadOnlyList<Channel> GetChannels() =>
@@ -118,7 +139,9 @@ internal sealed class ChatService : IChatService
         _channels.Where(c => c.IsDirectMessage).ToList();
 
     public IReadOnlyList<ChatMessage> GetMessages(string channelId) =>
-        _messages.TryGetValue(channelId, out var messages) ? messages : [];
+        _messages.TryGetValue(channelId, out var messages)
+            ? messages.Where(m => m.ParentMessageId is null && !m.IsDeleted).ToList()
+            : [];
 
     public Channel? GetChannel(string channelId) =>
         _channels.FirstOrDefault(c => c.Id == channelId);
@@ -159,28 +182,183 @@ internal sealed class ChatService : IChatService
         ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(emoji);
 
+        var message = FindMessage(messageId);
+        if (message is null) return;
+
+        var existing = message.Reactions.FirstOrDefault(r => r.Emoji == emoji);
+        if (existing is not null)
+        {
+            if (!existing.UserIds.Contains(_currentUser.Id))
+            {
+                existing.UserIds.Add(_currentUser.Id);
+            }
+        }
+        else
+        {
+            message.Reactions.Add(new Reaction(emoji, [_currentUser.Id]));
+        }
+    }
+
+    public void RemoveReaction(string messageId, string emoji)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(emoji);
+
+        var message = FindMessage(messageId);
+        if (message is null) return;
+
+        var existing = message.Reactions.FirstOrDefault(r => r.Emoji == emoji);
+        if (existing is null) return;
+
+        existing.UserIds.Remove(_currentUser.Id);
+        if (existing.UserIds.Count == 0)
+        {
+            message.Reactions.Remove(existing);
+        }
+    }
+
+    public void ToggleReaction(string messageId, string emoji)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(emoji);
+
+        var message = FindMessage(messageId);
+        if (message is null) return;
+
+        var existing = message.Reactions.FirstOrDefault(r => r.Emoji == emoji);
+        if (existing is not null && existing.UserIds.Contains(_currentUser.Id))
+        {
+            RemoveReaction(messageId, emoji);
+        }
+        else
+        {
+            AddReaction(messageId, emoji);
+        }
+    }
+
+    public void EditMessage(string messageId, string newContent)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newContent);
+
+        var message = FindMessage(messageId);
+        if (message is null || message.AuthorId != _currentUser.Id) return;
+
+        message.Content = newContent;
+        message.IsEdited = true;
+    }
+
+    public void DeleteMessage(string messageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+
+        var message = FindMessage(messageId);
+        if (message is null || message.AuthorId != _currentUser.Id) return;
+
+        message.IsDeleted = true;
+    }
+
+    public int GetUnreadCount(string channelId)
+    {
+        if (!_messages.TryGetValue(channelId, out var messages)) return 0;
+        if (!_lastRead.TryGetValue(channelId, out var lastRead)) return messages.Count;
+
+        return messages.Count(m => m.Timestamp > lastRead && m.AuthorId != _currentUser.Id && !m.IsDeleted);
+    }
+
+    public void MarkAsRead(string channelId)
+    {
+        _lastRead[channelId] = DateTimeOffset.Now;
+    }
+
+    public IReadOnlyList<ChatMessage> GetThreadReplies(string parentMessageId) =>
+        _messages.Values
+            .SelectMany(m => m)
+            .Where(m => m.ParentMessageId == parentMessageId && !m.IsDeleted)
+            .OrderBy(m => m.Timestamp)
+            .ToList();
+
+    public ChatMessage SendThreadReply(string channelId, string parentMessageId, string content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(channelId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentMessageId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+
+        var reply = new ChatMessage
+        {
+            Id = $"m{DateTimeOffset.UtcNow.Ticks}",
+            ChannelId = channelId,
+            AuthorId = _currentUser.Id,
+            Content = content,
+            Timestamp = DateTimeOffset.Now,
+            ParentMessageId = parentMessageId,
+        };
+
+        if (!_messages.TryGetValue(channelId, out var messages))
+        {
+            messages = [];
+            _messages[channelId] = messages;
+        }
+
+        messages.Add(reply);
+
+        var parent = FindMessage(parentMessageId);
+        if (parent is not null)
+        {
+            parent.ReplyCount = GetThreadReplies(parentMessageId).Count;
+        }
+
+        return reply;
+    }
+
+    public IReadOnlyList<ChatMessage> SearchMessages(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return [];
+
+        return _messages.Values
+            .SelectMany(m => m)
+            .Where(m => !m.IsDeleted && m.Content.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(m => m.Timestamp)
+            .Take(20)
+            .ToList();
+    }
+
+    private ChatMessage? FindMessage(string messageId)
+    {
         foreach (var messages in _messages.Values)
         {
             var message = messages.FirstOrDefault(m => m.Id == messageId);
-            if (message is null)
-            {
-                continue;
-            }
+            if (message is not null) return message;
+        }
+        return null;
+    }
 
-            var existing = message.Reactions.FirstOrDefault(r => r.Emoji == emoji);
-            if (existing is not null)
-            {
-                if (!existing.UserIds.Contains(_currentUser.Id))
-                {
-                    existing.UserIds.Add(_currentUser.Id);
-                }
-            }
-            else
-            {
-                message.Reactions.Add(new Reaction(emoji, [_currentUser.Id]));
-            }
+    private void SeedThreadReply(string parentId, string channelId, string authorId, string content, DateTimeOffset timestamp)
+    {
+        var reply = new ChatMessage
+        {
+            Id = $"reply-{parentId}-{timestamp.Ticks}",
+            ChannelId = channelId,
+            AuthorId = authorId,
+            Content = content,
+            Timestamp = timestamp,
+            ParentMessageId = parentId,
+        };
 
-            return;
+        if (!_messages.TryGetValue(channelId, out var messages))
+        {
+            messages = [];
+            _messages[channelId] = messages;
+        }
+
+        messages.Add(reply);
+
+        var parent = FindMessage(parentId);
+        if (parent is not null)
+        {
+            parent.ReplyCount = _messages.Values
+                .SelectMany(m => m)
+                .Count(m => m.ParentMessageId == parentId);
         }
     }
 
