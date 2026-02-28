@@ -44,8 +44,8 @@ public partial class MainWindow : Window
         DrawBackdrop(canvas, w, h, t);
 
         DrawEnergyNetwork(canvas, w, h, t);
-        DrawTank(canvas, w, h, t);
-        DrawFan(canvas, w, h, t);
+        DrawTanks(canvas, w, h, t);
+        DrawFans(canvas, w, h, t);
         DrawHud(canvas, w, h, t);
     }
 
@@ -133,15 +133,62 @@ public partial class MainWindow : Window
             new(w * 0.90f, h * 0.18f)
         ];
 
-        DrawFlowPath(canvas, mainLine, t);
-        DrawFlowPath(canvas, branchA, t + 0.8f);
-        DrawFlowPath(canvas, branchB, t + 1.3f);
+        SKPoint[] magentaLine =
+        [
+            new(w * 0.09f, h * 0.83f),
+            new(w * 0.30f, h * 0.83f),
+            new(w * 0.30f, h * 0.58f),
+            new(w * 0.50f, h * 0.58f),
+            new(w * 0.50f, h * 0.82f),
+            new(w * 0.72f, h * 0.82f)
+        ];
+
+        SKPoint[] magentaBranch =
+        [
+            new(w * 0.50f, h * 0.58f),
+            new(w * 0.64f, h * 0.58f),
+            new(w * 0.64f, h * 0.42f),
+            new(w * 0.79f, h * 0.42f)
+        ];
+
+        SKPoint[] tankFeedA =
+        [
+            new(w * 0.68f, h * 0.72f),
+            new(w * 0.79f, h * 0.72f)
+        ];
+
+        SKPoint[] tankFeedB =
+        [
+            new(w * 0.72f, h * 0.82f),
+            new(w * 0.84f, h * 0.82f),
+            new(w * 0.84f, h * 0.70f)
+        ];
+
+        SKPoint[] tankFeedC =
+        [
+            new(w * 0.34f, h * 0.72f),
+            new(w * 0.24f, h * 0.72f),
+            new(w * 0.24f, h * 0.58f)
+        ];
+
+        DrawFlowPath(canvas, mainLine, t, new SKColor(20, 212, 255), new SKColor(170, 255, 255));
+        DrawFlowPath(canvas, branchA, t + 0.8f, new SKColor(20, 212, 255), new SKColor(170, 255, 255));
+        DrawFlowPath(canvas, branchB, t + 1.3f, new SKColor(20, 212, 255), new SKColor(170, 255, 255));
+        DrawFlowPath(canvas, magentaLine, t + 0.35f, new SKColor(255, 84, 212), new SKColor(255, 180, 240));
+        DrawFlowPath(canvas, magentaBranch, t + 1.1f, new SKColor(255, 84, 212), new SKColor(255, 180, 240));
+        DrawFlowPath(canvas, tankFeedA, t + 1.7f, new SKColor(20, 212, 255), new SKColor(170, 255, 255), 12f);
+        DrawFlowPath(canvas, tankFeedB, t + 0.9f, new SKColor(255, 84, 212), new SKColor(255, 180, 240), 12f);
+        DrawFlowPath(canvas, tankFeedC, t + 1.35f, new SKColor(20, 212, 255), new SKColor(170, 255, 255), 12f);
 
         SKPoint[] joints =
         [
             mainLine[1], mainLine[2], mainLine[3], mainLine[4],
             branchA[1], branchA[2], branchA[3],
-            branchB[1], branchB[2]
+            branchB[1], branchB[2],
+            magentaLine[2], magentaLine[3], magentaLine[4],
+            magentaBranch[1], magentaBranch[2],
+            tankFeedB[1],
+            tankFeedC[1]
         ];
 
         float pulse = 0.45f + 0.55f * (MathF.Sin(t * 2.4f) * 0.5f + 0.5f);
@@ -165,11 +212,24 @@ public partial class MainWindow : Window
             };
             canvas.DrawCircle(p, MathF.Max(2, h * 0.0035f), core);
         }
+
+        DrawBranchCoverJoint(canvas, mainLine[2], h, t);
+        DrawBranchCoverJoint(canvas, mainLine[3], h, t + 0.6f);
+        DrawBranchCoverJoint(canvas, magentaLine[3], h, t + 1.1f);
+        DrawBranchCoverJoint(canvas, tankFeedC[1], h, t + 1.4f);
     }
 
-    private static void DrawFlowPath(SKCanvas canvas, SKPoint[] points, float t)
+    private static void DrawFlowPath(
+        SKCanvas canvas,
+        SKPoint[] points,
+        float t,
+        SKColor glowColor,
+        SKColor coreColor,
+        float conduitWidth = 18f)
     {
         using var path = BuildPath(points);
+        float glowWidth = conduitWidth * 0.78f;
+        float coreWidth = conduitWidth * 0.39f;
 
         using var conduit = new SKPaint
         {
@@ -177,7 +237,7 @@ public partial class MainWindow : Window
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
-            StrokeWidth = 18,
+            StrokeWidth = conduitWidth,
             Color = new SKColor(10, 44, 62, 190)
         };
         canvas.DrawPath(path, conduit);
@@ -191,8 +251,8 @@ public partial class MainWindow : Window
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
-            StrokeWidth = 14,
-            Color = new SKColor(20, 212, 255, 120),
+            StrokeWidth = glowWidth,
+            Color = glowColor.WithAlpha(120),
             PathEffect = SKPathEffect.CreateDash(pattern, phase),
             MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 6)
         };
@@ -204,11 +264,56 @@ public partial class MainWindow : Window
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
-            StrokeWidth = 7,
-            Color = new SKColor(170, 255, 255, 245),
+            StrokeWidth = coreWidth,
+            Color = coreColor.WithAlpha(245),
             PathEffect = SKPathEffect.CreateDash(pattern, phase)
         };
         canvas.DrawPath(path, flowCore);
+    }
+
+    private static void DrawBranchCoverJoint(SKCanvas canvas, SKPoint center, float h, float t)
+    {
+        float radius = MathF.Max(12f, h * 0.018f);
+        float innerRadius = radius * 0.58f;
+        float sweep = 65f + (MathF.Sin(t * 2.2f) * 0.5f + 0.5f) * 35f;
+
+        using var shellGlow = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+            Color = new SKColor(30, 214, 255, 70),
+            MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 6)
+        };
+        canvas.DrawCircle(center, radius + 4f, shellGlow);
+
+        using var shell = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+            Color = new SKColor(13, 31, 56, 245)
+        };
+        canvas.DrawCircle(center, radius, shell);
+
+        using var ring = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 2.5f,
+            Color = new SKColor(140, 240, 255, 210)
+        };
+        canvas.DrawCircle(center, radius, ring);
+
+        using var slot = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 2f,
+            Color = new SKColor(90, 220, 250, 190),
+            StrokeCap = SKStrokeCap.Round
+        };
+        var arcRect = SKRect.Create(center.X - innerRadius, center.Y - innerRadius, innerRadius * 2f, innerRadius * 2f);
+        canvas.DrawArc(arcRect, -120f, sweep, false, slot);
+        canvas.DrawArc(arcRect, 55f, sweep * 0.72f, false, slot);
     }
 
     private static SKPath BuildPath(SKPoint[] points)
@@ -228,11 +333,25 @@ public partial class MainWindow : Window
         return path;
     }
 
-    private static void DrawTank(SKCanvas canvas, float w, float h, float t)
+    private static void DrawTanks(SKCanvas canvas, float w, float h, float t)
     {
-        float tankW = w * 0.16f;
-        float tankH = h * 0.35f;
-        var rect = new SKRect(w * 0.78f, h * 0.53f, w * 0.78f + tankW, h * 0.53f + tankH);
+        DrawTank(canvas, w * 0.74f, h * 0.53f, w * 0.13f, h * 0.35f, t, new SKColor(80, 248, 255), new SKColor(8, 102, 185));
+        DrawTank(canvas, w * 0.15f, h * 0.47f, w * 0.11f, h * 0.24f, t + 1.2f, new SKColor(98, 228, 255), new SKColor(16, 124, 198));
+        DrawTank(canvas, w * 0.89f, h * 0.59f, w * 0.08f, h * 0.17f, t + 0.6f, new SKColor(255, 134, 226), new SKColor(178, 52, 140));
+    }
+
+    private static void DrawTank(
+        SKCanvas canvas,
+        float x,
+        float y,
+        float tankW,
+        float tankH,
+        float t,
+        SKColor fluidTopColor,
+        SKColor fluidBottomColor)
+    {
+        float labelSize = MathF.Max(12, tankH * 0.18f);
+        var rect = new SKRect(x, y, x + tankW, y + tankH);
 
         using var shell = new SKPaint
         {
@@ -266,9 +385,9 @@ public partial class MainWindow : Window
                 new SKPoint(fluidRect.MidX, fluidRect.Bottom),
                 new[]
                 {
-                    new SKColor(80, 248, 255, 220),
-                    new SKColor(15, 145, 210, 200),
-                    new SKColor(8, 102, 185, 180)
+                    fluidTopColor.WithAlpha(220),
+                    MixColor(fluidTopColor, fluidBottomColor, 0.45f).WithAlpha(200),
+                    fluidBottomColor.WithAlpha(180)
                 },
                 null,
                 SKShaderTileMode.Clamp)
@@ -289,17 +408,32 @@ public partial class MainWindow : Window
         {
             IsAntialias = true,
             Color = new SKColor(194, 244, 255, 230),
-            TextSize = MathF.Max(16, h * 0.024f),
+            TextSize = labelSize,
             TextAlign = SKTextAlign.Center,
             Typeface = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Bold)
         };
         canvas.DrawText($"{(int)(level * 100)}%", rect.MidX, rect.Top - 10, gaugeText);
     }
 
-    private static void DrawFan(SKCanvas canvas, float w, float h, float t)
+    private static SKColor MixColor(SKColor a, SKColor b, float t)
     {
-        SKPoint center = new(w * 0.17f, h * 0.72f);
-        float radius = MathF.Max(48, h * 0.095f);
+        t = Math.Clamp(t, 0f, 1f);
+        byte r = (byte)(a.Red + (b.Red - a.Red) * t);
+        byte g = (byte)(a.Green + (b.Green - a.Green) * t);
+        byte bl = (byte)(a.Blue + (b.Blue - a.Blue) * t);
+        byte alpha = (byte)(a.Alpha + (b.Alpha - a.Alpha) * t);
+        return new SKColor(r, g, bl, alpha);
+    }
+
+    private static void DrawFans(SKCanvas canvas, float w, float h, float t)
+    {
+        DrawFan(canvas, new SKPoint(w * 0.13f, h * 0.84f), MathF.Max(48, h * 0.095f), t * 220f, new SKColor(115, 230, 255, 190));
+        DrawFan(canvas, new SKPoint(w * 0.63f, h * 0.24f), MathF.Max(28, h * 0.055f), -t * 180f, new SKColor(255, 156, 236, 185));
+        DrawFan(canvas, new SKPoint(w * 0.91f, h * 0.31f), MathF.Max(24, h * 0.048f), t * 260f, new SKColor(152, 246, 255, 170));
+    }
+
+    private static void DrawFan(SKCanvas canvas, SKPoint center, float radius, float rotation, SKColor bladeColor)
+    {
         float hub = radius * 0.22f;
 
         using var ringGlow = new SKPaint
@@ -321,12 +455,11 @@ public partial class MainWindow : Window
         };
         canvas.DrawCircle(center, radius, ring);
 
-        float rotation = t * 220f;
         using var bladePaint = new SKPaint
         {
             IsAntialias = true,
             Style = SKPaintStyle.Fill,
-            Color = new SKColor(115, 230, 255, 190)
+            Color = bladeColor
         };
 
         for (int i = 0; i < 5; i++)
@@ -387,3 +520,4 @@ public partial class MainWindow : Window
         canvas.DrawRoundRect(new SKRect(w * 0.04f, h * 0.05f, w * 0.39f, h * 0.2f), 8, 8, panel);
     }
 }
+
