@@ -1,3 +1,6 @@
+using System.Net;
+using System.Text;
+
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -14,88 +17,218 @@ var config = new AmazonS3Config
 using var client = new AmazonS3Client(
     new BasicAWSCredentials("test", "test"), config);
 
-// 1. Create bucket
-Console.WriteLine($"Creating bucket: {bucketName}");
+// ── 1. Create bucket ────────────────────────────────────────────
+Console.WriteLine("=== Create Bucket ===");
 await client.PutBucketAsync(bucketName);
-Console.WriteLine("  -> Done");
+Console.WriteLine($"  Created: {bucketName}");
 
-// 2. Upload objects with hierarchical keys
-string[] keys = ["readme.txt", "docs/guide.txt", "docs/api/reference.txt", "images/logo.png", "images/icons/favicon.ico"];
+// ── 2. Upload objects with hierarchical keys and metadata ────────
+Console.WriteLine("\n=== Upload Objects ===");
+string[] keys =
+[
+    "readme.txt",
+    "docs/guide.txt",
+    "docs/api/reference.txt",
+    "images/logo.png",
+    "images/icons/favicon.ico",
+];
 foreach (var key in keys)
 {
-    Console.WriteLine($"Uploading: {key}");
-    await client.PutObjectAsync(new PutObjectRequest
+    var req = new PutObjectRequest
     {
         BucketName = bucketName,
         Key = key,
         ContentBody = $"Content of {key}",
-    });
+        ContentType = "text/plain",
+    };
+    req.Metadata["author"] = "demo-user";
+    await client.PutObjectAsync(req);
+    Console.WriteLine($"  Uploaded: {key}");
 }
-Console.WriteLine("  -> All uploads done");
 
-// 3. List all objects (flat)
-Console.WriteLine("\n--- All objects (flat) ---");
-var flatList = await client.ListObjectsV2Async(new ListObjectsV2Request
-{
-    BucketName = bucketName,
-});
+// ── 3. List all objects (flat) ──────────────────────────────────
+Console.WriteLine("\n=== List All Objects (flat) ===");
+var flatList = await client.ListObjectsV2Async(
+    new ListObjectsV2Request { BucketName = bucketName });
 foreach (var obj in flatList.S3Objects)
-{
     Console.WriteLine($"  {obj.Key} ({obj.Size} bytes)");
-}
 
-// 4. List root level with delimiter (directory browsing)
-Console.WriteLine("\n--- Root level (delimiter='/') ---");
-var rootList = await client.ListObjectsV2Async(new ListObjectsV2Request
-{
-    BucketName = bucketName,
-    Delimiter = "/",
-});
+// ── 4. List with delimiter (hierarchy browsing) ─────────────────
+Console.WriteLine("\n=== Root Level (delimiter='/') ===");
+var rootList = await client.ListObjectsV2Async(
+    new ListObjectsV2Request { BucketName = bucketName, Delimiter = "/" });
 foreach (var cp in rootList.CommonPrefixes)
     Console.WriteLine($"  [DIR]  {cp}");
 foreach (var obj in rootList.S3Objects)
-    Console.WriteLine($"  [FILE] {obj.Key} ({obj.Size} bytes)");
+    Console.WriteLine($"  [FILE] {obj.Key}");
 
-// 5. Browse into docs/ subdirectory
-Console.WriteLine("\n--- docs/ (delimiter='/') ---");
-var docsList = await client.ListObjectsV2Async(new ListObjectsV2Request
+// ── 5. Pagination (MaxKeys=2) ───────────────────────────────────
+Console.WriteLine("\n=== Pagination (MaxKeys=2) ===");
+string? continuationToken = null;
+var page = 1;
+do
+{
+    var resp = await client.ListObjectsV2Async(new ListObjectsV2Request
+    {
+        BucketName = bucketName,
+        MaxKeys = 2,
+        ContinuationToken = continuationToken,
+    });
+    Console.WriteLine($"  Page {page}: " +
+        $"{string.Join(", ", resp.S3Objects.Select(o => o.Key))} " +
+        $"(IsTruncated={resp.IsTruncated})");
+    continuationToken = resp.IsTruncated == true ? resp.NextContinuationToken : null;
+    page++;
+} while (continuationToken is not null);
+
+// ── 6. CopyObject ───────────────────────────────────────────────
+Console.WriteLine("\n=== Copy Object ===");
+await client.CopyObjectAsync(new CopyObjectRequest
+{
+    SourceBucket = bucketName,
+    SourceKey = "readme.txt",
+    DestinationBucket = bucketName,
+    DestinationKey = "backup/readme-copy.txt",
+});
+Console.WriteLine("  Copied readme.txt -> backup/readme-copy.txt");
+var copyGet = await client.GetObjectAsync(bucketName, "backup/readme-copy.txt");
+using (var reader = new StreamReader(copyGet.ResponseStream))
+    Console.WriteLine($"  Content: {await reader.ReadToEndAsync()}");
+
+// ── 7. Content-Type and user-defined metadata ───────────────────
+Console.WriteLine("\n=== Content-Type & User Metadata ===");
+
+// Upload with explicit Content-Type and custom metadata
+var metaReq = new PutObjectRequest
 {
     BucketName = bucketName,
-    Prefix = "docs/",
-    Delimiter = "/",
-});
-foreach (var cp in docsList.CommonPrefixes)
-    Console.WriteLine($"  [DIR]  {cp}");
-foreach (var obj in docsList.S3Objects)
-    Console.WriteLine($"  [FILE] {obj.Key} ({obj.Size} bytes)");
+    Key = "data/config.json",
+    ContentBody = """{"setting": true}""",
+    ContentType = "application/json",
+};
+metaReq.Metadata["project"] = "work-storage";
+metaReq.Metadata["version"] = "1.0";
+await client.PutObjectAsync(metaReq);
+Console.WriteLine("  Uploaded data/config.json with custom metadata");
 
-// 6. Browse into docs/api/ subdirectory
-Console.WriteLine("\n--- docs/api/ (delimiter='/') ---");
-var apiList = await client.ListObjectsV2Async(new ListObjectsV2Request
+// HEAD to verify metadata is returned
+var metaHead = await client.GetObjectMetadataAsync(bucketName, "data/config.json");
+Console.WriteLine($"  ContentType : {metaHead.Headers.ContentType}");
+Console.WriteLine($"  x-amz-meta-project: {metaHead.Metadata["project"]}");
+Console.WriteLine($"  x-amz-meta-version: {metaHead.Metadata["version"]}");
+
+// Copy with COPY directive (metadata preserved)
+await client.CopyObjectAsync(new CopyObjectRequest
+{
+    SourceBucket = bucketName,
+    SourceKey = "data/config.json",
+    DestinationBucket = bucketName,
+    DestinationKey = "data/config-copy.json",
+});
+var copyMeta = await client.GetObjectMetadataAsync(bucketName, "data/config-copy.json");
+Console.WriteLine($"  COPY directive  -> ContentType: {copyMeta.Headers.ContentType}" +
+    $", project={copyMeta.Metadata["project"]}");
+
+// Copy with REPLACE directive (new metadata)
+var replaceReq = new CopyObjectRequest
+{
+    SourceBucket = bucketName,
+    SourceKey = "data/config.json",
+    DestinationBucket = bucketName,
+    DestinationKey = "data/config-replaced.json",
+    MetadataDirective = S3MetadataDirective.REPLACE,
+    ContentType = "text/yaml",
+};
+replaceReq.Metadata["project"] = "new-project";
+await client.CopyObjectAsync(replaceReq);
+var replacedMeta = await client.GetObjectMetadataAsync(bucketName, "data/config-replaced.json");
+Console.WriteLine($"  REPLACE directive -> ContentType: {replacedMeta.Headers.ContentType}" +
+    $", project={replacedMeta.Metadata["project"]}");
+
+// ── 8. Range request (partial download) ─────────────────────────
+Console.WriteLine("\n=== Range Request ===");
+var rangeResp = await client.GetObjectAsync(new GetObjectRequest
 {
     BucketName = bucketName,
-    Prefix = "docs/api/",
-    Delimiter = "/",
+    Key = "readme.txt",
+    ByteRange = new ByteRange(0, 6),
 });
-foreach (var obj in apiList.S3Objects)
-    Console.WriteLine($"  [FILE] {obj.Key} ({obj.Size} bytes)");
+using (var reader = new StreamReader(rangeResp.ResponseStream))
+    Console.WriteLine($"  Bytes 0-6: \"{await reader.ReadToEndAsync()}\"");
 
-// 7. Download a nested object
-Console.WriteLine("\n--- Download docs/api/reference.txt ---");
-var getResponse = await client.GetObjectAsync(bucketName, "docs/api/reference.txt");
-using (var reader = new StreamReader(getResponse.ResponseStream))
+// ── 9. Conditional request (If-None-Match → 304) ────────────────
+Console.WriteLine("\n=== Conditional Request ===");
+var headResp = await client.GetObjectMetadataAsync(bucketName, "readme.txt");
+Console.WriteLine($"  Current ETag: {headResp.ETag}");
+try
 {
-    Console.WriteLine($"  -> Content: {await reader.ReadToEndAsync()}");
+    await client.GetObjectAsync(new GetObjectRequest
+    {
+        BucketName = bucketName,
+        Key = "readme.txt",
+        EtagToNotMatch = headResp.ETag,
+    });
+    Console.WriteLine("  Unexpected: should have returned 304");
+}
+catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotModified)
+{
+    Console.WriteLine("  304 Not Modified (as expected)");
 }
 
-// 8. Delete all objects then bucket
-Console.WriteLine("\n--- Cleanup ---");
-foreach (var key in keys)
+// ── 10. Multipart upload ────────────────────────────────────────
+Console.WriteLine("\n=== Multipart Upload ===");
+var initResp = await client.InitiateMultipartUploadAsync(
+    new InitiateMultipartUploadRequest
+    {
+        BucketName = bucketName,
+        Key = "large-file.dat",
+    });
+var uploadId = initResp.UploadId;
+Console.WriteLine($"  UploadId: {uploadId}");
+
+var partETags = new List<PartETag>();
+for (var i = 1; i <= 3; i++)
 {
-    Console.WriteLine($"Deleting: {key}");
-    await client.DeleteObjectAsync(bucketName, key);
+    var partData = Encoding.UTF8.GetBytes($"[Part-{i} data with some padding...]");
+    using var ms = new MemoryStream(partData);
+    var partResp = await client.UploadPartAsync(new UploadPartRequest
+    {
+        BucketName = bucketName,
+        Key = "large-file.dat",
+        UploadId = uploadId,
+        PartNumber = i,
+        InputStream = ms,
+    });
+    partETags.Add(new PartETag(i, partResp.ETag));
+    Console.WriteLine($"  Part {i} uploaded, ETag: {partResp.ETag}");
 }
+
+await client.CompleteMultipartUploadAsync(new CompleteMultipartUploadRequest
+{
+    BucketName = bucketName,
+    Key = "large-file.dat",
+    UploadId = uploadId,
+    PartETags = partETags,
+});
+Console.WriteLine("  Multipart upload completed");
+
+var mpGet = await client.GetObjectAsync(bucketName, "large-file.dat");
+using (var reader = new StreamReader(mpGet.ResponseStream))
+    Console.WriteLine($"  Content: {await reader.ReadToEndAsync()}");
+
+// ── 11. DeleteObjects (bulk delete) ─────────────────────────────
+Console.WriteLine("\n=== Bulk Delete ===");
+var allObjs = await client.ListObjectsV2Async(
+    new ListObjectsV2Request { BucketName = bucketName });
+var delResp = await client.DeleteObjectsAsync(new DeleteObjectsRequest
+{
+    BucketName = bucketName,
+    Objects = allObjs.S3Objects.Select(o => new KeyVersion { Key = o.Key }).ToList(),
+});
+Console.WriteLine($"  Deleted {delResp.DeletedObjects.Count} objects");
+
+// ── 12. Cleanup ─────────────────────────────────────────────────
 await client.DeleteBucketAsync(bucketName);
-Console.WriteLine("  -> Bucket deleted");
+Console.WriteLine($"  Bucket deleted: {bucketName}");
 
-Console.WriteLine("\nAll operations completed successfully.");
+Console.WriteLine("\n=== All operations completed successfully ===");
