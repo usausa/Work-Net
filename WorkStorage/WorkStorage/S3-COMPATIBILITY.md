@@ -11,19 +11,25 @@ AWS S3 REST API との互換性状況をまとめます。
 | ListBuckets | `GET /` | 全バケットを一覧取得 |
 | CreateBucket | `PUT /{bucket}` | バケットを作成 |
 | HeadBucket | `HEAD /{bucket}` | バケットの存在確認 |
-| DeleteBucket | `DELETE /{bucket}` | バケットとメタデータを再帰削除 |
+| DeleteBucket | `DELETE /{bucket}` | バケット・メタデータ・タグを再帰削除 |
 | GetBucketLocation | `GET /{bucket}?location` | バケットのリージョン情報を返却（固定値 `us-east-1`） |
+| GetBucketTagging | `GET /{bucket}?tagging` | バケットのタグセットを取得 |
+| PutBucketTagging | `PUT /{bucket}?tagging` | バケットにタグセットを設定 |
+| DeleteBucketTagging | `DELETE /{bucket}?tagging` | バケットのタグセットを削除 |
 
 ### オブジェクト操作
 
 | 操作 | メソッド / パス | 説明 |
 |---|---|---|
-| PutObject | `PUT /{bucket}/{key}` | オブジェクトをアップロード。Content-Type と `x-amz-meta-*` を保存 |
-| GetObject | `GET /{bucket}/{key}` | オブジェクトをダウンロード。保存された Content-Type と `x-amz-meta-*` を返却 |
+| PutObject | `PUT /{bucket}/{key}` | オブジェクトをアップロード。Content-Type・`x-amz-meta-*` を保存 |
+| GetObject | `GET /{bucket}/{key}` | オブジェクトをダウンロード。保存された Content-Type・`x-amz-meta-*` を返却 |
 | HeadObject | `HEAD /{bucket}/{key}` | オブジェクトのメタデータを取得 |
 | DeleteObject | `DELETE /{bucket}/{key}` | オブジェクトとメタデータを削除。空ディレクトリを自動クリーンアップ |
 | CopyObject | `PUT /{bucket}/{key}` + `x-amz-copy-source` | サーバー側コピー。`x-amz-metadata-directive: COPY\|REPLACE` に対応 |
 | DeleteObjects | `POST /{bucket}?delete` | 複数オブジェクトの一括削除。`Quiet` モード対応 |
+| GetObjectTagging | `GET /{bucket}/{key}?tagging` | オブジェクトのタグセットを取得 |
+| PutObjectTagging | `PUT /{bucket}/{key}?tagging` | オブジェクトにタグセットを設定 |
+| DeleteObjectTagging | `DELETE /{bucket}/{key}?tagging` | オブジェクトのタグセットを削除 |
 
 ### ListObjectsV2
 
@@ -42,6 +48,8 @@ AWS S3 REST API との互換性状況をまとめます。
 | UploadPart | `PUT /{bucket}/{key}?partNumber=N&uploadId=ID` | パートをアップロード |
 | CompleteMultipartUpload | `POST /{bucket}/{key}?uploadId=ID` | パートを結合して最終オブジェクトを生成。メタデータを復元 |
 | AbortMultipartUpload | `DELETE /{bucket}/{key}?uploadId=ID` | アップロードを中止しパートを破棄 |
+| ListMultipartUploads | `GET /{bucket}?uploads` | バケット内の進行中マルチパートアップロードを一覧 |
+| ListParts | `GET /{bucket}/{key}?uploadId=ID` | マルチパートアップロードのパートを一覧 |
 
 ### 条件付きリクエスト
 
@@ -64,7 +72,14 @@ AWS S3 REST API との互換性状況をまとめます。
 |---|---|
 | Content-Type 保持 | PutObject / Multipart Upload で送信された Content-Type をサイドカーファイルに保存し、GET/HEAD で返却 |
 | ユーザー定義メタデータ (`x-amz-meta-*`) | PutObject / Multipart Upload で送信されたカスタムメタデータを保存し、GET/HEAD で返却 |
-| CopyObject メタデータディレクティブ | `x-amz-metadata-directive: COPY` (デフォルト) でソースのメタデータを保持、`REPLACE` でリクエストのメタデータに置換 |
+| CopyObject メタデータディレクティブ | `COPY` (デフォルト) でソースのメタデータを保持、`REPLACE` でリクエストのメタデータに置換 |
+
+### タグ
+
+| 機能 | 説明 |
+|---|---|
+| Object Tagging | オブジェクト単位でキー/値のタグセットを管理 (`GET/PUT/DELETE ?tagging`) |
+| Bucket Tagging | バケット単位でキー/値のタグセットを管理 (`GET/PUT/DELETE ?tagging`) |
 
 ### その他
 
@@ -98,7 +113,6 @@ AWS S3 REST API との互換性状況をまとめます。
 | Bucket Notification | オブジェクト作成/削除時のイベント通知 (SNS/SQS/Lambda) |
 | Bucket CORS | バケット単位の CORS 設定 |
 | Bucket Logging | アクセスログの記録 |
-| Bucket Tagging | バケットへのタグ付与 |
 | Bucket Encryption | デフォルト暗号化設定 (SSE-S3, SSE-KMS) |
 | Bucket Replication | クロスリージョンレプリケーション |
 
@@ -107,27 +121,18 @@ AWS S3 REST API との互換性状況をまとめます。
 | 機能 | 説明 |
 |---|---|
 | Object Versioning | バージョニング有効時のオブジェクトバージョン管理 |
-| Object Tagging | オブジェクトへのタグ付与 (`GET/PUT/DELETE /{bucket}/{key}?tagging`) |
+| ListObjectVersions | バージョン付きオブジェクトの一覧 |
 | Object Lock / Legal Hold | オブジェクトの変更不可ロック |
 | Server-Side Encryption | SSE-S3, SSE-KMS, SSE-C による暗号化 |
 | Storage Class | STANDARD 以外のストレージクラス (GLACIER, INTELLIGENT_TIERING 等) |
 | Object Restore | Glacier からの復元 |
 | Select Object Content | SQL による CSV/JSON/Parquet のクエリ |
 
-### リスト・検索
-
-| 機能 | 説明 |
-|---|---|
-| ListObjectVersions | バージョン付きオブジェクトの一覧 |
-| ListMultipartUploads | 進行中のマルチパートアップロード一覧 |
-| ListParts | マルチパートアップロードのパート一覧 |
-
 ### 転送・パフォーマンス
 
 | 機能 | 説明 |
 |---|---|
 | Transfer Acceleration | CloudFront エッジ経由の高速転送 |
-| Byte-Range Fetch (Multipart) | 並列 Range リクエストによる高速ダウンロード（サーバー側対応は済み、クライアント側のみ） |
 
 ---
 
@@ -140,10 +145,12 @@ AWS S3 REST API との互換性状況をまとめます。
 │   └── folder/
 │       └── key2.txt
 ├── .meta/                     # メタデータ (JSON サイドカー)
-│   └── {bucket}/
-│       ├── key1.txt.json
-│       └── folder/
-│           └── key2.txt.json
+│   ├── {bucket}/
+│   │   ├── key1.txt.json
+│   │   └── folder/
+│   │       └── key2.txt.json
+│   └── .buckets/              # バケットタグ
+│       └── {bucket}.json
 └── .multipart/                # マルチパート一時ファイル
     └── {uploadId}/
         ├── .info              # bucket\nkey
@@ -160,6 +167,19 @@ AWS S3 REST API との互換性状況をまとめます。
   "UserMetadata": {
     "project": "work-storage",
     "version": "1.0"
+  },
+  "Tags": {
+    "environment": "dev",
+    "team": "backend"
   }
+}
+```
+
+バケットタグファイルの形式:
+
+```json
+{
+  "project": "work-storage",
+  "cost-center": "engineering"
 }
 ```

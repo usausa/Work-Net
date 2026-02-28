@@ -12,8 +12,9 @@ namespace WorkStorage.Controllers;
 /// <summary>
 /// Provides AWS S3-compatible REST API endpoints backed by local file system storage.
 /// Authentication is not enforced.
-/// Object metadata (Content-Type, x-amz-meta-*) is persisted as JSON sidecar files
-/// under {BasePath}/.meta/{bucket}/{key}.json.
+/// Object metadata (Content-Type, x-amz-meta-*, tags) is persisted as JSON sidecar
+/// files under {BasePath}/.meta/{bucket}/{key}.json.
+/// Bucket tags are stored under {BasePath}/.meta/.buckets/{bucket}.json.
 /// </summary>
 [ApiController]
 public sealed class S3Controller : ControllerBase
@@ -42,6 +43,7 @@ public sealed class S3Controller : ControllerBase
     {
         public string ContentType { get; init; } = "application/octet-stream";
         public Dictionary<string, string> UserMetadata { get; init; } = [];
+        public Dictionary<string, string> Tags { get; init; } = [];
     }
 
     // ================================================================
@@ -76,11 +78,15 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// PUT /{bucket} – Create a bucket.
+    /// PUT /{bucket} – Create a bucket, or set bucket tagging (?tagging).
     /// </summary>
     [HttpPut("/{bucket}")]
-    public IActionResult CreateBucket(string bucket)
+    public async Task<IActionResult> PutBucketAsync(
+        string bucket, CancellationToken cancellationToken)
     {
+        if (Request.Query.ContainsKey("tagging"))
+            return await PutBucketTaggingAsync(bucket, cancellationToken);
+
         ValidateBucketName(bucket);
         Directory.CreateDirectory(ResolveBucketPath(bucket));
         Response.Headers["Location"] = $"/{bucket}";
@@ -100,11 +106,15 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// DELETE /{bucket} – Delete a bucket and all its contents including metadata.
+    /// DELETE /{bucket} – Delete a bucket and all its contents,
+    /// or delete bucket tagging (?tagging).
     /// </summary>
     [HttpDelete("/{bucket}")]
     public IActionResult DeleteBucket(string bucket)
     {
+        if (Request.Query.ContainsKey("tagging"))
+            return DeleteBucketTagging(bucket);
+
         ValidateBucketName(bucket);
         var bucketPath = ResolveBucketPath(bucket);
         if (!Directory.Exists(bucketPath))
@@ -112,17 +122,18 @@ public sealed class S3Controller : ControllerBase
 
         Directory.Delete(bucketPath, recursive: true);
 
-        // Also remove the metadata directory for this bucket
+        // Also remove metadata and tags for this bucket
         var metaBucketDir = Path.Combine(_metaBasePath, bucket);
         if (Directory.Exists(metaBucketDir))
             Directory.Delete(metaBucketDir, recursive: true);
+        DeleteBucketTagsFile(bucket);
 
         return NoContent();
     }
 
     /// <summary>
-    /// GET /{bucket} – List objects (ListObjectsV2 with pagination, delimiter, prefix)
-    /// or get bucket location (?location).
+    /// GET /{bucket} – List objects, get bucket location (?location),
+    /// get bucket tagging (?tagging), or list multipart uploads (?uploads).
     /// </summary>
     [HttpGet("/{bucket}")]
     public IActionResult GetBucket(
@@ -135,6 +146,10 @@ public sealed class S3Controller : ControllerBase
     {
         if (Request.Query.ContainsKey("location"))
             return GetBucketLocation(bucket);
+        if (Request.Query.ContainsKey("tagging"))
+            return GetBucketTagging(bucket);
+        if (Request.Query.ContainsKey("uploads"))
+            return ListMultipartUploads(bucket);
 
         ValidateBucketName(bucket);
         var bucketPath = ResolveBucketPath(bucket);
@@ -143,7 +158,6 @@ public sealed class S3Controller : ControllerBase
 
         prefix ??= string.Empty;
 
-        // Decode continuation token (base64-encoded last key from previous page)
         if (!string.IsNullOrEmpty(continuationToken))
             startAfter = Encoding.UTF8.GetString(Convert.FromBase64String(continuationToken));
 
@@ -168,8 +182,6 @@ public sealed class S3Controller : ControllerBase
                 break;
             }
 
-            // When a delimiter is specified, group keys that share a common prefix
-            // (e.g. delimiter="/" turns "folder/file.txt" into CommonPrefix "folder/").
             if (!string.IsNullOrEmpty(delimiter))
             {
                 var remaining = key[prefix.Length..];
@@ -242,8 +254,8 @@ public sealed class S3Controller : ControllerBase
     // ================================================================
 
     /// <summary>
-    /// PUT /{bucket}/{**key} – Upload an object, copy an object (x-amz-copy-source),
-    /// or upload a multipart part (?partNumber&amp;uploadId).
+    /// PUT /{bucket}/{**key} – Upload an object, set object tagging (?tagging),
+    /// copy an object (x-amz-copy-source), or upload a multipart part.
     /// </summary>
     [HttpPut("/{bucket}/{**key}")]
     public async Task<IActionResult> PutObjectAsync(
@@ -251,6 +263,10 @@ public sealed class S3Controller : ControllerBase
     {
         ValidateBucketName(bucket);
         ValidateObjectKey(key);
+
+        // Object tagging
+        if (Request.Query.ContainsKey("tagging"))
+            return await PutObjectTaggingAsync(bucket, key, cancellationToken);
 
         // Multipart part upload
         if (Request.Query.TryGetValue("partNumber", out var partNumVal)
@@ -281,7 +297,6 @@ public sealed class S3Controller : ControllerBase
             await Request.Body.CopyToAsync(fs, cancellationToken);
         }
 
-        // Persist Content-Type and user-defined metadata
         SaveMetadata(bucket, key, new ObjectMetadata
         {
             ContentType = Request.ContentType ?? ResolveContentType(key),
@@ -293,14 +308,21 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// GET /{bucket}/{**key} – Download an object with conditional, range,
-    /// and user-metadata support.
+    /// GET /{bucket}/{**key} – Download an object, get object tagging (?tagging),
+    /// or list parts (?uploadId).
     /// </summary>
     [HttpGet("/{bucket}/{**key}")]
     public IActionResult GetObject(string bucket, string key)
     {
         ValidateBucketName(bucket);
         ValidateObjectKey(key);
+
+        if (Request.Query.ContainsKey("tagging"))
+            return GetObjectTagging(bucket, key);
+
+        if (Request.Query.TryGetValue("uploadId", out var uploadIdVal))
+            return ListParts(bucket, key, uploadIdVal.ToString()!);
+
         var bucketPath = ResolveBucketPath(bucket);
         if (!Directory.Exists(bucketPath))
             return S3Error("NoSuchBucket", "The specified bucket does not exist");
@@ -314,15 +336,11 @@ public sealed class S3Controller : ControllerBase
         var lastModified = new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero);
         var entityTag = new EntityTagHeaderValue($"\"{etag}\"");
 
-        // Load persisted metadata
         var metadata = LoadMetadata(bucket, key);
         var contentType = metadata?.ContentType ?? ResolveContentType(key);
 
-        // Emit x-amz-meta-* response headers
         SetUserMetadataHeaders(metadata);
 
-        // PhysicalFile handles If-None-Match, If-Modified-Since (→ 304),
-        // If-Match, If-Unmodified-Since (→ 412), and Range (→ 206) automatically.
         return PhysicalFile(
             filePath, contentType, lastModified, entityTag,
             enableRangeProcessing: true);
@@ -365,14 +383,17 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// DELETE /{bucket}/{**key} – Delete an object (and its metadata)
-    /// or abort a multipart upload (?uploadId).
+    /// DELETE /{bucket}/{**key} – Delete an object (and its metadata),
+    /// delete object tagging (?tagging), or abort a multipart upload (?uploadId).
     /// </summary>
     [HttpDelete("/{bucket}/{**key}")]
     public IActionResult DeleteObject(string bucket, string key)
     {
         ValidateBucketName(bucket);
         ValidateObjectKey(key);
+
+        if (Request.Query.ContainsKey("tagging"))
+            return DeleteObjectTagging(bucket, key);
 
         if (Request.Query.TryGetValue("uploadId", out var uploadIdVal))
             return AbortMultipartUpload(uploadIdVal.ToString()!);
@@ -420,7 +441,6 @@ public sealed class S3Controller : ControllerBase
     /// </summary>
     private IActionResult CopyObject(string destBucket, string destKey, string copySourceRaw)
     {
-        // x-amz-copy-source format: /bucket/key or bucket/key (URL-encoded)
         var decoded = Uri.UnescapeDataString(copySourceRaw).TrimStart('/');
         var slashIndex = decoded.IndexOf('/');
         if (slashIndex <= 0)
@@ -444,12 +464,10 @@ public sealed class S3Controller : ControllerBase
         Directory.CreateDirectory(Path.GetDirectoryName(destFilePath)!);
         System.IO.File.Copy(srcFilePath, destFilePath, overwrite: true);
 
-        // Handle metadata directive
         var directive = Request.Headers["x-amz-metadata-directive"].ToString();
         ObjectMetadata destMeta;
         if (string.Equals(directive, "REPLACE", StringComparison.OrdinalIgnoreCase))
         {
-            // Use metadata supplied in the copy request headers
             destMeta = new ObjectMetadata
             {
                 ContentType = Request.ContentType ?? ResolveContentType(destKey),
@@ -458,7 +476,6 @@ public sealed class S3Controller : ControllerBase
         }
         else
         {
-            // Default (COPY): preserve source metadata
             destMeta = LoadMetadata(srcBucket, srcKey) ?? new ObjectMetadata
             {
                 ContentType = ResolveContentType(srcKey),
@@ -543,12 +560,124 @@ public sealed class S3Controller : ControllerBase
     }
 
     // ================================================================
+    //  Object tagging
+    // ================================================================
+
+    /// <summary>
+    /// GET /{bucket}/{key}?tagging – Returns the tag set for an object.
+    /// </summary>
+    private IActionResult GetObjectTagging(string bucket, string key)
+    {
+        var filePath = ResolveObjectPath(bucket, key);
+        if (!System.IO.File.Exists(filePath))
+            return S3Error("NoSuchKey", "The specified key does not exist.");
+
+        var metadata = LoadMetadata(bucket, key);
+        return TagSetXmlResponse(metadata?.Tags ?? []);
+    }
+
+    /// <summary>
+    /// PUT /{bucket}/{key}?tagging – Sets the tag set for an object.
+    /// </summary>
+    private async Task<IActionResult> PutObjectTaggingAsync(
+        string bucket, string key, CancellationToken cancellationToken)
+    {
+        var filePath = ResolveObjectPath(bucket, key);
+        if (!System.IO.File.Exists(filePath))
+            return S3Error("NoSuchKey", "The specified key does not exist.");
+
+        var tags = await ParseTagSetFromBodyAsync(cancellationToken);
+
+        var metadata = LoadMetadata(bucket, key) ?? new ObjectMetadata
+        {
+            ContentType = ResolveContentType(key),
+        };
+
+        // Preserve existing metadata, update only tags
+        SaveMetadata(bucket, key, new ObjectMetadata
+        {
+            ContentType = metadata.ContentType,
+            UserMetadata = metadata.UserMetadata,
+            Tags = tags,
+        });
+
+        return Ok();
+    }
+
+    /// <summary>
+    /// DELETE /{bucket}/{key}?tagging – Removes the tag set from an object.
+    /// </summary>
+    private IActionResult DeleteObjectTagging(string bucket, string key)
+    {
+        var filePath = ResolveObjectPath(bucket, key);
+        if (!System.IO.File.Exists(filePath))
+            return S3Error("NoSuchKey", "The specified key does not exist.");
+
+        var metadata = LoadMetadata(bucket, key);
+        if (metadata is not null && metadata.Tags.Count > 0)
+        {
+            SaveMetadata(bucket, key, new ObjectMetadata
+            {
+                ContentType = metadata.ContentType,
+                UserMetadata = metadata.UserMetadata,
+                Tags = [],
+            });
+        }
+
+        return NoContent();
+    }
+
+    // ================================================================
+    //  Bucket tagging
+    // ================================================================
+
+    /// <summary>
+    /// GET /{bucket}?tagging – Returns the tag set for a bucket.
+    /// </summary>
+    private IActionResult GetBucketTagging(string bucket)
+    {
+        ValidateBucketName(bucket);
+        if (!Directory.Exists(ResolveBucketPath(bucket)))
+            return S3Error("NoSuchBucket", "The specified bucket does not exist");
+
+        var tags = LoadBucketTags(bucket);
+        return TagSetXmlResponse(tags);
+    }
+
+    /// <summary>
+    /// PUT /{bucket}?tagging – Sets the tag set for a bucket.
+    /// </summary>
+    private async Task<IActionResult> PutBucketTaggingAsync(
+        string bucket, CancellationToken cancellationToken)
+    {
+        ValidateBucketName(bucket);
+        if (!Directory.Exists(ResolveBucketPath(bucket)))
+            return S3Error("NoSuchBucket", "The specified bucket does not exist");
+
+        var tags = await ParseTagSetFromBodyAsync(cancellationToken);
+        SaveBucketTags(bucket, tags);
+        return Ok();
+    }
+
+    /// <summary>
+    /// DELETE /{bucket}?tagging – Removes the tag set from a bucket.
+    /// </summary>
+    private IActionResult DeleteBucketTagging(string bucket)
+    {
+        ValidateBucketName(bucket);
+        if (!Directory.Exists(ResolveBucketPath(bucket)))
+            return S3Error("NoSuchBucket", "The specified bucket does not exist");
+
+        DeleteBucketTagsFile(bucket);
+        return NoContent();
+    }
+
+    // ================================================================
     //  Multipart upload
     // ================================================================
 
     /// <summary>
     /// Initiates a multipart upload and returns an UploadId.
-    /// Captures Content-Type and x-amz-meta-* from the initiation request.
     /// </summary>
     private IActionResult CreateMultipartUpload(string bucket, string key)
     {
@@ -560,12 +689,10 @@ public sealed class S3Controller : ControllerBase
         var uploadDir = Path.Combine(_multipartPath, uploadId);
         Directory.CreateDirectory(uploadDir);
 
-        // Store upload info
         System.IO.File.WriteAllText(
             Path.Combine(uploadDir, ".info"),
             $"{bucket}\n{key}");
 
-        // Capture metadata from the initiation request for use at completion time
         var meta = new ObjectMetadata
         {
             ContentType = Request.ContentType ?? ResolveContentType(key),
@@ -610,8 +737,7 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// Concatenates uploaded parts into the final object and persists metadata
-    /// captured during initiation.
+    /// Concatenates uploaded parts into the final object and persists metadata.
     /// </summary>
     private async Task<IActionResult> CompleteMultipartUploadAsync(
         string bucket, string key, string uploadId,
@@ -653,7 +779,6 @@ public sealed class S3Controller : ControllerBase
             }
         }
 
-        // Restore metadata captured during CreateMultipartUpload
         var uploadMetaPath = Path.Combine(uploadDir, ".meta.json");
         ObjectMetadata? objMeta = null;
         if (System.IO.File.Exists(uploadMetaPath))
@@ -694,6 +819,102 @@ public sealed class S3Controller : ControllerBase
     }
 
     // ================================================================
+    //  ListMultipartUploads / ListParts
+    // ================================================================
+
+    /// <summary>
+    /// GET /{bucket}?uploads – Lists in-progress multipart uploads for a bucket.
+    /// </summary>
+    private IActionResult ListMultipartUploads(string bucket)
+    {
+        ValidateBucketName(bucket);
+        if (!Directory.Exists(ResolveBucketPath(bucket)))
+            return S3Error("NoSuchBucket", "The specified bucket does not exist");
+
+        var uploads = new List<XElement>();
+
+        if (Directory.Exists(_multipartPath))
+        {
+            foreach (var dir in Directory.GetDirectories(_multipartPath))
+            {
+                var infoPath = Path.Combine(dir, ".info");
+                if (!System.IO.File.Exists(infoPath))
+                    continue;
+
+                var lines = System.IO.File.ReadAllLines(infoPath);
+                if (lines.Length < 2 || lines[0] != bucket)
+                    continue;
+
+                var uploadId = Path.GetFileName(dir);
+                var key = lines[1];
+                var initiated = new DirectoryInfo(dir).CreationTimeUtc;
+
+                uploads.Add(new XElement(S3Ns + "Upload",
+                    new XElement(S3Ns + "Key", key),
+                    new XElement(S3Ns + "UploadId", uploadId),
+                    new XElement(S3Ns + "Initiator",
+                        new XElement(S3Ns + "ID", "1"),
+                        new XElement(S3Ns + "DisplayName", "owner")),
+                    new XElement(S3Ns + "Owner",
+                        new XElement(S3Ns + "ID", "1"),
+                        new XElement(S3Ns + "DisplayName", "owner")),
+                    new XElement(S3Ns + "StorageClass", "STANDARD"),
+                    new XElement(S3Ns + "Initiated",
+                        initiated.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))));
+            }
+        }
+
+        var xml = new XDocument(
+            new XDeclaration("1.0", "UTF-8", null),
+            new XElement(S3Ns + "ListMultipartUploadsResult",
+                new XElement(S3Ns + "Bucket", bucket),
+                new XElement(S3Ns + "MaxUploads", 1000),
+                new XElement(S3Ns + "IsTruncated", "false"),
+                uploads));
+
+        return XmlContent(xml);
+    }
+
+    /// <summary>
+    /// GET /{bucket}/{key}?uploadId=ID – Lists uploaded parts for a multipart upload.
+    /// </summary>
+    private IActionResult ListParts(string bucket, string key, string uploadId)
+    {
+        var uploadDir = Path.Combine(_multipartPath, uploadId);
+        if (!Directory.Exists(uploadDir))
+            return S3Error("NoSuchUpload", "The specified multipart upload does not exist.");
+
+        var parts = Directory.GetFiles(uploadDir)
+            .Select(f => Path.GetFileName(f))
+            .Where(name => int.TryParse(name, out _))
+            .Select(name => int.Parse(name))
+            .OrderBy(n => n)
+            .Select(n =>
+            {
+                var info = new FileInfo(Path.Combine(uploadDir, n.ToString()));
+                return new XElement(S3Ns + "Part",
+                    new XElement(S3Ns + "PartNumber", n),
+                    new XElement(S3Ns + "LastModified",
+                        info.LastWriteTimeUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")),
+                    new XElement(S3Ns + "ETag", $"\"{ComputeETag(info)}\""),
+                    new XElement(S3Ns + "Size", info.Length));
+            })
+            .ToList();
+
+        var xml = new XDocument(
+            new XDeclaration("1.0", "UTF-8", null),
+            new XElement(S3Ns + "ListPartsResult",
+                new XElement(S3Ns + "Bucket", bucket),
+                new XElement(S3Ns + "Key", key),
+                new XElement(S3Ns + "UploadId", uploadId),
+                new XElement(S3Ns + "MaxParts", 1000),
+                new XElement(S3Ns + "IsTruncated", "false"),
+                parts));
+
+        return XmlContent(xml);
+    }
+
+    // ================================================================
     //  Bucket sub-resources
     // ================================================================
 
@@ -717,9 +938,6 @@ public sealed class S3Controller : ControllerBase
     //  Metadata persistence helpers
     // ================================================================
 
-    /// <summary>
-    /// Returns the file system path to the JSON metadata sidecar for an object.
-    /// </summary>
     private string ResolveMetaPath(string bucket, string key)
     {
         var normalizedKey = key.Replace('/', Path.DirectorySeparatorChar);
@@ -756,6 +974,76 @@ public sealed class S3Controller : ControllerBase
         var metaBucketDir = Path.Combine(_metaBasePath, bucket);
         CleanEmptyDirectories(metaPath, metaBucketDir);
     }
+
+    // ================================================================
+    //  Bucket tags persistence helpers
+    // ================================================================
+
+    private string ResolveBucketTagsPath(string bucket) =>
+        Path.Combine(_metaBasePath, ".buckets", bucket + ".json");
+
+    private void SaveBucketTags(string bucket, Dictionary<string, string> tags)
+    {
+        var path = ResolveBucketTagsPath(bucket);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        System.IO.File.WriteAllText(path, JsonSerializer.Serialize(tags));
+    }
+
+    private Dictionary<string, string> LoadBucketTags(string bucket)
+    {
+        var path = ResolveBucketTagsPath(bucket);
+        if (!System.IO.File.Exists(path))
+            return [];
+        var json = System.IO.File.ReadAllText(path);
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
+    }
+
+    private void DeleteBucketTagsFile(string bucket)
+    {
+        var path = ResolveBucketTagsPath(bucket);
+        if (System.IO.File.Exists(path))
+            System.IO.File.Delete(path);
+    }
+
+    // ================================================================
+    //  Tagging XML helpers
+    // ================================================================
+
+    /// <summary>
+    /// Parses a Tagging XML request body into a dictionary.
+    /// </summary>
+    private async Task<Dictionary<string, string>> ParseTagSetFromBodyAsync(
+        CancellationToken cancellationToken)
+    {
+        var doc = await XDocument.LoadAsync(Request.Body, LoadOptions.None, cancellationToken);
+        return doc.Descendants()
+            .Where(e => e.Name.LocalName == "Tag")
+            .ToDictionary(
+                t => t.Elements().First(e => e.Name.LocalName == "Key").Value,
+                t => t.Elements().First(e => e.Name.LocalName == "Value").Value);
+    }
+
+    /// <summary>
+    /// Builds a Tagging XML response from a tag dictionary.
+    /// </summary>
+    private static ContentResult TagSetXmlResponse(Dictionary<string, string> tags)
+    {
+        var tagElements = tags.Select(t =>
+            new XElement(S3Ns + "Tag",
+                new XElement(S3Ns + "Key", t.Key),
+                new XElement(S3Ns + "Value", t.Value)));
+
+        var xml = new XDocument(
+            new XDeclaration("1.0", "UTF-8", null),
+            new XElement(S3Ns + "Tagging",
+                new XElement(S3Ns + "TagSet", tagElements)));
+
+        return XmlContent(xml);
+    }
+
+    // ================================================================
+    //  Request header helpers
+    // ================================================================
 
     /// <summary>
     /// Extracts x-amz-meta-* headers from the current request into a dictionary.
@@ -849,32 +1137,27 @@ public sealed class S3Controller : ControllerBase
     }
 
     /// <summary>
-    /// Evaluates S3 conditional request headers (If-Match, If-None-Match,
-    /// If-Modified-Since, If-Unmodified-Since).
+    /// Evaluates S3 conditional request headers.
     /// Returns the appropriate HTTP status code, or null if the request should proceed.
     /// </summary>
     private int? EvaluateConditionalHeaders(string etag, DateTimeOffset lastModified)
     {
         var quotedEtag = $"\"{etag}\"";
 
-        // If-Match → 412 when the current ETag does NOT match
         var ifMatch = Request.Headers.IfMatch.ToString();
         if (!string.IsNullOrEmpty(ifMatch) && ifMatch != "*" && ifMatch != quotedEtag)
             return StatusCodes.Status412PreconditionFailed;
 
-        // If-Unmodified-Since → 412 when the resource has been modified
         if (Request.Headers.TryGetValue("If-Unmodified-Since", out var ifUnmodified)
             && DateTimeOffset.TryParse(ifUnmodified, out var ifUnmodifiedSince)
             && lastModified > ifUnmodifiedSince)
             return StatusCodes.Status412PreconditionFailed;
 
-        // If-None-Match → 304 when the current ETag matches
         var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
         if (!string.IsNullOrEmpty(ifNoneMatch)
             && (ifNoneMatch == "*" || ifNoneMatch == quotedEtag))
             return StatusCodes.Status304NotModified;
 
-        // If-Modified-Since → 304 when the resource has NOT been modified
         if (Request.Headers.TryGetValue("If-Modified-Since", out var ifModified)
             && DateTimeOffset.TryParse(ifModified, out var ifModifiedSince)
             && lastModified <= ifModifiedSince)

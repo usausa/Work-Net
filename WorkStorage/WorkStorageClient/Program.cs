@@ -216,7 +216,98 @@ var mpGet = await client.GetObjectAsync(bucketName, "large-file.dat");
 using (var reader = new StreamReader(mpGet.ResponseStream))
     Console.WriteLine($"  Content: {await reader.ReadToEndAsync()}");
 
-// ── 11. DeleteObjects (bulk delete) ─────────────────────────────
+// ── 11. Object tagging ──────────────────────────────────────────
+Console.WriteLine("\n=== Object Tagging ===");
+await client.PutObjectTaggingAsync(new PutObjectTaggingRequest
+{
+    BucketName = bucketName,
+    Key = "readme.txt",
+    Tagging = new Tagging
+    {
+        TagSet =
+        [
+            new Tag { Key = "environment", Value = "dev" },
+            new Tag { Key = "team", Value = "backend" },
+        ],
+    },
+});
+Console.WriteLine("  Tags set on readme.txt");
+
+var objTags = await client.GetObjectTaggingAsync(
+    new GetObjectTaggingRequest { BucketName = bucketName, Key = "readme.txt" });
+foreach (var tag in objTags.Tagging)
+    Console.WriteLine($"  {tag.Key} = {tag.Value}");
+
+await client.DeleteObjectTaggingAsync(
+    new DeleteObjectTaggingRequest { BucketName = bucketName, Key = "readme.txt" });
+Console.WriteLine("  Tags deleted from readme.txt");
+
+// ── 12. Bucket tagging ──────────────────────────────────────────
+Console.WriteLine("\n=== Bucket Tagging ===");
+await client.PutBucketTaggingAsync(new PutBucketTaggingRequest
+{
+    BucketName = bucketName,
+    TagSet =
+    [
+        new Tag { Key = "project", Value = "work-storage" },
+        new Tag { Key = "cost-center", Value = "engineering" },
+    ],
+});
+Console.WriteLine("  Tags set on bucket");
+
+var bucketTags = await client.GetBucketTaggingAsync(
+    new GetBucketTaggingRequest { BucketName = bucketName });
+foreach (var tag in bucketTags.TagSet)
+    Console.WriteLine($"  {tag.Key} = {tag.Value}");
+
+await client.DeleteBucketTaggingAsync(bucketName);
+Console.WriteLine("  Tags deleted from bucket");
+
+// ── 13. ListMultipartUploads / ListParts ────────────────────────
+Console.WriteLine("\n=== ListMultipartUploads / ListParts ===");
+var mpInit = await client.InitiateMultipartUploadAsync(
+    new InitiateMultipartUploadRequest
+    {
+        BucketName = bucketName,
+        Key = "pending-upload.dat",
+    });
+
+var partBytes = Encoding.UTF8.GetBytes("test-part-data");
+using (var ms = new MemoryStream(partBytes))
+{
+    await client.UploadPartAsync(new UploadPartRequest
+    {
+        BucketName = bucketName,
+        Key = "pending-upload.dat",
+        UploadId = mpInit.UploadId,
+        PartNumber = 1,
+        InputStream = ms,
+    });
+}
+
+var uploads = await client.ListMultipartUploadsAsync(
+    new ListMultipartUploadsRequest { BucketName = bucketName });
+foreach (var u in uploads.MultipartUploads)
+    Console.WriteLine($"  Upload: key={u.Key}, uploadId={u.UploadId}");
+
+var partsResp = await client.ListPartsAsync(new ListPartsRequest
+{
+    BucketName = bucketName,
+    Key = "pending-upload.dat",
+    UploadId = mpInit.UploadId,
+});
+foreach (var p in partsResp.Parts)
+    Console.WriteLine($"  Part {p.PartNumber}: {p.Size} bytes, ETag={p.ETag}");
+
+await client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
+{
+    BucketName = bucketName,
+    Key = "pending-upload.dat",
+    UploadId = mpInit.UploadId,
+});
+Console.WriteLine("  Multipart upload aborted");
+
+// ── 14. DeleteObjects (bulk delete) ─────────────────────────────
 Console.WriteLine("\n=== Bulk Delete ===");
 var allObjs = await client.ListObjectsV2Async(
     new ListObjectsV2Request { BucketName = bucketName });
@@ -227,7 +318,7 @@ var delResp = await client.DeleteObjectsAsync(new DeleteObjectsRequest
 });
 Console.WriteLine($"  Deleted {delResp.DeletedObjects.Count} objects");
 
-// ── 12. Cleanup ─────────────────────────────────────────────────
+// ── 15. Cleanup ─────────────────────────────────────────────────
 await client.DeleteBucketAsync(bucketName);
 Console.WriteLine($"  Bucket deleted: {bucketName}");
 

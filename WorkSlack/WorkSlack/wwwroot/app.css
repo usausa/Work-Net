@@ -1,3 +1,7 @@
+/* ===================================================================
+   Base / Reset
+   =================================================================== */
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -19,6 +23,10 @@ h1:focus {
     outline: none;
 }
 
+/* ===================================================================
+   Blazor framework defaults
+   =================================================================== */
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
@@ -37,9 +45,31 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
+
+/* Blazor error UI (MainLayout) */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
@@ -52,4 +82,670 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* ===================================================================
+   App layout (Home) — full-viewport Slack shell
+   =================================================================== */
+
+.slack-app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+/* ===================================================================
+   UserAvatar — colored circle with initial letter & status dot
+   =================================================================== */
+
+.user-avatar {
+    position: relative;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.avatar-sm {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    border-radius: 4px;
+}
+
+.avatar-md {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-radius: 6px;
+}
+
+.avatar-lg {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    border-radius: 8px;
+}
+
+.avatar-initial {
+    line-height: 1;
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #1a1d21;
+}
+
+.avatar-sm .status-indicator {
+    width: 9px;
+    height: 9px;
+    bottom: -1px;
+    right: -1px;
+}
+
+.status-online {
+    background-color: #2bac76;
+}
+
+.status-away {
+    background-color: #e0a32e;
+}
+
+.status-dnd {
+    background-color: #e06b56;
+}
+
+.status-offline {
+    background-color: #616061;
+}
+
+/* ===================================================================
+   Sidebar — dark purple workspace nav with channels & DMs
+   =================================================================== */
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    height: 100%;
+    background: #3f0e40;
+    color: #cdbdcf;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* Sidebar header (workspace name & compose button) */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.workspace-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.workspace-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workspace-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #cdbdcf;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2bac76;
+    flex-shrink: 0;
+}
+
+.compose-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    flex-shrink: 0;
+}
+
+.compose-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Sidebar scrollable area */
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+/* Sidebar collapsible sections (Channels / Direct messages) */
+.nav-section {
+    margin-bottom: 4px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 4px 16px;
+    border: none;
+    background: none;
+    color: #cdbdcf;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+    text-align: left;
+}
+
+.section-header:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.section-caret {
+    font-size: 8px;
+    width: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+    color: #9c8e9e;
+}
+
+.section-caret.caret-down {
+    transform: rotate(90deg);
+}
+
+.section-title {
+    font-weight: 600;
+}
+
+/* Sidebar nav items (channels, DMs, shortcuts) */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px 4px 28px;
+    font-size: 15px;
+    color: #cdbdcf;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.1s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    line-height: 1.6;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.nav-item.nav-item-active {
+    background: #1164a3;
+    color: #fff;
+}
+
+.nav-icon {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.channel-prefix {
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 15px;
+    opacity: 0.7;
+}
+
+.channel-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.add-item {
+    color: #9c8e9e;
+    font-size: 14px;
+}
+
+.add-item:hover {
+    color: #fff;
+}
+
+.dm-item {
+    gap: 8px;
+}
+
+/* ===================================================================
+   ChannelView — main chat pane (header + messages + input)
+   =================================================================== */
+
+.channel-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+}
+
+/* Channel header bar */
+.channel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 49px;
+    padding: 0 16px 0 20px;
+    border-bottom: 1px solid #e1e1e5;
+    flex-shrink: 0;
+}
+
+.channel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.channel-header-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1d1c1d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.channel-header-divider {
+    color: #ddd;
+    font-weight: 300;
+}
+
+.channel-header-topic {
+    font-size: 13px;
+    color: #616061;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.channel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.header-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    background: none;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: #616061;
+    font-size: 13px;
+    transition: background-color 0.1s;
+}
+
+.header-icon-btn:hover {
+    background: #f8f8f8;
+}
+
+.header-icon-label {
+    font-weight: 600;
+}
+
+/* Scrollable message list */
+.channel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 8px;
+}
+
+/* Channel intro (top of message list) */
+.channel-intro {
+    padding: 48px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.channel-intro h2 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1d1c1d;
+    margin: 0;
+}
+
+.channel-intro-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    background: #616061;
+    border-radius: 12px;
+}
+
+.channel-intro-desc {
+    font-size: 15px;
+    color: #616061;
+    margin: 0;
+    line-height: 1.46;
+}
+
+/* ===================================================================
+   MessageItem — single chat message with avatar & reactions
+   =================================================================== */
+
+.message-item {
+    display: flex;
+    gap: 8px;
+    padding: 2px 20px;
+    position: relative;
+    transition: background-color 0.1s;
+}
+
+.message-item:hover {
+    background-color: #f8f8f8;
+}
+
+.message-item.first-in-group {
+    padding-top: 8px;
+    margin-top: 4px;
+}
+
+/* Left gutter (avatar or hover timestamp) */
+.message-gutter {
+    width: 36px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
+}
+
+.hover-timestamp {
+    font-size: 11px;
+    color: #92929d;
+    opacity: 0;
+    transition: opacity 0.1s;
+    line-height: 22px;
+}
+
+.message-item:hover .hover-timestamp {
+    opacity: 1;
+}
+
+/* Message body */
+.message-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.message-author {
+    font-weight: 800;
+    font-size: 15px;
+    color: #1d1c1d;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.message-author:hover {
+    text-decoration: underline;
+}
+
+.message-timestamp {
+    font-size: 12px;
+    color: #92929d;
+    font-weight: 400;
+}
+
+.message-text {
+    font-size: 15px;
+    color: #1d1c1d;
+    line-height: 1.46;
+    word-wrap: break-word;
+}
+
+/* Emoji reaction chips */
+.message-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid #e1e1e5;
+    border-radius: 24px;
+    background: #f8f8f8;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.1s;
+    line-height: 1.5;
+}
+
+.reaction-chip:hover {
+    background: #e8e8e8;
+    border-color: #ccc;
+}
+
+.reaction-chip.reaction-active {
+    background: #e0edff;
+    border-color: #1264a3;
+}
+
+.reaction-emoji {
+    font-size: 15px;
+}
+
+.reaction-count {
+    font-size: 12px;
+    color: #616061;
+    font-weight: 600;
+}
+
+.reaction-active .reaction-count {
+    color: #1264a3;
+}
+
+/* ===================================================================
+   MessageInput — compose area with toolbar & send button
+   =================================================================== */
+
+.message-input-container {
+    padding: 0 20px 20px;
+}
+
+.message-input-wrapper {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.message-input-wrapper:focus-within {
+    border-color: #1264a3;
+    box-shadow: 0 0 0 1px #1264a3;
+}
+
+/* Formatting toolbar (bold, italic, etc.) */
+.input-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    background: #fafafa;
+}
+
+.toolbar-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #616061;
+    transition: background-color 0.1s;
+}
+
+.toolbar-btn:hover {
+    background: #e8e8e8;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #ddd;
+    margin: 0 4px;
+}
+
+/* Text input area */
+.input-area {
+    padding: 8px 12px;
+}
+
+.input-area textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.46;
+    color: #1d1c1d;
+    background: transparent;
+    min-height: 22px;
+    max-height: 200px;
+}
+
+.input-area textarea::placeholder {
+    color: #92929d;
+}
+
+/* Footer actions (attach, emoji, send) */
+.input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+}
+
+.input-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.footer-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.1s;
+}
+
+.footer-btn:hover {
+    background: #e8e8e8;
+}
+
+.send-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #007a5a;
+    color: #fff;
+    transition: background-color 0.1s;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #005e44;
+}
+
+.send-btn.send-btn-disabled {
+    background: #ddd;
+    color: #aaa;
+    cursor: not-allowed;
 }
