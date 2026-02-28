@@ -1,7 +1,557 @@
-﻿@page "/"
+@page "/"
+@inject IJSRuntime JS
 
-<PageTitle>Home</PageTitle>
+<PageTitle>WorkDraw</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="draw-root">
+    <header class="toolbar">
+        <div class="toolbar-title">WorkDraw</div>
+        <button class="menu-button" @onclick="Undo" disabled="@(!_undoStack.Any())">Undo</button>
+        <button class="menu-button" @onclick="Redo" disabled="@(!_redoStack.Any())">Redo</button>
+        <div class="toolbar-spacer"></div>
+        <div class="toolbar-note">Shift+Click: Multi Select</div>
+    </header>
 
-Welcome to your new app.
+    <aside class="stencil-panel">
+        <div class="stencil-title">Stencil</div>
+        @foreach (var stencil in _stencils)
+        {
+            <div class="stencil-item"
+                 draggable="true"
+                 @ondragstart="(e) => OnStencilDragStart(stencil.Kind)">
+                <div class="stencil-preview @($"stencil-{stencil.Kind.ToString().ToLowerInvariant()}")"></div>
+                <span>@stencil.Name</span>
+            </div>
+        }
+    </aside>
+
+    <main class="canvas-host"
+          @ref="_canvasHostRef"
+          @ondragover:preventDefault="true"
+          @ondrop:preventDefault="true"
+          @ondragover="OnCanvasDragOver"
+          @ondrop="OnCanvasDrop"
+          @onmousemove="OnCanvasMouseMove"
+          @onmouseup="OnCanvasMouseUp"
+          @onmouseleave="OnCanvasMouseUp">
+        <div class="canvas-surface"
+             style="@($"width:{_canvasWidth}px;height:{_canvasHeight}px;")"
+             @onmousedown="OnCanvasSurfaceMouseDown">
+            @foreach (var shape in _shapes)
+            {
+                var selected = _selectedIds.Contains(shape.Id);
+                <div class="shape @(selected ? "selected" : null)"
+                     style="@GetShapeStyle(shape)"
+                     @onmousedown:stopPropagation="true"
+                     @onmousedown="(e) => OnShapeMouseDown(e, shape.Id)">
+                    @if (selected && _selectedIds.Count == 1)
+                    {
+                        @foreach (var handle in ResizeHandles)
+                        {
+                            <div class="resize-handle @($"handle-{handle}")"
+                                 @onmousedown:stopPropagation="true"
+                                 @onmousedown="(e) => OnResizeHandleMouseDown(e, shape.Id, handle)">
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private const double GridSize = 24;
+    private const double MinShapeSize = 24;
+    private const double DefaultShapeWidth = 120;
+    private const double DefaultShapeHeight = 80;
+
+    private readonly List<StencilItem> _stencils =
+    [
+        new("Rectangle", ShapeKind.Rectangle),
+        new("Ellipse", ShapeKind.Ellipse)
+    ];
+
+    private static readonly string[] ResizeHandles = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+    private readonly List<DrawShape> _shapes = [];
+    private readonly HashSet<int> _selectedIds = [];
+    private readonly Stack<CanvasSnapshot> _undoStack = [];
+    private readonly Stack<CanvasSnapshot> _redoStack = [];
+
+    private ElementReference _canvasHostRef;
+    private InteractionState? _interaction;
+    private string? _draggingStencil;
+
+    private int _nextShapeId = 1;
+    private double _canvasWidth = 1600;
+    private double _canvasHeight = 1000;
+
+    private void OnStencilDragStart(ShapeKind kind)
+    {
+        _draggingStencil = kind.ToString();
+    }
+
+    private static void OnCanvasDragOver(DragEventArgs _)
+    {
+    }
+
+    private async Task OnCanvasDrop(DragEventArgs args)
+    {
+        if (!Enum.TryParse<ShapeKind>(_draggingStencil, out var kind))
+        {
+            return;
+        }
+
+        var before = CaptureSnapshot();
+        var metrics = await JS.InvokeAsync<CanvasMetrics>("drawTool.getCanvasMetrics", _canvasHostRef);
+        var x = Snap(args.ClientX - metrics.Left + metrics.ScrollLeft - (DefaultShapeWidth / 2));
+        var y = Snap(args.ClientY - metrics.Top + metrics.ScrollTop - (DefaultShapeHeight / 2));
+
+        _shapes.Add(new DrawShape
+        {
+            Id = _nextShapeId++,
+            Kind = kind,
+            X = Math.Max(0, x),
+            Y = Math.Max(0, y),
+            Width = DefaultShapeWidth,
+            Height = DefaultShapeHeight,
+            Fill = kind == ShapeKind.Rectangle ? "#f6fbff" : "#fff9ef",
+            BorderColor = "#284f73",
+            BorderWidth = 2
+        });
+
+        EnsureCanvasFitsShapes();
+        CommitSnapshot(before);
+        _draggingStencil = null;
+    }
+
+    private void OnCanvasSurfaceMouseDown(MouseEventArgs args)
+    {
+        if (args.Button != 0)
+        {
+            return;
+        }
+
+        _interaction = null;
+        _selectedIds.Clear();
+    }
+
+    private async Task OnShapeMouseDown(MouseEventArgs args, int id)
+    {
+        if (args.Button != 0)
+        {
+            return;
+        }
+
+        if (args.ShiftKey)
+        {
+            if (!_selectedIds.Add(id))
+            {
+                _selectedIds.Remove(id);
+            }
+        }
+        else if (!_selectedIds.Contains(id))
+        {
+            _selectedIds.Clear();
+            _selectedIds.Add(id);
+        }
+
+        if (!_selectedIds.Contains(id))
+        {
+            return;
+        }
+
+        var selectedRects = _shapes
+            .Where(s => _selectedIds.Contains(s.Id))
+            .ToDictionary(s => s.Id, s => new ShapeRect(s.X, s.Y, s.Width, s.Height));
+
+        var metrics = await JS.InvokeAsync<CanvasMetrics>("drawTool.getCanvasMetrics", _canvasHostRef);
+        var startX = args.ClientX - metrics.Left + metrics.ScrollLeft;
+        var startY = args.ClientY - metrics.Top + metrics.ScrollTop;
+
+        _interaction = new InteractionState
+        {
+            Mode = InteractionMode.Move,
+            Before = CaptureSnapshot(),
+            Metrics = metrics,
+            StartX = startX,
+            StartY = startY,
+            InitialRects = selectedRects
+        };
+    }
+
+    private async Task OnResizeHandleMouseDown(MouseEventArgs args, int id, string handle)
+    {
+        if (args.Button != 0)
+        {
+            return;
+        }
+
+        if (!_selectedIds.Contains(id))
+        {
+            _selectedIds.Clear();
+            _selectedIds.Add(id);
+        }
+
+        var shape = _shapes.FirstOrDefault(s => s.Id == id);
+        if (shape is null)
+        {
+            return;
+        }
+
+        var metrics = await JS.InvokeAsync<CanvasMetrics>("drawTool.getCanvasMetrics", _canvasHostRef);
+        var startX = args.ClientX - metrics.Left + metrics.ScrollLeft;
+        var startY = args.ClientY - metrics.Top + metrics.ScrollTop;
+
+        _interaction = new InteractionState
+        {
+            Mode = InteractionMode.Resize,
+            Before = CaptureSnapshot(),
+            Metrics = metrics,
+            StartX = startX,
+            StartY = startY,
+            ResizeHandle = handle,
+            InitialRects = new Dictionary<int, ShapeRect>
+            {
+                [shape.Id] = new ShapeRect(shape.X, shape.Y, shape.Width, shape.Height)
+            }
+        };
+    }
+
+    private Task OnCanvasMouseMove(MouseEventArgs args)
+    {
+        if (_interaction is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var pointerX = args.ClientX - _interaction.Metrics.Left + _interaction.Metrics.ScrollLeft;
+        var pointerY = args.ClientY - _interaction.Metrics.Top + _interaction.Metrics.ScrollTop;
+
+        if (_interaction.Mode == InteractionMode.Move)
+        {
+            MoveSelectedShapes(pointerX, pointerY);
+        }
+        else if (_interaction.Mode == InteractionMode.Resize)
+        {
+            ResizeSelectedShape(pointerX, pointerY);
+        }
+
+        EnsureCanvasFitsShapes();
+        return Task.CompletedTask;
+    }
+
+    private Task OnCanvasMouseUp(MouseEventArgs _)
+    {
+        if (_interaction is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_interaction.Changed)
+        {
+            CommitSnapshot(_interaction.Before);
+        }
+
+        _interaction = null;
+        return Task.CompletedTask;
+    }
+
+    private void MoveSelectedShapes(double pointerX, double pointerY)
+    {
+        if (_interaction is null)
+        {
+            return;
+        }
+
+        var deltaX = Snap(pointerX - _interaction.StartX);
+        var deltaY = Snap(pointerY - _interaction.StartY);
+
+        var minX = _interaction.InitialRects.Values.Min(r => r.X);
+        var minY = _interaction.InitialRects.Values.Min(r => r.Y);
+
+        deltaX = Math.Max(deltaX, -minX);
+        deltaY = Math.Max(deltaY, -minY);
+
+        foreach (var shape in _shapes.Where(s => _interaction.InitialRects.ContainsKey(s.Id)))
+        {
+            var initial = _interaction.InitialRects[shape.Id];
+            var nextX = initial.X + deltaX;
+            var nextY = initial.Y + deltaY;
+
+            if (!NearlyEqual(shape.X, nextX) || !NearlyEqual(shape.Y, nextY))
+            {
+                shape.X = nextX;
+                shape.Y = nextY;
+                _interaction.Changed = true;
+            }
+        }
+    }
+
+    private void ResizeSelectedShape(double pointerX, double pointerY)
+    {
+        if (_interaction is null || _interaction.InitialRects.Count != 1 || string.IsNullOrWhiteSpace(_interaction.ResizeHandle))
+        {
+            return;
+        }
+
+        var targetId = _interaction.InitialRects.Keys.Single();
+        var shape = _shapes.FirstOrDefault(s => s.Id == targetId);
+        if (shape is null)
+        {
+            return;
+        }
+
+        var initial = _interaction.InitialRects[targetId];
+        var left = initial.X;
+        var top = initial.Y;
+        var right = initial.X + initial.Width;
+        var bottom = initial.Y + initial.Height;
+
+        var handle = _interaction.ResizeHandle;
+
+        if (handle.Contains('w'))
+        {
+            left = Snap(pointerX);
+        }
+        if (handle.Contains('e'))
+        {
+            right = Snap(pointerX);
+        }
+        if (handle.Contains('n'))
+        {
+            top = Snap(pointerY);
+        }
+        if (handle.Contains('s'))
+        {
+            bottom = Snap(pointerY);
+        }
+
+        if (right - left < MinShapeSize)
+        {
+            if (handle.Contains('w'))
+            {
+                left = right - MinShapeSize;
+            }
+            else
+            {
+                right = left + MinShapeSize;
+            }
+        }
+
+        if (bottom - top < MinShapeSize)
+        {
+            if (handle.Contains('n'))
+            {
+                top = bottom - MinShapeSize;
+            }
+            else
+            {
+                bottom = top + MinShapeSize;
+            }
+        }
+
+        if (left < 0)
+        {
+            left = 0;
+        }
+        if (top < 0)
+        {
+            top = 0;
+        }
+
+        var width = Math.Max(MinShapeSize, right - left);
+        var height = Math.Max(MinShapeSize, bottom - top);
+
+        if (!NearlyEqual(shape.X, left) ||
+            !NearlyEqual(shape.Y, top) ||
+            !NearlyEqual(shape.Width, width) ||
+            !NearlyEqual(shape.Height, height))
+        {
+            shape.X = left;
+            shape.Y = top;
+            shape.Width = width;
+            shape.Height = height;
+            _interaction.Changed = true;
+        }
+    }
+
+    private void Undo()
+    {
+        if (!_undoStack.TryPop(out var previous))
+        {
+            return;
+        }
+
+        _redoStack.Push(CaptureSnapshot());
+        RestoreSnapshot(previous);
+    }
+
+    private void Redo()
+    {
+        if (!_redoStack.TryPop(out var next))
+        {
+            return;
+        }
+
+        _undoStack.Push(CaptureSnapshot());
+        RestoreSnapshot(next);
+    }
+
+    private string GetShapeStyle(DrawShape shape)
+    {
+        var border = $"{shape.BorderWidth}px solid {shape.BorderColor}";
+        var radius = shape.Kind == ShapeKind.Ellipse ? "9999px" : "4px";
+        return $"left:{shape.X}px;top:{shape.Y}px;width:{shape.Width}px;height:{shape.Height}px;background:{shape.Fill};border:{border};border-radius:{radius};";
+    }
+
+    private void EnsureCanvasFitsShapes()
+    {
+        if (_shapes.Count == 0)
+        {
+            return;
+        }
+
+        var requiredWidth = _shapes.Max(s => s.X + s.Width) + GridSize;
+        var requiredHeight = _shapes.Max(s => s.Y + s.Height) + GridSize;
+
+        _canvasWidth = Math.Max(_canvasWidth, SnapUp(requiredWidth));
+        _canvasHeight = Math.Max(_canvasHeight, SnapUp(requiredHeight));
+    }
+
+    private CanvasSnapshot CaptureSnapshot()
+    {
+        return new CanvasSnapshot
+        {
+            Shapes = _shapes.Select(CloneShape).ToList(),
+            NextShapeId = _nextShapeId,
+            CanvasWidth = _canvasWidth,
+            CanvasHeight = _canvasHeight,
+            SelectedIds = _selectedIds.ToHashSet()
+        };
+    }
+
+    private void RestoreSnapshot(CanvasSnapshot snapshot)
+    {
+        _shapes.Clear();
+        _shapes.AddRange(snapshot.Shapes.Select(CloneShape));
+        _selectedIds.Clear();
+        foreach (var id in snapshot.SelectedIds.Where(x => _shapes.Any(s => s.Id == x)))
+        {
+            _selectedIds.Add(id);
+        }
+
+        _nextShapeId = snapshot.NextShapeId;
+        _canvasWidth = snapshot.CanvasWidth;
+        _canvasHeight = snapshot.CanvasHeight;
+    }
+
+    private void CommitSnapshot(CanvasSnapshot before)
+    {
+        var after = CaptureSnapshot();
+        if (!SnapshotsEqual(before, after))
+        {
+            _undoStack.Push(before);
+            _redoStack.Clear();
+        }
+    }
+
+    private static bool SnapshotsEqual(CanvasSnapshot left, CanvasSnapshot right)
+    {
+        if (!NearlyEqual(left.CanvasWidth, right.CanvasWidth) ||
+            !NearlyEqual(left.CanvasHeight, right.CanvasHeight) ||
+            left.NextShapeId != right.NextShapeId ||
+            left.Shapes.Count != right.Shapes.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < left.Shapes.Count; i++)
+        {
+            var a = left.Shapes[i];
+            var b = right.Shapes[i];
+            if (a.Id != b.Id ||
+                a.Kind != b.Kind ||
+                !NearlyEqual(a.X, b.X) ||
+                !NearlyEqual(a.Y, b.Y) ||
+                !NearlyEqual(a.Width, b.Width) ||
+                !NearlyEqual(a.Height, b.Height) ||
+                !string.Equals(a.Fill, b.Fill, StringComparison.Ordinal) ||
+                !string.Equals(a.BorderColor, b.BorderColor, StringComparison.Ordinal) ||
+                !NearlyEqual(a.BorderWidth, b.BorderWidth))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static DrawShape CloneShape(DrawShape source)
+    {
+        return new DrawShape
+        {
+            Id = source.Id,
+            Kind = source.Kind,
+            X = source.X,
+            Y = source.Y,
+            Width = source.Width,
+            Height = source.Height,
+            Fill = source.Fill,
+            BorderColor = source.BorderColor,
+            BorderWidth = source.BorderWidth
+        };
+    }
+
+    private static double Snap(double value) => Math.Round(value / GridSize) * GridSize;
+    private static double SnapUp(double value) => Math.Ceiling(value / GridSize) * GridSize;
+    private static bool NearlyEqual(double left, double right) => Math.Abs(left - right) < 0.01;
+
+    private sealed class DrawShape
+    {
+        public required int Id { get; set; }
+        public ShapeKind Kind { get; set; }
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public required string Fill { get; set; }
+        public required string BorderColor { get; set; }
+        public double BorderWidth { get; set; }
+    }
+
+    private sealed class CanvasSnapshot
+    {
+        public required List<DrawShape> Shapes { get; set; }
+        public required int NextShapeId { get; set; }
+        public required double CanvasWidth { get; set; }
+        public required double CanvasHeight { get; set; }
+        public required HashSet<int> SelectedIds { get; set; }
+    }
+
+    private sealed class InteractionState
+    {
+        public InteractionMode Mode { get; set; }
+        public required CanvasSnapshot Before { get; set; }
+        public required CanvasMetrics Metrics { get; set; }
+        public double StartX { get; set; }
+        public double StartY { get; set; }
+        public required Dictionary<int, ShapeRect> InitialRects { get; set; }
+        public string? ResizeHandle { get; set; }
+        public bool Changed { get; set; }
+    }
+
+    private sealed class CanvasMetrics
+    {
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public double ScrollLeft { get; set; }
+        public double ScrollTop { get; set; }
+    }
+
+    private sealed record ShapeRect(double X, double Y, double Width, double Height);
+    private sealed record StencilItem(string Name, ShapeKind Kind);
+    private enum InteractionMode { Move, Resize }
+    private enum ShapeKind { Rectangle, Ellipse }
+}
