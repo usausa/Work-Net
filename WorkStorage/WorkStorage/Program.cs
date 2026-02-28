@@ -14,6 +14,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Add S3-compatible response header
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["x-amz-request-id"] = Guid.NewGuid().ToString("N");
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();

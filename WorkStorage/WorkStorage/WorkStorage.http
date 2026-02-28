@@ -1,6 +1,0 @@
-@WorkStorage_HostAddress = http://localhost:5128
-
-GET {{WorkStorage_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
