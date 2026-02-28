@@ -626,7 +626,6 @@ h1:focus {
     border: 1px solid #ccc;
     border-radius: 8px;
     background: #fff;
-    overflow: hidden;
     transition: border-color 0.15s;
 }
 
@@ -643,6 +642,7 @@ h1:focus {
     padding: 4px 8px;
     border-bottom: 1px solid #eee;
     background: #fafafa;
+    border-radius: 7px 7px 0 0;
 }
 
 .toolbar-btn {
@@ -1746,4 +1746,132 @@ h1:focus {
 
 .message-text a:hover {
     text-decoration: underline;
+}
+
+/* ===================================================================
+   Workspace icon bar — narrow strip to left of sidebar
+   =================================================================== */
+
+.workspace-bar {
+    width: 56px;
+    height: 100%;
+    background: #1a1d21;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.workspace-bar-icon {
+    width: 36px;
+    height: 36px;
+    background: #3f0e40;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: border-radius 0.15s;
+}
+
+.workspace-bar-icon:hover {
+    border-radius: 8px;
+}
+
+.workspace-bar-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+}
+
+.workspace-bar-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #9c9ca0;
+    transition: all 0.15s;
+    gap: 1px;
+}
+
+.workspace-bar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.workspace-bar-btn.ws-btn-active {
+    color: #fff;
+}
+
+.workspace-bar-label {
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.workspace-bar-divider {
+    width: 24px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 6px 0;
+}
+
+/* ===================================================================
+   Typing indicator — animated dots + "X is typing..."
+   =================================================================== */
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 20px 4px;
+    font-size: 13px;
+    color: #616061;
+    min-height: 24px;
+}
+
+.typing-indicator-empty {
+    min-height: 24px;
+    padding: 2px 20px 4px;
+}
+
+.typing-dots {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    background: #f0f0f0;
+    border-radius: 12px;
+    padding: 4px 8px;
+}
+
+.typing-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #616061;
+    animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
 }

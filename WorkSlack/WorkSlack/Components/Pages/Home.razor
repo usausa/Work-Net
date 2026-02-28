@@ -1,9 +1,36 @@
-﻿@page "/"
+@page "/"
 @using WorkSlack.Components.Chat
 
 <PageTitle>WorkSlack</PageTitle>
 
 <div class="slack-app">
+    <div class="workspace-bar">
+        <div class="workspace-bar-icon" title="WorkSlack">W</div>
+        <div class="workspace-bar-nav">
+            <button class="workspace-bar-btn ws-btn-active" title="Home">
+                <span>🏠</span>
+                <span class="workspace-bar-label">Home</span>
+            </button>
+            <button class="workspace-bar-btn" title="DMs">
+                <span>💬</span>
+                <span class="workspace-bar-label">DMs</span>
+            </button>
+            <button class="workspace-bar-btn" title="Activity">
+                <span>🔔</span>
+                <span class="workspace-bar-label">Activity</span>
+            </button>
+            <button class="workspace-bar-btn" title="More">
+                <span>⋯</span>
+                <span class="workspace-bar-label">More</span>
+            </button>
+        </div>
+        <div class="workspace-bar-divider"></div>
+        <div class="workspace-bar-nav">
+            <button class="workspace-bar-btn" title="Add workspace">
+                <span>+</span>
+            </button>
+        </div>
+    </div>
     <Sidebar SelectedChannelId="@_selectedChannelId" OnChannelSelected="HandleChannelSelected" />
     <main class="main-content">
         <ChannelView ChannelId="@_selectedChannelId" />

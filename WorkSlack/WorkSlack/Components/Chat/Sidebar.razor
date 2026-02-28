@@ -21,7 +21,7 @@
     <div class="sidebar-search">
         <div class="sidebar-search-box">
             <span class="sidebar-search-icon">🔍</span>
-            <input type="text" placeholder="Search WorkSlack" @onfocus="() => OnSearchOpen.InvokeAsync()" />
+            <input type="text" placeholder="Search WorkSlack" @bind="_filterText" @bind:event="oninput" />
         </div>
     </div>
 
@@ -48,7 +48,7 @@
             </button>
             @if (_channelsExpanded)
             {
-                @foreach (var channel in _channels)
+                @foreach (var channel in FilteredChannels)
                 {
                     var unread = ChatService.GetUnreadCount(channel.Id);
                     <button class="nav-item channel-item @(channel.Id == SelectedChannelId ? "nav-item-active" : "") @(unread > 0 ? "nav-item-unread" : "")"
@@ -75,7 +75,7 @@
             </button>
             @if (_dmsExpanded)
             {
-                @foreach (var dm in _directMessages)
+                @foreach (var dm in FilteredDirectMessages)
                 {
                     var dmUser = ChatService.GetUser(dm.DmUserId ?? "");
                     var unread = ChatService.GetUnreadCount(dm.Id);
@@ -217,14 +217,12 @@
     [Parameter]
     public EventCallback<string> OnChannelSelected { get; set; }
 
-    [Parameter]
-    public EventCallback OnSearchOpen { get; set; }
-
     private IReadOnlyList<Channel> _channels = [];
     private IReadOnlyList<Channel> _directMessages = [];
     private ChatUser _currentUser = default!;
     private bool _channelsExpanded = true;
     private bool _dmsExpanded = true;
+    private string _filterText = "";
 
     private bool _showComposeDialog;
     private bool _showAddChannelDialog;
@@ -232,6 +230,16 @@
     private bool _showThreadsDialog;
     private bool _showDraftsDialog;
     private bool _showSavedDialog;
+
+    private IEnumerable<Channel> FilteredChannels =>
+        string.IsNullOrWhiteSpace(_filterText)
+            ? _channels
+            : _channels.Where(c => c.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<Channel> FilteredDirectMessages =>
+        string.IsNullOrWhiteSpace(_filterText)
+            ? _directMessages
+            : _directMessages.Where(c => c.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
     protected override void OnInitialized()
     {
