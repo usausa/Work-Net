@@ -307,7 +307,89 @@ await client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
 });
 Console.WriteLine("  Multipart upload aborted");
 
-// ── 14. DeleteObjects (bulk delete) ─────────────────────────────
+// ── 14. Storage Class ───────────────────────────────────────────
+Console.WriteLine("\n=== Storage Class ===");
+await client.PutObjectAsync(new PutObjectRequest
+{
+    BucketName = bucketName,
+    Key = "archive/old-data.txt",
+    ContentBody = "archived content",
+    StorageClass = S3StorageClass.StandardInfrequentAccess,
+});
+Console.WriteLine("  Uploaded archive/old-data.txt with STANDARD_IA");
+var scHead = await client.GetObjectMetadataAsync(bucketName, "archive/old-data.txt");
+Console.WriteLine($"  StorageClass from HEAD: {scHead.StorageClass}");
+
+var scList = await client.ListObjectsV2Async(new ListObjectsV2Request
+{
+    BucketName = bucketName,
+    Prefix = "archive/",
+});
+foreach (var o in scList.S3Objects)
+    Console.WriteLine($"  {o.Key} -> StorageClass: {o.StorageClass}");
+
+// ── 15. ACL ─────────────────────────────────────────────────────
+Console.WriteLine("\n=== ACL ===");
+var bucketAcl = await client.GetACLAsync(new GetACLRequest
+{
+    BucketName = bucketName,
+});
+Console.WriteLine("  Bucket ACL:");
+foreach (var grant in bucketAcl.AccessControlList.Grants)
+    Console.WriteLine($"    {grant.Grantee.Type}: {grant.Permission}");
+
+await client.PutACLAsync(new PutACLRequest
+{
+    BucketName = bucketName,
+    Key = "readme.txt",
+    CannedACL = S3CannedACL.PublicRead,
+});
+Console.WriteLine("  Set readme.txt ACL to public-read");
+
+var objAcl = await client.GetACLAsync(new GetACLRequest
+{
+    BucketName = bucketName,
+    Key = "readme.txt",
+});
+Console.WriteLine("  Object ACL:");
+foreach (var grant in objAcl.AccessControlList.Grants)
+    Console.WriteLine($"    {grant.Grantee.Type}: {grant.Permission}");
+
+// ── 16. Bucket CORS ─────────────────────────────────────────────
+Console.WriteLine("\n=== Bucket CORS ===");
+await client.PutCORSConfigurationAsync(new PutCORSConfigurationRequest
+{
+    BucketName = bucketName,
+    Configuration = new CORSConfiguration
+    {
+        Rules =
+        [
+            new CORSRule
+            {
+                AllowedOrigins = ["*"],
+                AllowedMethods = ["GET", "PUT", "POST", "DELETE"],
+                AllowedHeaders = ["*"],
+                ExposeHeaders = ["ETag", "x-amz-meta-*"],
+                MaxAgeSeconds = 3600,
+            },
+        ],
+    },
+});
+Console.WriteLine("  CORS configuration set");
+
+var corsResp = await client.GetCORSConfigurationAsync(
+    new GetCORSConfigurationRequest { BucketName = bucketName });
+foreach (var rule in corsResp.Configuration.Rules)
+{
+    Console.WriteLine($"  Origins: {string.Join(", ", rule.AllowedOrigins)}");
+    Console.WriteLine($"  Methods: {string.Join(", ", rule.AllowedMethods)}");
+}
+
+await client.DeleteCORSConfigurationAsync(
+    new DeleteCORSConfigurationRequest { BucketName = bucketName });
+Console.WriteLine("  CORS configuration deleted");
+
+// ── 17. DeleteObjects (bulk delete) ─────────────────────────────
 Console.WriteLine("\n=== Bulk Delete ===");
 var allObjs = await client.ListObjectsV2Async(
     new ListObjectsV2Request { BucketName = bucketName });
@@ -318,7 +400,7 @@ var delResp = await client.DeleteObjectsAsync(new DeleteObjectsRequest
 });
 Console.WriteLine($"  Deleted {delResp.DeletedObjects.Count} objects");
 
-// ── 15. Cleanup ─────────────────────────────────────────────────
+// ── 18. Cleanup ─────────────────────────────────────────────────
 await client.DeleteBucketAsync(bucketName);
 Console.WriteLine($"  Bucket deleted: {bucketName}");
 

@@ -2,6 +2,8 @@
 
 AWS S3 REST API との互換性状況をまとめます。
 
+> **本プロジェクトの位置づけ**: 実運用向けではなく、AWS SDK を使った開発時のローカルダミー S3 として利用することを目的としています。
+
 ## 実装済み機能
 
 ### バケット操作
@@ -11,25 +13,32 @@ AWS S3 REST API との互換性状況をまとめます。
 | ListBuckets | `GET /` | 全バケットを一覧取得 |
 | CreateBucket | `PUT /{bucket}` | バケットを作成 |
 | HeadBucket | `HEAD /{bucket}` | バケットの存在確認 |
-| DeleteBucket | `DELETE /{bucket}` | バケット・メタデータ・タグを再帰削除 |
+| DeleteBucket | `DELETE /{bucket}` | バケット・メタデータ・タグ・ACL・CORS を再帰削除 |
 | GetBucketLocation | `GET /{bucket}?location` | バケットのリージョン情報を返却（固定値 `us-east-1`） |
 | GetBucketTagging | `GET /{bucket}?tagging` | バケットのタグセットを取得 |
 | PutBucketTagging | `PUT /{bucket}?tagging` | バケットにタグセットを設定 |
 | DeleteBucketTagging | `DELETE /{bucket}?tagging` | バケットのタグセットを削除 |
+| GetBucketAcl | `GET /{bucket}?acl` | バケットの ACL を取得 |
+| PutBucketAcl | `PUT /{bucket}?acl` | バケットの ACL を設定（`x-amz-acl` ヘッダー対応） |
+| GetBucketCors | `GET /{bucket}?cors` | バケットの CORS 設定を取得 |
+| PutBucketCors | `PUT /{bucket}?cors` | バケットの CORS 設定を保存（ミドルウェアで実行時に適用） |
+| DeleteBucketCors | `DELETE /{bucket}?cors` | バケットの CORS 設定を削除 |
 
 ### オブジェクト操作
 
 | 操作 | メソッド / パス | 説明 |
 |---|---|---|
-| PutObject | `PUT /{bucket}/{key}` | オブジェクトをアップロード。Content-Type・`x-amz-meta-*` を保存 |
-| GetObject | `GET /{bucket}/{key}` | オブジェクトをダウンロード。保存された Content-Type・`x-amz-meta-*` を返却 |
-| HeadObject | `HEAD /{bucket}/{key}` | オブジェクトのメタデータを取得 |
-| DeleteObject | `DELETE /{bucket}/{key}` | オブジェクトとメタデータを削除。空ディレクトリを自動クリーンアップ |
-| CopyObject | `PUT /{bucket}/{key}` + `x-amz-copy-source` | サーバー側コピー。`x-amz-metadata-directive: COPY\|REPLACE` に対応 |
+| PutObject | `PUT /{bucket}/{key}` | オブジェクトをアップロード。Content-Type・StorageClass・ACL・`x-amz-meta-*` を保存 |
+| GetObject | `GET /{bucket}/{key}` | オブジェクトをダウンロード。メタデータと `x-amz-storage-class` を返却 |
+| HeadObject | `HEAD /{bucket}/{key}` | オブジェクトのメタデータを取得（StorageClass 含む） |
+| DeleteObject | `DELETE /{bucket}/{key}` | オブジェクトとメタデータを削除 |
+| CopyObject | `PUT /{bucket}/{key}` + `x-amz-copy-source` | サーバー側コピー。`COPY\|REPLACE` ディレクティブ対応（StorageClass も処理） |
 | DeleteObjects | `POST /{bucket}?delete` | 複数オブジェクトの一括削除。`Quiet` モード対応 |
 | GetObjectTagging | `GET /{bucket}/{key}?tagging` | オブジェクトのタグセットを取得 |
 | PutObjectTagging | `PUT /{bucket}/{key}?tagging` | オブジェクトにタグセットを設定 |
 | DeleteObjectTagging | `DELETE /{bucket}/{key}?tagging` | オブジェクトのタグセットを削除 |
+| GetObjectAcl | `GET /{bucket}/{key}?acl` | オブジェクトの ACL を取得 |
+| PutObjectAcl | `PUT /{bucket}/{key}?acl` | オブジェクトの ACL を設定 |
 
 ### ListObjectsV2
 
@@ -44,142 +53,114 @@ AWS S3 REST API との互換性状況をまとめます。
 
 | 操作 | メソッド / パス | 説明 |
 |---|---|---|
-| CreateMultipartUpload | `POST /{bucket}/{key}?uploads` | アップロード開始。Content-Type と `x-amz-meta-*` を一時保存 |
+| CreateMultipartUpload | `POST /{bucket}/{key}?uploads` | 開始。Content-Type・StorageClass・`x-amz-meta-*` を一時保存 |
 | UploadPart | `PUT /{bucket}/{key}?partNumber=N&uploadId=ID` | パートをアップロード |
-| CompleteMultipartUpload | `POST /{bucket}/{key}?uploadId=ID` | パートを結合して最終オブジェクトを生成。メタデータを復元 |
-| AbortMultipartUpload | `DELETE /{bucket}/{key}?uploadId=ID` | アップロードを中止しパートを破棄 |
-| ListMultipartUploads | `GET /{bucket}?uploads` | バケット内の進行中マルチパートアップロードを一覧 |
-| ListParts | `GET /{bucket}/{key}?uploadId=ID` | マルチパートアップロードのパートを一覧 |
+| CompleteMultipartUpload | `POST /{bucket}/{key}?uploadId=ID` | パートを結合。メタデータを復元 |
+| AbortMultipartUpload | `DELETE /{bucket}/{key}?uploadId=ID` | 中止しパートを破棄 |
+| ListMultipartUploads | `GET /{bucket}?uploads` | 進行中のマルチパートアップロードを一覧 |
+| ListParts | `GET /{bucket}/{key}?uploadId=ID` | パートを一覧 |
 
-### 条件付きリクエスト
+### 条件付きリクエスト / Range
 
-| ヘッダー | レスポンス | 対象 |
-|---|---|---|
-| `If-None-Match` | `304 Not Modified` | GET (自動), HEAD (手動評価) |
-| `If-Modified-Since` | `304 Not Modified` | GET (自動), HEAD (手動評価) |
-| `If-Match` | `412 Precondition Failed` | GET (自動), HEAD (手動評価) |
-| `If-Unmodified-Since` | `412 Precondition Failed` | GET (自動), HEAD (手動評価) |
+| ヘッダー | レスポンス |
+|---|---|
+| `If-None-Match` | `304 Not Modified` |
+| `If-Modified-Since` | `304 Not Modified` |
+| `If-Match` | `412 Precondition Failed` |
+| `If-Unmodified-Since` | `412 Precondition Failed` |
+| `Range: bytes=start-end` | `206 Partial Content` |
 
-### Range リクエスト
-
-| ヘッダー | レスポンス | 説明 |
-|---|---|---|
-| `Range: bytes=start-end` | `206 Partial Content` | GetObject で部分ダウンロード対応 |
-
-### メタデータ
+### メタデータ・タグ・ACL
 
 | 機能 | 説明 |
 |---|---|
-| Content-Type 保持 | PutObject / Multipart Upload で送信された Content-Type をサイドカーファイルに保存し、GET/HEAD で返却 |
-| ユーザー定義メタデータ (`x-amz-meta-*`) | PutObject / Multipart Upload で送信されたカスタムメタデータを保存し、GET/HEAD で返却 |
-| CopyObject メタデータディレクティブ | `COPY` (デフォルト) でソースのメタデータを保持、`REPLACE` でリクエストのメタデータに置換 |
+| Content-Type 保持 | PutObject / Multipart Upload で保存し GET/HEAD で返却 |
+| Storage Class | `x-amz-storage-class` ヘッダーを保存し GET/HEAD/ListObjects で返却 |
+| ユーザー定義メタデータ | `x-amz-meta-*` ヘッダーの保存と返却 |
+| メタデータディレクティブ | CopyObject の `x-amz-metadata-directive: COPY\|REPLACE` |
+| Object Tagging | オブジェクト単位のタグセット管理 |
+| Bucket Tagging | バケット単位のタグセット管理 |
+| Bucket/Object ACL | Canned ACL の保存と XML 応答生成（`private`, `public-read`, `public-read-write`, `authenticated-read`） |
 
-### タグ
+### Bucket CORS
 
 | 機能 | 説明 |
 |---|---|
-| Object Tagging | オブジェクト単位でキー/値のタグセットを管理 (`GET/PUT/DELETE ?tagging`) |
-| Bucket Tagging | バケット単位でキー/値のタグセットを管理 (`GET/PUT/DELETE ?tagging`) |
+| CORS 設定の保存/取得/削除 | `GET/PUT/DELETE /{bucket}?cors` で S3 標準の CORS XML を管理 |
+| ミドルウェアによる実行時適用 | `Origin` ヘッダーを検出し、保存された CORS ルールに基づいて `Access-Control-*` ヘッダーを自動付与 |
+| OPTIONS プリフライト | `Access-Control-Request-Method` に基づくプリフライト応答 |
 
 ### その他
 
 | 機能 | 説明 |
 |---|---|
-| `x-amz-request-id` ヘッダー | 全レスポンスに一意のリクエストIDを付与（ミドルウェア） |
-| ETag (MD5) | オブジェクトの MD5 ハッシュを ETag として返却 |
-| S3 XML レスポンス | S3 標準の XML 名前空間 (`http://s3.amazonaws.com/doc/2006-03-01/`) に準拠 |
-| パストラバーサル防止 | バケット名・キーのバリデーションとパス正規化による安全性確保 |
-| 階層キー構造 | `/` を含むキーをファイルシステムのディレクトリ構造にマッピング |
+| `x-amz-request-id` | 全レスポンスに一意のリクエストIDを付与（ミドルウェア） |
+| ETag (MD5) | MD5 ハッシュを ETag として返却 |
+| S3 XML 名前空間準拠 | `http://s3.amazonaws.com/doc/2006-03-01/` |
+| パストラバーサル防止 | バリデーションとパス正規化 |
+| 階層キー構造 | `/` をディレクトリ構造にマッピング |
 
 ---
 
 ## 未実装の機能
 
-### 認証・認可
+### 実装を検討する価値がある機能
 
-| 機能 | 説明 |
-|---|---|
-| AWS Signature V4 | リクエスト署名の検証 |
-| Bucket Policy | JSON ポリシーによるアクセス制御 |
-| ACL (Access Control List) | バケット/オブジェクト単位の ACL |
-| Presigned URL | 署名付き URL の生成・検証 |
+| 機能 | 必要性 | 難易度 | 備考 |
+|---|---|---|---|
+| **Versioning** | ★★★ | ★★★★ | バージョニングを利用するアプリでは必須。ストレージ設計の大幅変更が必要。設計方針は [VERSIONING-DESIGN.md](./VERSIONING-DESIGN.md) を参照 |
 
-### バケット機能
+### 開発ダミーとしての実装が不要な機能
 
-| 機能 | 説明 |
-|---|---|
-| Bucket Versioning | 同一キーの複数バージョン管理 |
-| Bucket Lifecycle | オブジェクトの自動削除・ストレージクラス遷移ルール |
-| Bucket Notification | オブジェクト作成/削除時のイベント通知 (SNS/SQS/Lambda) |
-| Bucket CORS | バケット単位の CORS 設定 |
-| Bucket Logging | アクセスログの記録 |
-| Bucket Encryption | デフォルト暗号化設定 (SSE-S3, SSE-KMS) |
-| Bucket Replication | クロスリージョンレプリケーション |
+以下の機能はローカル開発ダミーとしての利用時には実質的に意味を持たない、あるいは既に動作しているため、実装の必要性は低いと判断しています。
 
-### オブジェクト機能
-
-| 機能 | 説明 |
-|---|---|
-| Object Versioning | バージョニング有効時のオブジェクトバージョン管理 |
-| ListObjectVersions | バージョン付きオブジェクトの一覧 |
-| Object Lock / Legal Hold | オブジェクトの変更不可ロック |
-| Server-Side Encryption | SSE-S3, SSE-KMS, SSE-C による暗号化 |
-| Storage Class | STANDARD 以外のストレージクラス (GLACIER, INTELLIGENT_TIERING 等) |
-| Object Restore | Glacier からの復元 |
-| Select Object Content | SQL による CSV/JSON/Parquet のクエリ |
-
-### 転送・パフォーマンス
-
-| 機能 | 説明 |
-|---|---|
-| Transfer Acceleration | CloudFront エッジ経由の高速転送 |
+| 機能 | 必要性 | 難易度 | 不要な理由 |
+|---|---|---|---|
+| AWS Signature V4 | ★ | ★★★★★ | SDK はダミー認証情報で署名を送るが、サーバーが無視すれば全 API が動作する |
+| Presigned URL | ★ | ★★★★ | 認証を検証しないため **既に動作する**。SDK が生成する URL はそのまま本サーバーを指す |
+| Bucket Policy | ★ | ★★★★ | ローカル開発でアクセス制御は不要 |
+| Bucket Lifecycle | ★ | ★★★★ | バックグラウンドでの自動削除/遷移であり開発・テスト時は不要 |
+| Bucket Notification | ★★ | ★★★★ | イベント駆動テストに有用だが通常アプリ側でモックする |
+| Bucket Logging | ★ | ★★ | 監査用途で開発時は不要 |
+| Bucket Encryption | ★ | ★★★ | ローカルストレージに暗号化は無意味 |
+| Bucket Replication | ★ | ★★★★★ | ローカル環境で意味を持たない |
+| Object Versioning / ListObjectVersions | ★★★ | ★★★★ | Versioning 実装に依存（上記参照） |
+| Object Lock / Legal Hold | ★ | ★★★ | コンプライアンス向け。開発時は不要 |
+| Server-Side Encryption | ★ | ★★★ | ローカルでの暗号化は無意味。ヘッダー受理のみなら容易だが実用性なし |
+| Object Restore | ★ | ★★★ | Glacier 復元のシミュレーション。ステータスタイマー管理が必要 |
+| Select Object Content | ★ | ★★★★★ | SQL パーサー + 実行エンジンが必要。非常に複雑で用途も限定的 |
+| Transfer Acceleration | ★ | ★ | ローカルでは意味がない |
 
 ---
 
-## メタデータストレージの構成
+## ストレージ構成
 
 ```
 {BasePath}/
-├── {bucket}/                  # オブジェクトデータ
-│   ├── key1.txt
-│   └── folder/
-│       └── key2.txt
-├── .meta/                     # メタデータ (JSON サイドカー)
-│   ├── {bucket}/
-│   │   ├── key1.txt.json
-│   │   └── folder/
-│   │       └── key2.txt.json
-│   └── .buckets/              # バケットタグ
-│       └── {bucket}.json
-└── .multipart/                # マルチパート一時ファイル
+├── {bucket}/                       # オブジェクトデータ
+│   └── key.txt
+├── .meta/
+│   ├── {bucket}/                   # オブジェクトメタデータ
+│   │   └── key.txt.json
+│   └── .buckets/                   # バケットレベルの設定
+│       ├── {bucket}-tags.json      # バケットタグ
+│       ├── {bucket}-acl.json       # バケット ACL
+│       └── {bucket}-cors.json      # バケット CORS
+└── .multipart/                     # マルチパート一時ファイル
     └── {uploadId}/
-        ├── .info              # bucket\nkey
-        ├── .meta.json         # 開始時のメタデータ
-        ├── 1                  # パート 1
-        └── 2                  # パート 2
+        ├── .info
+        ├── .meta.json
+        └── 1, 2, ...
 ```
 
-各メタデータファイルの形式:
+オブジェクトメタデータ (`*.json`):
 
 ```json
 {
   "ContentType": "application/json",
-  "UserMetadata": {
-    "project": "work-storage",
-    "version": "1.0"
-  },
-  "Tags": {
-    "environment": "dev",
-    "team": "backend"
-  }
-}
-```
-
-バケットタグファイルの形式:
-
-```json
-{
-  "project": "work-storage",
-  "cost-center": "engineering"
+  "StorageClass": "STANDARD_IA",
+  "Acl": "public-read",
+  "UserMetadata": { "author": "demo" },
+  "Tags": { "env": "dev" }
 }
 ```

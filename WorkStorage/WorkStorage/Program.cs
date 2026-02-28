@@ -1,3 +1,5 @@
+using WorkStorage.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,6 +22,9 @@ app.Use(async (context, next) =>
     context.Response.Headers["x-amz-request-id"] = Guid.NewGuid().ToString("N");
     await next();
 });
+
+// Apply per-bucket CORS rules stored via the S3 PutBucketCors API
+app.UseMiddleware<S3CorsMiddleware>();
 
 app.UseAuthorization();
 
