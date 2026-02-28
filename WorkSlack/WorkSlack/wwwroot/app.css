@@ -1875,3 +1875,201 @@ h1:focus {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-5px); }
 }
+
+/* ===================================================================
+   Pinned message indicator — badge on message + panel items
+   =================================================================== */
+
+.message-pinned {
+    font-size: 11px;
+    color: #e0a32e;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.pinned-message-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.pinned-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.pinned-msg-content {
+    font-size: 14px;
+    color: #1d1c1d;
+    line-height: 1.4;
+}
+
+/* ===================================================================
+   Hover action active state (e.g., bookmarked)
+   =================================================================== */
+
+.hover-action-active {
+    color: #e0a32e;
+}
+
+/* ===================================================================
+   Saved items — bookmarked message list
+   =================================================================== */
+
+.saved-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.saved-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.saved-item-channel {
+    color: #616061;
+    font-size: 12px;
+    margin-left: auto;
+}
+
+.saved-item-content {
+    font-size: 14px;
+    color: #1d1c1d;
+    line-height: 1.4;
+}
+
+.modal-hint-text {
+    font-size: 13px;
+    color: #92929d;
+    margin-top: 0;
+}
+
+/* ===================================================================
+   Custom status — sidebar status button & preset dialog
+   =================================================================== */
+
+.workspace-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #cdbdcf;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    transition: color 0.15s;
+}
+
+.workspace-status-btn:hover {
+    color: #fff;
+}
+
+.status-preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.status-preset {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+    transition: background 0.1s;
+}
+
+.status-preset:hover {
+    background: #f0f0f0;
+}
+
+.status-custom-row {
+    margin-top: 12px;
+}
+
+/* ===================================================================
+   Responsive — mobile & tablet adaptations
+   =================================================================== */
+
+@media (max-width: 1024px) {
+    .workspace-bar {
+        width: 44px;
+        padding: 8px 0;
+    }
+
+    .workspace-bar-label {
+        display: none;
+    }
+
+    .workspace-bar-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .workspace-bar-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    .sidebar {
+        width: 220px;
+    }
+
+    .thread-panel {
+        width: 320px;
+    }
+
+    .members-panel {
+        width: 260px;
+    }
+}
+
+@media (max-width: 768px) {
+    .workspace-bar {
+        display: none;
+    }
+
+    .sidebar {
+        width: 200px;
+    }
+
+    .thread-panel {
+        width: 280px;
+    }
+
+    .members-panel {
+        width: 240px;
+    }
+}
+
+@media (max-width: 640px) {
+    .sidebar {
+        display: none;
+    }
+
+    .thread-panel,
+    .members-panel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        z-index: 50;
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+    }
+}

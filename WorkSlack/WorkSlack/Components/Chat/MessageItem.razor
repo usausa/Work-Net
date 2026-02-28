@@ -5,23 +5,28 @@
     @* Hover action toolbar *@
     <div class="message-hover-toolbar">
         <button class="hover-action-btn" title="Add reaction" @onclick="ToggleReactionPicker" @onclick:stopPropagation="true">😀</button>
-        @if (Message.ReplyCount >= 0)
-        {
-            <button class="hover-action-btn" title="Reply in thread" @onclick="() => OnThreadOpen.InvokeAsync(Message.Id)">💬</button>
-        }
-        <button class="hover-action-btn" title="Bookmark" @onclick="() => _showBookmarkToast = true">🔖</button>
-        @if (Message.AuthorId == CurrentUserId)
-        {
-            <button class="hover-action-btn" title="More actions" @onclick="ToggleMoreMenu" @onclick:stopPropagation="true">⋯</button>
-        }
+        <button class="hover-action-btn" title="Reply in thread" @onclick="() => OnThreadOpen.InvokeAsync(Message.Id)">💬</button>
+        <button class="hover-action-btn @(IsBookmarked ? "hover-action-active" : "")" title="@(IsBookmarked ? "Remove bookmark" : "Bookmark")" @onclick="() => OnBookmark.InvokeAsync(Message.Id)">🔖</button>
+        <button class="hover-action-btn" title="More actions" @onclick="ToggleMoreMenu" @onclick:stopPropagation="true">⋯</button>
     </div>
 
     @if (_showMoreMenu)
     {
         <div class="msg-dropdown-backdrop" @onclick="() => _showMoreMenu = false"></div>
         <div class="msg-dropdown">
-            <button class="msg-dropdown-item" @onclick="StartEdit">✏️ Edit message</button>
-            <button class="msg-dropdown-item msg-dropdown-danger" @onclick="() => OnDelete.InvokeAsync(Message.Id)">🗑️ Delete message</button>
+            @if (Message.IsPinned)
+            {
+                <button class="msg-dropdown-item" @onclick="HandleUnpin">📌 Unpin message</button>
+            }
+            else
+            {
+                <button class="msg-dropdown-item" @onclick="HandlePin">📌 Pin to channel</button>
+            }
+            @if (Message.AuthorId == CurrentUserId)
+            {
+                <button class="msg-dropdown-item" @onclick="StartEdit">✏️ Edit message</button>
+                <button class="msg-dropdown-item msg-dropdown-danger" @onclick="() => OnDelete.InvokeAsync(Message.Id)">🗑️ Delete message</button>
+            }
         </div>
     }
 
@@ -46,6 +51,10 @@
                 @if (Message.IsEdited)
                 {
                     <span class="message-edited">(edited)</span>
+                }
+                @if (Message.IsPinned)
+                {
+                    <span class="message-pinned">📌 Pinned</span>
                 }
             </div>
             @if (_isEditing)
@@ -94,11 +103,6 @@
             <RenderReactions />
         </div>
     }
-
-    @if (_showBookmarkToast)
-    {
-        <div class="bookmark-toast">Saved to your bookmarks</div>
-    }
 </div>
 
 @code {
@@ -129,11 +133,19 @@
     [Parameter]
     public EventCallback<string> OnProfileOpen { get; set; }
 
+    [Parameter]
+    public EventCallback<string> OnBookmark { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnPin { get; set; }
+
+    [Parameter]
+    public bool IsBookmarked { get; set; }
+
     private bool _showReactionPicker;
     private bool _showMoreMenu;
     private bool _isEditing;
     private string _editText = "";
-    private bool _showBookmarkToast;
 
     private void ToggleReactionPicker()
     {
@@ -145,6 +157,18 @@
     {
         _showMoreMenu = !_showMoreMenu;
         _showReactionPicker = false;
+    }
+
+    private async Task HandlePin()
+    {
+        _showMoreMenu = false;
+        await OnPin.InvokeAsync(Message.Id);
+    }
+
+    private async Task HandleUnpin()
+    {
+        _showMoreMenu = false;
+        await OnPin.InvokeAsync(Message.Id);
     }
 
     private async Task AddReactionAsync(string emoji)

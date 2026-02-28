@@ -25,6 +25,16 @@
             }
         </div>
         <div class="channel-header-right">
+            @{
+                var pinnedCount = ChannelId is not null ? ChatService.GetPinnedMessages(ChannelId).Count : 0;
+            }
+            @if (pinnedCount > 0)
+            {
+                <button class="header-icon-btn" title="Pinned messages" @onclick="() => _showPinnedPanel = !_showPinnedPanel">
+                    📌
+                    <span class="header-icon-label">@pinnedCount</span>
+                </button>
+            }
             <button class="header-icon-btn" title="Members" @onclick="() => _showMembersPanel = !_showMembersPanel">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z" />
@@ -93,11 +103,14 @@
                                  Author="@author"
                                  IsFirstInGroup="@isNewGroup"
                                  CurrentUserId="@_currentUser.Id"
+                                 IsBookmarked="@ChatService.IsBookmarked(message.Id)"
                                  OnReactionClick="@(emoji => HandleToggleReactionAsync(message.Id, emoji))"
                                  OnThreadOpen="OpenThread"
                                  OnEdit="HandleEditAsync"
                                  OnDelete="HandleDeleteAsync"
-                                 OnProfileOpen="OpenProfile" />
+                                 OnProfileOpen="OpenProfile"
+                                 OnBookmark="HandleBookmarkAsync"
+                                 OnPin="HandlePinAsync" />
 
                     lastAuthorId = message.AuthorId;
                     lastTimestamp = message.Timestamp;
@@ -223,6 +236,38 @@
                 </div>
             </div>
         }
+
+        @* Pinned messages side panel *@
+        @if (_showPinnedPanel && ChannelId is not null)
+        {
+            <div class="members-panel">
+                <div class="members-panel-header">
+                    <span class="members-panel-title">Pinned messages</span>
+                    <button class="thread-panel-close" @onclick="() => _showPinnedPanel = false">✕</button>
+                </div>
+                <div class="members-panel-list">
+                    @foreach (var msg in ChatService.GetPinnedMessages(ChannelId))
+                    {
+                        var pinAuthor = ChatService.GetUser(msg.AuthorId);
+                        <div class="pinned-message-item">
+                            <div class="pinned-msg-header">
+                                @if (pinAuthor is not null)
+                                {
+                                    <UserAvatar User="@pinAuthor" Size="UserAvatar.AvatarSize.Small" />
+                                    <strong>@pinAuthor.DisplayName</strong>
+                                }
+                                <span class="message-timestamp">@FormatTimestamp(msg.Timestamp)</span>
+                            </div>
+                            <div class="pinned-msg-content">@msg.Content</div>
+                        </div>
+                    }
+                    @if (ChatService.GetPinnedMessages(ChannelId).Count == 0)
+                    {
+                        <p class="search-no-results">No pinned messages yet.</p>
+                    }
+                </div>
+            </div>
+        }
     </div>
 
     @* User profile card *@
@@ -270,6 +315,7 @@
     // Panels
     private bool _showMembersPanel;
     private bool _showSearchPanel;
+    private bool _showPinnedPanel;
     private string _searchQuery = "";
     private IReadOnlyList<ChatMessage> _searchResults = [];
 
@@ -300,6 +346,7 @@
         _threadReplies = [];
         _showMembersPanel = false;
         _showSearchPanel = false;
+        _showPinnedPanel = false;
         _typingCts?.Cancel();
         _typingUser = null;
     }
@@ -363,6 +410,24 @@
     private void OpenProfile(string userId)
     {
         _profileUser = ChatService.GetUser(userId);
+    }
+
+    private void HandleBookmarkAsync(string messageId)
+    {
+        ChatService.ToggleBookmark(messageId);
+    }
+
+    private void HandlePinAsync(string messageId)
+    {
+        var msg = _messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg is null) return;
+
+        if (msg.IsPinned)
+            ChatService.UnpinMessage(messageId);
+        else
+            ChatService.PinMessage(messageId);
+
+        RefreshMessages();
     }
 
     private Task HandleSearchKeyDownAsync(KeyboardEventArgs e)

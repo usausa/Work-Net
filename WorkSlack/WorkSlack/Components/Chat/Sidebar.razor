@@ -6,10 +6,14 @@
     <div class="sidebar-header">
         <div class="workspace-info">
             <h1 class="workspace-name">WorkSlack</h1>
-            <span class="workspace-status">
+            <button class="workspace-status-btn" @onclick="() => _showStatusDialog = true">
                 <span class="status-dot"></span>
-                @_currentUser.DisplayName
-            </span>
+                @if (_currentUser.CustomStatusEmoji is not null)
+                {
+                    <span>@_currentUser.CustomStatusEmoji</span>
+                }
+                <span>@_currentUser.DisplayName</span>
+            </button>
         </div>
         <button class="compose-btn" title="New message" @onclick="() => _showComposeDialog = true">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -203,9 +207,67 @@
             <span>Saved items</span>
             <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
         </div>
-        <div class="modal-dialog-body modal-dialog-body-empty">
-            <span class="modal-empty-icon">🔖</span>
-            <p>Your saved messages will appear here.</p>
+        <div class="modal-dialog-body">
+            @{
+                var bookmarks = ChatService.GetBookmarkedMessages();
+            }
+            @if (bookmarks.Count == 0)
+            {
+                <div class="modal-dialog-body-empty">
+                    <span class="modal-empty-icon">🔖</span>
+                    <p>Your saved messages will appear here.</p>
+                    <p class="modal-hint-text">Click 🔖 on any message to save it.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var msg in bookmarks)
+                {
+                    var author = ChatService.GetUser(msg.AuthorId);
+                    var ch = ChatService.GetChannel(msg.ChannelId);
+                    <div class="saved-item">
+                        <div class="saved-item-header">
+                            @if (author is not null)
+                            {
+                                <UserAvatar User="@author" Size="UserAvatar.AvatarSize.Small" />
+                                <strong>@author.DisplayName</strong>
+                            }
+                            <span class="saved-item-channel">in #@(ch?.Name ?? "")</span>
+                        </div>
+                        <div class="saved-item-content">@msg.Content</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@if (_showStatusDialog)
+{
+    <div class="modal-backdrop" @onclick="CloseAllDialogs"></div>
+    <div class="modal-dialog">
+        <div class="modal-dialog-header">
+            <span>Set a status</span>
+            <button class="modal-dialog-close" @onclick="CloseAllDialogs">✕</button>
+        </div>
+        <div class="modal-dialog-body">
+            <div class="status-preset-list">
+                <button class="status-preset" @onclick='() => ApplyStatus("📅", "In a meeting")'>📅 In a meeting</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("🚌", "Commuting")'>🚌 Commuting</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("🤒", "Out sick")'>🤒 Out sick</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("🌴", "Vacationing")'>🌴 Vacationing</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("🏠", "Working remotely")'>🏠 Working remotely</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("💻", "Coding")'>💻 Coding</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("☕", "On break")'>☕ On break</button>
+                <button class="status-preset" @onclick='() => ApplyStatus("🎧", "Focus time")'>🎧 Focus time</button>
+            </div>
+            <div class="status-custom-row">
+                <input type="text" class="modal-input" placeholder="What's your status?" @bind="_statusText" />
+            </div>
+        </div>
+        <div class="modal-dialog-footer">
+            <button class="edit-cancel-btn" @onclick="ClearStatus">Clear status</button>
+            <button class="modal-primary-btn" @onclick="CloseAllDialogs">Save</button>
         </div>
     </div>
 }
@@ -230,6 +292,8 @@
     private bool _showThreadsDialog;
     private bool _showDraftsDialog;
     private bool _showSavedDialog;
+    private bool _showStatusDialog;
+    private string _statusText = "";
 
     private IEnumerable<Channel> FilteredChannels =>
         string.IsNullOrWhiteSpace(_filterText)
@@ -261,5 +325,22 @@
         _showThreadsDialog = false;
         _showDraftsDialog = false;
         _showSavedDialog = false;
+        _showStatusDialog = false;
+    }
+
+    private void ApplyStatus(string emoji, string text)
+    {
+        _statusText = text;
+        ChatService.SetCustomStatus(emoji, text);
+        _currentUser = ChatService.GetCurrentUser();
+        _showStatusDialog = false;
+    }
+
+    private void ClearStatus()
+    {
+        _statusText = "";
+        ChatService.SetCustomStatus(null, null);
+        _currentUser = ChatService.GetCurrentUser();
+        _showStatusDialog = false;
     }
 }

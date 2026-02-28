@@ -10,6 +10,7 @@ public sealed class ChatMessage
     public List<Reaction> Reactions { get; init; } = [];
     public bool IsEdited { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsPinned { get; set; }
     public string? ParentMessageId { get; init; }
     public int ReplyCount { get; set; }
 }

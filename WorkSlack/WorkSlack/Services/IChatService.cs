@@ -25,4 +25,11 @@ public interface IChatService
     IReadOnlyList<ChatMessage> GetThreadReplies(string parentMessageId);
     ChatMessage SendThreadReply(string channelId, string parentMessageId, string content);
     IReadOnlyList<ChatMessage> SearchMessages(string query);
+    void SetCustomStatus(string? emoji, string? text);
+    void ToggleBookmark(string messageId);
+    bool IsBookmarked(string messageId);
+    IReadOnlyList<ChatMessage> GetBookmarkedMessages();
+    void PinMessage(string messageId);
+    void UnpinMessage(string messageId);
+    IReadOnlyList<ChatMessage> GetPinnedMessages(string channelId);
 }

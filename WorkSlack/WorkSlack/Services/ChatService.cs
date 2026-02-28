@@ -11,7 +11,8 @@ internal sealed class ChatService : IChatService
     private readonly List<Channel> _channels;
     private readonly Dictionary<string, List<ChatMessage>> _messages;
     private readonly Dictionary<string, DateTimeOffset> _lastRead;
-    private readonly ChatUser _currentUser;
+    private readonly HashSet<string> _bookmarks = [];
+    private ChatUser _currentUser;
 
     public ChatService()
     {
@@ -322,6 +323,47 @@ internal sealed class ChatService : IChatService
             .Take(20)
             .ToList();
     }
+
+    public void SetCustomStatus(string? emoji, string? text)
+    {
+        _currentUser = _currentUser with { CustomStatusEmoji = emoji, CustomStatusText = text };
+        _users[_currentUser.Id] = _currentUser;
+    }
+
+    public void ToggleBookmark(string messageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        if (!_bookmarks.Add(messageId))
+            _bookmarks.Remove(messageId);
+    }
+
+    public bool IsBookmarked(string messageId) => _bookmarks.Contains(messageId);
+
+    public IReadOnlyList<ChatMessage> GetBookmarkedMessages() =>
+        _messages.Values
+            .SelectMany(m => m)
+            .Where(m => _bookmarks.Contains(m.Id) && !m.IsDeleted)
+            .OrderByDescending(m => m.Timestamp)
+            .ToList();
+
+    public void PinMessage(string messageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        var msg = FindMessage(messageId);
+        if (msg is not null) msg.IsPinned = true;
+    }
+
+    public void UnpinMessage(string messageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        var msg = FindMessage(messageId);
+        if (msg is not null) msg.IsPinned = false;
+    }
+
+    public IReadOnlyList<ChatMessage> GetPinnedMessages(string channelId) =>
+        _messages.TryGetValue(channelId, out var msgs)
+            ? msgs.Where(m => m.IsPinned && !m.IsDeleted && m.ParentMessageId is null).ToList()
+            : [];
 
     private ChatMessage? FindMessage(string messageId)
     {
