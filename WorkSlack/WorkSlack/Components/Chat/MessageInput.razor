@@ -1,0 +1,70 @@
+@using WorkSlack.Models
+
+<div class="message-input-container">
+    <div class="message-input-wrapper">
+        <div class="input-toolbar">
+            <button class="toolbar-btn" title="Bold">𝐁</button>
+            <button class="toolbar-btn" title="Italic">𝐼</button>
+            <button class="toolbar-btn" title="Strikethrough">S̶</button>
+            <span class="toolbar-divider"></span>
+            <button class="toolbar-btn" title="Link">🔗</button>
+            <button class="toolbar-btn" title="List">☰</button>
+        </div>
+        <div class="input-area">
+            <textarea @ref="_inputRef"
+                      @bind="MessageText"
+                      @bind:event="oninput"
+                      @onkeydown="HandleKeyDownAsync"
+                      placeholder="@Placeholder"
+                      rows="1"></textarea>
+        </div>
+        <div class="input-footer">
+            <div class="input-actions-left">
+                <button class="footer-btn" title="Attach file">📎</button>
+                <button class="footer-btn" title="Emoji">😊</button>
+                <button class="footer-btn" title="Mention">＠</button>
+            </div>
+            <div class="input-actions-right">
+                <button class="send-btn @(string.IsNullOrWhiteSpace(MessageText) ? "send-btn-disabled" : "")"
+                        @onclick="SendAsync"
+                        disabled="@string.IsNullOrWhiteSpace(MessageText)"
+                        title="Send message">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.5 1.5L14.5 8L1.5 14.5V9.5L10.5 8L1.5 6.5V1.5Z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Placeholder { get; set; } = "Message";
+
+    [Parameter]
+    public EventCallback<string> OnSend { get; set; }
+
+    private string MessageText { get; set; } = "";
+    private ElementReference _inputRef;
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e is { Key: "Enter", ShiftKey: false })
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(MessageText))
+        {
+            return;
+        }
+
+        var text = MessageText.Trim();
+        MessageText = "";
+        await OnSend.InvokeAsync(text);
+    }
+}

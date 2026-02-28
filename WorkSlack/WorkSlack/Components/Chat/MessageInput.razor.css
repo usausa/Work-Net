@@ -1,0 +1,128 @@
+.message-input-container {
+    padding: 0 20px 20px;
+}
+
+.message-input-wrapper {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+    .message-input-wrapper:focus-within {
+        border-color: #1264a3;
+        box-shadow: 0 0 0 1px #1264a3;
+    }
+
+.input-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+    background: #fafafa;
+}
+
+.toolbar-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #616061;
+    transition: background-color 0.1s;
+}
+
+    .toolbar-btn:hover {
+        background: #e8e8e8;
+    }
+
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #ddd;
+    margin: 0 4px;
+}
+
+.input-area {
+    padding: 8px 12px;
+}
+
+    .input-area textarea {
+        width: 100%;
+        border: none;
+        outline: none;
+        resize: none;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 15px;
+        line-height: 1.46;
+        color: #1d1c1d;
+        background: transparent;
+        min-height: 22px;
+        max-height: 200px;
+    }
+
+        .input-area textarea::placeholder {
+            color: #92929d;
+        }
+
+.input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+}
+
+.input-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.footer-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.1s;
+}
+
+    .footer-btn:hover {
+        background: #e8e8e8;
+    }
+
+.send-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #007a5a;
+    color: #fff;
+    transition: background-color 0.1s;
+}
+
+    .send-btn:hover:not(:disabled) {
+        background: #005e44;
+    }
+
+    .send-btn.send-btn-disabled {
+        background: #ddd;
+        color: #aaa;
+        cursor: not-allowed;
+    }

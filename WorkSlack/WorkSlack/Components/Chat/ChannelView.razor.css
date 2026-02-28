@@ -1,0 +1,114 @@
+.channel-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #fff;
+}
+
+.channel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 49px;
+    padding: 0 16px 0 20px;
+    border-bottom: 1px solid #e1e1e5;
+    flex-shrink: 0;
+}
+
+.channel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.channel-header-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1d1c1d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.channel-header-divider {
+    color: #ddd;
+    font-weight: 300;
+}
+
+.channel-header-topic {
+    font-size: 13px;
+    color: #616061;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.channel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.header-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #e1e1e5;
+    border-radius: 6px;
+    background: none;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: #616061;
+    font-size: 13px;
+    transition: background-color 0.1s;
+}
+
+    .header-icon-btn:hover {
+        background: #f8f8f8;
+    }
+
+.header-icon-label {
+    font-weight: 600;
+}
+
+.channel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 8px;
+}
+
+.channel-intro {
+    padding: 48px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    .channel-intro h2 {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1d1c1d;
+        margin: 0;
+    }
+
+.channel-intro-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    background: #616061;
+    border-radius: 12px;
+}
+
+.channel-intro-desc {
+    font-size: 15px;
+    color: #616061;
+    margin: 0;
+    line-height: 1.46;
+}

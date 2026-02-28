@@ -1,0 +1,112 @@
+@using WorkSlack.Models
+@using WorkSlack.Services
+@inject IChatService ChatService
+
+<nav class="sidebar">
+    <div class="sidebar-header">
+        <div class="workspace-info">
+            <h1 class="workspace-name">WorkSlack</h1>
+            <span class="workspace-status">
+                <span class="status-dot"></span>
+                @_currentUser.DisplayName
+            </span>
+        </div>
+        <button class="compose-btn" title="New message">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M14.7 1.3a1 1 0 00-1.4 0L6 8.6V10h1.4l7.3-7.3a1 1 0 000-1.4zM5 11V10l-1-1H2v4h4v-2H5z" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="sidebar-content">
+        <div class="nav-section">
+            <a class="nav-item" href="#">
+                <span class="nav-icon">💬</span>
+                <span>Threads</span>
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">📨</span>
+                <span>Drafts & Sent</span>
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">🔖</span>
+                <span>Saved items</span>
+            </a>
+            <a class="nav-item" href="#">
+                <span class="nav-icon">⋯</span>
+                <span>More</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <button class="section-header" @onclick="() => _channelsExpanded = !_channelsExpanded">
+                <span class="section-caret @(_channelsExpanded ? "caret-down" : "")">▶</span>
+                <span class="section-title">Channels</span>
+            </button>
+            @if (_channelsExpanded)
+            {
+                @foreach (var channel in _channels)
+                {
+                    <a class="nav-item channel-item @(channel.Id == SelectedChannelId ? "nav-item-active" : "")"
+                       @onclick="() => OnChannelSelected.InvokeAsync(channel.Id)"
+                       @onclick:preventDefault>
+                        <span class="channel-prefix">#</span>
+                        <span class="channel-name">@channel.Name</span>
+                    </a>
+                }
+                <a class="nav-item add-item" href="#">
+                    <span class="nav-icon">+</span>
+                    <span>Add channels</span>
+                </a>
+            }
+        </div>
+
+        <div class="nav-section">
+            <button class="section-header" @onclick="() => _dmsExpanded = !_dmsExpanded">
+                <span class="section-caret @(_dmsExpanded ? "caret-down" : "")">▶</span>
+                <span class="section-title">Direct messages</span>
+            </button>
+            @if (_dmsExpanded)
+            {
+                @foreach (var dm in _directMessages)
+                {
+                    var dmUser = ChatService.GetUser(dm.DmUserId ?? "");
+                    <a class="nav-item dm-item @(dm.Id == SelectedChannelId ? "nav-item-active" : "")"
+                       @onclick="() => OnChannelSelected.InvokeAsync(dm.Id)"
+                       @onclick:preventDefault>
+                        @if (dmUser is not null)
+                        {
+                            <UserAvatar User="@dmUser" Size="UserAvatar.AvatarSize.Small" ShowStatus="true" />
+                        }
+                        <span class="channel-name">@dm.Name</span>
+                    </a>
+                }
+                <a class="nav-item add-item" href="#">
+                    <span class="nav-icon">+</span>
+                    <span>Add teammates</span>
+                </a>
+            }
+        </div>
+    </div>
+</nav>
+
+@code {
+    [Parameter]
+    public string? SelectedChannelId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnChannelSelected { get; set; }
+
+    private IReadOnlyList<Channel> _channels = [];
+    private IReadOnlyList<Channel> _directMessages = [];
+    private ChatUser _currentUser = default!;
+    private bool _channelsExpanded = true;
+    private bool _dmsExpanded = true;
+
+    protected override void OnInitialized()
+    {
+        _channels = ChatService.GetChannels();
+        _directMessages = ChatService.GetDirectMessages();
+        _currentUser = ChatService.GetCurrentUser();
+    }
+}

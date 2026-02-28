@@ -1,0 +1,148 @@
+@using WorkSlack.Models
+@using WorkSlack.Services
+@inject IChatService ChatService
+@inject IJSRuntime JS
+
+<div class="channel-view">
+    <div class="channel-header">
+        <div class="channel-header-left">
+            @if (Channel is not null)
+            {
+                @if (Channel.IsDirectMessage)
+                {
+                    <span class="channel-header-name">@Channel.Name</span>
+                }
+                else
+                {
+                    <span class="channel-header-name"># @Channel.Name</span>
+                }
+                @if (!string.IsNullOrEmpty(Channel.Description))
+                {
+                    <span class="channel-header-divider">|</span>
+                    <span class="channel-header-topic">@Channel.Description</span>
+                }
+            }
+        </div>
+        <div class="channel-header-right">
+            <button class="header-icon-btn" title="Members">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4z" />
+                </svg>
+                <span class="header-icon-label">@MemberCount</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="channel-messages" @ref="_messagesContainer">
+        @if (Channel is not null)
+        {
+            <div class="channel-intro">
+                @if (Channel.IsDirectMessage)
+                {
+                    var dmUser = ChatService.GetUser(Channel.DmUserId ?? "");
+                    if (dmUser is not null)
+                    {
+                        <UserAvatar User="@dmUser" Size="UserAvatar.AvatarSize.Large" ShowStatus="true" />
+                        <h2>@dmUser.DisplayName</h2>
+                        <p class="channel-intro-desc">This is the very beginning of your direct message history with <strong>@dmUser.DisplayName</strong>.</p>
+                    }
+                }
+                else
+                {
+                    <div class="channel-intro-icon">#</div>
+                    <h2>@Channel.Name</h2>
+                    <p class="channel-intro-desc">
+                        @(Channel.Description ?? $"This is the very beginning of the #{Channel.Name} channel.")
+                    </p>
+                }
+            </div>
+        }
+
+        @{
+            string? lastAuthorId = null;
+            DateTimeOffset? lastTimestamp = null;
+        }
+        @foreach (var message in _messages)
+        {
+            var author = ChatService.GetUser(message.AuthorId);
+            if (author is null) continue;
+
+            var isNewGroup = lastAuthorId != message.AuthorId
+                || lastTimestamp is null
+                || (message.Timestamp - lastTimestamp.Value).TotalMinutes > 5;
+
+            <MessageItem Message="@message"
+                         Author="@author"
+                         IsFirstInGroup="@isNewGroup"
+                         CurrentUserId="@_currentUser.Id"
+                         OnReactionClick="@(emoji => HandleReactionAsync(message.Id, emoji))" />
+
+            lastAuthorId = message.AuthorId;
+            lastTimestamp = message.Timestamp;
+        }
+    </div>
+
+    <MessageInput Placeholder="@InputPlaceholder" OnSend="HandleSendAsync" />
+</div>
+
+@code {
+    [Parameter]
+    public string? ChannelId { get; set; }
+
+    private Channel? Channel => ChannelId is not null ? ChatService.GetChannel(ChannelId) : null;
+    private IReadOnlyList<ChatMessage> _messages = [];
+    private ChatUser _currentUser = default!;
+    private ElementReference _messagesContainer;
+
+    private string InputPlaceholder =>
+        Channel is null ? "Message" :
+        Channel.IsDirectMessage ? $"Message {Channel.Name}" :
+        $"Message #{Channel.Name}";
+
+    private int MemberCount => ChatService.GetAllUsers().Count;
+
+    protected override void OnInitialized()
+    {
+        _currentUser = ChatService.GetCurrentUser();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _messages = ChannelId is not null ? ChatService.GetMessages(ChannelId) : [];
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ScrollToBottomAsync();
+    }
+
+    private async Task HandleSendAsync(string content)
+    {
+        if (ChannelId is null) return;
+        ChatService.SendMessage(ChannelId, content);
+        _messages = ChatService.GetMessages(ChannelId);
+        await ScrollToBottomAsync();
+    }
+
+    private Task HandleReactionAsync(string messageId, string emoji)
+    {
+        ChatService.AddReaction(messageId, emoji);
+        if (ChannelId is not null)
+        {
+            _messages = ChatService.GetMessages(ChannelId);
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "document.querySelector('.channel-messages')?.scrollTo(0, document.querySelector('.channel-messages')?.scrollHeight)");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Ignored during prerender or disconnect
+        }
+    }
+}

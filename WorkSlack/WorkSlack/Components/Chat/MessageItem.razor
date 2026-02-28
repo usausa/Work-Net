@@ -1,0 +1,81 @@
+@using WorkSlack.Models
+
+<div class="message-item @(IsFirstInGroup ? "first-in-group" : "continuation")">
+    @if (IsFirstInGroup)
+    {
+        <div class="message-gutter">
+            <UserAvatar User="@Author" />
+        </div>
+        <div class="message-content">
+            <div class="message-header">
+                <span class="message-author">@Author.DisplayName</span>
+                <span class="message-timestamp">@FormatTimestamp(Message.Timestamp)</span>
+            </div>
+            <div class="message-text">@Message.Content</div>
+            @if (Message.Reactions.Count > 0)
+            {
+                <div class="message-reactions">
+                    @foreach (var reaction in Message.Reactions)
+                    {
+                        <button class="reaction-chip @(reaction.UserIds.Contains(CurrentUserId) ? "reaction-active" : "")"
+                                @onclick="() => OnReactionClick.InvokeAsync(reaction.Emoji)"
+                                title="@string.Join(", ", reaction.UserIds)">
+                            <span class="reaction-emoji">@reaction.Emoji</span>
+                            <span class="reaction-count">@reaction.UserIds.Count</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="message-gutter">
+            <span class="hover-timestamp">@Message.Timestamp.ToString("HH:mm")</span>
+        </div>
+        <div class="message-content">
+            <div class="message-text">@Message.Content</div>
+            @if (Message.Reactions.Count > 0)
+            {
+                <div class="message-reactions">
+                    @foreach (var reaction in Message.Reactions)
+                    {
+                        <button class="reaction-chip @(reaction.UserIds.Contains(CurrentUserId) ? "reaction-active" : "")"
+                                @onclick="() => OnReactionClick.InvokeAsync(reaction.Emoji)"
+                                title="@string.Join(", ", reaction.UserIds)">
+                            <span class="reaction-emoji">@reaction.Emoji</span>
+                            <span class="reaction-count">@reaction.UserIds.Count</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ChatMessage Message { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public ChatUser Author { get; set; } = default!;
+
+    [Parameter]
+    public bool IsFirstInGroup { get; set; } = true;
+
+    [Parameter]
+    public string CurrentUserId { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<string> OnReactionClick { get; set; }
+
+    private static string FormatTimestamp(DateTimeOffset ts)
+    {
+        var now = DateTimeOffset.Now;
+        if (ts.Date == now.Date)
+            return ts.ToString("h:mm tt");
+        if (ts.Date == now.Date.AddDays(-1))
+            return "Yesterday " + ts.ToString("h:mm tt");
+        return ts.ToString("MMM d, h:mm tt");
+    }
+}

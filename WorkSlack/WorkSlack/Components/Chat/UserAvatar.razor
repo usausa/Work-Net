@@ -1,0 +1,37 @@
+@using WorkSlack.Models
+
+<div class="user-avatar @SizeClass" style="background-color: @User.AvatarColor;" title="@User.DisplayName">
+    <span class="avatar-initial">@User.DisplayName[..1]</span>
+    @if (ShowStatus)
+    {
+        <span class="status-indicator @StatusClass"></span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ChatUser User { get; set; } = default!;
+
+    [Parameter]
+    public bool ShowStatus { get; set; }
+
+    [Parameter]
+    public AvatarSize Size { get; set; } = AvatarSize.Medium;
+
+    private string SizeClass => Size switch
+    {
+        AvatarSize.Small => "avatar-sm",
+        AvatarSize.Large => "avatar-lg",
+        _ => "avatar-md",
+    };
+
+    private string StatusClass => User.Status switch
+    {
+        UserStatus.Online => "status-online",
+        UserStatus.Away => "status-away",
+        UserStatus.DoNotDisturb => "status-dnd",
+        _ => "status-offline",
+    };
+
+    public enum AvatarSize { Small, Medium, Large }
+}

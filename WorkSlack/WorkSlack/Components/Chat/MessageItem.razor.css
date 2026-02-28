@@ -1,0 +1,118 @@
+.message-item {
+    display: flex;
+    gap: 8px;
+    padding: 2px 20px;
+    position: relative;
+    transition: background-color 0.1s;
+}
+
+    .message-item:hover {
+        background-color: #f8f8f8;
+    }
+
+    .message-item.first-in-group {
+        padding-top: 8px;
+        margin-top: 4px;
+    }
+
+.message-gutter {
+    width: 36px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
+}
+
+.hover-timestamp {
+    font-size: 11px;
+    color: #92929d;
+    opacity: 0;
+    transition: opacity 0.1s;
+    line-height: 22px;
+}
+
+.message-item:hover .hover-timestamp {
+    opacity: 1;
+}
+
+.message-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.message-author {
+    font-weight: 800;
+    font-size: 15px;
+    color: #1d1c1d;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+    .message-author:hover {
+        text-decoration: underline;
+    }
+
+.message-timestamp {
+    font-size: 12px;
+    color: #92929d;
+    font-weight: 400;
+}
+
+.message-text {
+    font-size: 15px;
+    color: #1d1c1d;
+    line-height: 1.46;
+    word-wrap: break-word;
+}
+
+.message-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid #e1e1e5;
+    border-radius: 24px;
+    background: #f8f8f8;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.1s;
+    line-height: 1.5;
+}
+
+    .reaction-chip:hover {
+        background: #e8e8e8;
+        border-color: #ccc;
+    }
+
+    .reaction-chip.reaction-active {
+        background: #e0edff;
+        border-color: #1264a3;
+    }
+
+.reaction-emoji {
+    font-size: 15px;
+}
+
+.reaction-count {
+    font-size: 12px;
+    color: #616061;
+    font-weight: 600;
+}
+
+.reaction-active .reaction-count {
+    color: #1264a3;
+}
