@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using HidSharp;
-using SkiaSharp;
 
 namespace WorkLcd;
 
@@ -75,83 +74,6 @@ public sealed class UsbLcdDevice : IDisposable
     {
         _stream?.Dispose();
         _stream = null;
-    }
-
-    /// <summary>
-    /// ディスプレイを黒でクリアします。
-    /// </summary>
-    public void Clear()
-    {
-        Clear(SKColors.Black);
-    }
-
-    /// <summary>
-    /// ディスプレイを指定色でクリアします。
-    /// </summary>
-    /// <param name="color">塗りつぶし色。</param>
-    public void Clear(SKColor color)
-    {
-        using var bitmap = new SKBitmap(Width, Height, SKColorType.Rgba8888, SKAlphaType.Premul);
-        bitmap.Erase(color);
-        SendBitmap(bitmap);
-    }
-
-    /// <summary>
-    /// SKBitmap を JPEG エンコードして LCD に転送します。
-    /// サイズが異なる場合は 1280x480 にリサイズされます。
-    /// </summary>
-    /// <param name="bitmap">転送するビットマップ。</param>
-    /// <param name="jpegQuality">JPEG 品質 (1-100)。既定値は 95。</param>
-    public void SendBitmap(SKBitmap bitmap, int jpegQuality = 95)
-    {
-        ArgumentNullException.ThrowIfNull(bitmap);
-
-        SKBitmap? resized = null;
-        try
-        {
-            var source = bitmap;
-            if (bitmap.Width != Width || bitmap.Height != Height)
-            {
-                resized = bitmap.Resize(new SKImageInfo(Width, Height), SKFilterQuality.High);
-                source = resized ?? throw new InvalidOperationException("Failed to resize bitmap.");
-            }
-
-            using var image = SKImage.FromBitmap(source);
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, jpegQuality);
-            SendJpeg(data.AsSpan());
-        }
-        finally
-        {
-            resized?.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// SKBitmap を RGB565 形式で LCD に転送します。
-    /// サイズが異なる場合は 1280x480 にリサイズされます。
-    /// </summary>
-    /// <param name="bitmap">転送するビットマップ。</param>
-    public void SendBitmapAsRgb565(SKBitmap bitmap)
-    {
-        ArgumentNullException.ThrowIfNull(bitmap);
-
-        SKBitmap? resized = null;
-        try
-        {
-            var source = bitmap;
-            if (bitmap.Width != Width || bitmap.Height != Height)
-            {
-                resized = bitmap.Resize(new SKImageInfo(Width, Height), SKFilterQuality.High);
-                source = resized ?? throw new InvalidOperationException("Failed to resize bitmap.");
-            }
-
-            var rgb565 = ConvertToRgb565(source);
-            SendRgb565(rgb565);
-        }
-        finally
-        {
-            resized?.Dispose();
-        }
     }
 
     /// <summary>
@@ -236,33 +158,5 @@ public sealed class UsbLcdDevice : IDisposable
             _stream.Write(packet);
             offset += chunkSize;
         }
-    }
-
-    /// <summary>
-    /// SKBitmap を RGB565 バイト配列に変換します。
-    /// </summary>
-    private static byte[] ConvertToRgb565(SKBitmap bitmap)
-    {
-        var buffer = new byte[bitmap.Width * bitmap.Height * 2];
-        var offset = 0;
-
-        for (var y = 0; y < bitmap.Height; y++)
-        {
-            for (var x = 0; x < bitmap.Width; x++)
-            {
-                var pixel = bitmap.GetPixel(x, y);
-
-                // RGB565: RRRRRGGG GGGBBBBB (リトルエンディアン)
-                var rgb565 = (ushort)(
-                    ((pixel.Red & 0xF8) << 8) |
-                    ((pixel.Green & 0xFC) << 3) |
-                    (pixel.Blue >> 3));
-
-                buffer[offset++] = (byte)(rgb565 & 0xFF);
-                buffer[offset++] = (byte)(rgb565 >> 8);
-            }
-        }
-
-        return buffer;
     }
 }

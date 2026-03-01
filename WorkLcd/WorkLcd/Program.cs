@@ -17,6 +17,8 @@ using var paint = new SKPaint
 };
 canvas.DrawText("Hello, LCD!", 100, 260, paint);
 
+var jpegBytes = SkiaBitmapHelper.ToJpegBytes(bitmap, 95);
+
 // デバイスは一定時間フレームを受信しないと画面をクリアするため、定期的に再送する
 var interval = TimeSpan.FromSeconds(1);
 using var cts = new CancellationTokenSource();
@@ -25,7 +27,7 @@ Console.WriteLine("Ctrl+C で終了します。");
 
 while (!cts.Token.IsCancellationRequested)
 {
-    lcd.SendBitmap(bitmap);
+    lcd.SendJpeg(jpegBytes);
 
     try
     {
@@ -37,4 +39,5 @@ while (!cts.Token.IsCancellationRequested)
     }
 }
 
-lcd.Clear();
+var blackFrame = new byte[UsbLcdDevice.Width * UsbLcdDevice.Height * 2];
+lcd.SendRgb565(blackFrame);
