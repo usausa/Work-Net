@@ -1,3 +1,4 @@
+using System.Buffers;
 using SkiaSharp;
 using WorkLcd;
 
@@ -42,5 +43,14 @@ while (!cts.Token.IsCancellationRequested)
     }
 }
 
-var blackFrame = new byte[UsbLcdDevice.Width * UsbLcdDevice.Height * 2];
-lcd.SendRgb565(blackFrame);
+var frameSize = UsbLcdDevice.Width * UsbLcdDevice.Height * 2;
+var pooledBlackFrame = ArrayPool<byte>.Shared.Rent(frameSize);
+try
+{
+    Array.Clear(pooledBlackFrame, 0, frameSize);
+    lcd.SendRgb565(pooledBlackFrame.AsSpan(0, frameSize));
+}
+finally
+{
+    ArrayPool<byte>.Shared.Return(pooledBlackFrame);
+}
