@@ -12,10 +12,13 @@ canvas.Clear(SKColors.DarkBlue);
 using var paint = new SKPaint
 {
     Color = SKColors.White,
-    TextSize = 64,
     IsAntialias = true,
 };
-canvas.DrawText("Hello, LCD!", 100, 260, paint);
+using var font = new SKFont
+{
+    Size = 64,
+};
+canvas.DrawText("Hello, LCD!", 100, 260, SKTextAlign.Left, font, paint);
 
 var jpegBytes = SkiaBitmapHelper.ToJpegBytes(bitmap, 95);
 

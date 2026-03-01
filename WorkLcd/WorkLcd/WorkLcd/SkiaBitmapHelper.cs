@@ -47,7 +47,8 @@ public static class SkiaBitmapHelper
             return bitmap.Copy();
         }
 
-        return bitmap.Resize(new SKImageInfo(UsbLcdDevice.Width, UsbLcdDevice.Height), SKFilterQuality.High)
+        var sampling = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None);
+        return bitmap.Resize(new SKImageInfo(UsbLcdDevice.Width, UsbLcdDevice.Height), sampling)
             ?? throw new InvalidOperationException("Failed to resize bitmap.");
     }
 }
