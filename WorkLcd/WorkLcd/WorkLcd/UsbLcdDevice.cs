@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Buffers.Binary;
 using HidSharp;
 
@@ -128,43 +127,43 @@ public sealed class UsbLcdDevice : IDisposable
             throw new InvalidOperationException("Device is not open.");
         }
 
-        var totalLength = HeaderSize + imageData.Length;
-        var pooledPayload = ArrayPool<byte>.Shared.Rent(totalLength);
+        // 20バイトのプロトコルヘッダーを構築
+        Span<byte> header = stackalloc byte[HeaderSize];
+        header.Clear();
+        HeaderMagic.CopyTo(header);
+        header[4] = CommandImage;
+        BinaryPrimitives.WriteUInt16LittleEndian(header[8..], Width);
+        BinaryPrimitives.WriteUInt16LittleEndian(header[10..], Height);
+        header[12] = compressionType;
+        BinaryPrimitives.WriteInt32LittleEndian(header[16..], imageData.Length);
 
-        try
+        // HID レポート単位で送信（payloadバッファは作らず、先頭パケットにヘッダーを同梱）
+        Span<byte> packet = stackalloc byte[HidReportSize];
+
+        packet.Clear();
+        packet[0] = ReportId;
+        header.CopyTo(packet[1..]);
+
+        var sentDataOffset = 0;
+        var firstDataBytes = Math.Min(imageData.Length, DataPerPacket - HeaderSize);
+        if (firstDataBytes > 0)
         {
-            var payload = pooledPayload.AsSpan(0, totalLength);
-
-            // 20バイトのプロトコルヘッダーを構築
-            Span<byte> header = payload[..HeaderSize];
-            header.Clear();
-            HeaderMagic.CopyTo(header);
-            header[4] = CommandImage;
-            BinaryPrimitives.WriteUInt16LittleEndian(header[8..], Width);
-            BinaryPrimitives.WriteUInt16LittleEndian(header[10..], Height);
-            header[12] = compressionType;
-            BinaryPrimitives.WriteInt32LittleEndian(header[16..], imageData.Length);
-
-            imageData.CopyTo(payload[HeaderSize..]);
-
-            // HID レポート単位に分割して送信
-            Span<byte> packet = stackalloc byte[HidReportSize];
-            var offset = 0;
-            while (offset < totalLength)
-            {
-                packet.Clear();
-                packet[0] = ReportId;
-
-                var chunkSize = Math.Min(totalLength - offset, DataPerPacket);
-                payload.Slice(offset, chunkSize).CopyTo(packet[1..]);
-
-                _stream.Write(packet);
-                offset += chunkSize;
-            }
+            imageData[..firstDataBytes].CopyTo(packet[(1 + HeaderSize)..]);
+            sentDataOffset = firstDataBytes;
         }
-        finally
+
+        _stream.Write(packet);
+
+        while (sentDataOffset < imageData.Length)
         {
-            ArrayPool<byte>.Shared.Return(pooledPayload);
+            packet.Clear();
+            packet[0] = ReportId;
+
+            var chunkSize = Math.Min(imageData.Length - sentDataOffset, DataPerPacket);
+            imageData.Slice(sentDataOffset, chunkSize).CopyTo(packet[1..]);
+
+            _stream.Write(packet);
+            sentDataOffset += chunkSize;
         }
     }
 }
