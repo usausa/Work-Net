@@ -1,2 +1,40 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+using SkiaSharp;
+using WorkLcd;
+
+using var lcd = new UsbLcdDevice();
+lcd.Open();
+
+using var bitmap = new SKBitmap(UsbLcdDevice.Width, UsbLcdDevice.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+using var canvas = new SKCanvas(bitmap);
+
+canvas.Clear(SKColors.DarkBlue);
+
+using var paint = new SKPaint
+{
+    Color = SKColors.White,
+    TextSize = 64,
+    IsAntialias = true,
+};
+canvas.DrawText("Hello, LCD!", 100, 260, paint);
+
+// デバイスは一定時間フレームを受信しないと画面をクリアするため、定期的に再送する
+var interval = TimeSpan.FromSeconds(1);
+using var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+Console.WriteLine("Ctrl+C で終了します。");
+
+while (!cts.Token.IsCancellationRequested)
+{
+    lcd.SendBitmap(bitmap);
+
+    try
+    {
+        await Task.Delay(interval, cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        break;
+    }
+}
+
+lcd.Clear();
