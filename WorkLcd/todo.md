@@ -1,5 +1,0 @@
-WorkLcdプロジェクトのUsbLcdDeviceを以下の形に変更してください。
-
-- UsbLcdDevice自体はSkiaSharpに依存しない形にする
-- jpegのバイト列、またはRGB565のバイト列を引数にするようなメソッドのみを残し、SkiaBitmapの処理は使用する側で行なう
-- サンプルプログラムではSkiaBitmapからbyte配列に変換する部分はヘルパー化
