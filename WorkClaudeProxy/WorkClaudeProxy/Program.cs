@@ -1,32 +1,44 @@
+using Yarp.ReverseProxy.Transforms;
+using WorkClaudeProxy;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddSingleton(new DashboardImageStore("dashboard.jpg"));
+builder.Services.AddHostedService<DashboardWorker>();
+
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    .AddTransforms(transformBuilderContext =>
+    {
+        transformBuilderContext.AddResponseTransform(transformContext =>
+        {
+            if (transformContext.ProxyResponse is { } proxyResponse)
+            {
+                var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (key, values) in proxyResponse.Headers)
+                {
+                    if (key.StartsWith("anthropic-", StringComparison.OrdinalIgnoreCase) ||
+                        key.Equals("retry-after", StringComparison.OrdinalIgnoreCase))
+                    {
+                        headers[key] = string.Join(", ", values);
+                    }
+                }
+                transformContext.HttpContext.Items[ClaudeProxyMiddleware.UpstreamHeadersKey] = headers;
+            }
+            return ValueTask.CompletedTask;
+        });
+    });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<ClaudeProxyMiddleware>();
+app.MapReverseProxy();
 
-var summaries = new[]
+try
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-});
+    var imageStore = app.Services.GetRequiredService<DashboardImageStore>();
+    imageStore.Update(DashboardRenderer.Render(new DisplayState(null, null, null)));
+}
+catch { }
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
