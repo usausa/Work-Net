@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run:*)",
+      "Bash(curl -s --max-time 5 http://localhost:4318/usage)",
+      "Bash(curl -s -X POST http://localhost:4318/v1/traces -H 'Content-Type: application/json' -d '{:*)",
+      "Bash(curl -s http://localhost:4318/usage)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "PowerShell(Stop-Process:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebSearch"
+    ]
+  }
+}

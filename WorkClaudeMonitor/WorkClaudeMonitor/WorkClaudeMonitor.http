@@ -1,0 +1,6 @@
+@WorkClaudeMonitor_HostAddress = http://localhost:5105
+
+GET {{WorkClaudeMonitor_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
