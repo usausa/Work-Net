@@ -1,0 +1,6 @@
+@WorkClaudeProxy_HostAddress = http://localhost:5182
+
+GET {{WorkClaudeProxy_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
