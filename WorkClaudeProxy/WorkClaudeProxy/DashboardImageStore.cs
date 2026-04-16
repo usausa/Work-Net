@@ -2,29 +2,29 @@ namespace WorkClaudeProxy;
 
 internal sealed class DashboardImageStore
 {
-    private readonly Lock imageLock = new();
-    private byte[]? currentImage;
-    private readonly string outputPath;
+    private readonly Lock stateLock = new();
+    private DisplayState? currentState;
+
+    public string OutputPath { get; }
 
     public DashboardImageStore(string outputPath)
     {
-        this.outputPath = outputPath;
+        OutputPath = outputPath;
     }
 
-    public void Update(byte[] imageData)
+    public void UpdateState(DisplayState state)
     {
-        lock (imageLock)
+        lock (stateLock)
         {
-            currentImage = imageData;
+            currentState = state;
         }
-        File.WriteAllBytes(outputPath, imageData);
     }
 
-    public byte[]? GetImage()
+    public DisplayState? GetState()
     {
-        lock (imageLock)
+        lock (stateLock)
         {
-            return currentImage;
+            return currentState;
         }
     }
 }

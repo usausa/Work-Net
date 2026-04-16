@@ -34,11 +34,4 @@ var app = builder.Build();
 app.UseMiddleware<ClaudeProxyMiddleware>();
 app.MapReverseProxy();
 
-try
-{
-    var imageStore = app.Services.GetRequiredService<DashboardImageStore>();
-    imageStore.Update(DashboardRenderer.Render(new DisplayState(null, null, null)));
-}
-catch { }
-
 app.Run();

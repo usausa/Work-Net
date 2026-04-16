@@ -77,8 +77,22 @@ internal sealed class ClaudeProxyMiddleware
             // 今回取得できなかった項目は最後に保持している値で補完してマージ
             var merged = new DisplayState(
                 model ?? lastState?.Model,
-                usageInfo ?? lastState?.Usage,
-                rateLimitInfo ?? lastState?.RateLimit
+                new UsageInfo(
+                    usageInfo.InputTokens ?? lastState?.Usage.InputTokens,
+                    usageInfo.OutputTokens ?? lastState?.Usage.OutputTokens,
+                    usageInfo.CacheCreationInputTokens ?? lastState?.Usage.CacheCreationInputTokens,
+                    usageInfo.CacheReadInputTokens ?? lastState?.Usage.CacheReadInputTokens
+                ),
+                new RateLimitInfo(
+                    rateLimitInfo.FiveHourStatus ?? lastState?.RateLimit.FiveHourStatus,
+                    rateLimitInfo.FiveHourUtilization ?? lastState?.RateLimit.FiveHourUtilization,
+                    rateLimitInfo.FiveHourReset ?? lastState?.RateLimit.FiveHourReset,
+                    rateLimitInfo.SevenDayStatus ?? lastState?.RateLimit.SevenDayStatus,
+                    rateLimitInfo.SevenDayUtilization ?? lastState?.RateLimit.SevenDayUtilization,
+                    rateLimitInfo.SevenDayReset ?? lastState?.RateLimit.SevenDayReset,
+                    rateLimitInfo.OverageStatus ?? lastState?.RateLimit.OverageStatus,
+                    rateLimitInfo.OverageDisabledReason ?? lastState?.RateLimit.OverageDisabledReason
+                )
             );
             if (merged == lastState)
                 return;
@@ -93,46 +107,50 @@ internal sealed class ClaudeProxyMiddleware
         if (stateToLog.Model is not null)
             sb.AppendLine($"  │  Model: {stateToLog.Model}");
 
-        if (stateToLog.Usage is not null)
+        var u = stateToLog.Usage;
+        if (u.InputTokens is not null)
         {
             var contextWindowSize = GetContextWindowSize(stateToLog.Model);
             sb.AppendLine("  │  Token Usage:");
 
-            if (stateToLog.Usage.CacheReadInputTokens > 0 || stateToLog.Usage.CacheCreationInputTokens > 0)
+            var cacheRead    = u.CacheReadInputTokens ?? 0;
+            var cacheCreated = u.CacheCreationInputTokens ?? 0;
+            if (cacheRead > 0 || cacheCreated > 0)
             {
-                sb.AppendLine($"  │    Input:   {stateToLog.Usage.InputTokens,8:N0}  (cache read: {stateToLog.Usage.CacheReadInputTokens:N0} / created: {stateToLog.Usage.CacheCreationInputTokens:N0})");
+                sb.AppendLine($"  │    Input:   {u.InputTokens.Value,8:N0}  (cache read: {cacheRead:N0} / created: {cacheCreated:N0})");
             }
             else
             {
-                sb.AppendLine($"  │    Input:   {stateToLog.Usage.InputTokens,8:N0}");
+                sb.AppendLine($"  │    Input:   {u.InputTokens.Value,8:N0}");
             }
 
-            if (stateToLog.Usage.OutputTokens > 0)
-                sb.AppendLine($"  │    Output:  {stateToLog.Usage.OutputTokens,8:N0}");
+            if (u.OutputTokens > 0)
+                sb.AppendLine($"  │    Output:  {u.OutputTokens.GetValueOrDefault(),8:N0}");
 
             if (contextWindowSize > 0)
             {
                 // コンテキストウィンドウ使用量はキャッシュ読み込み分も含む入力トークン全体で算出
-                var totalInputTokens = stateToLog.Usage.InputTokens + stateToLog.Usage.CacheReadInputTokens + stateToLog.Usage.CacheCreationInputTokens;
+                var totalInputTokens = u.InputTokens.Value + cacheRead + cacheCreated;
                 var percentage = (double)totalInputTokens / contextWindowSize * 100.0;
                 sb.AppendLine($"  │    Context: {totalInputTokens:N0} / {contextWindowSize:N0} ({percentage:F1}% of context window used)");
             }
         }
 
-        if (stateToLog.RateLimit is not null)
+        var rl = stateToLog.RateLimit;
+        if (rl.FiveHourStatus is not null || rl.SevenDayStatus is not null)
         {
             sb.AppendLine("  │  Rate Limits:");
 
-            if (stateToLog.RateLimit.FiveHourStatus is not null)
+            if (rl.FiveHourStatus is not null)
             {
-                var resetLocal = stateToLog.RateLimit.FiveHourReset.ToLocalTime();
-                sb.AppendLine($"  │    5h:  {stateToLog.RateLimit.FiveHourUtilization * 100,5:F1}%  [{stateToLog.RateLimit.FiveHourStatus}]  (resets {resetLocal:HH:mm:ss})");
+                var resetStr = rl.FiveHourReset?.ToLocalTime().ToString("HH:mm:ss") ?? "—";
+                sb.AppendLine($"  │    5h:  {(rl.FiveHourUtilization ?? 0) * 100,5:F1}%  [{rl.FiveHourStatus}]  (resets {resetStr})");
             }
 
-            if (stateToLog.RateLimit.SevenDayStatus is not null)
+            if (rl.SevenDayStatus is not null)
             {
-                var resetLocal = stateToLog.RateLimit.SevenDayReset.ToLocalTime();
-                sb.AppendLine($"  │    7d:  {stateToLog.RateLimit.SevenDayUtilization * 100,5:F1}%  [{stateToLog.RateLimit.SevenDayStatus}]  (resets {resetLocal:yyyy-MM-dd HH:mm:ss})");
+                var resetStr = rl.SevenDayReset?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "—";
+                sb.AppendLine($"  │    7d:  {(rl.SevenDayUtilization ?? 0) * 100,5:F1}%  [{rl.SevenDayStatus}]  (resets {resetStr})");
             }
         }
 
@@ -140,14 +158,7 @@ internal sealed class ClaudeProxyMiddleware
 
         logger.LogInformation("{Info}", sb.ToString());
 
-        try
-        {
-            imageStore.Update(DashboardRenderer.Render(stateToLog));
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug("Dashboard render failed: {Error}", ex.Message);
-        }
+        imageStore.UpdateState(stateToLog);
     }
 
     internal static int GetContextWindowSize(string? model)
@@ -164,10 +175,10 @@ internal sealed class ClaudeProxyMiddleware
         return 0;
     }
 
-    private static RateLimitInfo? ParseRateLimitHeaders(Dictionary<string, string>? headers)
+    private static RateLimitInfo ParseRateLimitHeaders(Dictionary<string, string>? headers)
     {
         if (headers is null)
-            return null;
+            return RateLimitInfo.Empty;
 
         var fiveHourStatus = ParseStringHeader(headers, "anthropic-ratelimit-unified-5h-status");
         var fiveHourReset = ParseUnixTimestampHeader(headers, "anthropic-ratelimit-unified-5h-reset");
@@ -178,12 +189,9 @@ internal sealed class ClaudeProxyMiddleware
         var overageStatus = ParseStringHeader(headers, "anthropic-ratelimit-unified-overage-status");
         var overageDisabledReason = ParseStringHeader(headers, "anthropic-ratelimit-unified-overage-disabled-reason");
 
-        if (fiveHourStatus is null && sevenDayStatus is null)
-            return null;
-
         return new RateLimitInfo(
-            fiveHourStatus, fiveHourUtilization, fiveHourReset ?? DateTimeOffset.UtcNow,
-            sevenDayStatus, sevenDayUtilization, sevenDayReset ?? DateTimeOffset.UtcNow,
+            fiveHourStatus, fiveHourUtilization, fiveHourReset,
+            sevenDayStatus, sevenDayUtilization, sevenDayReset,
             overageStatus, overageDisabledReason
         );
     }
@@ -191,16 +199,16 @@ internal sealed class ClaudeProxyMiddleware
     private static string? ParseStringHeader(Dictionary<string, string> headers, string name)
         => headers.TryGetValue(name, out var value) ? value : null;
 
-    private static double ParseDoubleHeader(Dictionary<string, string> headers, string name)
-        => headers.TryGetValue(name, out var value) && double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : 0.0;
+    private static double? ParseDoubleHeader(Dictionary<string, string> headers, string name)
+        => headers.TryGetValue(name, out var value) && double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : null;
 
     private static DateTimeOffset? ParseUnixTimestampHeader(Dictionary<string, string> headers, string name)
         => headers.TryGetValue(name, out var value) && long.TryParse(value, out var result) ? DateTimeOffset.FromUnixTimeSeconds(result) : null;
 
-    private static (UsageInfo? usage, string? model) ParseResponseBody(string body, string contentType)
+    private static (UsageInfo usage, string? model) ParseResponseBody(string body, string contentType)
     {
         if (string.IsNullOrWhiteSpace(body))
-            return (null, null);
+            return (UsageInfo.Empty, null);
 
         try
         {
@@ -215,15 +223,15 @@ internal sealed class ClaudeProxyMiddleware
             // ボディ解析はベストエフォートのため、エラーは無視する
         }
 
-        return (null, null);
+        return (UsageInfo.Empty, null);
     }
 
-    private static (UsageInfo? usage, string? model) ParseSseBody(string body)
+    private static (UsageInfo usage, string? model) ParseSseBody(string body)
     {
-        var inputTokens = 0;
-        var outputTokens = 0;
-        var cacheCreationInputTokens = 0;
-        var cacheReadInputTokens = 0;
+        int? inputTokens = null;
+        int? outputTokens = null;
+        int? cacheCreationInputTokens = null;
+        int? cacheReadInputTokens = null;
         string? model = null;
 
         foreach (var line in body.Split('\n'))
@@ -272,13 +280,10 @@ internal sealed class ClaudeProxyMiddleware
             }
         }
 
-        if (inputTokens == 0 && outputTokens == 0)
-            return (null, model);
-
         return (new UsageInfo(inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens), model);
     }
 
-    private static (UsageInfo? usage, string? model) ParseJsonBody(string body)
+    private static (UsageInfo usage, string? model) ParseJsonBody(string body)
     {
         using var doc = JsonDocument.Parse(body);
         var root = doc.RootElement;
@@ -298,9 +303,9 @@ internal sealed class ClaudeProxyMiddleware
 
         // /v1/messages/count_tokens レスポンス
         if (root.TryGetProperty("input_tokens", out var inputTokensProp) && inputTokensProp.TryGetInt32(out var countTokens))
-            return (new UsageInfo(countTokens, 0, 0, 0), model);
+            return (new UsageInfo(countTokens, null, null, null), model);
 
-        return (null, model);
+        return (UsageInfo.Empty, model);
     }
 
     private static int GetInt(JsonElement element, string propertyName)
@@ -309,24 +314,33 @@ internal sealed class ClaudeProxyMiddleware
 
 internal sealed record DisplayState(
     string? Model,
-    UsageInfo? Usage,
-    RateLimitInfo? RateLimit
-);
+    UsageInfo Usage,
+    RateLimitInfo RateLimit
+)
+{
+    public static readonly DisplayState Empty = new(null, UsageInfo.Empty, RateLimitInfo.Empty);
+}
 
 internal sealed record UsageInfo(
-    int InputTokens,
-    int OutputTokens,
-    int CacheCreationInputTokens,
-    int CacheReadInputTokens
-);
+    int? InputTokens,
+    int? OutputTokens,
+    int? CacheCreationInputTokens,
+    int? CacheReadInputTokens
+)
+{
+    public static readonly UsageInfo Empty = new(null, null, null, null);
+}
 
 internal sealed record RateLimitInfo(
     string? FiveHourStatus,
-    double FiveHourUtilization,
-    DateTimeOffset FiveHourReset,
+    double? FiveHourUtilization,
+    DateTimeOffset? FiveHourReset,
     string? SevenDayStatus,
-    double SevenDayUtilization,
-    DateTimeOffset SevenDayReset,
+    double? SevenDayUtilization,
+    DateTimeOffset? SevenDayReset,
     string? OverageStatus,
     string? OverageDisabledReason
-);
+)
+{
+    public static readonly RateLimitInfo Empty = new(null, null, null, null, null, null, null, null);
+}

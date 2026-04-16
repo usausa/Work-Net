@@ -54,13 +54,30 @@ internal sealed class DashboardWorker : BackgroundService
 
         using var screen = new ScreenDevice(hidDevice);
 
+        DisplayState? lastRenderedState = null;
+        byte[]? currentImage = null;
+
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
-            var image = imageStore.GetImage();
-            if (image is not null)
+            var state = imageStore.GetState() ?? DisplayState.Empty;
+            if (state != lastRenderedState)
             {
-                screen.DrawJpeg(image);
+                try
+                {
+                    currentImage = DashboardRenderer.Render(state);
+                    lastRenderedState = state;
+                    await File.WriteAllBytesAsync(imageStore.OutputPath, currentImage, stoppingToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug("Dashboard render failed: {Error}", ex.Message);
+                }
+            }
+
+            if (currentImage is not null)
+            {
+                screen.DrawJpeg(currentImage);
             }
         }
     }

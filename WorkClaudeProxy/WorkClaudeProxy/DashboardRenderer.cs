@@ -80,12 +80,10 @@ internal static class DashboardRenderer
         DrawLabel(canvas, "TOKEN USAGE", x, ref y);
 
         var u = state.Usage;
-        DrawKV(canvas, "Input",  u is not null ? $"{u.InputTokens:N0}"  : "—", x, rightX, ref y);
-        DrawKV(canvas, "Output", u is not null ? $"{u.OutputTokens:N0}" : "—", x, rightX, ref y);
-        if (u is not null && u.CacheReadInputTokens > 0)
-            DrawKV(canvas, "Cache read",    $"{u.CacheReadInputTokens:N0}",     x, rightX, ref y);
-        if (u is not null && u.CacheCreationInputTokens > 0)
-            DrawKV(canvas, "Cache created", $"{u.CacheCreationInputTokens:N0}", x, rightX, ref y);
+        DrawKV(canvas, "Input",         u.InputTokens.HasValue ? $"{u.InputTokens.Value:N0}" : "—",                    x, rightX, ref y);
+        DrawKV(canvas, "Output",        u.OutputTokens.HasValue ? $"{u.OutputTokens.Value:N0}" : "—",                   x, rightX, ref y);
+        DrawKV(canvas, "Cache read",    u.CacheReadInputTokens.HasValue ? $"{u.CacheReadInputTokens.Value:N0}" : "—",    x, rightX, ref y);
+        DrawKV(canvas, "Cache created", u.CacheCreationInputTokens.HasValue ? $"{u.CacheCreationInputTokens.Value:N0}" : "—", x, rightX, ref y);
 
         // CONTEXT WINDOW ────────────────────────────────────────────────────────
         var ctxSize = ClaudeProxyMiddleware.GetContextWindowSize(state.Model);
@@ -93,9 +91,9 @@ internal static class DashboardRenderer
         y += 10;
         DrawLabel(canvas, "CONTEXT WINDOW", x, ref y);
 
-        if (ctxSize > 0 && u is not null)
+        if (ctxSize > 0 && u.InputTokens is not null)
         {
-            var total    = u.InputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens;
+            var total    = u.InputTokens.Value + (u.CacheReadInputTokens ?? 0) + (u.CacheCreationInputTokens ?? 0);
             var frac     = Math.Clamp((float)total / ctxSize, 0f, 1f);
             var barColor = frac >= 0.9f ? T.ColorError : frac >= 0.7f ? T.ColorWarn : T.ColorGood;
             DrawBar(canvas, x, y, panelW, 24, frac, barColor);
@@ -130,21 +128,21 @@ internal static class DashboardRenderer
         var rl = state.RateLimit;
 
         DrawRateRow(canvas, "5H",
-            rl?.FiveHourUtilization ?? 0.0,
-            rl?.FiveHourStatus,
-            rl is not null ? rl.FiveHourReset.ToLocalTime().ToString("HH:mm:ss") : "—",
+            rl.FiveHourUtilization,
+            rl.FiveHourStatus,
+            rl.FiveHourReset?.ToLocalTime().ToString("HH:mm:ss"),
             x, ref y, panelW);
         y += 16;
 
         DrawRateRow(canvas, "7D",
-            rl?.SevenDayUtilization ?? 0.0,
-            rl?.SevenDayStatus,
-            rl is not null ? rl.SevenDayReset.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—",
+            rl.SevenDayUtilization,
+            rl.SevenDayStatus,
+            rl.SevenDayReset?.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
             x, ref y, panelW);
     }
 
     private static void DrawRateRow(
-        SKCanvas canvas, string label, double utilization, string? status, string resetTime,
+        SKCanvas canvas, string label, double? utilization, string? status, string? resetTime,
         float x, ref float y, float panelW)
     {
         const float labelW = 52f;
@@ -158,10 +156,10 @@ internal static class DashboardRenderer
         canvas.DrawText(label, x, y + 24, lp);
 
         // Progress bar
-        DrawBar(canvas, barX, y, barW, barH, (float)utilization, color);
+        DrawBar(canvas, barX, y, barW, barH, (float)(utilization ?? 0.0), color);
 
         // Percentage text inside bar, right-aligned
-        var pctTxt = $"{utilization * 100:F1}%";
+        var pctTxt = utilization.HasValue ? $"{utilization.Value * 100:F1}%" : "—";
         using var pctP = TextPaint(T.TextPrimary, 24);
         canvas.DrawText(pctTxt, barX + barW - pctP.MeasureText(pctTxt) - 6, y + barH - 5, pctP);
 
@@ -174,8 +172,9 @@ internal static class DashboardRenderer
             canvas.DrawText($"[{status}]", barX, y + 24, sp);
         }
 
+        var resetText = resetTime ?? "—";
         using var rp = TextPaint(T.TextSecondary, 24);
-        canvas.DrawText(resetTime, barX + barW - rp.MeasureText(resetTime), y + 24, rp);
+        canvas.DrawText(resetText, barX + barW - rp.MeasureText(resetText), y + 24, rp);
 
         y += 24 + 6;
     }
