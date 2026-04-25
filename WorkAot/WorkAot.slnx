@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Activator/">
+    <Project Path="WorkAotActivator/WorkAotActivator.csproj" Id="e7eefa5a-6d00-482e-9bec-27926b05c71e" />
+    <Project Path="WorkAotActivatorFailed/WorkAotActivatorFailed.csproj" Id="d2c73705-d937-477b-8a81-be49423dab9c" />
+  </Folder>
+  <Folder Name="/Basic/">
+    <Project Path="WorkAotConsole/WorkAotConsole.csproj" />
+    <Project Path="WorkAotZip/WorkAotZip.csproj" Id="81c7e2e3-7192-4a60-9a89-565e57b5ef9b" />
+  </Folder>
+  <Project Path="WorkAotAccessor/WorkAotAccessor.csproj" />
+</Solution>
