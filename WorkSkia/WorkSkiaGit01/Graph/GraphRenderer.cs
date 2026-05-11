@@ -125,13 +125,13 @@ public sealed class GraphRenderer
                 continue;
             }
 
+            var cornerY = MarginTop + ((edge.FromRow + 1) * RowHeight);
+            var corner = new SKPoint(to.X, cornerY);
+
             using var path = new SKPath();
             path.MoveTo(from);
-
-            var c1 = new SKPoint(from.X, from.Y + (RowHeight * 0.2f));
-            var c2 = new SKPoint(to.X, from.Y + (RowHeight * 0.8f));
-            path.CubicTo(c1, c2, to);
-
+            path.LineTo(corner);
+            path.LineTo(to);
             canvas.DrawPath(path, paint);
         }
     }
