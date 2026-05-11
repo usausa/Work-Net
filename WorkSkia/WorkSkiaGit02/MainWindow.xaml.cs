@@ -1,23 +1,36 @@
-﻿namespace WorkSkiaGit02;
+namespace WorkSkiaGit02;
 
-using System.Text;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
+using WorkSkiaGit02.Graph;
+
 public partial class MainWindow : Window
 {
+    private const string RepositoryPath = @"C:\Users\machi\Desktop\Works\Git\docker-gitlab";
+    private const int MaxCommits = 500;
+
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            var data = GraphBuilder.Build(RepositoryPath, MaxCommits);
+            sw.Stop();
+
+            RowList.ItemsSource = data.Rows;
+            HeaderText.Text =
+                $"{RepositoryPath}    Commits: {data.Rows.Count}    Lanes: {data.LaneCount}    Build: {sw.ElapsedMilliseconds} ms";
+        }
+        catch (Exception ex)
+        {
+            HeaderText.Text = $"Failed to load repository: {ex.Message}";
+        }
     }
 }
