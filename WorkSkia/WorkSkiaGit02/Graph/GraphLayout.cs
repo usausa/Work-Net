@@ -23,6 +23,7 @@ public enum GraphSegmentKind
     HalfVerticalTop,
     HalfVerticalBottom,
     Diagonal,
+    DiagonalBranch,
 }
 
 public sealed class GraphSegment

@@ -152,7 +152,7 @@ public static class GraphBuilder
             {
                 foreach (var pe in pendingList)
                 {
-                    resolvedEdges.Add(new ResolvedEdge(pe.FromRow, pe.FromLane, row, myLane));
+                    resolvedEdges.Add(new ResolvedEdge(pe.FromRow, pe.FromLane, row, myLane, pe.BranchFromSource));
                 }
                 pending.Remove(sha);
             }
@@ -181,7 +181,7 @@ public static class GraphBuilder
                     lanes[laneForParent] = parentSha;
                 }
 
-                AddPending(pending, parentSha, row, myLane);
+                AddPending(pending, parentSha, row, myLane, branchFromSource: i > 0);
             }
         }
 
@@ -241,6 +241,68 @@ public static class GraphBuilder
                 Lane = edge.FromLane,
                 ColorIndex = colorIndex,
             });
+
+            for (var r = edge.FromRow + 1; r < edge.ToRow; r++)
+            {
+                segmentsByRow[r].Add(new GraphSegment
+                {
+                    Kind = GraphSegmentKind.Vertical,
+                    Lane = edge.ToLane,
+                    ColorIndex = colorIndex,
+                });
+            }
+
+            segmentsByRow[edge.ToRow].Add(new GraphSegment
+            {
+                Kind = GraphSegmentKind.HalfVerticalTop,
+                Lane = edge.ToLane,
+                ColorIndex = colorIndex,
+            });
+        }
+        else if (edge.BranchFromSource)
+        {
+            segmentsByRow[edge.FromRow].Add(new GraphSegment
+            {
+                Kind = GraphSegmentKind.HalfVerticalBottom,
+                Lane = edge.FromLane,
+                ColorIndex = colorIndex,
+            });
+
+            var diagRow = edge.FromRow + 1;
+            segmentsByRow[diagRow].Add(new GraphSegment
+            {
+                Kind = GraphSegmentKind.DiagonalBranch,
+                Lane = edge.FromLane,
+                ToLane = edge.ToLane,
+                ColorIndex = colorIndex,
+            });
+
+            if (diagRow < edge.ToRow)
+            {
+                segmentsByRow[diagRow].Add(new GraphSegment
+                {
+                    Kind = GraphSegmentKind.HalfVerticalBottom,
+                    Lane = edge.ToLane,
+                    ColorIndex = colorIndex,
+                });
+
+                for (var r = diagRow + 1; r < edge.ToRow; r++)
+                {
+                    segmentsByRow[r].Add(new GraphSegment
+                    {
+                        Kind = GraphSegmentKind.Vertical,
+                        Lane = edge.ToLane,
+                        ColorIndex = colorIndex,
+                    });
+                }
+
+                segmentsByRow[edge.ToRow].Add(new GraphSegment
+                {
+                    Kind = GraphSegmentKind.HalfVerticalTop,
+                    Lane = edge.ToLane,
+                    ColorIndex = colorIndex,
+                });
+            }
         }
         else
         {
@@ -251,24 +313,24 @@ public static class GraphBuilder
                 ToLane = edge.ToLane,
                 ColorIndex = colorIndex,
             });
-        }
 
-        for (var r = edge.FromRow + 1; r < edge.ToRow; r++)
-        {
-            segmentsByRow[r].Add(new GraphSegment
+            for (var r = edge.FromRow + 1; r < edge.ToRow; r++)
             {
-                Kind = GraphSegmentKind.Vertical,
+                segmentsByRow[r].Add(new GraphSegment
+                {
+                    Kind = GraphSegmentKind.Vertical,
+                    Lane = edge.ToLane,
+                    ColorIndex = colorIndex,
+                });
+            }
+
+            segmentsByRow[edge.ToRow].Add(new GraphSegment
+            {
+                Kind = GraphSegmentKind.HalfVerticalTop,
                 Lane = edge.ToLane,
                 ColorIndex = colorIndex,
             });
         }
-
-        segmentsByRow[edge.ToRow].Add(new GraphSegment
-        {
-            Kind = GraphSegmentKind.HalfVerticalTop,
-            Lane = edge.ToLane,
-            ColorIndex = colorIndex,
-        });
     }
 
     private static int AllocateLane(List<string?> lanes)
@@ -289,19 +351,20 @@ public static class GraphBuilder
         Dictionary<string, List<PendingEdge>> pending,
         string sha,
         int fromRow,
-        int fromLane)
+        int fromLane,
+        bool branchFromSource)
     {
         if (!pending.TryGetValue(sha, out var list))
         {
             list = [];
             pending[sha] = list;
         }
-        list.Add(new PendingEdge(fromRow, fromLane));
+        list.Add(new PendingEdge(fromRow, fromLane, branchFromSource));
     }
 
-    private readonly record struct PendingEdge(int FromRow, int FromLane);
+    private readonly record struct PendingEdge(int FromRow, int FromLane, bool BranchFromSource);
 
-    private readonly record struct ResolvedEdge(int FromRow, int FromLane, int ToRow, int ToLane);
+    private readonly record struct ResolvedEdge(int FromRow, int FromLane, int ToRow, int ToLane, bool BranchFromSource);
 
     private readonly record struct NodeInfo(Commit Commit, int Lane);
 }

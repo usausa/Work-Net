@@ -37,7 +37,7 @@ public static class GraphRowRenderer
             Style = SKPaintStyle.Stroke,
             StrokeWidth = StrokeWidth,
             IsAntialias = true,
-            StrokeCap = SKStrokeCap.Butt,
+            StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
         };
 
@@ -72,6 +72,7 @@ public static class GraphRowRenderer
     private static void DrawSegment(SKCanvas canvas, GraphSegment seg, SKPaint paint)
     {
         var laneX = LaneCenterX(seg.Lane);
+        var radius = StrokeWidth / 2f;
         switch (seg.Kind)
         {
             case GraphSegmentKind.Vertical:
@@ -84,8 +85,20 @@ public static class GraphRowRenderer
                 canvas.DrawLine(laneX, RowHeight / 2f, laneX, RowHeight, paint);
                 break;
             case GraphSegmentKind.Diagonal:
-                var toLaneX = LaneCenterX(seg.ToLane);
-                canvas.DrawLine(laneX, RowHeight / 2f, toLaneX, RowHeight, paint);
+                canvas.DrawLine(
+                    laneX,
+                    RowHeight / 2f,
+                    LaneCenterX(seg.ToLane),
+                    RowHeight - radius,
+                    paint);
+                break;
+            case GraphSegmentKind.DiagonalBranch:
+                canvas.DrawLine(
+                    laneX,
+                    radius,
+                    LaneCenterX(seg.ToLane),
+                    RowHeight / 2f,
+                    paint);
                 break;
             default:
                 break;
