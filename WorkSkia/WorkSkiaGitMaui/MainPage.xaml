@@ -4,7 +4,9 @@
              xmlns:controls="clr-namespace:WorkSkiaGitMaui.Controls"
              xmlns:conv="clr-namespace:WorkSkiaGitMaui.Converters"
              xmlns:graph="clr-namespace:WorkSkiaGitMaui.Graph"
+             xmlns:vm="clr-namespace:WorkSkiaGitMaui.ViewModels"
              x:Class="WorkSkiaGitMaui.MainPage"
+             x:DataType="vm:MainPageViewModel"
              Title="Git Graph (MAUI)"
              BackgroundColor="White">
     <ContentPage.Resources>
@@ -18,15 +20,14 @@
                 Stroke="#FF2D2D30"
                 StrokeThickness="0"
                 Padding="10,6">
-            <Label x:Name="HeaderLabel"
-                   TextColor="White"
+            <Label TextColor="White"
                    FontFamily="OpenSansRegular"
                    FontSize="13"
-                   Text="Loading..." />
+                   Text="{Binding HeaderText}" />
         </Border>
 
         <CollectionView Grid.Row="1"
-                        x:Name="RowList"
+                        ItemsSource="{Binding Rows}"
                         HorizontalScrollBarVisibility="Always"
                         VerticalScrollBarVisibility="Always"
                         SelectionMode="None">
