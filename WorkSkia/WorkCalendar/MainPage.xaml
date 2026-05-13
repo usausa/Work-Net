@@ -1,58 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:WorkCalendar.Controls"
              x:Class="WorkCalendar.MainPage"
              BackgroundColor="White">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="0">
+    <Grid RowDefinitions="*,Auto,Auto" RowSpacing="0">
 
-        <!-- Header: prev | Year & Month | next -->
-        <Grid Grid.Row="0" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
-            <Border Grid.Column="0" BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="44" HeightRequest="44" VerticalOptions="Center">
-                <Label x:Name="PrevMonthLabel" Text="◀" FontSize="18" TextColor="#333333"
-                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
-            </Border>
-            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center" Spacing="-2">
-                <Label x:Name="YearLabel" Text="2019" FontSize="13" TextColor="Black" HorizontalTextAlignment="Center" />
-                <Label x:Name="MonthLabel" Text="6月" FontSize="28" FontAttributes="Bold" TextColor="Black" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-            <Border Grid.Column="2" BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="44" HeightRequest="44" VerticalOptions="Center">
-                <Label x:Name="NextMonthLabel" Text="▶" FontSize="18" TextColor="#333333"
-                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
-            </Border>
-        </Grid>
-
-        <!-- Divider above weekday header -->
-        <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
-
-        <!-- Day of week header -->
-        <Grid Grid.Row="2" Padding="0,6,0,6" ColumnDefinitions="*,*,*,*,*,*,*">
-            <Label Grid.Column="0" Text="月" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="1" Text="火" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="2" Text="水" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="3" Text="木" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="4" Text="金" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="5" Text="土" HorizontalTextAlignment="Center" FontSize="13" TextColor="#2196F3" />
-            <Label Grid.Column="6" Text="日" HorizontalTextAlignment="Center" FontSize="13" TextColor="#E53935" />
-        </Grid>
-
-        <!-- Calendar body: 6 equal-height week rows fill the available area -->
-        <Grid Grid.Row="3" x:Name="WeeksHost" RowSpacing="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-        </Grid>
+        <!-- Calendar control -->
+        <controls:CalendarView Grid.Row="0"
+                               x:Name="Calendar" />
 
         <!-- Divider below the last week -->
-        <BoxView Grid.Row="4" HeightRequest="0.5" Color="#E0E0E0" />
+        <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
 
         <!-- Bottom navigation -->
-        <Grid Grid.Row="5" Padding="0,8,0,12" ColumnDefinitions="*,*,Auto,*,*" BackgroundColor="White">
+        <Grid Grid.Row="2" Padding="0,8,0,12" ColumnDefinitions="*,*,Auto,*,*" BackgroundColor="White">
             <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Spacing="2">
                 <Label Text="📅" FontSize="20" HorizontalTextAlignment="Center" TextColor="#D81B60" />
                 <Label Text="カレンダー" FontSize="11" HorizontalTextAlignment="Center" TextColor="#D81B60" />
