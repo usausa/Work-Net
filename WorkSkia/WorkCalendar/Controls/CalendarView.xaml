@@ -1,40 +1,43 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="WorkCalendar.Controls.CalendarView">
+             x:Class="WorkCalendar.Controls.CalendarView"
+             x:Name="_self">
 
     <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="0">
 
         <!-- Header: prev | Year & Month | next -->
-        <Grid Grid.Row="0" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
-            <Border Grid.Column="0" x:Name="PrevMonthBorder"
-                    BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="44" HeightRequest="44" VerticalOptions="Center">
-                <Label Text="◀" FontSize="18" TextColor="#333333"
-                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
-            </Border>
+        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" x:Name="PrevButton"
+                    Text="◀"
+                    Command="{Binding PrevMonthCommand, Source={x:Reference _self}}"
+                    BackgroundColor="Transparent"
+                    BorderWidth="0"
+                    VerticalOptions="Center" />
             <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center" Spacing="-2">
-                <Label x:Name="YearLabel" Text="" FontSize="13" TextColor="Black" HorizontalTextAlignment="Center" />
-                <Label x:Name="MonthLabel" Text="" FontSize="28" FontAttributes="Bold" TextColor="Black" HorizontalTextAlignment="Center" />
+                <Label x:Name="YearLabel" Text="" HorizontalTextAlignment="Center" />
+                <Label x:Name="MonthLabel" Text="" FontAttributes="Bold" HorizontalTextAlignment="Center" />
             </VerticalStackLayout>
-            <Border Grid.Column="2" x:Name="NextMonthBorder"
-                    BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="44" HeightRequest="44" VerticalOptions="Center">
-                <Label Text="▶" FontSize="18" TextColor="#333333"
-                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
-            </Border>
+            <Button Grid.Column="2" x:Name="NextButton"
+                    Text="▶"
+                    Command="{Binding NextMonthCommand, Source={x:Reference _self}}"
+                    BackgroundColor="Transparent"
+                    BorderWidth="0"
+                    VerticalOptions="Center" />
         </Grid>
 
         <!-- Divider above weekday header -->
         <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
 
         <!-- Day of week header -->
-        <Grid Grid.Row="2" Padding="0,6,0,6" ColumnDefinitions="*,*,*,*,*,*,*">
-            <Label Grid.Column="0" Text="月" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="1" Text="火" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="2" Text="水" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="3" Text="木" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="4" Text="金" HorizontalTextAlignment="Center" FontSize="13" TextColor="#333333" />
-            <Label Grid.Column="5" Text="土" HorizontalTextAlignment="Center" FontSize="13" TextColor="#2196F3" />
-            <Label Grid.Column="6" Text="日" HorizontalTextAlignment="Center" FontSize="13" TextColor="#E53935" />
+        <Grid Grid.Row="2" x:Name="WeekdayHeaderGrid" Padding="0,6,0,6" ColumnDefinitions="*,*,*,*,*,*,*">
+            <Label Grid.Column="0" Text="月" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="1" Text="火" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="2" Text="水" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="3" Text="木" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="4" Text="金" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="5" Text="土" HorizontalTextAlignment="Center" />
+            <Label Grid.Column="6" Text="日" HorizontalTextAlignment="Center" />
         </Grid>
 
         <!-- Calendar body: 6 equal-height week rows -->

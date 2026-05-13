@@ -3,6 +3,7 @@ namespace WorkCalendar.Controls;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Input;
 
 using Microsoft.Maui.Controls.Shapes;
 
@@ -11,39 +12,122 @@ using WorkCalendar.ViewModels;
 
 public partial class CalendarView : ContentView
 {
-    // ------------------------------------------------------------------ BindableProperties
+    // ------------------------------------------------------------------ BindableProperties: Commands / ViewModel
 
     public static readonly BindableProperty ViewModelProperty =
-        BindableProperty.Create(
-            nameof(ViewModel),
-            typeof(MonthViewModel),
-            typeof(CalendarView),
-            defaultValue: null,
-            propertyChanged: OnViewModelChanged);
+        BindableProperty.Create(nameof(ViewModel), typeof(MonthViewModel), typeof(CalendarView),
+            defaultValue: null, propertyChanged: OnViewModelChanged);
 
     public static readonly BindableProperty PrevMonthCommandProperty =
-        BindableProperty.Create(
-            nameof(PrevMonthCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(CalendarView));
+        BindableProperty.Create(nameof(PrevMonthCommand), typeof(ICommand), typeof(CalendarView));
 
     public static readonly BindableProperty NextMonthCommandProperty =
-        BindableProperty.Create(
-            nameof(NextMonthCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(CalendarView));
+        BindableProperty.Create(nameof(NextMonthCommand), typeof(ICommand), typeof(CalendarView));
 
     public static readonly BindableProperty DayTappedCommandProperty =
-        BindableProperty.Create(
-            nameof(DayTappedCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(CalendarView));
+        BindableProperty.Create(nameof(DayTappedCommand), typeof(ICommand), typeof(CalendarView));
 
     public static readonly BindableProperty EventTappedCommandProperty =
-        BindableProperty.Create(
-            nameof(EventTappedCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(CalendarView));
+        BindableProperty.Create(nameof(EventTappedCommand), typeof(ICommand), typeof(CalendarView));
+
+    // ------------------------------------------------------------------ BindableProperties: Layout / Sizes
+
+    public static readonly BindableProperty DateRowHeightProperty =
+        BindableProperty.Create(nameof(DateRowHeight), typeof(double), typeof(CalendarView), 26d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty SlotRowHeightProperty =
+        BindableProperty.Create(nameof(SlotRowHeight), typeof(double), typeof(CalendarView), 17d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty DateNumberSizeProperty =
+        BindableProperty.Create(nameof(DateNumberSize), typeof(double), typeof(CalendarView), 22d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty DateNumberMarginProperty =
+        BindableProperty.Create(nameof(DateNumberMargin), typeof(Thickness), typeof(CalendarView), new Thickness(4, 2, 0, 0), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty DateNumberFontSizeProperty =
+        BindableProperty.Create(nameof(DateNumberFontSize), typeof(double), typeof(CalendarView), 13d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty EventFontSizeProperty =
+        BindableProperty.Create(nameof(EventFontSize), typeof(double), typeof(CalendarView), 11d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty EventRowHeightProperty =
+        BindableProperty.Create(nameof(EventRowHeight), typeof(double), typeof(CalendarView), 15d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty StampMarginEdgeProperty =
+        BindableProperty.Create(nameof(StampMarginEdge), typeof(double), typeof(CalendarView), 2d, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty NavButtonWidthProperty =
+        BindableProperty.Create(nameof(NavButtonWidth), typeof(double), typeof(CalendarView), 44d);
+
+    public static readonly BindableProperty NavButtonHeightProperty =
+        BindableProperty.Create(nameof(NavButtonHeight), typeof(double), typeof(CalendarView), 44d);
+
+    public static readonly BindableProperty NavButtonFontSizeProperty =
+        BindableProperty.Create(nameof(NavButtonFontSize), typeof(double), typeof(CalendarView), 18d);
+
+    public static readonly BindableProperty HeaderPaddingProperty =
+        BindableProperty.Create(nameof(HeaderPadding), typeof(Thickness), typeof(CalendarView), new Thickness(16, 12, 16, 8));
+
+    public static readonly BindableProperty WeekdayHeaderFontSizeProperty =
+        BindableProperty.Create(nameof(WeekdayHeaderFontSize), typeof(double), typeof(CalendarView), 13d);
+
+    public static readonly BindableProperty WeekdayHeaderPaddingProperty =
+        BindableProperty.Create(nameof(WeekdayHeaderPadding), typeof(Thickness), typeof(CalendarView), new Thickness(0, 6, 0, 6));
+
+    public static readonly BindableProperty YearFontSizeProperty =
+        BindableProperty.Create(nameof(YearFontSize), typeof(double), typeof(CalendarView), 13d);
+
+    public static readonly BindableProperty MonthFontSizeProperty =
+        BindableProperty.Create(nameof(MonthFontSize), typeof(double), typeof(CalendarView), 28d);
+
+    // ------------------------------------------------------------------ BindableProperties: Colors
+
+    public static readonly BindableProperty GridLineColorProperty =
+        BindableProperty.Create(nameof(GridLineColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#E0E0E0"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty WeekdayTextColorProperty =
+        BindableProperty.Create(nameof(WeekdayTextColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#1F1F1F"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty SaturdayTextColorProperty =
+        BindableProperty.Create(nameof(SaturdayTextColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#2196F3"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty SundayTextColorProperty =
+        BindableProperty.Create(nameof(SundayTextColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#E53935"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty OutsideMonthTextColorProperty =
+        BindableProperty.Create(nameof(OutsideMonthTextColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#BDBDBD"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty OutsideMonthBackgroundProperty =
+        BindableProperty.Create(nameof(OutsideMonthBackground), typeof(Color), typeof(CalendarView), Color.FromArgb("#F2F2F2"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty WeekendBackgroundProperty =
+        BindableProperty.Create(nameof(WeekendBackground), typeof(Color), typeof(CalendarView), Color.FromArgb("#FFF1F1"), propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty TodayBackgroundProperty =
+        BindableProperty.Create(nameof(TodayBackground), typeof(Color), typeof(CalendarView), Colors.Black, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty TodayTextColorProperty =
+        BindableProperty.Create(nameof(TodayTextColor), typeof(Color), typeof(CalendarView), Colors.White, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty NavButtonColorProperty =
+        BindableProperty.Create(nameof(NavButtonColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#333333"));
+
+    public static readonly BindableProperty YearTextColorProperty =
+        BindableProperty.Create(nameof(YearTextColor), typeof(Color), typeof(CalendarView), Colors.Black);
+
+    public static readonly BindableProperty MonthTextColorProperty =
+        BindableProperty.Create(nameof(MonthTextColor), typeof(Color), typeof(CalendarView), Colors.Black);
+
+    public static readonly BindableProperty WeekdayHeaderColorProperty =
+        BindableProperty.Create(nameof(WeekdayHeaderColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#333333"));
+
+    public static readonly BindableProperty SaturdayHeaderColorProperty =
+        BindableProperty.Create(nameof(SaturdayHeaderColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#2196F3"));
+
+    public static readonly BindableProperty SundayHeaderColorProperty =
+        BindableProperty.Create(nameof(SundayHeaderColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#E53935"));
+
+    // ------------------------------------------------------------------ CLR Properties
 
     public MonthViewModel? ViewModel
     {
@@ -51,65 +135,83 @@ public partial class CalendarView : ContentView
         set => SetValue(ViewModelProperty, value);
     }
 
-    public System.Windows.Input.ICommand? PrevMonthCommand
+    public ICommand? PrevMonthCommand
     {
-        get => (System.Windows.Input.ICommand?)GetValue(PrevMonthCommandProperty);
+        get => (ICommand?)GetValue(PrevMonthCommandProperty);
         set => SetValue(PrevMonthCommandProperty, value);
     }
 
-    public System.Windows.Input.ICommand? NextMonthCommand
+    public ICommand? NextMonthCommand
     {
-        get => (System.Windows.Input.ICommand?)GetValue(NextMonthCommandProperty);
+        get => (ICommand?)GetValue(NextMonthCommandProperty);
         set => SetValue(NextMonthCommandProperty, value);
     }
 
-    public System.Windows.Input.ICommand? DayTappedCommand
+    public ICommand? DayTappedCommand
     {
-        get => (System.Windows.Input.ICommand?)GetValue(DayTappedCommandProperty);
+        get => (ICommand?)GetValue(DayTappedCommandProperty);
         set => SetValue(DayTappedCommandProperty, value);
     }
 
-    public System.Windows.Input.ICommand? EventTappedCommand
+    public ICommand? EventTappedCommand
     {
-        get => (System.Windows.Input.ICommand?)GetValue(EventTappedCommandProperty);
+        get => (ICommand?)GetValue(EventTappedCommandProperty);
         set => SetValue(EventTappedCommandProperty, value);
     }
 
-    // ------------------------------------------------------------------ Constants / Colors
+    public double DateRowHeight        { get => (double)GetValue(DateRowHeightProperty);        set => SetValue(DateRowHeightProperty, value); }
+    public double SlotRowHeight        { get => (double)GetValue(SlotRowHeightProperty);        set => SetValue(SlotRowHeightProperty, value); }
+    public double DateNumberSize       { get => (double)GetValue(DateNumberSizeProperty);       set => SetValue(DateNumberSizeProperty, value); }
+    public Thickness DateNumberMargin  { get => (Thickness)GetValue(DateNumberMarginProperty);  set => SetValue(DateNumberMarginProperty, value); }
+    public double DateNumberFontSize   { get => (double)GetValue(DateNumberFontSizeProperty);   set => SetValue(DateNumberFontSizeProperty, value); }
+    public double EventFontSize        { get => (double)GetValue(EventFontSizeProperty);        set => SetValue(EventFontSizeProperty, value); }
+    public double EventRowHeight       { get => (double)GetValue(EventRowHeightProperty);       set => SetValue(EventRowHeightProperty, value); }
+    public double StampMarginEdge      { get => (double)GetValue(StampMarginEdgeProperty);      set => SetValue(StampMarginEdgeProperty, value); }
+    public double NavButtonWidth       { get => (double)GetValue(NavButtonWidthProperty);       set => SetValue(NavButtonWidthProperty, value); }
+    public double NavButtonHeight      { get => (double)GetValue(NavButtonHeightProperty);      set => SetValue(NavButtonHeightProperty, value); }
+    public double NavButtonFontSize    { get => (double)GetValue(NavButtonFontSizeProperty);    set => SetValue(NavButtonFontSizeProperty, value); }
+    public Thickness HeaderPadding     { get => (Thickness)GetValue(HeaderPaddingProperty);     set => SetValue(HeaderPaddingProperty, value); }
+    public double WeekdayHeaderFontSize{ get => (double)GetValue(WeekdayHeaderFontSizeProperty);set => SetValue(WeekdayHeaderFontSizeProperty, value); }
+    public Thickness WeekdayHeaderPadding{ get => (Thickness)GetValue(WeekdayHeaderPaddingProperty); set => SetValue(WeekdayHeaderPaddingProperty, value); }
+    public double YearFontSize         { get => (double)GetValue(YearFontSizeProperty);         set => SetValue(YearFontSizeProperty, value); }
+    public double MonthFontSize        { get => (double)GetValue(MonthFontSizeProperty);        set => SetValue(MonthFontSizeProperty, value); }
 
-    private const int DaysPerWeek = 7;
-    private const double DateRowHeight = 26;
-    private const double SlotRowHeight = 17;
-
-    private static readonly Color GridLineColor = Color.FromArgb("#E0E0E0");
-    private static readonly Color WeekdayTextColor = Color.FromArgb("#1F1F1F");
-    private static readonly Color SaturdayTextColor = Color.FromArgb("#2196F3");
-    private static readonly Color SundayTextColor = Color.FromArgb("#E53935");
-    private static readonly Color OutsideMonthTextColor = Color.FromArgb("#BDBDBD");
-    private static readonly Color OutsideMonthBackground = Color.FromArgb("#F2F2F2");
-    private static readonly Color WeekendBackground = Color.FromArgb("#FFF1F1");
+    public Color GridLineColor         { get => (Color)GetValue(GridLineColorProperty);         set => SetValue(GridLineColorProperty, value); }
+    public Color WeekdayTextColor      { get => (Color)GetValue(WeekdayTextColorProperty);      set => SetValue(WeekdayTextColorProperty, value); }
+    public Color SaturdayTextColor     { get => (Color)GetValue(SaturdayTextColorProperty);     set => SetValue(SaturdayTextColorProperty, value); }
+    public Color SundayTextColor       { get => (Color)GetValue(SundayTextColorProperty);       set => SetValue(SundayTextColorProperty, value); }
+    public Color OutsideMonthTextColor { get => (Color)GetValue(OutsideMonthTextColorProperty); set => SetValue(OutsideMonthTextColorProperty, value); }
+    public Color OutsideMonthBackground{ get => (Color)GetValue(OutsideMonthBackgroundProperty);set => SetValue(OutsideMonthBackgroundProperty, value); }
+    public Color WeekendBackground     { get => (Color)GetValue(WeekendBackgroundProperty);     set => SetValue(WeekendBackgroundProperty, value); }
+    public Color TodayBackground       { get => (Color)GetValue(TodayBackgroundProperty);       set => SetValue(TodayBackgroundProperty, value); }
+    public Color TodayTextColor        { get => (Color)GetValue(TodayTextColorProperty);        set => SetValue(TodayTextColorProperty, value); }
+    public Color NavButtonColor        { get => (Color)GetValue(NavButtonColorProperty);        set => SetValue(NavButtonColorProperty, value); }
+    public Color YearTextColor         { get => (Color)GetValue(YearTextColorProperty);         set => SetValue(YearTextColorProperty, value); }
+    public Color MonthTextColor        { get => (Color)GetValue(MonthTextColorProperty);        set => SetValue(MonthTextColorProperty, value); }
+    public Color WeekdayHeaderColor    { get => (Color)GetValue(WeekdayHeaderColorProperty);    set => SetValue(WeekdayHeaderColorProperty, value); }
+    public Color SaturdayHeaderColor   { get => (Color)GetValue(SaturdayHeaderColorProperty);   set => SetValue(SaturdayHeaderColorProperty, value); }
+    public Color SundayHeaderColor     { get => (Color)GetValue(SundayHeaderColorProperty);     set => SetValue(SundayHeaderColorProperty, value); }
 
     // ------------------------------------------------------------------ Constructor
+
+    private const int DaysPerWeek = 7;
 
     public CalendarView()
     {
         InitializeComponent();
-
-        PrevMonthBorder.GestureRecognizers.Add(new TapGestureRecognizer
-        {
-            Command = new Command(() => PrevMonthCommand?.Execute(null)),
-        });
-        NextMonthBorder.GestureRecognizers.Add(new TapGestureRecognizer
-        {
-            Command = new Command(() => NextMonthCommand?.Execute(null)),
-        });
     }
 
-    // ------------------------------------------------------------------ Property changed
+    // ------------------------------------------------------------------ Property changed callbacks
 
     private static void OnViewModelChanged(BindableObject bindable, object oldValue, object newValue)
     {
         if (bindable is CalendarView view && newValue is MonthViewModel month)
+            view.Render(month);
+    }
+
+    private static void OnRenderPropertyChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view && view.ViewModel is MonthViewModel month)
             view.Render(month);
     }
 
@@ -118,7 +220,24 @@ public partial class CalendarView : ContentView
     private void Render(MonthViewModel month)
     {
         YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
-        MonthLabel.Text = $"{month.Month}月";
+        YearLabel.FontSize = YearFontSize;
+        YearLabel.TextColor = YearTextColor;
+        MonthLabel.Text = $"{month.Month}\u6708";
+        MonthLabel.FontSize = MonthFontSize;
+        MonthLabel.TextColor = MonthTextColor;
+
+        PrevButton.TextColor = NavButtonColor;
+        PrevButton.FontSize = NavButtonFontSize;
+        PrevButton.WidthRequest = NavButtonWidth;
+        PrevButton.HeightRequest = NavButtonHeight;
+        NextButton.TextColor = NavButtonColor;
+        NextButton.FontSize = NavButtonFontSize;
+        NextButton.WidthRequest = NavButtonWidth;
+        NextButton.HeightRequest = NavButtonHeight;
+
+        HeaderGrid.Padding = HeaderPadding;
+        WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
+        UpdateWeekdayHeaderColors();
 
         var slotCount = Math.Max(2, month.Weeks.Max(static w => w.SlotCount));
 
@@ -128,6 +247,20 @@ public partial class CalendarView : ContentView
             var weekView = BuildWeekRow(month.Weeks[i], slotCount);
             Grid.SetRow(weekView, i);
             WeeksHost.Children.Add(weekView);
+        }
+    }
+
+    private void UpdateWeekdayHeaderColors()
+    {
+        // Columns: 0=月 1=火 2=水 3=木 4=金 5=土 6=日
+        var labels = WeekdayHeaderGrid.Children.OfType<Label>().ToList();
+        foreach (var label in labels)
+        {
+            label.FontSize = WeekdayHeaderFontSize;
+            var col = Grid.GetColumn(label);
+            label.TextColor = col == 5 ? SaturdayHeaderColor
+                            : col == 6 ? SundayHeaderColor
+                            : WeekdayHeaderColor;
         }
     }
 
@@ -151,16 +284,13 @@ public partial class CalendarView : ContentView
         // Per-column background
         for (var c = 0; c < DaysPerWeek; c++)
         {
-            var day = week.Days[c];
-            var background = GetCellBackgroundColor(day);
-            if (background != Colors.Transparent)
-            {
-                var bg = new BoxView { Color = background, InputTransparent = true };
-                Grid.SetColumn(bg, c);
-                Grid.SetRow(bg, 0);
-                Grid.SetRowSpan(bg, totalRows);
-                grid.Children.Add(bg);
-            }
+            var bg = GetCellBackgroundColor(week.Days[c]);
+            if (bg == Colors.Transparent) continue;
+            var box = new BoxView { Color = bg, InputTransparent = true };
+            Grid.SetColumn(box, c);
+            Grid.SetRow(box, 0);
+            Grid.SetRowSpan(box, totalRows);
+            grid.Children.Add(box);
         }
 
         // Top divider
@@ -178,17 +308,17 @@ public partial class CalendarView : ContentView
         // Vertical dividers
         for (var c = 0; c < DaysPerWeek - 1; c++)
         {
-            var vDivider = new BoxView
+            var vd = new BoxView
             {
                 WidthRequest = 0.5,
                 Color = GridLineColor,
                 HorizontalOptions = LayoutOptions.End,
                 InputTransparent = true,
             };
-            Grid.SetColumn(vDivider, c);
-            Grid.SetRow(vDivider, 0);
-            Grid.SetRowSpan(vDivider, totalRows);
-            grid.Children.Add(vDivider);
+            Grid.SetColumn(vd, c);
+            Grid.SetRow(vd, 0);
+            Grid.SetRowSpan(vd, totalRows);
+            grid.Children.Add(vd);
         }
 
         // Cell tap targets
@@ -210,35 +340,33 @@ public partial class CalendarView : ContentView
         // Date numbers
         for (var c = 0; c < DaysPerWeek; c++)
         {
-            var day = week.Days[c];
-            var dateView = BuildDateNumberView(day);
-            Grid.SetColumn(dateView, c);
-            Grid.SetRow(dateView, 0);
-            grid.Children.Add(dateView);
+            var dv = BuildDateNumberView(week.Days[c]);
+            Grid.SetColumn(dv, c);
+            Grid.SetRow(dv, 0);
+            grid.Children.Add(dv);
         }
 
         // Stamps
         for (var c = 0; c < DaysPerWeek; c++)
         {
-            var day = week.Days[c];
-            foreach (var stamp in day.Stamps)
+            foreach (var stamp in week.Days[c].Stamps)
             {
-                var stampView = BuildStampView(stamp);
-                Grid.SetColumn(stampView, c);
-                Grid.SetRow(stampView, 0);
-                Grid.SetRowSpan(stampView, totalRows);
-                grid.Children.Add(stampView);
+                var sv = BuildStampView(stamp);
+                Grid.SetColumn(sv, c);
+                Grid.SetRow(sv, 0);
+                Grid.SetRowSpan(sv, totalRows);
+                grid.Children.Add(sv);
             }
         }
 
         // Event placements
         foreach (var placement in week.EventPlacements)
         {
-            var eventView = BuildEventView(placement);
-            Grid.SetColumn(eventView, placement.StartColumn);
-            Grid.SetColumnSpan(eventView, placement.ColumnSpan);
-            Grid.SetRow(eventView, placement.Slot + 1);
-            grid.Children.Add(eventView);
+            var ev = BuildEventView(placement);
+            Grid.SetColumn(ev, placement.StartColumn);
+            Grid.SetColumnSpan(ev, placement.ColumnSpan);
+            Grid.SetRow(ev, placement.Slot + 1);
+            grid.Children.Add(ev);
         }
 
         return grid;
@@ -246,39 +374,37 @@ public partial class CalendarView : ContentView
 
     // ------------------------------------------------------------------ View builders
 
-    private static View BuildDateNumberView(DayViewModel day)
+    private View BuildDateNumberView(DayViewModel day)
     {
         var label = new Label
         {
             Text = day.Date.Day.ToString(CultureInfo.InvariantCulture),
-            FontSize = 13,
+            FontSize = DateNumberFontSize,
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            TextColor = day.IsToday ? Colors.White : GetDateTextColor(day),
-            WidthRequest = 22,
-            HeightRequest = 22,
+            TextColor = day.IsToday ? TodayTextColor : GetDateTextColor(day),
+            WidthRequest = DateNumberSize,
+            HeightRequest = DateNumberSize,
         };
-
         var bubble = new Border
         {
-            BackgroundColor = day.IsToday ? Colors.Black : Colors.Transparent,
+            BackgroundColor = day.IsToday ? TodayBackground : Colors.Transparent,
             StrokeThickness = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Start,
-            Margin = new Thickness(4, 2, 0, 0),
+            Margin = DateNumberMargin,
             Padding = 0,
             Content = label,
         };
-
         if (day.IsToday)
             bubble.StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(2) };
-
         return bubble;
     }
 
-    private static View BuildStampView(Stamp stamp)
+    private View BuildStampView(Stamp stamp)
     {
+        var m = StampMarginEdge;
         var label = new Label
         {
             Text = stamp.Glyph,
@@ -288,18 +414,16 @@ public partial class CalendarView : ContentView
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
         };
-
         (label.HorizontalOptions, label.VerticalOptions, label.Margin) = stamp.Position switch
         {
-            StampPosition.TopLeft => (LayoutOptions.Start, LayoutOptions.Start, new Thickness(2, 0, 0, 0)),
-            StampPosition.TopCenter => (LayoutOptions.Center, LayoutOptions.Start, new Thickness(0)),
-            StampPosition.TopRight => (LayoutOptions.End, LayoutOptions.Start, new Thickness(0, 0, 2, 0)),
-            StampPosition.BottomLeft => (LayoutOptions.Start, LayoutOptions.End, new Thickness(2, 0, 0, 2)),
-            StampPosition.BottomCenter => (LayoutOptions.Center, LayoutOptions.End, new Thickness(0, 0, 0, 2)),
-            StampPosition.BottomRight => (LayoutOptions.End, LayoutOptions.End, new Thickness(0, 0, 2, 2)),
-            _ => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
+            StampPosition.TopLeft      => (LayoutOptions.Start,  LayoutOptions.Start, new Thickness(m, 0, 0, 0)),
+            StampPosition.TopCenter    => (LayoutOptions.Center, LayoutOptions.Start, new Thickness(0)),
+            StampPosition.TopRight     => (LayoutOptions.End,    LayoutOptions.Start, new Thickness(0, 0, m, 0)),
+            StampPosition.BottomLeft   => (LayoutOptions.Start,  LayoutOptions.End,   new Thickness(m, 0, 0, m)),
+            StampPosition.BottomCenter => (LayoutOptions.Center, LayoutOptions.End,   new Thickness(0, 0, 0, m)),
+            StampPosition.BottomRight  => (LayoutOptions.End,    LayoutOptions.End,   new Thickness(0, 0, m, m)),
+            _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
         };
-
         return label;
     }
 
@@ -309,14 +433,13 @@ public partial class CalendarView : ContentView
         var label = new Label
         {
             Text = evt.Title,
-            FontSize = 11,
+            FontSize = EventFontSize,
             FontAttributes = FontAttributes.Bold,
             LineBreakMode = LineBreakMode.TailTruncation,
             VerticalTextAlignment = TextAlignment.Center,
             TextDecorations = evt.Underline ? TextDecorations.Underline : TextDecorations.None,
             TextColor = evt.TextColor,
         };
-
         Border border;
         if (evt.Style == ScheduleStyle.Filled)
         {
@@ -328,12 +451,10 @@ public partial class CalendarView : ContentView
                 StrokeThickness = 0,
                 StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(left, right, left, right) },
                 Padding = new Thickness(4, 0),
-                HeightRequest = 15,
+                HeightRequest = EventRowHeight,
                 Margin = new Thickness(
-                    placement.ContinuesFromPreviousWeek ? 0 : 1,
-                    1,
-                    placement.ContinuesToNextWeek ? 0 : 1,
-                    0),
+                    placement.ContinuesFromPreviousWeek ? 0 : 1, 1,
+                    placement.ContinuesToNextWeek ? 0 : 1, 0),
                 Content = label,
             };
         }
@@ -344,27 +465,24 @@ public partial class CalendarView : ContentView
                 BackgroundColor = Colors.Transparent,
                 StrokeThickness = 0,
                 Padding = new Thickness(4, 0),
-                HeightRequest = 15,
+                HeightRequest = EventRowHeight,
                 Margin = new Thickness(1, 1, 1, 0),
                 Content = label,
             };
         }
-
         border.GestureRecognizers.Add(new TapGestureRecognizer
         {
             Command = new Command<ScheduleEvent>(OnEventTapped),
             CommandParameter = evt,
         });
-
         return border;
     }
 
     // ------------------------------------------------------------------ Color helpers
 
-    private static Color GetCellBackgroundColor(DayViewModel day)
+    private Color GetCellBackgroundColor(DayViewModel day)
     {
-        if (!day.IsCurrentMonth)
-            return OutsideMonthBackground;
+        if (!day.IsCurrentMonth) return OutsideMonthBackground;
         return day.Kind switch
         {
             DayKind.Saturday or DayKind.Sunday or DayKind.Holiday => WeekendBackground,
@@ -372,10 +490,9 @@ public partial class CalendarView : ContentView
         };
     }
 
-    private static Color GetDateTextColor(DayViewModel day)
+    private Color GetDateTextColor(DayViewModel day)
     {
-        if (!day.IsCurrentMonth)
-            return OutsideMonthTextColor;
+        if (!day.IsCurrentMonth) return OutsideMonthTextColor;
         return day.Kind switch
         {
             DayKind.Sunday or DayKind.Holiday => SundayTextColor,
@@ -386,9 +503,6 @@ public partial class CalendarView : ContentView
 
     // ------------------------------------------------------------------ Tap handlers
 
-    private void OnDayTapped(DayViewModel day) =>
-        DayTappedCommand?.Execute(day);
-
-    private void OnEventTapped(ScheduleEvent evt) =>
-        EventTappedCommand?.Execute(evt);
+    private void OnDayTapped(DayViewModel day) => DayTappedCommand?.Execute(day);
+    private void OnEventTapped(ScheduleEvent evt) => EventTappedCommand?.Execute(evt);
 }
