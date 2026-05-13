@@ -9,29 +9,29 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <!-- BottomNav: アクティブ状態のアイコン/ラベル -->
-            <Style x:Key="NavIconActiveStyle" TargetType="Label">
+            <Style x:Key="NavIconActive" TargetType="Label">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="HorizontalTextAlignment" Value="Center" />
                 <Setter Property="TextColor" Value="#D81B60" />
             </Style>
-            <Style x:Key="NavLabelActiveStyle" TargetType="Label">
+            <Style x:Key="NavLabelActive" TargetType="Label">
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="HorizontalTextAlignment" Value="Center" />
                 <Setter Property="TextColor" Value="#D81B60" />
             </Style>
             <!-- BottomNav: 非アクティブ状態のアイコン/ラベル -->
-            <Style x:Key="NavIconInactiveStyle" TargetType="Label">
+            <Style x:Key="NavIconInactive" TargetType="Label">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="HorizontalTextAlignment" Value="Center" />
                 <Setter Property="TextColor" Value="#888888" />
             </Style>
-            <Style x:Key="NavLabelInactiveStyle" TargetType="Label">
+            <Style x:Key="NavLabelInactive" TargetType="Label">
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="HorizontalTextAlignment" Value="Center" />
                 <Setter Property="TextColor" Value="#888888" />
             </Style>
             <!-- FAB: 中央ボタンのラベル -->
-            <Style x:Key="FabLabelStyle" TargetType="Label">
+            <Style x:Key="FabLabel" TargetType="Label">
                 <Setter Property="TextColor" Value="White" />
                 <Setter Property="FontSize" Value="26" />
                 <Setter Property="FontAttributes" Value="Bold" />
@@ -39,13 +39,28 @@
                 <Setter Property="VerticalTextAlignment" Value="Center" />
             </Style>
             <!-- FAB: 中央ボタンの円形ボーダー -->
-            <Style x:Key="FabBorderStyle" TargetType="Border">
+            <Style x:Key="FabBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="Black" />
                 <Setter Property="StrokeThickness" Value="0" />
                 <Setter Property="WidthRequest" Value="48" />
                 <Setter Property="HeightRequest" Value="48" />
                 <Setter Property="VerticalOptions" Value="Center" />
                 <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+            </Style>
+            <!-- カレンダー下区切り線 -->
+            <Style x:Key="CalendarDivider" TargetType="BoxView">
+                <Setter Property="HeightRequest" Value="0.5" />
+                <Setter Property="Color" Value="#E0E0E0" />
+            </Style>
+            <!-- BottomNavバー -->
+            <Style x:Key="BottomNavBar" TargetType="Grid">
+                <Setter Property="Padding" Value="0,8,0,12" />
+                <Setter Property="BackgroundColor" Value="White" />
+            </Style>
+            <!-- BottomNavアイテムのスタック -->
+            <Style x:Key="NavItemStack" TargetType="VerticalStackLayout">
+                <Setter Property="HorizontalOptions" Value="Center" />
+                <Setter Property="Spacing" Value="2" />
             </Style>
         </ResourceDictionary>
     </ContentPage.Resources>
@@ -65,28 +80,28 @@
                                EventTappedCommand="{Binding EventTappedCommand}" />
 
         <!-- Divider below the last week -->
-        <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
+        <BoxView Grid.Row="1" Style="{StaticResource CalendarDivider}" />
 
         <!-- Bottom navigation -->
-        <Grid Grid.Row="2" Padding="0,8,0,12" ColumnDefinitions="*,*,Auto,*,*" BackgroundColor="White">
-            <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Spacing="2">
-                <Label Text="📅" Style="{StaticResource NavIconActiveStyle}" />
-                <Label Text="カレンダー" Style="{StaticResource NavLabelActiveStyle}" />
+        <Grid Grid.Row="2" Style="{StaticResource BottomNavBar}" ColumnDefinitions="*,*,Auto,*,*">
+            <VerticalStackLayout Grid.Column="0" Style="{StaticResource NavItemStack}">
+                <Label Text="📅" Style="{StaticResource NavIconActive}" />
+                <Label Text="カレンダー" Style="{StaticResource NavLabelActive}" />
             </VerticalStackLayout>
-            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
-                <Label Text="✓" Style="{StaticResource NavIconInactiveStyle}" />
-                <Label Text="ToDo" Style="{StaticResource NavLabelInactiveStyle}" />
+            <VerticalStackLayout Grid.Column="1" Style="{StaticResource NavItemStack}">
+                <Label Text="✓" Style="{StaticResource NavIconInactive}" />
+                <Label Text="ToDo" Style="{StaticResource NavLabelInactive}" />
             </VerticalStackLayout>
-            <Border Grid.Column="2" Style="{StaticResource FabBorderStyle}">
-                <Label Text="+" Style="{StaticResource FabLabelStyle}" />
+            <Border Grid.Column="2" Style="{StaticResource FabBorder}">
+                <Label Text="+" Style="{StaticResource FabLabel}" />
             </Border>
-            <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Spacing="2">
-                <Label Text="📖" Style="{StaticResource NavIconInactiveStyle}" />
-                <Label Text="ノート＆日記" Style="{StaticResource NavLabelInactiveStyle}" />
+            <VerticalStackLayout Grid.Column="3" Style="{StaticResource NavItemStack}">
+                <Label Text="📖" Style="{StaticResource NavIconInactive}" />
+                <Label Text="ノート＆日記" Style="{StaticResource NavLabelInactive}" />
             </VerticalStackLayout>
-            <VerticalStackLayout Grid.Column="4" HorizontalOptions="Center" Spacing="2">
-                <Label Text="…" Style="{StaticResource NavIconInactiveStyle}" />
-                <Label Text="その他" Style="{StaticResource NavLabelInactiveStyle}" />
+            <VerticalStackLayout Grid.Column="4" Style="{StaticResource NavItemStack}">
+                <Label Text="…" Style="{StaticResource NavIconInactive}" />
+                <Label Text="その他" Style="{StaticResource NavLabelInactive}" />
             </VerticalStackLayout>
         </Grid>
 

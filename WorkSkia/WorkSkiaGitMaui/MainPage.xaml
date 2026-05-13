@@ -13,57 +13,65 @@
         <conv:RefKindBrushConverter x:Key="RefBackgroundConverter" Foreground="False" />
         <conv:RefKindBrushConverter x:Key="RefForegroundConverter" Foreground="True" />
         <!-- ヘッダーバーのラベル -->
-        <Style x:Key="HeaderLabelStyle" TargetType="Label">
+        <Style x:Key="HeaderLabel" TargetType="Label">
             <Setter Property="TextColor" Value="White" />
             <Setter Property="FontFamily" Value="OpenSansRegular" />
             <Setter Property="FontSize" Value="13" />
         </Style>
         <!-- RefバッジのLabel -->
-        <Style x:Key="RefBadgeLabelStyle" TargetType="Label">
+        <Style x:Key="RefBadgeLabel" TargetType="Label">
             <Setter Property="FontFamily" Value="OpenSansRegular" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontAttributes" Value="Bold" />
         </Style>
-        <!-- SHA・Author・Date などの補助情報 -->
-        <Style x:Key="MetaLabelStyle" TargetType="Label">
+        <!-- SHA・Author・Date などの補助情報（Margin はサブクラスで上書き） -->
+        <Style x:Key="MetaLabel" TargetType="Label">
+            <Setter Property="Margin" Value="0,0,16,0" />
             <Setter Property="VerticalOptions" Value="Center" />
             <Setter Property="FontFamily" Value="OpenSansRegular" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="TextColor" Value="#FF666666" />
         </Style>
         <!-- コミットサマリー -->
-        <Style x:Key="SummaryLabelStyle" TargetType="Label">
+        <Style x:Key="SummaryLabel" TargetType="Label">
+            <Setter Property="Margin" Value="0,0,16,0" />
             <Setter Property="VerticalOptions" Value="Center" />
             <Setter Property="TextColor" Value="Black" />
             <Setter Property="FontFamily" Value="OpenSansRegular" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="LineBreakMode" Value="TailTruncation" />
         </Style>
-        <!-- SHAのみ色が異なる -->
-        <Style x:Key="ShaLabelStyle" TargetType="Label" BasedOn="{StaticResource MetaLabelStyle}">
+        <!-- SHA：色とMarginが異なる -->
+        <Style x:Key="ShaLabel" TargetType="Label" BasedOn="{StaticResource MetaLabel}">
+            <Setter Property="Margin" Value="0,0,8,0" />
             <Setter Property="TextColor" Value="#FF888888" />
         </Style>
         <!-- ヘッダーバー：ダーク背景 -->
-        <Style x:Key="HeaderBarBorderStyle" TargetType="Border">
+        <Style x:Key="HeaderBarBorder" TargetType="Border">
             <Setter Property="BackgroundColor" Value="#FF2D2D30" />
             <Setter Property="Stroke" Value="#FF2D2D30" />
             <Setter Property="StrokeThickness" Value="0" />
             <Setter Property="Padding" Value="10,6" />
         </Style>
         <!-- Refバッジ：枠線付き丸角 -->
-        <Style x:Key="RefBadgeBorderStyle" TargetType="Border">
+        <Style x:Key="RefBadgeBorder" TargetType="Border">
             <Setter Property="Margin" Value="0,0,4,0" />
             <Setter Property="Padding" Value="6,1" />
             <Setter Property="Stroke" Value="#FF333333" />
             <Setter Property="StrokeThickness" Value="1" />
             <Setter Property="StrokeShape" Value="RoundRectangle 4" />
         </Style>
+        <!-- Refリストのスタック -->
+        <Style x:Key="RefListStack" TargetType="HorizontalStackLayout">
+            <Setter Property="Margin" Value="6,0,4,0" />
+            <Setter Property="VerticalOptions" Value="Center" />
+        </Style>
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*">
         <Border Grid.Row="0"
-                Style="{StaticResource HeaderBarBorderStyle}">
-            <Label Style="{StaticResource HeaderLabelStyle}"
+                Style="{StaticResource HeaderBarBorder}">
+            <Label Style="{StaticResource HeaderLabel}"
                    Text="{Binding HeaderText}" />
         </Border>
 
@@ -85,15 +93,14 @@
                                                   VerticalOptions="Fill" />
 
                         <HorizontalStackLayout Grid.Column="1"
-                                               Margin="6,0,4,0"
-                                               VerticalOptions="Center"
+                                               Style="{StaticResource RefListStack}"
                                                BindableLayout.ItemsSource="{Binding Refs}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="graph:GraphRef">
-                                    <Border Style="{StaticResource RefBadgeBorderStyle}"
+                                    <Border Style="{StaticResource RefBadgeBorder}"
                                             BackgroundColor="{Binding Kind, Converter={StaticResource RefBackgroundConverter}}">
                                         <Label Text="{Binding Name}"
-                                               Style="{StaticResource RefBadgeLabelStyle}"
+                                               Style="{StaticResource RefBadgeLabel}"
                                                TextColor="{Binding Kind, Converter={StaticResource RefForegroundConverter}}" />
                                     </Border>
                                 </DataTemplate>
@@ -101,23 +108,19 @@
                         </HorizontalStackLayout>
 
                         <Label Grid.Column="2"
-                               Margin="0,0,8,0"
-                               Style="{StaticResource ShaLabelStyle}"
+                               Style="{StaticResource ShaLabel}"
                                Text="{Binding ShortSha}" />
 
                         <Label Grid.Column="3"
-                               Margin="0,0,16,0"
-                               Style="{StaticResource SummaryLabelStyle}"
+                               Style="{StaticResource SummaryLabel}"
                                Text="{Binding Summary}" />
 
                         <Label Grid.Column="4"
-                               Margin="0,0,16,0"
-                               Style="{StaticResource MetaLabelStyle}"
+                               Style="{StaticResource MetaLabel}"
                                Text="{Binding Author}" />
 
                         <Label Grid.Column="5"
-                               Margin="0,0,16,0"
-                               Style="{StaticResource MetaLabelStyle}"
+                               Style="{StaticResource MetaLabel}"
                                Text="{Binding When, StringFormat='{0:yyyy-MM-dd HH:mm}'}" />
                     </Grid>
                 </DataTemplate>

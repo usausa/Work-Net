@@ -9,25 +9,29 @@
 
     <ContentPage.Resources>
         <ResourceDictionary>
+            <Color x:Key="PrimaryText">#1C1C1E</Color>
+            <Color x:Key="MetaText">#8E8E93</Color>
+            <Color x:Key="SeparatorText">#C7C7CC</Color>
+
             <!-- ヘッダーのタイトル -->
-            <Style x:Key="HeaderTitleStyle" TargetType="Label">
+            <Style x:Key="HeaderTitleLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="TextColor" Value="#1C1C1E" />
             </Style>
             <!-- ヘッダーのサブタイトル -->
-            <Style x:Key="HeaderSubtitleStyle" TargetType="Label">
+            <Style x:Key="HeaderSubtitleLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="12" />
                 <Setter Property="TextColor" Value="#8E8E93" />
             </Style>
             <!-- ヘッダー件数バッジのLabel -->
-            <Style x:Key="CountBadgeLabelStyle" TargetType="Label">
+            <Style x:Key="CountBadgeLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="13" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="TextColor" Value="White" />
             </Style>
             <!-- アイテムのSSID名 -->
-            <Style x:Key="SsidLabelStyle" TargetType="Label">
+            <Style x:Key="SsidLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="18" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="TextColor" Value="#1C1C1E" />
@@ -35,36 +39,51 @@
                 <Setter Property="VerticalOptions" Value="Center" />
             </Style>
             <!-- インラインバッジのLabel（接続中・Passpoint共通） -->
-            <Style x:Key="InlineBadgeLabelStyle" TargetType="Label">
+            <Style x:Key="InlineBadgeLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="10" />
                 <Setter Property="FontAttributes" Value="Bold" />
             </Style>
             <!-- グレーのメタ情報（#8E8E93） -->
-            <Style x:Key="MetaLabelStyle" TargetType="Label">
+            <Style x:Key="MetaLabel" TargetType="Label">
                 <Setter Property="VerticalOptions" Value="Center" />
                 <Setter Property="FontSize" Value="12" />
                 <Setter Property="TextColor" Value="#8E8E93" />
             </Style>
+            <!-- セキュリティアイコンラベル -->
+            <Style x:Key="SecurityIconLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- 周波数帯・規格・チャンネル行 -->
+            <Style x:Key="BandInfoLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="LineBreakMode" Value="TailTruncation" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- セキュリティ・BSSID行 -->
+            <Style x:Key="SecurityInfoLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="LineBreakMode" Value="TailTruncation" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
 
-            <!-- ヘッダーバー：白背景・底面Shadow -->
-            <Style x:Key="HeaderBarBorderStyle" TargetType="Border">
+            <!-- ヘッダーバー：白背景 -->
+            <Style x:Key="HeaderBarBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="White" />
                 <Setter Property="Stroke" Value="Transparent" />
                 <Setter Property="StrokeThickness" Value="0" />
                 <Setter Property="StrokeShape" Value="Rectangle" />
             </Style>
-
             <!-- 件数バッジ：青丸角 -->
-            <Style x:Key="CountBadgeBorderStyle" TargetType="Border">
+            <Style x:Key="CountBadgeBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="#007AFF" />
                 <Setter Property="Stroke" Value="Transparent" />
                 <Setter Property="StrokeShape" Value="RoundRectangle 13" />
                 <Setter Property="Padding" Value="12,5" />
                 <Setter Property="VerticalOptions" Value="Center" />
             </Style>
-
             <!-- APカード：白カード・丸角12 -->
-            <Style x:Key="ApCardBorderStyle" TargetType="Border">
+            <Style x:Key="ApCardBorder" TargetType="Border">
                 <Setter Property="Margin" Value="12,0,12,0" />
                 <Setter Property="BackgroundColor" Value="White" />
                 <Setter Property="Stroke" Value="Transparent" />
@@ -72,22 +91,65 @@
                 <Setter Property="StrokeShape" Value="RoundRectangle 12" />
                 <Setter Property="Padding" Value="14,10" />
             </Style>
-
             <!-- 接続中バッジ：緑 -->
-            <Style x:Key="ConnectedBadgeBorderStyle" TargetType="Border">
+            <Style x:Key="ConnectedBadgeBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="#34C759" />
                 <Setter Property="Stroke" Value="Transparent" />
                 <Setter Property="StrokeShape" Value="RoundRectangle 6" />
                 <Setter Property="Padding" Value="6,2" />
                 <Setter Property="VerticalOptions" Value="Center" />
             </Style>
-
             <!-- Passspoint バッジ：黄 -->
-            <Style x:Key="PasspointBadgeBorderStyle" TargetType="Border">
+            <Style x:Key="PasspointBadgeBorder" TargetType="Border">
                 <Setter Property="BackgroundColor" Value="#FFE082" />
                 <Setter Property="Stroke" Value="Transparent" />
                 <Setter Property="StrokeShape" Value="RoundRectangle 6" />
                 <Setter Property="Padding" Value="6,2" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+
+            <!-- ヘッダーバーの Shadow -->
+            <Shadow x:Key="HeaderShadow" Brush="Black" Opacity="0.06" Radius="6" Offset="0,2" />
+            <!-- APカードの Shadow -->
+            <Shadow x:Key="CardShadow" Brush="Black" Opacity="0.06" Radius="4" Offset="0,1" />
+
+            <!-- ヘッダー内のコンテンツGrid -->
+            <Style x:Key="HeaderContentGrid" TargetType="Grid">
+                <Setter Property="Padding" Value="18,14" />
+            </Style>
+            <!-- ヘッダー絵文字アイコン -->
+            <Style x:Key="HeaderIconLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="28" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- ヘッダーテキストのVerticalStackLayout -->
+            <Style x:Key="HeaderTextStack" TargetType="VerticalStackLayout">
+                <Setter Property="Margin" Value="12,0,0,0" />
+                <Setter Property="Spacing" Value="1" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- APリスト CollectionView -->
+            <Style x:Key="ApListView" TargetType="CollectionView">
+                <Setter Property="Margin" Value="0,6,0,0" />
+            </Style>
+            <!-- APカード内のGrid -->
+            <Style x:Key="ApCardGrid" TargetType="Grid">
+                <Setter Property="ColumnSpacing" Value="12" />
+                <Setter Property="RowSpacing" Value="3" />
+            </Style>
+            <!-- シグナルアイコンLabel -->
+            <Style x:Key="SignalIconLabel" TargetType="Label">
+                <Setter Property="FontSize" Value="34" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- 電波強度数値Label（dBm） -->
+            <Style x:Key="SignalStrengthLabel" TargetType="Label">
+                <Setter Property="VerticalOptions" Value="Center" />
+                <Setter Property="FontAttributes" Value="Bold" />
+            </Style>
+            <!-- SSID行のHorizontalStackLayout -->
+            <Style x:Key="SsidRowStack" TargetType="HorizontalStackLayout">
+                <Setter Property="Spacing" Value="6" />
                 <Setter Property="VerticalOptions" Value="Center" />
             </Style>
         </ResourceDictionary>
@@ -101,35 +163,30 @@
 
         <!-- Header -->
         <Border Grid.Row="0"
-                Style="{StaticResource HeaderBarBorderStyle}">
-            <Border.Shadow>
-                <Shadow Brush="Black" Opacity="0.06" Radius="6" Offset="0,2" />
-            </Border.Shadow>
-            <Grid Padding="18,14" ColumnDefinitions="Auto,*,Auto">
+                Style="{StaticResource HeaderBarBorder}"
+                Shadow="{StaticResource HeaderShadow}">
+            <Grid Style="{StaticResource HeaderContentGrid}" ColumnDefinitions="Auto,*,Auto">
                 <Label Grid.Column="0"
                        Text="📡"
-                       FontSize="28"
-                       VerticalOptions="Center" />
+                       Style="{StaticResource HeaderIconLabel}" />
                 <VerticalStackLayout Grid.Column="1"
-                                     Margin="12,0,0,0"
-                                     Spacing="1"
-                                     VerticalOptions="Center">
+                                     Style="{StaticResource HeaderTextStack}">
                     <Label Text="Wi-Fi"
-                           Style="{StaticResource HeaderTitleStyle}" />
+                           Style="{StaticResource HeaderTitleLabel}" />
                     <Label Text="周辺のネットワーク"
-                           Style="{StaticResource HeaderSubtitleStyle}" />
+                           Style="{StaticResource HeaderSubtitleLabel}" />
                 </VerticalStackLayout>
                 <Border Grid.Column="2"
-                        Style="{StaticResource CountBadgeBorderStyle}">
+                        Style="{StaticResource CountBadgeBorder}">
                     <Label Text="{Binding AccessPoints.Count, StringFormat='{0}件'}"
-                           Style="{StaticResource CountBadgeLabelStyle}" />
+                           Style="{StaticResource CountBadgeLabel}" />
                 </Border>
             </Grid>
         </Border>
 
         <!-- AP list -->
         <CollectionView Grid.Row="1"
-                        Margin="0,6,0,0"
+                        Style="{StaticResource ApListView}"
                         ItemsSource="{Binding AccessPoints}"
                         SelectionMode="None">
             <CollectionView.ItemsLayout>
@@ -137,58 +194,51 @@
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="local:WifiAccessPoint">
-                    <Border Style="{StaticResource ApCardBorderStyle}">
-                        <Border.Shadow>
-                            <Shadow Brush="Black" Opacity="0.06" Radius="4" Offset="0,1" />
-                        </Border.Shadow>
+                    <Border Style="{StaticResource ApCardBorder}"
+                            Shadow="{StaticResource CardShadow}">
 
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="12"
-                              RowDefinitions="Auto,Auto,Auto"
-                              RowSpacing="3">
+                        <Grid Style="{StaticResource ApCardGrid}"
+                              ColumnDefinitions="Auto,*,Auto"
+                              RowDefinitions="Auto,Auto,Auto">
 
                             <!-- Signal icon spans all rows -->
                             <Label Grid.Column="0" Grid.Row="0" Grid.RowSpan="3"
+                                   Style="{StaticResource SignalIconLabel}"
                                    Text="{Binding SignalIcon}"
-                                   FontSize="34"
-                                   TextColor="{Binding SignalColor}"
-                                   VerticalOptions="Center" />
+                                   TextColor="{Binding SignalColor}" />
 
                             <!-- Row 1: SSID + inline badges -->
                             <HorizontalStackLayout Grid.Column="1" Grid.Row="0"
-                                                   Spacing="6"
-                                                   VerticalOptions="Center">
+                                                   Style="{StaticResource SsidRowStack}">
                                 <Label Text="{Binding DisplaySsid}"
-                                       Style="{StaticResource SsidLabelStyle}" />
+                                       Style="{StaticResource SsidLabel}" />
                                 <Label Text="{Binding SecurityIcon}"
-                                       FontSize="14"
-                                       TextColor="{Binding SecurityColor}"
-                                       VerticalOptions="Center" />
+                                       Style="{StaticResource SecurityIconLabel}"
+                                       TextColor="{Binding SecurityColor}" />
                                 <Border IsVisible="{Binding IsConnected}"
-                                        Style="{StaticResource ConnectedBadgeBorderStyle}">
+                                        Style="{StaticResource ConnectedBadgeBorder}">
                                     <Label Text="接続中"
-                                           Style="{StaticResource InlineBadgeLabelStyle}"
+                                           Style="{StaticResource InlineBadgeLabel}"
                                            TextColor="White" />
                                 </Border>
                                 <Border IsVisible="{Binding IsPasspointNetwork}"
-                                        Style="{StaticResource PasspointBadgeBorderStyle}">
+                                        Style="{StaticResource PasspointBadgeBorder}">
                                     <Label Text="Passpoint"
-                                           Style="{StaticResource InlineBadgeLabelStyle}"
+                                           Style="{StaticResource InlineBadgeLabel}"
                                            TextColor="#5D4037" />
                                 </Border>
                             </HorizontalStackLayout>
 
                             <!-- Row 1 right: dBm spans rows 0-1 -->
                             <Label Grid.Column="2" Grid.Row="0" Grid.RowSpan="2"
-                                   VerticalOptions="Center"
-                                   FontAttributes="Bold"
+                                   Style="{StaticResource SignalStrengthLabel}"
                                    TextColor="{Binding SignalColor}">
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding Level}" FontSize="24" />
                                         <Span Text=" dBm"
                                               FontSize="11"
-                                              TextColor="#8E8E93"
+                                              TextColor="{StaticResource MetaText}"
                                               FontAttributes="None" />
                                     </FormattedString>
                                 </Label.FormattedText>
@@ -196,33 +246,29 @@
 
                             <!-- Row 2: 周波数帯 / 規格 / チャンネル -->
                             <Label Grid.Column="1" Grid.Row="1"
-                                   FontSize="13"
-                                   LineBreakMode="TailTruncation"
-                                   VerticalOptions="Center">
+                                   Style="{StaticResource BandInfoLabel}">
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding Band}" FontAttributes="Bold" TextColor="{Binding BandColor}" />
-                                        <Span Text="  •  " TextColor="#C7C7CC" />
-                                        <Span Text="{Binding StandardLabel}" FontAttributes="Bold" TextColor="#1C1C1E" />
-                                        <Span Text="  •  Ch " TextColor="#8E8E93" />
-                                        <Span Text="{Binding Channel}" FontAttributes="Bold" TextColor="#1C1C1E" />
-                                        <Span Text=" (" TextColor="#8E8E93" />
-                                        <Span Text="{Binding ChannelWidthLabel}" TextColor="#1C1C1E" />
-                                        <Span Text=")" TextColor="#8E8E93" />
+                                        <Span Text="  •  " TextColor="{StaticResource SeparatorText}" />
+                                        <Span Text="{Binding StandardLabel}" FontAttributes="Bold" TextColor="{StaticResource PrimaryText}" />
+                                        <Span Text="  •  Ch " TextColor="{StaticResource MetaText}" />
+                                        <Span Text="{Binding Channel}" FontAttributes="Bold" TextColor="{StaticResource PrimaryText}" />
+                                        <Span Text=" (" TextColor="{StaticResource MetaText}" />
+                                        <Span Text="{Binding ChannelWidthLabel}" TextColor="{StaticResource PrimaryText}" />
+                                        <Span Text=")" TextColor="{StaticResource MetaText}" />
                                     </FormattedString>
                                 </Label.FormattedText>
                             </Label>
 
                             <!-- Row 3: セキュリティ / BSSID -->
                             <Label Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="2"
-                                   FontSize="12"
-                                   LineBreakMode="TailTruncation"
-                                   VerticalOptions="Center">
+                                   Style="{StaticResource SecurityInfoLabel}">
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding SecurityLabel}" FontAttributes="Bold" TextColor="{Binding SecurityColor}" />
-                                        <Span Text="  •  " TextColor="#C7C7CC" />
-                                        <Span Text="{Binding Bssid}" FontFamily="Monospace" TextColor="#8E8E93" />
+                                        <Span Text="  •  " TextColor="{StaticResource SeparatorText}" />
+                                        <Span Text="{Binding Bssid}" FontFamily="Monospace" TextColor="{StaticResource MetaText}" />
                                     </FormattedString>
                                 </Label.FormattedText>
                             </Label>
