@@ -9,6 +9,12 @@ using WorkChat.Models;
 
 public sealed partial class MainPageViewModel : ObservableObject
 {
+    private const string AvatarAlice = "avatar_alice.png";
+    private const string AvatarBob = "avatar_bob.png";
+    private const string AvatarCarol = "avatar_carol.png";
+    private const string AvatarDave = "avatar_dave.png";
+    private const string AvatarMe = "avatar_me.png";
+
     private string inputText = string.Empty;
 
     public ObservableCollection<ChatMessage> Messages { get; } = [];
@@ -41,107 +47,157 @@ public sealed partial class MainPageViewModel : ObservableObject
         {
             Type = MessageType.Send,
             Author = CurrentUser,
-            AvatarColor = Color.FromArgb("#4CAF50"),
+            AvatarSource = AvatarMe,
             TextContent = InputText.Trim()
         });
 
         InputText = string.Empty;
     }
 
+    [RelayCommand]
+    private static void PickImage()
+    {
+        // Camera/gallery picker placeholder
+    }
+
+    [RelayCommand]
+    private static void PickSticker()
+    {
+        // Sticker picker placeholder
+    }
+
     private void LoadSampleMessages()
     {
         var today = DateTime.Today;
         var yesterday = today.AddDays(-1);
+        var twoDaysAgo = today.AddDays(-2);
 
+        // ---- Two days ago ----
+        AddSystem(twoDaysAgo);
+
+        AddReceive(twoDaysAgo.AddHours(9), "Alice", AvatarAlice,
+            "おはようございます。今日の進捗どうですか？");
+        AddSend(twoDaysAgo.AddHours(9).AddMinutes(5),
+            "おはようございます。順調です。今日中に PR 出します。", isRead: true);
+        AddReceive(twoDaysAgo.AddHours(9).AddMinutes(8), "Bob", AvatarBob,
+            "お疲れさまです。レビュー入りましたらお願いします。");
+        AddSend(twoDaysAgo.AddHours(9).AddMinutes(10), "了解です！", isRead: true);
+        AddReceive(twoDaysAgo.AddHours(11).AddMinutes(30), "Carol", AvatarCarol,
+            "今日の定例は 14:00 からです。");
+        AddSend(twoDaysAgo.AddHours(11).AddMinutes(32),
+            "ありがとうございます。", isRead: true);
+        AddReceive(twoDaysAgo.AddHours(12), "Alice", AvatarAlice,
+            "お昼ご飯どこ行きます？");
+        AddSend(twoDaysAgo.AddHours(12).AddMinutes(5),
+            "近くのカフェにしようかと。", isRead: true,
+            reactions: [new MessageReaction { Emoji = "👍", Count = 2 }]);
+        AddReceive(twoDaysAgo.AddHours(12).AddMinutes(7), "Bob", AvatarBob,
+            "ご一緒します！");
+        AddReceive(twoDaysAgo.AddHours(18), "Dave", AvatarDave,
+            "今日もお疲れさまでした！");
+
+        // ---- Yesterday ----
+        AddSystem(yesterday);
+
+        AddReceive(yesterday.AddHours(9).AddMinutes(15), "Alice", AvatarAlice,
+            "おはようございます。");
+        AddSend(yesterday.AddHours(9).AddMinutes(18),
+            "おはようございます。", isRead: true);
+        AddReceive(yesterday.AddHours(9).AddMinutes(30), "Bob", AvatarBob,
+            "昨日の PR レビューしました。コメントいくつかあります。");
+        AddSend(yesterday.AddHours(9).AddMinutes(32),
+            "ありがとうございます！見ます。", isRead: true);
+        AddReceive(yesterday.AddHours(12).AddMinutes(30), "Bob", AvatarBob,
+            "お昼ご飯食べてきます〜",
+            reactions: [new MessageReaction { Emoji = "🍱", Count = 3 }]);
+        AddReceive(yesterday.AddHours(14), "Carol", AvatarCarol,
+            "定例始めます。");
+        AddSend(yesterday.AddHours(14).AddMinutes(1),
+            "入ります。", isRead: true);
+        AddReceive(yesterday.AddHours(16), "Alice", AvatarAlice,
+            "資料 PDF 共有しますね。");
+        AddSend(yesterday.AddHours(16).AddMinutes(5),
+            "確認しました！", isRead: true,
+            reactions: [new MessageReaction { Emoji = "🙏", Count = 1 }]);
+        AddReceive(yesterday.AddHours(18).AddMinutes(30), "Dave", AvatarDave,
+            "お疲れさまでした！");
+
+        // ---- Today ----
+        AddSystem(today);
+
+        AddReceive(today.AddHours(10).AddMinutes(5), "Alice", AvatarAlice,
+            "資料できましたー！確認お願いします。");
+        AddSend(today.AddHours(10).AddMinutes(7),
+            "ありがとうございます！見ますね。", isRead: true);
+        AddReceiveStamp(today.AddHours(10).AddMinutes(10), "Bob", AvatarBob,
+            "dotnet_bot.png");
+        AddSend(today.AddHours(10).AddMinutes(12),
+            "👀 確認中…", isRead: true,
+            reactions: [new MessageReaction { Emoji = "👀", Count = 1 }]);
+        AddReceive(today.AddHours(10).AddMinutes(30), "Carol", AvatarCarol,
+            "今日は 15:00 から会議です。");
+        AddSend(today.AddHours(10).AddMinutes(32),
+            "了解しました。", isRead: true);
+        AddReceive(today.AddHours(11), "Alice", AvatarAlice,
+            "ランチ何にします？");
+        AddReceive(today.AddHours(11).AddMinutes(2), "Bob", AvatarBob,
+            "寿司でどうでしょう。",
+            reactions: [new MessageReaction { Emoji = "🍣", Count = 2 }]);
+        AddSend(today.AddHours(11).AddMinutes(5), "いいですね！", isRead: false);
+    }
+
+    private void AddSystem(DateTime date) =>
         Messages.Add(new ChatMessage
         {
             Type = MessageType.System,
-            DateTime = yesterday,
-            TextContent = yesterday.ToString("yyyy年M月d日")
+            DateTime = date,
+            TextContent = date.ToString("yyyy年M月d日 (ddd)")
         });
 
+    private void AddReceive(
+        DateTime dateTime,
+        string author,
+        string avatar,
+        string text,
+        IReadOnlyList<MessageReaction>? reactions = null) =>
         Messages.Add(new ChatMessage
         {
             Type = MessageType.Receive,
-            DateTime = yesterday.AddHours(9).AddMinutes(15),
-            Author = "Alice",
-            AvatarColor = Color.FromArgb("#E91E63"),
-            TextContent = "おはようございます！今日もよろしくお願いします。"
+            DateTime = dateTime,
+            Author = author,
+            AvatarSource = avatar,
+            TextContent = text,
+            Reactions = reactions ?? []
         });
 
-        Messages.Add(new ChatMessage
-        {
-            Type = MessageType.Send,
-            DateTime = yesterday.AddHours(9).AddMinutes(18),
-            Author = CurrentUser,
-            AvatarColor = Color.FromArgb("#4CAF50"),
-            TextContent = "おはようございます！こちらこそ。",
-            Reactions =
-            [
-                new MessageReaction { Emoji = "👍", Count = 2 },
-                new MessageReaction { Emoji = "🎉", Count = 1 }
-            ]
-        });
-
+    private void AddReceiveStamp(
+        DateTime dateTime,
+        string author,
+        string avatar,
+        string stampSource) =>
         Messages.Add(new ChatMessage
         {
             Type = MessageType.Receive,
-            DateTime = yesterday.AddHours(12).AddMinutes(30),
-            Author = "Bob",
-            AvatarColor = Color.FromArgb("#2196F3"),
-            TextContent = "お昼ご飯食べてきます〜",
-            Reactions =
-            [
-                new MessageReaction { Emoji = "🍱", Count = 3 }
-            ]
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Type = MessageType.System,
-            DateTime = today,
-            TextContent = today.ToString("yyyy年M月d日")
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Type = MessageType.Receive,
-            DateTime = today.AddHours(10).AddMinutes(5),
-            Author = "Alice",
-            AvatarColor = Color.FromArgb("#E91E63"),
-            TextContent = "資料できましたー！確認お願いします。"
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Type = MessageType.Send,
-            DateTime = today.AddHours(10).AddMinutes(7),
-            Author = CurrentUser,
-            AvatarColor = Color.FromArgb("#4CAF50"),
-            TextContent = "ありがとうございます！見ますね。"
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Type = MessageType.Receive,
-            DateTime = today.AddHours(10).AddMinutes(10),
-            Author = "Bob",
-            AvatarColor = Color.FromArgb("#2196F3"),
-            StampSource = "dotnet_bot.png",
+            DateTime = dateTime,
+            Author = author,
+            AvatarSource = avatar,
+            StampSource = stampSource,
             TextContent = string.Empty
         });
 
+    private void AddSend(
+        DateTime dateTime,
+        string text,
+        bool isRead,
+        IReadOnlyList<MessageReaction>? reactions = null) =>
         Messages.Add(new ChatMessage
         {
             Type = MessageType.Send,
-            DateTime = today.AddHours(10).AddMinutes(12),
+            DateTime = dateTime,
             Author = CurrentUser,
-            AvatarColor = Color.FromArgb("#4CAF50"),
-            TextContent = "👀 確認中…",
-            Reactions =
-            [
-                new MessageReaction { Emoji = "👀", Count = 1 }
-            ]
+            AvatarSource = AvatarMe,
+            TextContent = text,
+            IsRead = isRead,
+            Reactions = reactions ?? []
         });
-    }
 }

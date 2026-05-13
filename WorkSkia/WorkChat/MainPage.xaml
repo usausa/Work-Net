@@ -7,15 +7,27 @@
              x:Class="WorkChat.MainPage"
              x:DataType="vm:MainPageViewModel"
              Title="WorkChat"
-             BackgroundColor="{AppThemeBinding Light=#E5DDD5, Dark=#1F1F1F}">
+             BackgroundColor="White">
 
     <ContentPage.Resources>
         <ResourceDictionary>
 
+            <Color x:Key="BubbleSend">#4CAF50</Color>
+            <Color x:Key="BubbleSendText">#FFFFFF</Color>
+            <Color x:Key="BubbleReceive">#F0F0F0</Color>
+            <Color x:Key="BubbleReceiveText">#1A1A1A</Color>
+            <Color x:Key="MetaText">#888888</Color>
+            <Color x:Key="AuthorText">#666666</Color>
+            <Color x:Key="DividerLine">#D0D0D0</Color>
+            <Color x:Key="InputBackground">#F5F5F5</Color>
+            <Color x:Key="InputBorder">#E0E0E0</Color>
+            <Color x:Key="ReactionBackground">#FFFFFF</Color>
+            <Color x:Key="ReactionBorder">#D0D0D0</Color>
+
             <!-- Reaction pill -->
             <DataTemplate x:Key="ReactionTemplate" x:DataType="models:MessageReaction">
-                <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
-                        Stroke="{AppThemeBinding Light=#D0D0D0, Dark=#444444}"
+                <Border BackgroundColor="{StaticResource ReactionBackground}"
+                        Stroke="{StaticResource ReactionBorder}"
                         StrokeThickness="1"
                         Padding="6,1"
                         Margin="0,0,4,0">
@@ -26,102 +38,44 @@
                         <Label Text="{Binding Emoji}" FontSize="12" />
                         <Label Text="{Binding Count}"
                                FontSize="10"
-                               TextColor="{AppThemeBinding Light=#666666, Dark=#BBBBBB}"
+                               TextColor="{StaticResource MetaText}"
                                VerticalOptions="Center" />
                     </HorizontalStackLayout>
                 </Border>
             </DataTemplate>
 
-            <!-- Send (right-aligned) -->
+            <!-- Send (right-aligned, timestamp on the LEFT of the bubble) -->
             <DataTemplate x:Key="SendTemplate" x:DataType="models:ChatMessage">
-                <Grid Padding="60,4,8,4" ColumnSpacing="6">
+                <Grid Padding="60,4,8,4">
                     <VerticalStackLayout HorizontalOptions="End" Spacing="2">
 
-                        <!-- Text bubble -->
-                        <Border IsVisible="{Binding HasText}"
-                                BackgroundColor="#DCF8C6"
-                                Stroke="Transparent"
-                                StrokeThickness="0"
-                                Padding="10,6"
-                                HorizontalOptions="End">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="14,14,4,14" />
-                            </Border.StrokeShape>
-                            <Label Text="{Binding TextContent}"
-                                   TextColor="#1A1A1A"
-                                   FontSize="14"
-                                   LineBreakMode="WordWrap" />
-                        </Border>
+                        <!-- Time/read column + bubble -->
+                        <HorizontalStackLayout HorizontalOptions="End" Spacing="6">
 
-                        <!-- Stamp -->
-                        <Image IsVisible="{Binding IsStamp}"
-                               Source="{Binding StampSource}"
-                               HeightRequest="120"
-                               WidthRequest="120"
-                               Aspect="AspectFit"
-                               HorizontalOptions="End" />
+                            <!-- Read indicator above timestamp, both bottom-aligned with bubble -->
+                            <VerticalStackLayout VerticalOptions="End" Spacing="0">
+                                <Label Text="既読"
+                                       IsVisible="{Binding ShowReadIndicator}"
+                                       FontSize="10"
+                                       TextColor="{StaticResource MetaText}"
+                                       HorizontalOptions="End" />
+                                <Label Text="{Binding TimeText}"
+                                       FontSize="10"
+                                       TextColor="{StaticResource MetaText}"
+                                       HorizontalOptions="End" />
+                            </VerticalStackLayout>
 
-                        <!-- Reactions -->
-                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Reactions}"
-                                               BindableLayout.ItemTemplate="{StaticResource ReactionTemplate}"
-                                               IsVisible="{Binding HasReactions}"
-                                               HorizontalOptions="End"
-                                               Spacing="0" />
-
-                        <!-- Timestamp -->
-                        <Label Text="{Binding TimeText}"
-                               FontSize="10"
-                               TextColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
-                               HorizontalOptions="End" />
-                    </VerticalStackLayout>
-                </Grid>
-            </DataTemplate>
-
-            <!-- Receive (left-aligned with avatar) -->
-            <DataTemplate x:Key="ReceiveTemplate" x:DataType="models:ChatMessage">
-                <Grid Padding="8,4,60,4" ColumnDefinitions="36,*" ColumnSpacing="8">
-
-                    <!-- Avatar -->
-                    <Border Grid.Column="0"
-                            WidthRequest="36"
-                            HeightRequest="36"
-                            BackgroundColor="{Binding AvatarColor}"
-                            Stroke="Transparent"
-                            StrokeThickness="0"
-                            VerticalOptions="Start">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="18" />
-                        </Border.StrokeShape>
-                        <Label Text="{Binding AvatarInitial}"
-                               TextColor="White"
-                               FontSize="16"
-                               FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center" />
-                    </Border>
-
-                    <!-- Body -->
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start">
-
-                        <!-- Author -->
-                        <Label Text="{Binding Author}"
-                               FontSize="11"
-                               TextColor="{AppThemeBinding Light=#555555, Dark=#BBBBBB}" />
-
-                        <!-- Bubble + time row -->
-                        <HorizontalStackLayout Spacing="6" VerticalOptions="End">
-
-                            <!-- Text bubble -->
+                            <!-- Text bubble (top-right corner pointed) -->
                             <Border IsVisible="{Binding HasText}"
-                                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}"
+                                    BackgroundColor="{StaticResource BubbleSend}"
                                     Stroke="Transparent"
                                     StrokeThickness="0"
-                                    Padding="10,6">
+                                    Padding="12,8">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="14,14,14,4" />
+                                    <RoundRectangle CornerRadius="14,4,14,14" />
                                 </Border.StrokeShape>
                                 <Label Text="{Binding TextContent}"
-                                       TextColor="{AppThemeBinding Light=#1A1A1A, Dark=#EEEEEE}"
+                                       TextColor="{StaticResource BubbleSendText}"
                                        FontSize="14"
                                        LineBreakMode="WordWrap" />
                             </Border>
@@ -131,13 +85,73 @@
                                    Source="{Binding StampSource}"
                                    HeightRequest="120"
                                    WidthRequest="120"
-                                   Aspect="AspectFit"
-                                   HorizontalOptions="Start" />
+                                   Aspect="AspectFit" />
+                        </HorizontalStackLayout>
 
-                            <!-- Timestamp -->
+                        <!-- Reactions below bubble -->
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Reactions}"
+                                               BindableLayout.ItemTemplate="{StaticResource ReactionTemplate}"
+                                               IsVisible="{Binding HasReactions}"
+                                               HorizontalOptions="End"
+                                               Spacing="0" />
+                    </VerticalStackLayout>
+                </Grid>
+            </DataTemplate>
+
+            <!-- Receive (left-aligned, avatar image, timestamp on the RIGHT of the bubble) -->
+            <DataTemplate x:Key="ReceiveTemplate" x:DataType="models:ChatMessage">
+                <Grid Padding="8,4,60,4" ColumnDefinitions="40,*" ColumnSpacing="8">
+
+                    <!-- Avatar image clipped to circle -->
+                    <Border Grid.Column="0"
+                            WidthRequest="40"
+                            HeightRequest="40"
+                            Stroke="Transparent"
+                            StrokeThickness="0"
+                            VerticalOptions="Start">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="20" />
+                        </Border.StrokeShape>
+                        <Image Source="{Binding AvatarSource}" Aspect="AspectFill" />
+                    </Border>
+
+                    <!-- Body -->
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start">
+
+                        <!-- Author -->
+                        <Label Text="{Binding Author}"
+                               FontSize="11"
+                               TextColor="{StaticResource AuthorText}" />
+
+                        <!-- Bubble + timestamp -->
+                        <HorizontalStackLayout Spacing="6">
+
+                            <!-- Text bubble (top-left corner pointed) -->
+                            <Border IsVisible="{Binding HasText}"
+                                    BackgroundColor="{StaticResource BubbleReceive}"
+                                    Stroke="Transparent"
+                                    StrokeThickness="0"
+                                    Padding="12,8">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="4,14,14,14" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding TextContent}"
+                                       TextColor="{StaticResource BubbleReceiveText}"
+                                       FontSize="14"
+                                       LineBreakMode="WordWrap" />
+                            </Border>
+
+                            <!-- Stamp -->
+                            <Image IsVisible="{Binding IsStamp}"
+                                   Source="{Binding StampSource}"
+                                   HeightRequest="120"
+                                   WidthRequest="120"
+                                   Aspect="AspectFit" />
+
+                            <!-- Timestamp on the right -->
                             <Label Text="{Binding TimeText}"
                                    FontSize="10"
-                                   TextColor="{AppThemeBinding Light=#777777, Dark=#AAAAAA}"
+                                   TextColor="{StaticResource MetaText}"
                                    VerticalOptions="End" />
                         </HorizontalStackLayout>
 
@@ -151,21 +165,22 @@
                 </Grid>
             </DataTemplate>
 
-            <!-- System (centered pill) -->
+            <!-- System (date divider with horizontal lines) -->
             <DataTemplate x:Key="SystemTemplate" x:DataType="models:ChatMessage">
-                <Grid Padding="0,12">
-                    <Border HorizontalOptions="Center"
-                            Padding="12,4"
-                            BackgroundColor="#80909090"
-                            Stroke="Transparent"
-                            StrokeThickness="0">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
-                        </Border.StrokeShape>
-                        <Label Text="{Binding TextContent}"
-                               TextColor="White"
-                               FontSize="11" />
-                    </Border>
+                <Grid Padding="16,16" ColumnDefinitions="*,Auto,*" ColumnSpacing="12">
+                    <BoxView Grid.Column="0"
+                             HeightRequest="1"
+                             Color="{StaticResource DividerLine}"
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1"
+                           Text="{Binding TextContent}"
+                           FontSize="11"
+                           TextColor="{StaticResource MetaText}"
+                           VerticalOptions="Center" />
+                    <BoxView Grid.Column="2"
+                             HeightRequest="1"
+                             Color="{StaticResource DividerLine}"
+                             VerticalOptions="Center" />
                 </Grid>
             </DataTemplate>
 
@@ -176,7 +191,7 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,1,Auto">
 
         <!-- Message list -->
         <CollectionView x:Name="MessagesView"
@@ -186,32 +201,63 @@
                         ItemsUpdatingScrollMode="KeepLastItemInView"
                         VerticalScrollBarVisibility="Default" />
 
-        <!-- Input area -->
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,Auto"
-              ColumnSpacing="8"
-              Padding="8"
-              BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2A2A2A}">
+        <!-- Top border of input area -->
+        <BoxView Grid.Row="1" Color="{StaticResource InputBorder}" />
 
-            <Border Grid.Column="0"
-                    BackgroundColor="{AppThemeBinding Light=#F0F0F0, Dark=#1F1F1F}"
-                    Stroke="{AppThemeBinding Light=#D0D0D0, Dark=#444444}"
+        <!-- Input area: camera | [entry + sticker] | send -->
+        <Grid Grid.Row="2"
+              ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="4"
+              Padding="8"
+              BackgroundColor="White">
+
+            <!-- Camera / image button -->
+            <ImageButton Grid.Column="0"
+                         Source="ic_camera.png"
+                         Command="{Binding PickImageCommand}"
+                         WidthRequest="40"
+                         HeightRequest="40"
+                         Padding="8"
+                         BackgroundColor="Transparent"
+                         Aspect="AspectFit" />
+
+            <!-- Text input with sticker button on the right -->
+            <Border Grid.Column="1"
+                    BackgroundColor="{StaticResource InputBackground}"
+                    Stroke="{StaticResource InputBorder}"
                     StrokeThickness="1"
-                    Padding="10,0">
+                    Padding="0">
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="20" />
                 </Border.StrokeShape>
-                <Entry Text="{Binding InputText}"
-                       Placeholder="メッセージを入力"
-                       BackgroundColor="Transparent"
-                       ReturnType="Send"
-                       ReturnCommand="{Binding SendCommand}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <Entry Grid.Column="0"
+                           Text="{Binding InputText}"
+                           Placeholder="メッセージを入力"
+                           BackgroundColor="Transparent"
+                           Margin="14,0,0,0"
+                           ReturnType="Send"
+                           ReturnCommand="{Binding SendCommand}" />
+                    <ImageButton Grid.Column="1"
+                                 Source="ic_sticker.png"
+                                 Command="{Binding PickStickerCommand}"
+                                 WidthRequest="36"
+                                 HeightRequest="36"
+                                 Padding="6"
+                                 BackgroundColor="Transparent"
+                                 Aspect="AspectFit" />
+                </Grid>
             </Border>
 
-            <Button Grid.Column="1"
-                    Text="送信"
-                    Command="{Binding SendCommand}"
-                    MinimumWidthRequest="72" />
+            <!-- Send button -->
+            <ImageButton Grid.Column="2"
+                         Source="ic_send.png"
+                         Command="{Binding SendCommand}"
+                         WidthRequest="40"
+                         HeightRequest="40"
+                         Padding="8"
+                         BackgroundColor="Transparent"
+                         Aspect="AspectFit" />
         </Grid>
     </Grid>
 </ContentPage>

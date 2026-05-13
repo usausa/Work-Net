@@ -14,9 +14,9 @@ public sealed class ChatMessage
 
     public string? AvatarSource { get; set; }
 
-    public Color? AvatarColor { get; set; }
-
     public string? StampSource { get; set; }
+
+    public bool IsRead { get; set; }
 
     public IReadOnlyList<MessageReaction> Reactions { get; set; } = [];
 
@@ -26,8 +26,7 @@ public sealed class ChatMessage
 
     public bool HasReactions => Reactions.Count > 0;
 
-    public string TimeText => DateTime.ToString("HH:mm");
+    public bool ShowReadIndicator => Type == MessageType.Send && IsRead;
 
-    public string AvatarInitial =>
-        string.IsNullOrEmpty(Author) ? "?" : Author[..1].ToUpperInvariant();
+    public string TimeText => DateTime.ToString("HH:mm");
 }
