@@ -1,23 +1,34 @@
-﻿namespace WorkSkiaGitMaui;
+namespace WorkSkiaGitMaui;
+
+using System;
+using System.Diagnostics;
+
+using WorkSkiaGitMaui.Data;
+using WorkSkiaGitMaui.Graph;
 
 public partial class MainPage : ContentPage
 {
-    int count = 0;
-
     public MainPage()
     {
         InitializeComponent();
+        LoadGraph();
     }
 
-    private void OnCounterClicked(object? sender, EventArgs e)
+    private void LoadGraph()
     {
-        count++;
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            var data = GraphBuilder.Build(PseudoRepository.Commits, PseudoRepository.Refs);
+            sw.Stop();
 
-        if (count == 1)
-            CounterBtn.Text = $"Clicked {count} time";
-        else
-            CounterBtn.Text = $"Clicked {count} times";
-
-        SemanticScreenReader.Announce(CounterBtn.Text);
+            RowList.ItemsSource = data.Rows;
+            HeaderLabel.Text =
+                $"Commits: {data.Rows.Count}    Lanes: {data.LaneCount}    Build: {sw.ElapsedMilliseconds} ms";
+        }
+        catch (Exception ex)
+        {
+            HeaderLabel.Text = $"Failed to build graph: {ex.Message}";
+        }
     }
 }
