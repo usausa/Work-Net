@@ -22,31 +22,31 @@
             <Border.Shadow>
                 <Shadow Brush="Black" Opacity="0.06" Radius="6" Offset="0,2" />
             </Border.Shadow>
-            <Grid Padding="20,18" ColumnDefinitions="Auto,*,Auto">
+            <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
                 <Label Grid.Column="0"
                        Text="📡"
-                       FontSize="34"
+                       FontSize="26"
                        VerticalOptions="Center" />
                 <VerticalStackLayout Grid.Column="1"
-                                     Margin="14,0,0,0"
-                                     Spacing="2"
+                                     Margin="10,0,0,0"
+                                     Spacing="0"
                                      VerticalOptions="Center">
                     <Label Text="Wi-Fi"
-                           FontSize="22"
+                           FontSize="18"
                            FontAttributes="Bold"
                            TextColor="#1C1C1E" />
                     <Label Text="周辺のネットワーク"
-                           FontSize="12"
+                           FontSize="11"
                            TextColor="#8E8E93" />
                 </VerticalStackLayout>
                 <Border Grid.Column="2"
                         BackgroundColor="#007AFF"
                         Stroke="Transparent"
-                        StrokeShape="RoundRectangle 14"
-                        Padding="12,6"
+                        StrokeShape="RoundRectangle 12"
+                        Padding="10,4"
                         VerticalOptions="Center">
                     <Label Text="{Binding AccessPoints.Count, StringFormat='{0}件'}"
-                           FontSize="13"
+                           FontSize="12"
                            FontAttributes="Bold"
                            TextColor="White" />
                 </Border>
@@ -55,252 +55,118 @@
 
         <!-- AP list -->
         <CollectionView Grid.Row="1"
+                        Margin="0,4,0,0"
                         ItemsSource="{Binding AccessPoints}"
                         SelectionMode="None">
             <CollectionView.ItemsLayout>
-                <LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="4" />
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="local:WifiAccessPoint">
-                    <Border Margin="14,6,14,0"
+                    <Border Margin="10,0,10,0"
                             BackgroundColor="White"
-                            Stroke="#E5E5EA"
+                            Stroke="Transparent"
                             StrokeThickness="0"
-                            StrokeShape="RoundRectangle 16"
-                            Padding="16">
+                            StrokeShape="RoundRectangle 10"
+                            Padding="12,8">
                         <Border.Shadow>
-                            <Shadow Brush="Black" Opacity="0.08" Radius="8" Offset="0,2" />
+                            <Shadow Brush="Black" Opacity="0.05" Radius="3" Offset="0,1" />
                         </Border.Shadow>
 
-                        <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="10"
+                              RowDefinitions="Auto,Auto"
+                              RowSpacing="3">
 
-                            <!-- header: signal icon + SSID + security icon -->
-                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
-                                <Label Grid.Column="0"
-                                       Text="{Binding SignalIcon}"
-                                       FontSize="28"
-                                       TextColor="{Binding SignalColor}"
+                            <!-- Signal icon spans both rows -->
+                            <Label Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"
+                                   Text="{Binding SignalIcon}"
+                                   FontSize="30"
+                                   TextColor="{Binding SignalColor}"
+                                   VerticalOptions="Center" />
+
+                            <!-- Row 1: SSID + inline badges -->
+                            <HorizontalStackLayout Grid.Column="1" Grid.Row="0"
+                                                   Spacing="5"
+                                                   VerticalOptions="Center">
+                                <Label Text="{Binding DisplaySsid}"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="#1C1C1E"
+                                       LineBreakMode="TailTruncation"
                                        VerticalOptions="Center" />
-                                <VerticalStackLayout Grid.Column="1"
-                                                     Margin="12,0,8,0"
-                                                     Spacing="2"
-                                                     VerticalOptions="Center">
-                                    <Label Text="{Binding DisplaySsid}"
-                                           FontSize="17"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E"
-                                           LineBreakMode="TailTruncation" />
-                                    <Label Text="{Binding SubTitle}"
-                                           FontSize="12"
-                                           TextColor="#8E8E93"
-                                           LineBreakMode="TailTruncation"
-                                           IsVisible="{Binding SubTitle, Converter={StaticResource StringNotEmptyConverter}}" />
-                                </VerticalStackLayout>
-                                <Label Grid.Column="2"
-                                       Text="{Binding SecurityIcon}"
-                                       FontSize="22"
+                                <Label Text="{Binding SecurityIcon}"
+                                       FontSize="12"
                                        TextColor="{Binding SecurityColor}"
                                        VerticalOptions="Center" />
-                            </Grid>
-
-                            <!-- connected pill -->
-                            <Border IsVisible="{Binding IsConnected}"
-                                    BackgroundColor="#E8F5E9"
-                                    Stroke="Transparent"
-                                    StrokeShape="RoundRectangle 10"
-                                    Padding="10,6"
-                                    HorizontalOptions="Start">
-                                <HorizontalStackLayout Spacing="6">
-                                    <Label Text="🟢"
-                                           FontSize="11"
-                                           VerticalOptions="Center" />
+                                <Border IsVisible="{Binding IsConnected}"
+                                        BackgroundColor="#34C759"
+                                        Stroke="Transparent"
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="5,1"
+                                        VerticalOptions="Center">
                                     <Label Text="接続中"
-                                           FontSize="12"
-                                           FontAttributes="Bold"
-                                           TextColor="#2E7D32"
-                                           VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Border>
-
-                            <!-- signal row -->
-                            <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
-                                <HorizontalStackLayout Grid.Column="0"
-                                                       Spacing="3"
-                                                       VerticalOptions="Center">
-                                    <BoxView WidthRequest="7"
-                                             HeightRequest="6"
-                                             CornerRadius="1"
-                                             BackgroundColor="{Binding SignalColor}"
-                                             Opacity="{Binding Bar1Opacity}"
-                                             VerticalOptions="End" />
-                                    <BoxView WidthRequest="7"
-                                             HeightRequest="10"
-                                             CornerRadius="1"
-                                             BackgroundColor="{Binding SignalColor}"
-                                             Opacity="{Binding Bar2Opacity}"
-                                             VerticalOptions="End" />
-                                    <BoxView WidthRequest="7"
-                                             HeightRequest="14"
-                                             CornerRadius="1"
-                                             BackgroundColor="{Binding SignalColor}"
-                                             Opacity="{Binding Bar3Opacity}"
-                                             VerticalOptions="End" />
-                                    <BoxView WidthRequest="7"
-                                             HeightRequest="18"
-                                             CornerRadius="1"
-                                             BackgroundColor="{Binding SignalColor}"
-                                             Opacity="{Binding Bar4Opacity}"
-                                             VerticalOptions="End" />
-                                </HorizontalStackLayout>
-                                <Label Grid.Column="1"
-                                       Margin="12,0,0,0"
-                                       Text="{Binding SignalLabel}"
-                                       FontSize="13"
-                                       FontAttributes="Bold"
-                                       TextColor="{Binding SignalColor}"
-                                       VerticalOptions="Center" />
-                                <Label Grid.Column="2"
-                                       VerticalOptions="Center"
-                                       FontSize="22"
-                                       FontAttributes="Bold"
-                                       TextColor="{Binding SignalColor}">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="{Binding Level}" />
-                                            <Span Text=" dBm"
-                                                  FontSize="12"
-                                                  TextColor="#8E8E93"
-                                                  FontAttributes="None" />
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                            </Grid>
-
-                            <!-- divider -->
-                            <BoxView HeightRequest="1" BackgroundColor="#E5E5EA" />
-
-                            <!-- detail grid: WifiManager 由来項目 -->
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto"
-                                  ColumnDefinitions="*,*"
-                                  RowSpacing="10"
-                                  ColumnSpacing="10">
-
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="2">
-                                    <Label Text="チャンネル" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding Channel, StringFormat='Ch {0}'}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
-                                    <Label Text="周波数" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding Frequency, StringFormat='{0} MHz'}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="0" Spacing="2">
-                                    <Label Text="帯域幅" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding ChannelWidthLabel}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="1" Grid.Column="1" Spacing="2">
-                                    <Label Text="中心周波数" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding CenterFreq0, StringFormat='{0} MHz'}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="2" Grid.Column="0" Spacing="2">
-                                    <Label Text="規格" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding StandardLabel}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="2" Grid.Column="1" Spacing="2">
-                                    <Label Text="セキュリティ" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding SecurityLabel}"
-                                           FontSize="14"
-                                           FontAttributes="Bold"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-
-                                <VerticalStackLayout Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Spacing="2">
-                                    <Label Text="BSSID" FontSize="11" TextColor="#8E8E93" />
-                                    <Label Text="{Binding Bssid}"
-                                           FontSize="13"
-                                           FontFamily="Monospace"
-                                           TextColor="#1C1C1E" />
-                                </VerticalStackLayout>
-                            </Grid>
-
-                            <!-- capabilities (raw) -->
-                            <VerticalStackLayout Spacing="2"
-                                                 IsVisible="{Binding Capabilities, Converter={StaticResource StringNotEmptyConverter}}">
-                                <Label Text="Capabilities" FontSize="11" TextColor="#8E8E93" />
-                                <Label Text="{Binding Capabilities}"
-                                       FontSize="11"
-                                       FontFamily="Monospace"
-                                       TextColor="#3A3A3C"
-                                       LineBreakMode="WordWrap" />
-                            </VerticalStackLayout>
-
-                            <!-- badges row -->
-                            <HorizontalStackLayout Spacing="6">
-                                <Border BackgroundColor="{Binding BandColor}"
-                                        Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 10"
-                                        Padding="10,4">
-                                    <Label Text="{Binding Band}"
-                                           FontSize="11"
+                                           FontSize="9"
                                            FontAttributes="Bold"
                                            TextColor="White" />
                                 </Border>
-                                <Border BackgroundColor="#3C3C43"
+                                <Border IsVisible="{Binding IsPasspointNetwork}"
+                                        BackgroundColor="#FFE082"
                                         Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 10"
-                                        Padding="10,4">
-                                    <Label Text="{Binding StandardLabel}"
-                                           FontSize="11"
-                                           FontAttributes="Bold"
-                                           TextColor="White" />
-                                </Border>
-                                <Border BackgroundColor="{Binding SecurityColor}"
-                                        Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 10"
-                                        Padding="10,4">
-                                    <Label Text="{Binding SecurityLabel}"
-                                           FontSize="11"
-                                           FontAttributes="Bold"
-                                           TextColor="White" />
-                                </Border>
-                                <Border BackgroundColor="#FFE082"
-                                        Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 10"
-                                        Padding="10,4"
-                                        IsVisible="{Binding IsPasspointNetwork}">
+                                        StrokeShape="RoundRectangle 5"
+                                        Padding="5,1"
+                                        VerticalOptions="Center">
                                     <Label Text="Passpoint"
-                                           FontSize="11"
+                                           FontSize="9"
                                            FontAttributes="Bold"
                                            TextColor="#5D4037" />
                                 </Border>
                             </HorizontalStackLayout>
 
-                        </VerticalStackLayout>
+                            <!-- Row 1 right: dBm -->
+                            <Label Grid.Column="2" Grid.Row="0"
+                                   VerticalOptions="Center"
+                                   FontAttributes="Bold"
+                                   TextColor="{Binding SignalColor}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Level}" FontSize="20" />
+                                        <Span Text=" dBm"
+                                              FontSize="10"
+                                              TextColor="#8E8E93"
+                                              FontAttributes="None" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+
+                            <!-- Row 2: inline tech details -->
+                            <Label Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2"
+                                   FontSize="11"
+                                   LineBreakMode="TailTruncation"
+                                   VerticalOptions="Center">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Band}" FontAttributes="Bold" TextColor="{Binding BandColor}" />
+                                        <Span Text="  •  " TextColor="#C7C7CC" />
+                                        <Span Text="{Binding StandardLabel}" FontAttributes="Bold" TextColor="#1C1C1E" />
+                                        <Span Text="  •  Ch" TextColor="#8E8E93" />
+                                        <Span Text="{Binding Channel}" FontAttributes="Bold" TextColor="#1C1C1E" />
+                                        <Span Text=" (" TextColor="#8E8E93" />
+                                        <Span Text="{Binding ChannelWidthLabel}" TextColor="#1C1C1E" />
+                                        <Span Text=")  •  " TextColor="#8E8E93" />
+                                        <Span Text="{Binding SecurityLabel}" FontAttributes="Bold" TextColor="{Binding SecurityColor}" />
+                                        <Span Text="  •  " TextColor="#C7C7CC" />
+                                        <Span Text="{Binding Bssid}" FontFamily="Monospace" FontSize="10" TextColor="#8E8E93" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </Grid>
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
 
             <CollectionView.Footer>
-                <BoxView HeightRequest="12" Color="Transparent" />
+                <BoxView HeightRequest="8" Color="Transparent" />
             </CollectionView.Footer>
         </CollectionView>
     </Grid>
