@@ -1,9 +1,12 @@
 <Solution>
+  <Project Path="WorkCalendar/WorkCalendar.csproj" Id="b255a33e-a5f8-471a-ad79-6498f9f777d2" />
   <Project Path="WorkChat/WorkChat.csproj" Id="7bf0a464-3837-4166-b8d5-acbe6a2e24b4">
     <Deploy Solution="Debug|*" />
   </Project>
   <Project Path="WorkSkiaGit01/WorkSkiaGit01.csproj" Id="b23c3024-15df-45c2-b567-d7bc6768ed7b" />
   <Project Path="WorkSkiaGit02/WorkSkiaGit02.csproj" Id="2aeb9ea6-3741-4a66-b9c9-e2dc7943e396" />
   <Project Path="WorkSkiaGitMaui/WorkSkiaGitMaui.csproj" Id="2acd436e-8318-44de-921f-5ac656686cd1" />
-  <Project Path="WorkWifi/WorkWifi.csproj" Id="78d378af-30ee-4543-8a96-f9692d037ada" />
+  <Project Path="WorkWifi/WorkWifi.csproj" Id="78d378af-30ee-4543-8a96-f9692d037ada">
+    <Deploy Solution="Debug|*" />
+  </Project>
 </Solution>
