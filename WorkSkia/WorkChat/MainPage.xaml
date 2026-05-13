@@ -24,6 +24,8 @@
             <Color x:Key="ReactionBackground">#FFFFFF</Color>
             <Color x:Key="ReactionBorder">#D0D0D0</Color>
 
+            <x:Double x:Key="BubbleMaxWidth">280</x:Double>
+
             <!-- Reaction pill -->
             <DataTemplate x:Key="ReactionTemplate" x:DataType="models:MessageReaction">
                 <Border BackgroundColor="{StaticResource ReactionBackground}"
@@ -44,33 +46,37 @@
                 </Border>
             </DataTemplate>
 
-            <!-- Send (right-aligned, timestamp on the LEFT of the bubble) -->
+            <!-- Send: time/read column to the LEFT of the bubble, bubble width capped -->
             <DataTemplate x:Key="SendTemplate" x:DataType="models:ChatMessage">
                 <Grid Padding="60,4,8,4">
                     <VerticalStackLayout HorizontalOptions="End" Spacing="2">
 
-                        <!-- Time/read column + bubble -->
-                        <HorizontalStackLayout HorizontalOptions="End" Spacing="6">
+                        <!-- [time/read] [bubble or stamp] -->
+                        <Grid HorizontalOptions="End"
+                              ColumnDefinitions="Auto,Auto"
+                              ColumnSpacing="6">
 
-                            <!-- Read indicator above timestamp, both bottom-aligned with bubble -->
-                            <VerticalStackLayout VerticalOptions="End" Spacing="0">
+                            <VerticalStackLayout Grid.Column="0"
+                                                 VerticalOptions="End"
+                                                 Spacing="0">
                                 <Label Text="既読"
                                        IsVisible="{Binding ShowReadIndicator}"
-                                       FontSize="10"
+                                       FontSize="12"
                                        TextColor="{StaticResource MetaText}"
                                        HorizontalOptions="End" />
                                 <Label Text="{Binding TimeText}"
-                                       FontSize="10"
+                                       FontSize="12"
                                        TextColor="{StaticResource MetaText}"
                                        HorizontalOptions="End" />
                             </VerticalStackLayout>
 
-                            <!-- Text bubble (top-right corner pointed) -->
-                            <Border IsVisible="{Binding HasText}"
+                            <Border Grid.Column="1"
+                                    IsVisible="{Binding HasText}"
                                     BackgroundColor="{StaticResource BubbleSend}"
                                     Stroke="Transparent"
                                     StrokeThickness="0"
-                                    Padding="12,8">
+                                    Padding="12,8"
+                                    MaximumWidthRequest="{StaticResource BubbleMaxWidth}">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="14,4,14,14" />
                                 </Border.StrokeShape>
@@ -80,15 +86,15 @@
                                        LineBreakMode="WordWrap" />
                             </Border>
 
-                            <!-- Stamp -->
-                            <Image IsVisible="{Binding IsStamp}"
+                            <Image Grid.Column="1"
+                                   IsVisible="{Binding IsStamp}"
                                    Source="{Binding StampSource}"
                                    HeightRequest="120"
                                    WidthRequest="120"
                                    Aspect="AspectFit" />
-                        </HorizontalStackLayout>
+                        </Grid>
 
-                        <!-- Reactions below bubble -->
+                        <!-- Reactions below -->
                         <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Reactions}"
                                                BindableLayout.ItemTemplate="{StaticResource ReactionTemplate}"
                                                IsVisible="{Binding HasReactions}"
@@ -98,7 +104,7 @@
                 </Grid>
             </DataTemplate>
 
-            <!-- Receive (left-aligned, avatar image, timestamp on the RIGHT of the bubble) -->
+            <!-- Receive: avatar, then [bubble or stamp] with timestamp on the RIGHT -->
             <DataTemplate x:Key="ReceiveTemplate" x:DataType="models:ChatMessage">
                 <Grid Padding="8,4,60,4" ColumnDefinitions="40,*" ColumnSpacing="8">
 
@@ -115,23 +121,26 @@
                         <Image Source="{Binding AvatarSource}" Aspect="AspectFill" />
                     </Border>
 
-                    <!-- Body -->
-                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="Start">
+                    <VerticalStackLayout Grid.Column="1"
+                                         Spacing="2"
+                                         HorizontalOptions="Start">
 
-                        <!-- Author -->
                         <Label Text="{Binding Author}"
                                FontSize="11"
                                TextColor="{StaticResource AuthorText}" />
 
-                        <!-- Bubble + timestamp -->
-                        <HorizontalStackLayout Spacing="6">
+                        <!-- [bubble or stamp] [time] -->
+                        <Grid HorizontalOptions="Start"
+                              ColumnDefinitions="Auto,Auto"
+                              ColumnSpacing="6">
 
-                            <!-- Text bubble (top-left corner pointed) -->
-                            <Border IsVisible="{Binding HasText}"
+                            <Border Grid.Column="0"
+                                    IsVisible="{Binding HasText}"
                                     BackgroundColor="{StaticResource BubbleReceive}"
                                     Stroke="Transparent"
                                     StrokeThickness="0"
-                                    Padding="12,8">
+                                    Padding="12,8"
+                                    MaximumWidthRequest="{StaticResource BubbleMaxWidth}">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="4,14,14,14" />
                                 </Border.StrokeShape>
@@ -141,21 +150,20 @@
                                        LineBreakMode="WordWrap" />
                             </Border>
 
-                            <!-- Stamp -->
-                            <Image IsVisible="{Binding IsStamp}"
+                            <Image Grid.Column="0"
+                                   IsVisible="{Binding IsStamp}"
                                    Source="{Binding StampSource}"
                                    HeightRequest="120"
                                    WidthRequest="120"
                                    Aspect="AspectFit" />
 
-                            <!-- Timestamp on the right -->
-                            <Label Text="{Binding TimeText}"
-                                   FontSize="10"
+                            <Label Grid.Column="1"
+                                   Text="{Binding TimeText}"
+                                   FontSize="12"
                                    TextColor="{StaticResource MetaText}"
                                    VerticalOptions="End" />
-                        </HorizontalStackLayout>
+                        </Grid>
 
-                        <!-- Reactions -->
                         <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Reactions}"
                                                BindableLayout.ItemTemplate="{StaticResource ReactionTemplate}"
                                                IsVisible="{Binding HasReactions}"
@@ -165,18 +173,25 @@
                 </Grid>
             </DataTemplate>
 
-            <!-- System (date divider with horizontal lines) -->
+            <!-- System: line — framed date pill — line -->
             <DataTemplate x:Key="SystemTemplate" x:DataType="models:ChatMessage">
                 <Grid Padding="16,16" ColumnDefinitions="*,Auto,*" ColumnSpacing="12">
                     <BoxView Grid.Column="0"
                              HeightRequest="1"
                              Color="{StaticResource DividerLine}"
                              VerticalOptions="Center" />
-                    <Label Grid.Column="1"
-                           Text="{Binding TextContent}"
-                           FontSize="11"
-                           TextColor="{StaticResource MetaText}"
-                           VerticalOptions="Center" />
+                    <Border Grid.Column="1"
+                            Stroke="{StaticResource DividerLine}"
+                            StrokeThickness="1"
+                            BackgroundColor="White"
+                            Padding="12,4">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Label Text="{Binding TextContent}"
+                               FontSize="13"
+                               TextColor="{StaticResource MetaText}" />
+                    </Border>
                     <BoxView Grid.Column="2"
                              HeightRequest="1"
                              Color="{StaticResource DividerLine}"
@@ -211,7 +226,6 @@
               Padding="8"
               BackgroundColor="White">
 
-            <!-- Camera / image button -->
             <ImageButton Grid.Column="0"
                          Source="ic_camera.png"
                          Command="{Binding PickImageCommand}"
@@ -221,7 +235,6 @@
                          BackgroundColor="Transparent"
                          Aspect="AspectFit" />
 
-            <!-- Text input with sticker button on the right -->
             <Border Grid.Column="1"
                     BackgroundColor="{StaticResource InputBackground}"
                     Stroke="{StaticResource InputBorder}"
@@ -249,7 +262,6 @@
                 </Grid>
             </Border>
 
-            <!-- Send button -->
             <ImageButton Grid.Column="2"
                          Source="ic_send.png"
                          Command="{Binding SendCommand}"

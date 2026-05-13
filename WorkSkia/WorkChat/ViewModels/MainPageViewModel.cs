@@ -93,6 +93,8 @@ public sealed partial class MainPageViewModel : ObservableObject
             reactions: [new MessageReaction { Emoji = "👍", Count = 2 }]);
         AddReceive(twoDaysAgo.AddHours(12).AddMinutes(7), "Bob", AvatarBob,
             "ご一緒します！");
+        AddSend(twoDaysAgo.AddHours(17).AddMinutes(45),
+            "明日の予定です：\n10:00 朝会\n14:00 定例\n16:00 1on1", isRead: true);
         AddReceive(twoDaysAgo.AddHours(18), "Dave", AvatarDave,
             "今日もお疲れさまでした！");
 
@@ -104,9 +106,9 @@ public sealed partial class MainPageViewModel : ObservableObject
         AddSend(yesterday.AddHours(9).AddMinutes(18),
             "おはようございます。", isRead: true);
         AddReceive(yesterday.AddHours(9).AddMinutes(30), "Bob", AvatarBob,
-            "昨日の PR レビューしました。コメントいくつかあります。");
+            "昨日の PR レビューしました。CI が通っていないようなのでテストの修正をお願いできますか？コメントもいくつか書いてあります。");
         AddSend(yesterday.AddHours(9).AddMinutes(32),
-            "ありがとうございます！見ます。", isRead: true);
+            "ありがとうございます！\n午前中に対応します。", isRead: true);
         AddReceive(yesterday.AddHours(12).AddMinutes(30), "Bob", AvatarBob,
             "お昼ご飯食べてきます〜",
             reactions: [new MessageReaction { Emoji = "🍱", Count = 3 }]);
@@ -126,9 +128,9 @@ public sealed partial class MainPageViewModel : ObservableObject
         AddSystem(today);
 
         AddReceive(today.AddHours(10).AddMinutes(5), "Alice", AvatarAlice,
-            "資料できましたー！確認お願いします。");
+            "資料できましたー！来週の会議で使うものなので、月曜日までに確認をお願いします🙏");
         AddSend(today.AddHours(10).AddMinutes(7),
-            "ありがとうございます！見ますね。", isRead: true);
+            "了解しました！\n以下の点を確認します。\n・議事録\n・来週の資料\n・レビュー", isRead: true);
         AddReceiveStamp(today.AddHours(10).AddMinutes(10), "Bob", AvatarBob,
             "dotnet_bot.png");
         AddSend(today.AddHours(10).AddMinutes(12),
@@ -143,7 +145,9 @@ public sealed partial class MainPageViewModel : ObservableObject
         AddReceive(today.AddHours(11).AddMinutes(2), "Bob", AvatarBob,
             "寿司でどうでしょう。",
             reactions: [new MessageReaction { Emoji = "🍣", Count = 2 }]);
-        AddSend(today.AddHours(11).AddMinutes(5), "いいですね！", isRead: false);
+        AddSend(today.AddHours(11).AddMinutes(5),
+            "いいですね！ちなみに本日のミーティングお疲れさまでした。共有いただいた資料についていくつか質問があるので、後ほど別途連絡いたします。",
+            isRead: false);
     }
 
     private void AddSystem(DateTime date) =>
