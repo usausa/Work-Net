@@ -6,6 +6,50 @@
              x:Class="WorkCalendar.MainPage"
              BackgroundColor="White">
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- BottomNav: アクティブ状態のアイコン/ラベル -->
+            <Style x:Key="NavIconActiveStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="HorizontalTextAlignment" Value="Center" />
+                <Setter Property="TextColor" Value="#D81B60" />
+            </Style>
+            <Style x:Key="NavLabelActiveStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="HorizontalTextAlignment" Value="Center" />
+                <Setter Property="TextColor" Value="#D81B60" />
+            </Style>
+            <!-- BottomNav: 非アクティブ状態のアイコン/ラベル -->
+            <Style x:Key="NavIconInactiveStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="HorizontalTextAlignment" Value="Center" />
+                <Setter Property="TextColor" Value="#888888" />
+            </Style>
+            <Style x:Key="NavLabelInactiveStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="HorizontalTextAlignment" Value="Center" />
+                <Setter Property="TextColor" Value="#888888" />
+            </Style>
+            <!-- FAB: 中央ボタンのラベル -->
+            <Style x:Key="FabLabelStyle" TargetType="Label">
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontSize" Value="26" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="HorizontalTextAlignment" Value="Center" />
+                <Setter Property="VerticalTextAlignment" Value="Center" />
+            </Style>
+            <!-- FAB: 中央ボタンの円形ボーダー -->
+            <Style x:Key="FabBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="Black" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="WidthRequest" Value="48" />
+                <Setter Property="HeightRequest" Value="48" />
+                <Setter Property="VerticalOptions" Value="Center" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 24" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <ContentPage.BindingContext>
         <vm:MainPageViewModel />
     </ContentPage.BindingContext>
@@ -26,27 +70,23 @@
         <!-- Bottom navigation -->
         <Grid Grid.Row="2" Padding="0,8,0,12" ColumnDefinitions="*,*,Auto,*,*" BackgroundColor="White">
             <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center" Spacing="2">
-                <Label Text="📅" FontSize="20" HorizontalTextAlignment="Center" TextColor="#D81B60" />
-                <Label Text="カレンダー" FontSize="11" HorizontalTextAlignment="Center" TextColor="#D81B60" />
+                <Label Text="📅" Style="{StaticResource NavIconActiveStyle}" />
+                <Label Text="カレンダー" Style="{StaticResource NavLabelActiveStyle}" />
             </VerticalStackLayout>
             <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
-                <Label Text="✓" FontSize="20" HorizontalTextAlignment="Center" TextColor="#888888" />
-                <Label Text="ToDo" FontSize="11" HorizontalTextAlignment="Center" TextColor="#888888" />
+                <Label Text="✓" Style="{StaticResource NavIconInactiveStyle}" />
+                <Label Text="ToDo" Style="{StaticResource NavLabelInactiveStyle}" />
             </VerticalStackLayout>
-            <Border Grid.Column="2" BackgroundColor="Black" StrokeThickness="0" WidthRequest="48" HeightRequest="48" VerticalOptions="Center">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="24" />
-                </Border.StrokeShape>
-                <Label Text="+" TextColor="White" FontSize="26" FontAttributes="Bold"
-                       HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
+            <Border Grid.Column="2" Style="{StaticResource FabBorderStyle}">
+                <Label Text="+" Style="{StaticResource FabLabelStyle}" />
             </Border>
             <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Spacing="2">
-                <Label Text="📖" FontSize="20" HorizontalTextAlignment="Center" TextColor="#888888" />
-                <Label Text="ノート＆日記" FontSize="11" HorizontalTextAlignment="Center" TextColor="#888888" />
+                <Label Text="📖" Style="{StaticResource NavIconInactiveStyle}" />
+                <Label Text="ノート＆日記" Style="{StaticResource NavLabelInactiveStyle}" />
             </VerticalStackLayout>
             <VerticalStackLayout Grid.Column="4" HorizontalOptions="Center" Spacing="2">
-                <Label Text="…" FontSize="20" HorizontalTextAlignment="Center" TextColor="#888888" />
-                <Label Text="その他" FontSize="11" HorizontalTextAlignment="Center" TextColor="#888888" />
+                <Label Text="…" Style="{StaticResource NavIconInactiveStyle}" />
+                <Label Text="その他" Style="{StaticResource NavLabelInactiveStyle}" />
             </VerticalStackLayout>
         </Grid>
 

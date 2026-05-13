@@ -26,22 +26,131 @@
 
             <x:Double x:Key="BubbleMaxWidth">280</x:Double>
 
+            <!-- メタ情報ラベル（時刻・既読・システムメッセージ） -->
+            <Style x:Key="MetaLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextColor" Value="{StaticResource MetaText}" />
+            </Style>
+            <!-- 送受信バブル内のテキスト -->
+            <Style x:Key="BubbleContentLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="LineBreakMode" Value="WordWrap" />
+            </Style>
+            <!-- 送信バブル用テキスト（白） -->
+            <Style x:Key="SendBubbleLabelStyle" TargetType="Label" BasedOn="{StaticResource BubbleContentLabelStyle}">
+                <Setter Property="TextColor" Value="{StaticResource BubbleSendText}" />
+            </Style>
+            <!-- 受信バブル用テキスト（ダーク） -->
+            <Style x:Key="ReceiveBubbleLabelStyle" TargetType="Label" BasedOn="{StaticResource BubbleContentLabelStyle}">
+                <Setter Property="TextColor" Value="{StaticResource BubbleReceiveText}" />
+            </Style>
+            <!-- 送信者名ラベル -->
+            <Style x:Key="AuthorLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="TextColor" Value="{StaticResource AuthorText}" />
+            </Style>
+            <!-- リアクション数ラベル -->
+            <Style x:Key="ReactionCountLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="TextColor" Value="{StaticResource MetaText}" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- システムメッセージラベル（日付ピル） -->
+            <Style x:Key="SystemMessageLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="TextColor" Value="{StaticResource MetaText}" />
+            </Style>
+
+            <!-- アバター：40×40 円形クリップ -->
+            <Style x:Key="AvatarBorderStyle" TargetType="Border">
+                <Setter Property="WidthRequest" Value="40" />
+                <Setter Property="HeightRequest" Value="40" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 20" />
+                <Setter Property="VerticalOptions" Value="Start" />
+            </Style>
+
+            <!-- 送信バブル：緑背景・右丸角 -->
+            <Style x:Key="SendBubbleBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource BubbleSend}" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="MaximumWidthRequest" Value="{StaticResource BubbleMaxWidth}" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 14,4,14,14" />
+            </Style>
+
+            <!-- 受信バブル：グレー背景・左丸角 -->
+            <Style x:Key="ReceiveBubbleBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource BubbleReceive}" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="MaximumWidthRequest" Value="{StaticResource BubbleMaxWidth}" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 4,14,14,14" />
+            </Style>
+
+            <!-- リアクションピル -->
+            <Style x:Key="ReactionPillBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource ReactionBackground}" />
+                <Setter Property="Stroke" Value="{StaticResource ReactionBorder}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Padding" Value="6,1" />
+                <Setter Property="Margin" Value="0,0,4,0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+            </Style>
+
+            <!-- システム日付ピル -->
+            <Style x:Key="SystemDatePillBorderStyle" TargetType="Border">
+                <Setter Property="Stroke" Value="{StaticResource DividerLine}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="BackgroundColor" Value="White" />
+                <Setter Property="Padding" Value="12,4" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            </Style>
+
+            <!-- 入力フィールド Border -->
+            <Style x:Key="InputFieldBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{StaticResource InputBackground}" />
+                <Setter Property="Stroke" Value="{StaticResource InputBorder}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 20" />
+            </Style>
+
+            <!-- スタンプ画像：120×120 -->
+            <Style x:Key="StampImageStyle" TargetType="Image">
+                <Setter Property="HeightRequest" Value="120" />
+                <Setter Property="WidthRequest" Value="120" />
+                <Setter Property="Aspect" Value="AspectFit" />
+            </Style>
+
+            <!-- ツールバーアクションボタン（カメラ・送信）：40×40 -->
+            <Style x:Key="ToolbarActionButtonStyle" TargetType="ImageButton">
+                <Setter Property="WidthRequest" Value="40" />
+                <Setter Property="HeightRequest" Value="40" />
+                <Setter Property="Padding" Value="8" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Aspect" Value="AspectFit" />
+            </Style>
+
+            <!-- スタンプピッカーボタン：36×36 -->
+            <Style x:Key="StickerActionButtonStyle" TargetType="ImageButton">
+                <Setter Property="WidthRequest" Value="36" />
+                <Setter Property="HeightRequest" Value="36" />
+                <Setter Property="Padding" Value="6" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Aspect" Value="AspectFit" />
+            </Style>
+
             <!-- Reaction pill -->
             <DataTemplate x:Key="ReactionTemplate" x:DataType="models:MessageReaction">
-                <Border BackgroundColor="{StaticResource ReactionBackground}"
-                        Stroke="{StaticResource ReactionBorder}"
-                        StrokeThickness="1"
-                        Padding="6,1"
-                        Margin="0,0,4,0">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
+                <Border Style="{StaticResource ReactionPillBorderStyle}">
                     <HorizontalStackLayout Spacing="3" VerticalOptions="Center">
                         <Label Text="{Binding Emoji}" FontSize="12" />
                         <Label Text="{Binding Count}"
-                               FontSize="10"
-                               TextColor="{StaticResource MetaText}"
-                               VerticalOptions="Center" />
+                               Style="{StaticResource ReactionCountLabelStyle}" />
                     </HorizontalStackLayout>
                 </Border>
             </DataTemplate>
@@ -61,37 +170,24 @@
                                                  Spacing="0">
                                 <Label Text="既読"
                                        IsVisible="{Binding ShowReadIndicator}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource MetaText}"
+                                       Style="{StaticResource MetaLabelStyle}"
                                        HorizontalOptions="End" />
                                 <Label Text="{Binding TimeText}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource MetaText}"
+                                       Style="{StaticResource MetaLabelStyle}"
                                        HorizontalOptions="End" />
                             </VerticalStackLayout>
 
                             <Border Grid.Column="1"
                                     IsVisible="{Binding HasText}"
-                                    BackgroundColor="{StaticResource BubbleSend}"
-                                    Stroke="Transparent"
-                                    StrokeThickness="0"
-                                    Padding="12,8"
-                                    MaximumWidthRequest="{StaticResource BubbleMaxWidth}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="14,4,14,14" />
-                                </Border.StrokeShape>
+                                    Style="{StaticResource SendBubbleBorderStyle}">
                                 <Label Text="{Binding TextContent}"
-                                       TextColor="{StaticResource BubbleSendText}"
-                                       FontSize="14"
-                                       LineBreakMode="WordWrap" />
+                                       Style="{StaticResource SendBubbleLabelStyle}" />
                             </Border>
 
                             <Image Grid.Column="1"
                                    IsVisible="{Binding IsStamp}"
                                    Source="{Binding StampSource}"
-                                   HeightRequest="120"
-                                   WidthRequest="120"
-                                   Aspect="AspectFit" />
+                                   Style="{StaticResource StampImageStyle}" />
                         </Grid>
 
                         <!-- Reactions below -->
@@ -110,14 +206,7 @@
 
                     <!-- Avatar image clipped to circle -->
                     <Border Grid.Column="0"
-                            WidthRequest="40"
-                            HeightRequest="40"
-                            Stroke="Transparent"
-                            StrokeThickness="0"
-                            VerticalOptions="Start">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="20" />
-                        </Border.StrokeShape>
+                            Style="{StaticResource AvatarBorderStyle}">
                         <Image Source="{Binding AvatarSource}" Aspect="AspectFill" />
                     </Border>
 
@@ -126,8 +215,7 @@
                                          HorizontalOptions="Start">
 
                         <Label Text="{Binding Author}"
-                               FontSize="11"
-                               TextColor="{StaticResource AuthorText}" />
+                               Style="{StaticResource AuthorLabelStyle}" />
 
                         <!-- [bubble or stamp] [time] -->
                         <Grid HorizontalOptions="Start"
@@ -136,31 +224,19 @@
 
                             <Border Grid.Column="0"
                                     IsVisible="{Binding HasText}"
-                                    BackgroundColor="{StaticResource BubbleReceive}"
-                                    Stroke="Transparent"
-                                    StrokeThickness="0"
-                                    Padding="12,8"
-                                    MaximumWidthRequest="{StaticResource BubbleMaxWidth}">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="4,14,14,14" />
-                                </Border.StrokeShape>
+                                    Style="{StaticResource ReceiveBubbleBorderStyle}">
                                 <Label Text="{Binding TextContent}"
-                                       TextColor="{StaticResource BubbleReceiveText}"
-                                       FontSize="14"
-                                       LineBreakMode="WordWrap" />
+                                       Style="{StaticResource ReceiveBubbleLabelStyle}" />
                             </Border>
 
                             <Image Grid.Column="0"
                                    IsVisible="{Binding IsStamp}"
                                    Source="{Binding StampSource}"
-                                   HeightRequest="120"
-                                   WidthRequest="120"
-                                   Aspect="AspectFit" />
+                                   Style="{StaticResource StampImageStyle}" />
 
                             <Label Grid.Column="1"
                                    Text="{Binding TimeText}"
-                                   FontSize="12"
-                                   TextColor="{StaticResource MetaText}"
+                                   Style="{StaticResource MetaLabelStyle}"
                                    VerticalOptions="End" />
                         </Grid>
 
@@ -181,16 +257,9 @@
                              Color="{StaticResource DividerLine}"
                              VerticalOptions="Center" />
                     <Border Grid.Column="1"
-                            Stroke="{StaticResource DividerLine}"
-                            StrokeThickness="1"
-                            BackgroundColor="White"
-                            Padding="12,4">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="12" />
-                        </Border.StrokeShape>
+                            Style="{StaticResource SystemDatePillBorderStyle}">
                         <Label Text="{Binding TextContent}"
-                               FontSize="13"
-                               TextColor="{StaticResource MetaText}" />
+                               Style="{StaticResource SystemMessageLabelStyle}" />
                     </Border>
                     <BoxView Grid.Column="2"
                              HeightRequest="1"
@@ -229,20 +298,10 @@
             <ImageButton Grid.Column="0"
                          Source="ic_camera.png"
                          Command="{Binding PickImageCommand}"
-                         WidthRequest="40"
-                         HeightRequest="40"
-                         Padding="8"
-                         BackgroundColor="Transparent"
-                         Aspect="AspectFit" />
+                         Style="{StaticResource ToolbarActionButtonStyle}" />
 
             <Border Grid.Column="1"
-                    BackgroundColor="{StaticResource InputBackground}"
-                    Stroke="{StaticResource InputBorder}"
-                    StrokeThickness="1"
-                    Padding="0">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="20" />
-                </Border.StrokeShape>
+                    Style="{StaticResource InputFieldBorderStyle}">
                 <Grid ColumnDefinitions="*,Auto">
                     <Entry Grid.Column="0"
                            Text="{Binding InputText}"
@@ -254,22 +313,14 @@
                     <ImageButton Grid.Column="1"
                                  Source="ic_sticker.png"
                                  Command="{Binding PickStickerCommand}"
-                                 WidthRequest="36"
-                                 HeightRequest="36"
-                                 Padding="6"
-                                 BackgroundColor="Transparent"
-                                 Aspect="AspectFit" />
+                                 Style="{StaticResource StickerActionButtonStyle}" />
                 </Grid>
             </Border>
 
             <ImageButton Grid.Column="2"
                          Source="ic_send.png"
                          Command="{Binding SendCommand}"
-                         WidthRequest="40"
-                         HeightRequest="40"
-                         Padding="8"
-                         BackgroundColor="Transparent"
-                         Aspect="AspectFit" />
+                         Style="{StaticResource ToolbarActionButtonStyle}" />
         </Grid>
     </Grid>
 </ContentPage>

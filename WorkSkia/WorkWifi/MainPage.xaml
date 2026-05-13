@@ -7,6 +7,92 @@
              BackgroundColor="#F2F2F7"
              Shell.NavBarIsVisible="False">
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- ヘッダーのタイトル -->
+            <Style x:Key="HeaderTitleStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="TextColor" Value="#1C1C1E" />
+            </Style>
+            <!-- ヘッダーのサブタイトル -->
+            <Style x:Key="HeaderSubtitleStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextColor" Value="#8E8E93" />
+            </Style>
+            <!-- ヘッダー件数バッジのLabel -->
+            <Style x:Key="CountBadgeLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="TextColor" Value="White" />
+            </Style>
+            <!-- アイテムのSSID名 -->
+            <Style x:Key="SsidLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="TextColor" Value="#1C1C1E" />
+                <Setter Property="LineBreakMode" Value="TailTruncation" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+            <!-- インラインバッジのLabel（接続中・Passpoint共通） -->
+            <Style x:Key="InlineBadgeLabelStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="FontAttributes" Value="Bold" />
+            </Style>
+            <!-- グレーのメタ情報（#8E8E93） -->
+            <Style x:Key="MetaLabelStyle" TargetType="Label">
+                <Setter Property="VerticalOptions" Value="Center" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextColor" Value="#8E8E93" />
+            </Style>
+
+            <!-- ヘッダーバー：白背景・底面Shadow -->
+            <Style x:Key="HeaderBarBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="White" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="StrokeShape" Value="Rectangle" />
+            </Style>
+
+            <!-- 件数バッジ：青丸角 -->
+            <Style x:Key="CountBadgeBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#007AFF" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 13" />
+                <Setter Property="Padding" Value="12,5" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+
+            <!-- APカード：白カード・丸角12 -->
+            <Style x:Key="ApCardBorderStyle" TargetType="Border">
+                <Setter Property="Margin" Value="12,0,12,0" />
+                <Setter Property="BackgroundColor" Value="White" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+                <Setter Property="Padding" Value="14,10" />
+            </Style>
+
+            <!-- 接続中バッジ：緑 -->
+            <Style x:Key="ConnectedBadgeBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#34C759" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+                <Setter Property="Padding" Value="6,2" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+
+            <!-- Passspoint バッジ：黄 -->
+            <Style x:Key="PasspointBadgeBorderStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="#FFE082" />
+                <Setter Property="Stroke" Value="Transparent" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+                <Setter Property="Padding" Value="6,2" />
+                <Setter Property="VerticalOptions" Value="Center" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <ContentPage.BindingContext>
         <local:MainPageViewModel />
     </ContentPage.BindingContext>
@@ -15,10 +101,7 @@
 
         <!-- Header -->
         <Border Grid.Row="0"
-                BackgroundColor="White"
-                Stroke="Transparent"
-                StrokeThickness="0"
-                StrokeShape="Rectangle">
+                Style="{StaticResource HeaderBarBorderStyle}">
             <Border.Shadow>
                 <Shadow Brush="Black" Opacity="0.06" Radius="6" Offset="0,2" />
             </Border.Shadow>
@@ -32,23 +115,14 @@
                                      Spacing="1"
                                      VerticalOptions="Center">
                     <Label Text="Wi-Fi"
-                           FontSize="20"
-                           FontAttributes="Bold"
-                           TextColor="#1C1C1E" />
+                           Style="{StaticResource HeaderTitleStyle}" />
                     <Label Text="周辺のネットワーク"
-                           FontSize="12"
-                           TextColor="#8E8E93" />
+                           Style="{StaticResource HeaderSubtitleStyle}" />
                 </VerticalStackLayout>
                 <Border Grid.Column="2"
-                        BackgroundColor="#007AFF"
-                        Stroke="Transparent"
-                        StrokeShape="RoundRectangle 13"
-                        Padding="12,5"
-                        VerticalOptions="Center">
+                        Style="{StaticResource CountBadgeBorderStyle}">
                     <Label Text="{Binding AccessPoints.Count, StringFormat='{0}件'}"
-                           FontSize="13"
-                           FontAttributes="Bold"
-                           TextColor="White" />
+                           Style="{StaticResource CountBadgeLabelStyle}" />
                 </Border>
             </Grid>
         </Border>
@@ -63,12 +137,7 @@
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="local:WifiAccessPoint">
-                    <Border Margin="12,0,12,0"
-                            BackgroundColor="White"
-                            Stroke="Transparent"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 12"
-                            Padding="14,10">
+                    <Border Style="{StaticResource ApCardBorderStyle}">
                         <Border.Shadow>
                             <Shadow Brush="Black" Opacity="0.06" Radius="4" Offset="0,1" />
                         </Border.Shadow>
@@ -90,35 +159,21 @@
                                                    Spacing="6"
                                                    VerticalOptions="Center">
                                 <Label Text="{Binding DisplaySsid}"
-                                       FontSize="18"
-                                       FontAttributes="Bold"
-                                       TextColor="#1C1C1E"
-                                       LineBreakMode="TailTruncation"
-                                       VerticalOptions="Center" />
+                                       Style="{StaticResource SsidLabelStyle}" />
                                 <Label Text="{Binding SecurityIcon}"
                                        FontSize="14"
                                        TextColor="{Binding SecurityColor}"
                                        VerticalOptions="Center" />
                                 <Border IsVisible="{Binding IsConnected}"
-                                        BackgroundColor="#34C759"
-                                        Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 6"
-                                        Padding="6,2"
-                                        VerticalOptions="Center">
+                                        Style="{StaticResource ConnectedBadgeBorderStyle}">
                                     <Label Text="接続中"
-                                           FontSize="10"
-                                           FontAttributes="Bold"
+                                           Style="{StaticResource InlineBadgeLabelStyle}"
                                            TextColor="White" />
                                 </Border>
                                 <Border IsVisible="{Binding IsPasspointNetwork}"
-                                        BackgroundColor="#FFE082"
-                                        Stroke="Transparent"
-                                        StrokeShape="RoundRectangle 6"
-                                        Padding="6,2"
-                                        VerticalOptions="Center">
+                                        Style="{StaticResource PasspointBadgeBorderStyle}">
                                     <Label Text="Passpoint"
-                                           FontSize="10"
-                                           FontAttributes="Bold"
+                                           Style="{StaticResource InlineBadgeLabelStyle}"
                                            TextColor="#5D4037" />
                                 </Border>
                             </HorizontalStackLayout>

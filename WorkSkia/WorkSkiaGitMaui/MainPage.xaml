@@ -12,17 +12,58 @@
     <ContentPage.Resources>
         <conv:RefKindBrushConverter x:Key="RefBackgroundConverter" Foreground="False" />
         <conv:RefKindBrushConverter x:Key="RefForegroundConverter" Foreground="True" />
+        <!-- ヘッダーバーのラベル -->
+        <Style x:Key="HeaderLabelStyle" TargetType="Label">
+            <Setter Property="TextColor" Value="White" />
+            <Setter Property="FontFamily" Value="OpenSansRegular" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <!-- RefバッジのLabel -->
+        <Style x:Key="RefBadgeLabelStyle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansRegular" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontAttributes" Value="Bold" />
+        </Style>
+        <!-- SHA・Author・Date などの補助情報 -->
+        <Style x:Key="MetaLabelStyle" TargetType="Label">
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="FontFamily" Value="OpenSansRegular" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextColor" Value="#FF666666" />
+        </Style>
+        <!-- コミットサマリー -->
+        <Style x:Key="SummaryLabelStyle" TargetType="Label">
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="TextColor" Value="Black" />
+            <Setter Property="FontFamily" Value="OpenSansRegular" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="LineBreakMode" Value="TailTruncation" />
+        </Style>
+        <!-- SHAのみ色が異なる -->
+        <Style x:Key="ShaLabelStyle" TargetType="Label" BasedOn="{StaticResource MetaLabelStyle}">
+            <Setter Property="TextColor" Value="#FF888888" />
+        </Style>
+        <!-- ヘッダーバー：ダーク背景 -->
+        <Style x:Key="HeaderBarBorderStyle" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="#FF2D2D30" />
+            <Setter Property="Stroke" Value="#FF2D2D30" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="Padding" Value="10,6" />
+        </Style>
+        <!-- Refバッジ：枠線付き丸角 -->
+        <Style x:Key="RefBadgeBorderStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Stroke" Value="#FF333333" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 4" />
+        </Style>
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*">
         <Border Grid.Row="0"
-                BackgroundColor="#FF2D2D30"
-                Stroke="#FF2D2D30"
-                StrokeThickness="0"
-                Padding="10,6">
-            <Label TextColor="White"
-                   FontFamily="OpenSansRegular"
-                   FontSize="13"
+                Style="{StaticResource HeaderBarBorderStyle}">
+            <Label Style="{StaticResource HeaderLabelStyle}"
                    Text="{Binding HeaderText}" />
         </Border>
 
@@ -49,16 +90,10 @@
                                                BindableLayout.ItemsSource="{Binding Refs}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="graph:GraphRef">
-                                    <Border Margin="0,0,4,0"
-                                            Padding="6,1"
-                                            Stroke="#FF333333"
-                                            StrokeThickness="1"
-                                            BackgroundColor="{Binding Kind, Converter={StaticResource RefBackgroundConverter}}"
-                                            StrokeShape="RoundRectangle 4">
+                                    <Border Style="{StaticResource RefBadgeBorderStyle}"
+                                            BackgroundColor="{Binding Kind, Converter={StaticResource RefBackgroundConverter}}">
                                         <Label Text="{Binding Name}"
-                                               FontFamily="OpenSansRegular"
-                                               FontSize="11"
-                                               FontAttributes="Bold"
+                                               Style="{StaticResource RefBadgeLabelStyle}"
                                                TextColor="{Binding Kind, Converter={StaticResource RefForegroundConverter}}" />
                                     </Border>
                                 </DataTemplate>
@@ -67,35 +102,22 @@
 
                         <Label Grid.Column="2"
                                Margin="0,0,8,0"
-                               VerticalOptions="Center"
-                               TextColor="#FF888888"
-                               FontFamily="OpenSansRegular"
-                               FontSize="12"
+                               Style="{StaticResource ShaLabelStyle}"
                                Text="{Binding ShortSha}" />
 
                         <Label Grid.Column="3"
                                Margin="0,0,16,0"
-                               VerticalOptions="Center"
-                               TextColor="Black"
-                               FontFamily="OpenSansRegular"
-                               FontSize="12"
-                               LineBreakMode="TailTruncation"
+                               Style="{StaticResource SummaryLabelStyle}"
                                Text="{Binding Summary}" />
 
                         <Label Grid.Column="4"
                                Margin="0,0,16,0"
-                               VerticalOptions="Center"
-                               TextColor="#FF666666"
-                               FontFamily="OpenSansRegular"
-                               FontSize="12"
+                               Style="{StaticResource MetaLabelStyle}"
                                Text="{Binding Author}" />
 
                         <Label Grid.Column="5"
                                Margin="0,0,16,0"
-                               VerticalOptions="Center"
-                               TextColor="#FF666666"
-                               FontFamily="OpenSansRegular"
-                               FontSize="12"
+                               Style="{StaticResource MetaLabelStyle}"
                                Text="{Binding When, StringFormat='{0:yyyy-MM-dd HH:mm}'}" />
                     </Grid>
                 </DataTemplate>
