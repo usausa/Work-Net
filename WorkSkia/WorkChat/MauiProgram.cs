@@ -1,6 +1,8 @@
-﻿namespace WorkChat;
+namespace WorkChat;
 
 using Microsoft.Extensions.Logging;
+
+using WorkChat.ViewModels;
 
 public static class MauiProgram
 {
@@ -15,8 +17,11 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+        builder.Services.AddTransient<MainPageViewModel>();
+        builder.Services.AddTransient<MainPage>();
+
 #if DEBUG
-		builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
 
         return builder.Build();

@@ -1,23 +1,42 @@
-﻿namespace WorkChat;
+namespace WorkChat;
+
+using System.Collections.Specialized;
+
+using WorkChat.ViewModels;
 
 public partial class MainPage : ContentPage
 {
-    int count = 0;
+    private readonly MainPageViewModel viewModel;
 
-    public MainPage()
+    public MainPage(MainPageViewModel viewModel)
     {
         InitializeComponent();
+
+        this.viewModel = viewModel;
+        BindingContext = viewModel;
+
+        viewModel.Messages.CollectionChanged += OnMessagesChanged;
     }
 
-    private void OnCounterClicked(object? sender, EventArgs e)
+    protected override void OnDisappearing()
     {
-        count++;
+        base.OnDisappearing();
+        viewModel.Messages.CollectionChanged -= OnMessagesChanged;
+    }
 
-        if (count == 1)
-            CounterBtn.Text = $"Clicked {count} time";
-        else
-            CounterBtn.Text = $"Clicked {count} times";
+    private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action != NotifyCollectionChangedAction.Add)
+        {
+            return;
+        }
 
-        SemanticScreenReader.Announce(CounterBtn.Text);
+        if (viewModel.Messages.Count == 0)
+        {
+            return;
+        }
+
+        Dispatcher.Dispatch(() =>
+            MessagesView.ScrollTo(viewModel.Messages.Count - 1, position: ScrollToPosition.End, animate: true));
     }
 }
