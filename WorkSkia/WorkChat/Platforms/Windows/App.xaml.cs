@@ -1,7 +1,7 @@
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
-namespace WorkSkiaGitMaui.WinUI;
+namespace WorkChat.WinUI;
 
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -19,7 +19,7 @@ public partial class App : MauiWinUIApplication
     {
         this.InitializeComponent();
 
-        var windowWidth = 640;
+        var windowWidth = 480;
         var windowHeight = 960;
         Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, view) =>
         {
