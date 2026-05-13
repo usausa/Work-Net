@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="WorkSkiaGit01/WorkSkiaGit01.csproj" Id="b23c3024-15df-45c2-b567-d7bc6768ed7b" />
   <Project Path="WorkSkiaGit02/WorkSkiaGit02.csproj" Id="2aeb9ea6-3741-4a66-b9c9-e2dc7943e396" />
+  <Project Path="WorkSkiaGitMaui/WorkSkiaGitMaui.csproj" Id="2acd436e-8318-44de-921f-5ac656686cd1" />
 </Solution>
