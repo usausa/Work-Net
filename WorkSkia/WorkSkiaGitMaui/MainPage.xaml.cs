@@ -11,15 +11,16 @@ public partial class MainPage : ContentPage
     public MainPage()
     {
         InitializeComponent();
-        LoadGraph();
+        Loaded += OnLoaded;
     }
 
-    private void LoadGraph()
+    private async void OnLoaded(object? sender, EventArgs e)
     {
         try
         {
             var sw = Stopwatch.StartNew();
-            var data = GraphBuilder.Build(PseudoRepository.Commits, PseudoRepository.Refs);
+            var (commits, refs) = await PseudoRepository.LoadAsync().ConfigureAwait(true);
+            var data = GraphBuilder.Build(commits, refs);
             sw.Stop();
 
             RowList.ItemsSource = data.Rows;
