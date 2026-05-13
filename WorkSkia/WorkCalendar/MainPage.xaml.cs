@@ -25,7 +25,7 @@ public partial class MainPage : ContentPage
     private static readonly Color OutsideMonthBackground = Color.FromArgb("#F2F2F2");
     private static readonly Color WeekendBackground = Color.FromArgb("#FFF1F1");
 
-    private static readonly DateOnly ReferenceToday = new(2019, 6, 14);
+    private static readonly DateOnly ReferenceToday = DateOnly.FromDateTime(DateTime.Today);
 
     private readonly MonthViewBuilder builder = new(DayOfWeek.Monday);
     private readonly IScheduleService scheduleService = new ScheduleService();

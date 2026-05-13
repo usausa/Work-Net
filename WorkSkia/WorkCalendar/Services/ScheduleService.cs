@@ -17,110 +17,167 @@ public sealed class ScheduleService : IScheduleService
     private static readonly Color Pink = Color.FromArgb("#EC407A");
     private static readonly Color PinkText = Color.FromArgb("#E91E63");
     private static readonly Color Yellow = Color.FromArgb("#FBC02D");
-    private static readonly Color YellowText = Color.FromArgb("#F9A825");
     private static readonly Color Orange = Color.FromArgb("#FB8C00");
     private static readonly Color Blue = Color.FromArgb("#1E88E5");
     private static readonly Color CyanText = Color.FromArgb("#00ACC1");
+    private static readonly Color YellowText = Color.FromArgb("#F9A825");
 
-    private readonly IReadOnlyList<ScheduleEvent> events;
-    private readonly IReadOnlyList<Stamp> stamps;
+    // 週次イベントのテンプレート (曜日, タイトル, スタイル, 色)
+    private static readonly (DayOfWeek Dow, string Title, ScheduleStyle Style, Color Color, bool IsText)[] WeeklyTemplates =
+    [
+        (DayOfWeek.Monday, "週間報告", ScheduleStyle.Text, GreenText, true),
+        (DayOfWeek.Monday, "英会話", ScheduleStyle.Text, PinkText, true),
+        (DayOfWeek.Wednesday, "サークル", ScheduleStyle.Text, YellowText, true),
+        (DayOfWeek.Saturday, "水泳教室", ScheduleStyle.Text, CyanText, true),
+    ];
 
-    public ScheduleService()
+    // 月次固定イベントのテンプレート (月内日オフセット, タイトル, スパン日数, スタイル, 背景色, テキスト色)
+    private static readonly (int DayOffset, string Title, int Span, ScheduleStyle Style, Color Bg, Color? Fg)[] MonthlyTemplates =
+    [
+        (3,  "燃えるゴ",  1, ScheduleStyle.Filled, DarkRed,     null),
+        (10, "燃えるゴ",  1, ScheduleStyle.Filled, DarkRed,     null),
+        (17, "燃えるゴ",  1, ScheduleStyle.Filled, DarkRed,     null),
+        (24, "燃えるゴ",  1, ScheduleStyle.Filled, DarkRed,     null),
+        (5,  "○ジム",    1, ScheduleStyle.Filled, Cyan,        null),
+        (19, "○ジム",    1, ScheduleStyle.Filled, Cyan,        null),
+    ];
+
+    // スタンプのテンプレート (月内日オフセット, グリフ, 位置, サイズ, 不透明度)
+    private static readonly (int DayOffset, string Glyph, StampPosition Position, int FontSize, double Opacity)[] StampTemplates =
+    [
+        (3,  "\U0001F6A9", StampPosition.TopRight,     22, 1.0),
+        (8,  "\U0001F426", StampPosition.TopRight,     22, 1.0),
+        (13, "✈️",         StampPosition.Center,       26, 1.0),
+        (16, "\U0001F436", StampPosition.Center,       32, 0.9),
+        (20, "\U0001F45B", StampPosition.TopCenter,    22, 1.0),
+        (22, "\U0001F43C", StampPosition.TopLeft,      22, 1.0),
+        (26, "\U0001F38F", StampPosition.TopCenter,    22, 1.0),
+        (29, "\U0001F408", StampPosition.TopRight,     24, 1.0),
+    ];
+
+    // 臨時イベントのテンプレート (月内日オフセット, タイトル, スパン, スタイル, 背景色, テキスト色, 下線)
+    private static readonly (int DayOffset, string Title, int Span, ScheduleStyle Style, Color Bg, Color? Fg, bool Underline)[] OccasionalTemplates =
+    [
+        (2,  "ぶどう狩",   1, ScheduleStyle.Filled, VividMagenta, null,         false),
+        (6,  "会社研修",   2, ScheduleStyle.Filled, Green,        null,         false),
+        (9,  "温泉旅行",   1, ScheduleStyle.Filled, Orange,       null,         false),
+        (12, "大阪出張",   2, ScheduleStyle.Text,   Blue,         Blue,         true),
+        (14, "友達泊まり", 3, ScheduleStyle.Filled, HotPink,      null,         false),
+        (21, "買い物",     1, ScheduleStyle.Filled, Yellow,       Colors.Black, false),
+        (26, "海外出張",   4, ScheduleStyle.Filled, Blue,         null,         false),
+    ];
+
+    public IReadOnlyList<ScheduleEvent> GetEvents(DateOnly start, DateOnly end)
     {
-        events = BuildEvents();
-        stamps = BuildStamps();
+        var events = new List<ScheduleEvent>();
+        var months = EnumerateMonths(start, end);
+
+        var idx = 0;
+        foreach (var (year, month) in months)
+        {
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+
+            // 週次イベント
+            var first = new DateOnly(year, month, 1);
+            for (var day = 1; day <= daysInMonth; day++)
+            {
+                var date = new DateOnly(year, month, day);
+                foreach (var (dow, title, style, color, _) in WeeklyTemplates)
+                {
+                    if (date.DayOfWeek == dow)
+                    {
+                        var ev = CreateEvent($"w{idx++:D4}", title, date, date, style, Colors.Transparent, color);
+                        if (ev.StartDate <= end && ev.EndDate >= start)
+                            events.Add(ev);
+                    }
+                }
+            }
+
+            // 月次固定イベント
+            foreach (var (offset, title, span, style, bg, fg) in MonthlyTemplates)
+            {
+                var day = Math.Min(offset, daysInMonth);
+                var evStart = new DateOnly(year, month, day);
+                var evEnd = evStart.AddDays(span - 1);
+                if (evEnd.Month != month) evEnd = new DateOnly(year, month, daysInMonth);
+                if (evStart <= end && evEnd >= start)
+                    events.Add(CreateEvent($"m{idx++:D4}", title, evStart, evEnd, style, bg, fg ?? Colors.White));
+            }
+
+            // 臨時イベント (月ごとにローテーション)
+            var occCount = OccasionalTemplates.Length;
+            var pickCount = 3 + (month % 3);
+            for (var i = 0; i < pickCount; i++)
+            {
+                var t = OccasionalTemplates[(month + i * 3) % occCount];
+                var day = Math.Min(t.DayOffset, daysInMonth);
+                var evStart = new DateOnly(year, month, day);
+                var evEnd = evStart.AddDays(t.Span - 1);
+                if (evEnd.Month != month) evEnd = new DateOnly(year, month, daysInMonth);
+                if (evStart <= end && evEnd >= start)
+                    events.Add(CreateEvent($"o{idx++:D4}", t.Title, evStart, evEnd, t.Style, t.Bg, t.Fg ?? Colors.White, t.Underline));
+            }
+        }
+
+        return events.OrderBy(e => e.StartDate).ToList();
     }
 
-    public IReadOnlyList<ScheduleEvent> GetEvents(DateOnly start, DateOnly end) =>
-        events.Where(e => (e.EndDate >= start) && (e.StartDate <= end)).ToList();
+    public IReadOnlyList<Stamp> GetStamps(DateOnly start, DateOnly end)
+    {
+        var stamps = new List<Stamp>();
+        var months = EnumerateMonths(start, end);
 
-    public IReadOnlyList<Stamp> GetStamps(DateOnly start, DateOnly end) =>
-        stamps.Where(s => (s.Date >= start) && (s.Date <= end)).ToList();
+        var idx = 0;
+        foreach (var (year, month) in months)
+        {
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            var pickCount = 4 + (month % 4);
+            for (var i = 0; i < pickCount; i++)
+            {
+                var t = StampTemplates[(month + i * 2) % StampTemplates.Length];
+                var day = Math.Min(t.DayOffset, daysInMonth);
+                var date = new DateOnly(year, month, day);
+                if (date >= start && date <= end)
+                {
+                    stamps.Add(new Stamp
+                    {
+                        Id = $"s{idx++:D4}",
+                        Date = date,
+                        Glyph = t.Glyph,
+                        Position = t.Position,
+                        FontSize = t.FontSize,
+                        Opacity = t.Opacity,
+                    });
+                }
+            }
+        }
 
-    private static IReadOnlyList<ScheduleEvent> BuildEvents() =>
-    [
-        Filled("e01", "ぶどう狩", new(2019, 5, 26), new(2019, 5, 26), VividMagenta),
-        Text  ("e02", "週間報告", new(2019, 5, 27), GreenText),
-        Text  ("e03", "英会話",   new(2019, 5, 27), PinkText),
-        Filled("e04", "○ジム",    new(2019, 5, 28), new(2019, 5, 28), Cyan),
-        Filled("e05", "燃えるゴ", new(2019, 5, 28), new(2019, 5, 28), DarkRed),
-        Filled("e06", "会社研修", new(2019, 5, 30), new(2019, 5, 31), Green),
-        Filled("e07", "買い物",   new(2019, 5, 31), new(2019, 5, 31), Yellow, textColor: Colors.Black),
-        Text  ("e08", "水泳教室", new(2019, 6, 1), CyanText),
-        Filled("e09", "遊園地",   new(2019, 6, 2), new(2019, 6, 2), Orange),
-        Filled("e10", "燃えるゴ", new(2019, 6, 4), new(2019, 6, 4), DarkRed),
-        Filled("e11", "会社休み", new(2019, 6, 6), new(2019, 6, 8), Pink),
-        Filled("e12", "ゴルフ",   new(2019, 6, 8), new(2019, 6, 8), Cyan),
-        Filled("e13", "会社休み", new(2019, 6, 9), new(2019, 6, 9), Pink),
-        Filled("e14", "温泉旅行", new(2019, 6, 9), new(2019, 6, 9), Orange),
-        Text  ("e15", "週間報告", new(2019, 6, 10), GreenText),
-        Text  ("e16", "英会話",   new(2019, 6, 10), PinkText),
-        Filled("e17", "燃えるゴ", new(2019, 6, 11), new(2019, 6, 11), DarkRed),
-        TextRange("e18", "大阪出張", new(2019, 6, 12), new(2019, 6, 13), Blue, underline: true),
-        Filled("e19", "友達泊まり", new(2019, 6, 14), new(2019, 6, 16), HotPink),
-        Text  ("e20", "水泳教室", new(2019, 6, 15), CyanText),
-        Filled("e21", "○ジム",    new(2019, 6, 18), new(2019, 6, 18), Cyan),
-        Filled("e22", "燃えるゴ", new(2019, 6, 18), new(2019, 6, 18), DarkRed),
-        Text  ("e23", "サークル", new(2019, 6, 18), YellowText),
-        Text  ("e24", "会社飲み", new(2019, 6, 19), GreenText),
-        Text  ("e25", "週間報告", new(2019, 6, 24), GreenText),
-        Text  ("e26", "英会話",   new(2019, 6, 24), PinkText),
-        Filled("e27", "燃えるゴ", new(2019, 6, 25), new(2019, 6, 25), DarkRed),
-        Text  ("e28", "サークル", new(2019, 6, 25), YellowText),
-        Filled("e29", "海外出張", new(2019, 6, 26), new(2019, 7, 1), Blue),
-        Filled("e30", "燃えるゴ", new(2019, 7, 2), new(2019, 7, 2), DarkRed),
-        Text  ("e31", "歓迎会",   new(2019, 7, 3), PinkText),
-        Text  ("e32", "会社飲み", new(2019, 7, 11), GreenText),
-    ];
+        return stamps;
+    }
 
-    private static IReadOnlyList<Stamp> BuildStamps() =>
-    [
-        new Stamp { Id = "s01", Date = new(2019, 6, 3),  Glyph = "\U0001F6A9", Position = StampPosition.TopRight, FontSize = 22 },
-        new Stamp { Id = "s02", Date = new(2019, 6, 3),  Glyph = "\U0001F941", Position = StampPosition.BottomLeft, FontSize = 24 },
-        new Stamp { Id = "s03", Date = new(2019, 6, 8),  Glyph = "\U0001F426", Position = StampPosition.TopRight, FontSize = 22 },
-        new Stamp { Id = "s04", Date = new(2019, 6, 13), Glyph = "✈️", Position = StampPosition.Center, FontSize = 26 },
-        new Stamp { Id = "s05", Date = new(2019, 6, 16), Glyph = "\U0001F436", Position = StampPosition.Center, FontSize = 32, Opacity = 0.9 },
-        new Stamp { Id = "s06", Date = new(2019, 6, 20), Glyph = "\U0001F45B", Position = StampPosition.TopCenter, FontSize = 22 },
-        new Stamp { Id = "s07", Date = new(2019, 6, 22), Glyph = "\U0001F43C", Position = StampPosition.TopLeft, FontSize = 22 },
-        new Stamp { Id = "s08", Date = new(2019, 6, 26), Glyph = "\U0001F38F", Position = StampPosition.TopCenter, FontSize = 22 },
-        new Stamp { Id = "s09", Date = new(2019, 6, 29), Glyph = "\U0001F408", Position = StampPosition.TopRight, FontSize = 24 },
-        new Stamp { Id = "s10", Date = new(2019, 7, 1),  Glyph = "\U0001F37B", Position = StampPosition.BottomCenter, FontSize = 24 },
-        new Stamp { Id = "s11", Date = new(2019, 7, 3),  Glyph = "\U0001F490", Position = StampPosition.BottomCenter, FontSize = 24 },
-        new Stamp { Id = "s12", Date = new(2019, 7, 5),  Glyph = "❤️",  Position = StampPosition.Center, FontSize = 32, Opacity = 0.7 },
-    ];
+    private static IEnumerable<(int Year, int Month)> EnumerateMonths(DateOnly start, DateOnly end)
+    {
+        var current = new DateOnly(start.Year, start.Month, 1);
+        var last = new DateOnly(end.Year, end.Month, 1);
+        while (current <= last)
+        {
+            yield return (current.Year, current.Month);
+            current = current.AddMonths(1);
+        }
+    }
 
-    private static ScheduleEvent Filled(string id, string title, DateOnly start, DateOnly end, Color background, Color? textColor = null) =>
+    private static ScheduleEvent CreateEvent(
+        string id, string title, DateOnly start, DateOnly end,
+        ScheduleStyle style, Color bg, Color fg, bool underline = false) =>
         new()
         {
             Id = id,
             Title = title,
             StartDate = start,
             EndDate = end,
-            Style = ScheduleStyle.Filled,
-            BackgroundColor = background,
-            TextColor = textColor ?? Colors.White,
-        };
-
-    private static ScheduleEvent Text(string id, string title, DateOnly date, Color textColor) =>
-        new()
-        {
-            Id = id,
-            Title = title,
-            StartDate = date,
-            EndDate = date,
-            Style = ScheduleStyle.Text,
-            TextColor = textColor,
-        };
-
-    private static ScheduleEvent TextRange(string id, string title, DateOnly start, DateOnly end, Color textColor, bool underline) =>
-        new()
-        {
-            Id = id,
-            Title = title,
-            StartDate = start,
-            EndDate = end,
-            Style = ScheduleStyle.Text,
-            TextColor = textColor,
+            Style = style,
+            BackgroundColor = bg,
+            TextColor = fg,
             Underline = underline,
         };
 }
