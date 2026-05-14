@@ -75,12 +75,10 @@ public partial class CalendarView : ContentView
     // ------------------------------------------------------------------ BindableProperties: Navigation limits
 
     public static readonly BindableProperty MinDateProperty =
-        BindableProperty.Create(nameof(MinDate), typeof(DateOnly?), typeof(CalendarView),
-            null, propertyChanged: OnRenderPropertyChanged);
+        BindableProperty.Create(nameof(MinDate), typeof(DateOnly?), typeof(CalendarView), propertyChanged: OnRenderPropertyChanged);
 
     public static readonly BindableProperty MaxDateProperty =
-        BindableProperty.Create(nameof(MaxDate), typeof(DateOnly?), typeof(CalendarView),
-            null, propertyChanged: OnRenderPropertyChanged);
+        BindableProperty.Create(nameof(MaxDate), typeof(DateOnly?), typeof(CalendarView), propertyChanged: OnRenderPropertyChanged);
 
     public static readonly BindableProperty DisabledDayTextColorProperty =
         BindableProperty.Create(nameof(DisabledDayTextColor), typeof(Color), typeof(CalendarView),
@@ -89,8 +87,7 @@ public partial class CalendarView : ContentView
     // ------------------------------------------------------------------ BindableProperties: Localization
 
     public static readonly BindableProperty CultureProperty =
-        BindableProperty.Create(nameof(Culture), typeof(CultureInfo), typeof(CalendarView),
-            null, propertyChanged: OnCultureChanged);
+        BindableProperty.Create(nameof(Culture), typeof(CultureInfo), typeof(CalendarView), propertyChanged: OnCultureChanged);
 
     // ------------------------------------------------------------------ BindableProperties: Layout / Sizes
 
@@ -318,6 +315,20 @@ public partial class CalendarView : ContentView
     private const int DaysPerWeek = 7;
     private const int MaxWeekRows = 6;
 
+    // ------------------------------------------------------------------ Swipe & animation tuning
+
+    /// <summary>スワイプで月切り替えが発動するまでの最小水平移動距離 (dp)。小さいほど反応が速い。</summary>
+    private const double SwipeThreshold = 36d;
+
+    /// <summary>フリック（短い素早いスワイプ）を検知する最小ステップ幅 (dp)。小さいほど素早いフリックに反応しやすい。</summary>
+    private const double SwipeFlickThreshold = 20d;
+
+    /// <summary>水平方向のずれが垂直方向の何倍以上でないとスワイプと見なさない。大きいほど縦スクロールとの誤検知が減る。</summary>
+    private const double SwipeHorizontalBias = 1.25d;
+
+    /// <summary>スワイプ時のスライドアニメーション時間 (ミリ秒)。短いほど素早く切り替わる。</summary>
+    private const uint SwipeAnimationDurationMs = 180;
+
     private readonly WeekRowVisual[] weekRows = new WeekRowVisual[MaxWeekRows];
 
     private sealed class EventBorderVisual
@@ -328,7 +339,7 @@ public partial class CalendarView : ContentView
         {
             FontAttributes = FontAttributes.Bold,
             LineBreakMode = LineBreakMode.TailTruncation,
-            VerticalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center
         };
 
         public Border Root { get; }
@@ -384,7 +395,7 @@ public partial class CalendarView : ContentView
                 ColumnSpacing = 0,
                 RowSpacing = 0,
                 VerticalOptions = LayoutOptions.Fill,
-                HorizontalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Fill
             };
             for (var i = 0; i < DaysPerWeek; i++)
                 Root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
@@ -436,7 +447,7 @@ public partial class CalendarView : ContentView
         {
             HeightRequest = 0.5,
             VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
+            InputTransparent = true
         };
 
         public BoxView[] VerticalDividers { get; } = Enumerable.Range(0, DaysPerWeek - 1)
@@ -444,7 +455,7 @@ public partial class CalendarView : ContentView
             {
                 WidthRequest = 0.5,
                 HorizontalOptions = LayoutOptions.End,
-                InputTransparent = true,
+                InputTransparent = true
             })
             .ToArray();
 
@@ -509,7 +520,7 @@ public partial class CalendarView : ContentView
         public Border TapTarget { get; } = new()
         {
             BackgroundColor = Colors.Transparent,
-            StrokeThickness = 0,
+            StrokeThickness = 0
         };
 
         public Label DateLabel { get; } = new()
@@ -517,7 +528,7 @@ public partial class CalendarView : ContentView
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            InputTransparent = true,
+            InputTransparent = true
         };
 
         public Border DateBubble { get; }
@@ -544,7 +555,7 @@ public partial class CalendarView : ContentView
                 VerticalOptions = LayoutOptions.Start,
                 Padding = 0,
                 InputTransparent = true,
-                Content = DateLabel,
+                Content = DateLabel
             };
             TapTarget.GestureRecognizers.Add(TapGesture);
             TapTarget.GestureRecognizers.Add(PanGesture);
@@ -592,7 +603,7 @@ public partial class CalendarView : ContentView
         {
             // [DIFF-UPDATE: DayCell] 色などのプロパティ変更時はキャッシュを破棄して全セルを再描画
             view.InvalidateDayCellCaches();
-            if (view.ViewModel is MonthViewModel month)
+            if (view.ViewModel is { } month)
                 view.Render(month);
         }
     }
@@ -615,7 +626,7 @@ public partial class CalendarView : ContentView
         if (bindable is CalendarView view)
         {
             view.UpdateWeekdayHeaderLabels();
-            if (view.ViewModel is MonthViewModel month)
+            if (view.ViewModel is { } month)
                 view.Render(month);
         }
     }
@@ -628,7 +639,7 @@ public partial class CalendarView : ContentView
 
     private static void OnSelectionPropertyChanged(BindableObject bindable, object oldValue, object newValue)
     {
-        if (bindable is CalendarView view && view.ViewModel is MonthViewModel month)
+        if (bindable is CalendarView view && view.ViewModel is { } month)
             view.RebuildWeeksHostOnly(month);
     }
 
@@ -639,7 +650,7 @@ public partial class CalendarView : ContentView
             old.CollectionChanged -= view.OnSelectedDatesCollectionChanged;
         if (newValue is ObservableCollection<DateOnly> next)
             next.CollectionChanged += view.OnSelectedDatesCollectionChanged;
-        if (view.ViewModel is MonthViewModel month)
+        if (view.ViewModel is { } month)
             view.RebuildWeeksHostOnly(month);
     }
 
@@ -648,14 +659,14 @@ public partial class CalendarView : ContentView
         if (bindable is CalendarView view)
         {
             view.UpdateWeekdayHeaderLabels();
-            if (view.ViewModel is MonthViewModel month)
+            if (view.ViewModel is { } month)
                 view.Render(month);
         }
     }
 
     private void OnSelectedDatesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (ViewModel is MonthViewModel month)
+        if (ViewModel is { } month)
             RebuildWeeksHostOnly(month);
     }
 
@@ -766,7 +777,17 @@ public partial class CalendarView : ContentView
         }
     }
 
-    private static Task AnimateSlideAsync(int direction) => Task.CompletedTask;
+    private async Task AnimateSlideAsync(int direction)
+    {
+        if (direction == 0) return;
+
+        var width = WeeksHost.Width;
+        if (width <= 0) return;
+
+        // 新しいコンテンツを画面外から滑り込ませる（direction > 0: 次月=右から、< 0: 前月=左から）
+        WeeksHost.TranslationX = direction > 0 ? width : -width;
+        await WeeksHost.TranslateTo(0, 0, SwipeAnimationDurationMs, Easing.CubicOut);
+    }
 
     private void UpdateWeekdayHeaderLabels()
     {
@@ -782,7 +803,7 @@ public partial class CalendarView : ContentView
                 HorizontalTextAlignment = TextAlignment.Center,
                 TextColor = dayOfWeek == DayOfWeek.Saturday ? SaturdayHeaderColor
                           : dayOfWeek == DayOfWeek.Sunday   ? SundayHeaderColor
-                          : WeekdayHeaderColor,
+                          : WeekdayHeaderColor
             };
             Grid.SetColumn(label, i);
             WeekdayHeaderGrid.Children.Add(label);
@@ -808,7 +829,7 @@ public partial class CalendarView : ContentView
             DayOfWeek.Friday    => "金",
             DayOfWeek.Saturday  => "土",
             DayOfWeek.Sunday    => "日",
-            _ => string.Empty,
+            _ => string.Empty
         };
     }
 
@@ -865,11 +886,11 @@ public partial class CalendarView : ContentView
     {
         var background = GetCellBackgroundColor(day);
         cell.Background.Color = background;
-        cell.Background.IsVisible = background != Colors.Transparent;
+        cell.Background.IsVisible = !Equals(background, Colors.Transparent);
 
         var rangeBackground = GetRangeCellBackground(day.Date);
         cell.RangeBackground.Color = rangeBackground;
-        cell.RangeBackground.IsVisible = rangeBackground != Colors.Transparent;
+        cell.RangeBackground.IsVisible = !Equals(rangeBackground, Colors.Transparent);
 
         UpdateDateNumberView(cell, day);
 
@@ -914,7 +935,7 @@ public partial class CalendarView : ContentView
                     StampPosition.BottomLeft   => (LayoutOptions.Start,  LayoutOptions.End,   new Thickness(m, 0, 0, m)),
                     StampPosition.BottomCenter => (LayoutOptions.Center, LayoutOptions.End,   new Thickness(0, 0, 0, m)),
                     StampPosition.BottomRight  => (LayoutOptions.End,    LayoutOptions.End,   new Thickness(0, 0, m, m)),
-                    _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
+                    _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0))
                 };
 
                 Grid.SetRow(label, 0);
@@ -995,7 +1016,7 @@ public partial class CalendarView : ContentView
         cell.DateBubble.BackgroundColor = bubbleBg;
         cell.DateBubble.Margin = DateNumberMargin;
         // [DIFF-UPDATE: DateBubble] 毎回 new RoundRectangle を避け同一インスタンスを再利用
-        cell.DateBubble.StrokeShape = bubbleBg != Colors.Transparent ? cell.DateBubbleShape : null;
+        cell.DateBubble.StrokeShape = !Equals(bubbleBg, Colors.Transparent) ? cell.DateBubbleShape : null;
     }
 
     // ------------------------------------------------------------------ Color helpers
@@ -1006,7 +1027,7 @@ public partial class CalendarView : ContentView
         return day.Kind switch
         {
             DayKind.Saturday or DayKind.Sunday or DayKind.Holiday => WeekendBackground,
-            _ => Colors.Transparent,
+            _ => Colors.Transparent
         };
     }
 
@@ -1017,7 +1038,7 @@ public partial class CalendarView : ContentView
         {
             DayKind.Sunday or DayKind.Holiday => SundayTextColor,
             DayKind.Saturday => SaturdayTextColor,
-            _ => WeekdayTextColor,
+            _ => WeekdayTextColor
         };
     }
 
@@ -1025,8 +1046,8 @@ public partial class CalendarView : ContentView
 
     private bool IsDateDisabled(DateOnly date)
     {
-        if (MinDate is DateOnly min && date < min) return true;
-        if (MaxDate is DateOnly max && date > max) return true;
+        if (MinDate is { } min && date < min) return true;
+        if (MaxDate is { } max && date > max) return true;
         return false;
     }
 
@@ -1035,7 +1056,7 @@ public partial class CalendarView : ContentView
         CalendarSelectionMode.Single    => SelectedDate == date,
         CalendarSelectionMode.Multiple  => SelectedDates?.Contains(date) == true,
         CalendarSelectionMode.Range     => IsInRange(date, endpoints: true),
-        _ => false,
+        _ => false
     };
 
     // Returns true for the interior of the range (excluding endpoints, which are drawn as full bubbles).
@@ -1043,7 +1064,7 @@ public partial class CalendarView : ContentView
     {
         if (SelectionMode != CalendarSelectionMode.Range)
             return Colors.Transparent;
-        if (SelectedStartDate is not DateOnly start || SelectedEndDate is not DateOnly end)
+        if (SelectedStartDate is not { } start || SelectedEndDate is not { } end)
             return Colors.Transparent;
         if (start > end) (start, end) = (end, start);
         return (date > start && date < end) ? RangeBackground : Colors.Transparent;
@@ -1051,20 +1072,13 @@ public partial class CalendarView : ContentView
 
     private bool IsInRange(DateOnly date, bool endpoints)
     {
-        if (SelectedStartDate is not DateOnly start || SelectedEndDate is not DateOnly end)
+        if (SelectedStartDate is not { } start || SelectedEndDate is not { } end)
             return false;
         if (start > end) (start, end) = (end, start);
         return endpoints ? (date >= start && date <= end) : (date > start && date < end);
     }
 
     // ------------------------------------------------------------------ Swipe gestures (PanGestureRecognizer for reliable Android detection)
-
-    // Minimum horizontal distance (dp) to trigger a month change.
-    private const double SwipeThreshold = 48d;
-    // Minimum velocity-like delta between updates to make short flicks responsive on Android.
-    private const double SwipeFlickThreshold = 28d;
-    // Horizontal movement must be stronger than vertical drift.
-    private const double SwipeHorizontalBias = 1.25d;
 
     private PanGestureRecognizer? panGesture;
     private double panStartX;
@@ -1154,8 +1168,7 @@ public partial class CalendarView : ContentView
                 break;
 
             case CalendarSelectionMode.Multiple:
-                if (SelectedDates is null)
-                    SelectedDates = new ObservableCollection<DateOnly>();
+                SelectedDates ??= new ObservableCollection<DateOnly>();
                 var list = SelectedDates;
                 if (list.Contains(date))
                     list.Remove(date);
