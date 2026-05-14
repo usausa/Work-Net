@@ -616,7 +616,6 @@ public partial class CalendarView : ContentView
         // [DIFF-UPDATE: UpdateRows] slotCount キャッシュをリセット
         foreach (var row in weekRows)
         {
-            if (row is null) continue;
             row.LastSlotCount = -1;
         }
     }
@@ -692,7 +691,7 @@ public partial class CalendarView : ContentView
 
         YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
         YearLabel.TextColor = YearTextColor;
-        MonthLabel.Text = GetMonthDisplayName(month.Year, month.Month);
+        MonthLabel.Text = GetMonthDisplayName(month.Month);
         MonthLabel.TextColor = MonthTextColor;
 
         // [DIFF-UPDATE: Header] フォント・サイズ・パディングなどの不変プロパティは初回のみ設定
@@ -777,17 +776,7 @@ public partial class CalendarView : ContentView
         }
     }
 
-    private async Task AnimateSlideAsync(int direction)
-    {
-        if (direction == 0) return;
-
-        var width = WeeksHost.Width;
-        if (width <= 0) return;
-
-        // 新しいコンテンツを画面外から滑り込ませる（direction > 0: 次月=右から、< 0: 前月=左から）
-        WeeksHost.TranslationX = direction > 0 ? width : -width;
-        await WeeksHost.TranslateTo(0, 0, SwipeAnimationDurationMs, Easing.CubicOut);
-    }
+    private static Task AnimateSlideAsync(int direction) => Task.CompletedTask;
 
     private void UpdateWeekdayHeaderLabels()
     {
@@ -833,14 +822,11 @@ public partial class CalendarView : ContentView
         };
     }
 
-    private string GetMonthDisplayName(int year, int month)
+    private string GetMonthDisplayName(int month)
     {
         var culture = Culture;
         if (culture is not null)
-        {
-            var dt = new DateTime(year, month, 1);
             return culture.DateTimeFormat.GetMonthName(month).ToUpper(culture);
-        }
         return $"{month}\u6708";
     }
 
