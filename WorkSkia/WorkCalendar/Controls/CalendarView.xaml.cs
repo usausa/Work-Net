@@ -317,8 +317,153 @@ public partial class CalendarView : ContentView
     private const int DaysPerWeek = 7;
     private const int MaxWeekRows = 6;
 
-    // Pre-allocated row containers reused across month renders to avoid GC pressure.
-    private readonly Grid[] weekRowContainers = new Grid[MaxWeekRows];
+    private readonly WeekRowVisual[] weekRows = new WeekRowVisual[MaxWeekRows];
+
+    private sealed class WeekRowVisual
+    {
+        public WeekRowVisual()
+        {
+            Root = new Grid
+            {
+                ColumnSpacing = 0,
+                RowSpacing = 0,
+                VerticalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Fill,
+            };
+            for (var i = 0; i < DaysPerWeek; i++)
+                Root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+            for (var i = 0; i < DaysPerWeek; i++)
+            {
+                var day = new DayCellVisual();
+                Days[i] = day;
+
+                Grid.SetColumn(day.Background, i);
+                Grid.SetRow(day.Background, 0);
+                Root.Children.Add(day.Background);
+
+                Grid.SetColumn(day.RangeBackground, i);
+                Grid.SetRow(day.RangeBackground, 0);
+                Root.Children.Add(day.RangeBackground);
+            }
+
+            Grid.SetRow(TopDivider, 0);
+            Grid.SetColumnSpan(TopDivider, DaysPerWeek);
+            Root.Children.Add(TopDivider);
+
+            for (var i = 0; i < VerticalDividers.Length; i++)
+            {
+                var divider = VerticalDividers[i];
+                Grid.SetColumn(divider, i);
+                Grid.SetRow(divider, 0);
+                Root.Children.Add(divider);
+            }
+
+            for (var i = 0; i < DaysPerWeek; i++)
+            {
+                var day = Days[i];
+                Grid.SetColumn(day.TapTarget, i);
+                Grid.SetRow(day.TapTarget, 0);
+                Root.Children.Add(day.TapTarget);
+
+                Grid.SetColumn(day.DateBubble, i);
+                Grid.SetRow(day.DateBubble, 0);
+                Root.Children.Add(day.DateBubble);
+            }
+        }
+
+        public Grid Root { get; }
+
+        public DayCellVisual[] Days { get; } = new DayCellVisual[DaysPerWeek];
+
+        public BoxView TopDivider { get; } = new()
+        {
+            HeightRequest = 0.5,
+            VerticalOptions = LayoutOptions.Start,
+            InputTransparent = true,
+        };
+
+        public BoxView[] VerticalDividers { get; } = Enumerable.Range(0, DaysPerWeek - 1)
+            .Select(_ => new BoxView
+            {
+                WidthRequest = 0.5,
+                HorizontalOptions = LayoutOptions.End,
+                InputTransparent = true,
+            })
+            .ToArray();
+
+        public List<View> DynamicViews { get; } = [];
+
+        public void UpdateRows(int slotCount, double dateRowHeight, double slotRowHeight)
+        {
+            var totalRows = 2 + slotCount;
+            Root.RowDefinitions.Clear();
+            Root.RowDefinitions.Add(new RowDefinition(new GridLength(dateRowHeight)));
+            for (var i = 0; i < slotCount; i++)
+                Root.RowDefinitions.Add(new RowDefinition(new GridLength(slotRowHeight)));
+            Root.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+
+            for (var i = 0; i < DaysPerWeek; i++)
+            {
+                Grid.SetRowSpan(Days[i].Background, totalRows);
+                Grid.SetRowSpan(Days[i].RangeBackground, totalRows);
+                Grid.SetRowSpan(Days[i].TapTarget, totalRows);
+            }
+            foreach (var divider in VerticalDividers)
+                Grid.SetRowSpan(divider, totalRows);
+        }
+
+        public void ClearDynamicViews()
+        {
+            foreach (var view in DynamicViews)
+                Root.Children.Remove(view);
+            DynamicViews.Clear();
+        }
+    }
+
+    private sealed class DayCellVisual
+    {
+        public BoxView Background { get; } = new() { InputTransparent = true };
+
+        public BoxView RangeBackground { get; } = new() { InputTransparent = true };
+
+        public Border TapTarget { get; } = new()
+        {
+            BackgroundColor = Colors.Transparent,
+            StrokeThickness = 0,
+        };
+
+        public Label DateLabel { get; } = new()
+        {
+            FontAttributes = FontAttributes.Bold,
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center,
+            InputTransparent = true,
+        };
+
+        public Border DateBubble { get; }
+
+        public TapGestureRecognizer TapGesture { get; } = new();
+
+        public PanGestureRecognizer PanGesture { get; } = new();
+
+        public Command<DayViewModel>? TapCommand { get; set; }
+
+        public DayCellVisual()
+        {
+            DateBubble = new Border
+            {
+                StrokeThickness = 0,
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Start,
+                Padding = 0,
+                InputTransparent = true,
+                Content = DateLabel,
+            };
+            TapTarget.GestureRecognizers.Add(TapGesture);
+            TapTarget.GestureRecognizers.Add(PanGesture);
+        }
+    }
 
     // Direction of the last month navigation: +1 = forward (next), -1 = backward (prev), 0 = jump
     private int lastNavDirection;
@@ -329,13 +474,13 @@ public partial class CalendarView : ContentView
     {
         InitializeComponent();
 
-        // Pre-create the six week-row containers and insert them into the fixed WeeksHost rows.
+        // Pre-create the six fixed week rows and forty-two fixed day cells.
         for (var i = 0; i < MaxWeekRows; i++)
         {
-            var container = new Grid { RowSpacing = 0, ColumnSpacing = 0 };
-            Grid.SetRow(container, i);
-            WeeksHost.Children.Add(container);
-            weekRowContainers[i] = container;
+            var row = new WeekRowVisual();
+            Grid.SetRow(row.Root, i);
+            WeeksHost.Children.Add(row.Root);
+            weekRows[i] = row;
         }
 
         AttachSwipeGestures();
@@ -434,8 +579,6 @@ public partial class CalendarView : ContentView
         NextButton.FontSize = NavButtonFontSize;
         NextButton.WidthRequest = NavButtonWidth;
         NextButton.HeightRequest = NavButtonHeight;
-        TodayButton.FontSize = NavButtonFontSize;
-        TodayButton.TextColor = NavButtonColor;
 
         HeaderGrid.Padding = HeaderPadding;
         WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
@@ -455,35 +598,28 @@ public partial class CalendarView : ContentView
         var weekCount = month.Weeks.Count;
         for (var i = 0; i < MaxWeekRows; i++)
         {
-            var container = weekRowContainers[i];
-            container.Children.Clear();
-            container.IsVisible = i < weekCount;
+            var row = weekRows[i];
+            row.Root.IsVisible = i < weekCount;
             if (i < weekCount)
-            {
-                var weekView = BuildWeekRow(month.Weeks[i], slotCount);
-                container.Children.Add(weekView);
-            }
+                UpdateWeekRow(row, month.Weeks[i], slotCount);
+            else
+                row.ClearDynamicViews();
         }
     }
 
-    // Rebuild only the week cells (no animation). Used when only selection/color state changes.
+    // Update only fixed day-cell state. Used when selection/color state changes.
     private void RebuildWeeksHostOnly(MonthViewModel month)
     {
-        var slotCount = Math.Max(2, month.Weeks.Count > 0
-            ? month.Weeks.Max(static w => w.SlotCount)
-            : 0);
-        RebuildWeeksHost(month, slotCount);
+        for (var weekIndex = 0; weekIndex < Math.Min(MaxWeekRows, month.Weeks.Count); weekIndex++)
+        {
+            var row = weekRows[weekIndex];
+            var week = month.Weeks[weekIndex];
+            for (var dayIndex = 0; dayIndex < DaysPerWeek; dayIndex++)
+                UpdateDayCell(row.Days[dayIndex], week.Days[dayIndex]);
+        }
     }
 
-    private async Task AnimateSlideAsync(int direction)
-    {
-        if (direction == 0)
-            return;
-
-        var width = WeeksHost.Width > 0 ? WeeksHost.Width : 400d;
-        WeeksHost.TranslationX = direction * width;
-        await WeeksHost.TranslateToAsync(0, 0, 250, Easing.CubicOut);
-    }
+    private static Task AnimateSlideAsync(int direction) => Task.CompletedTask;
 
     private void UpdateWeekdayHeaderLabels()
     {
@@ -540,107 +676,42 @@ public partial class CalendarView : ContentView
         return $"{month}\u6708";
     }
 
-    private View BuildWeekRow(WeekViewModel week, int slotCount)
+    private void UpdateWeekRow(WeekRowVisual row, WeekViewModel week, int slotCount)
     {
         var totalRows = 2 + slotCount;
-        var grid = new Grid
-        {
-            ColumnSpacing = 0,
-            RowSpacing = 0,
-            VerticalOptions = LayoutOptions.Fill,
-            HorizontalOptions = LayoutOptions.Fill,
-        };
-        for (var i = 0; i < DaysPerWeek; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-        grid.RowDefinitions.Add(new RowDefinition(new GridLength(DateRowHeight)));
-        for (var i = 0; i < slotCount; i++)
-            grid.RowDefinitions.Add(new RowDefinition(new GridLength(SlotRowHeight)));
-        grid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+        row.UpdateRows(slotCount, DateRowHeight, SlotRowHeight);
+        row.TopDivider.Color = GridLineColor;
+        foreach (var divider in row.VerticalDividers)
+            divider.Color = GridLineColor;
 
-        // Per-column background
         for (var c = 0; c < DaysPerWeek; c++)
-        {
-            var day = week.Days[c];
-            var bg = GetCellBackgroundColor(day);
-            if (bg != Colors.Transparent)
-            {
-                var box = new BoxView { Color = bg, InputTransparent = true };
-                Grid.SetColumn(box, c);
-                Grid.SetRow(box, 0);
-                Grid.SetRowSpan(box, totalRows);
-                grid.Children.Add(box);
-            }
+            UpdateDayCell(row.Days[c], week.Days[c]);
 
-            // Range highlight (behind date bubble, full cell height)
-            var rangeBg = GetRangeCellBackground(day.Date);
-            if (rangeBg != Colors.Transparent)
-            {
-                var rangeBox = new BoxView { Color = rangeBg, InputTransparent = true };
-                Grid.SetColumn(rangeBox, c);
-                Grid.SetRow(rangeBox, 0);
-                Grid.SetRowSpan(rangeBox, totalRows);
-                grid.Children.Add(rangeBox);
-            }
-        }
+        row.ClearDynamicViews();
+        AddStampViews(row, week, totalRows);
+        AddEventViews(row, week);
+    }
 
-        // Top divider
-        var topDivider = new BoxView
-        {
-            HeightRequest = 0.5,
-            Color = GridLineColor,
-            VerticalOptions = LayoutOptions.Start,
-            InputTransparent = true,
-        };
-        Grid.SetRow(topDivider, 0);
-        Grid.SetColumnSpan(topDivider, DaysPerWeek);
-        grid.Children.Add(topDivider);
+    private void UpdateDayCell(DayCellVisual cell, DayViewModel day)
+    {
+        var background = GetCellBackgroundColor(day);
+        cell.Background.Color = background;
+        cell.Background.IsVisible = background != Colors.Transparent;
 
-        // Vertical dividers
-        for (var c = 0; c < DaysPerWeek - 1; c++)
-        {
-            var vd = new BoxView
-            {
-                WidthRequest = 0.5,
-                Color = GridLineColor,
-                HorizontalOptions = LayoutOptions.End,
-                InputTransparent = true,
-            };
-            Grid.SetColumn(vd, c);
-            Grid.SetRow(vd, 0);
-            Grid.SetRowSpan(vd, totalRows);
-            grid.Children.Add(vd);
-        }
+        var rangeBackground = GetRangeCellBackground(day.Date);
+        cell.RangeBackground.Color = rangeBackground;
+        cell.RangeBackground.IsVisible = rangeBackground != Colors.Transparent;
 
-        // Cell tap targets
-        for (var c = 0; c < DaysPerWeek; c++)
-        {
-            var day = week.Days[c];
-            var disabled = IsDateDisabled(day.Date);
-            var tappable = new Border { BackgroundColor = Colors.Transparent, StrokeThickness = 0 };
-            if (!disabled)
-            {
-                tappable.GestureRecognizers.Add(new TapGestureRecognizer
-                {
-                    Command = new Command<DayViewModel>(OnDayTapped),
-                    CommandParameter = day,
-                });
-            }
-            Grid.SetColumn(tappable, c);
-            Grid.SetRow(tappable, 0);
-            Grid.SetRowSpan(tappable, totalRows);
-            grid.Children.Add(tappable);
-        }
+        UpdateDateNumberView(cell, day);
 
-        // Date numbers
-        for (var c = 0; c < DaysPerWeek; c++)
-        {
-            var dv = BuildDateNumberView(week.Days[c]);
-            Grid.SetColumn(dv, c);
-            Grid.SetRow(dv, 0);
-            grid.Children.Add(dv);
-        }
+        cell.TapTarget.IsEnabled = !IsDateDisabled(day.Date);
+        cell.TapCommand ??= new Command<DayViewModel>(OnDayTapped);
+        cell.TapGesture.Command = cell.TapTarget.IsEnabled ? cell.TapCommand : null;
+        cell.TapGesture.CommandParameter = cell.TapTarget.IsEnabled ? day : null;
+    }
 
-        // Stamps
+    private void AddStampViews(WeekRowVisual row, WeekViewModel week, int totalRows)
+    {
         for (var c = 0; c < DaysPerWeek; c++)
         {
             foreach (var stamp in week.Days[c].Stamps)
@@ -649,26 +720,28 @@ public partial class CalendarView : ContentView
                 Grid.SetColumn(sv, c);
                 Grid.SetRow(sv, 0);
                 Grid.SetRowSpan(sv, totalRows);
-                grid.Children.Add(sv);
+                row.Root.Children.Add(sv);
+                row.DynamicViews.Add(sv);
             }
         }
+    }
 
-        // Event placements
+    private void AddEventViews(WeekRowVisual row, WeekViewModel week)
+    {
         foreach (var placement in week.EventPlacements)
         {
             var ev = BuildEventView(placement);
             Grid.SetColumn(ev, placement.StartColumn);
             Grid.SetColumnSpan(ev, placement.ColumnSpan);
             Grid.SetRow(ev, placement.Slot + 1);
-            grid.Children.Add(ev);
+            row.Root.Children.Add(ev);
+            row.DynamicViews.Add(ev);
         }
-
-        return grid;
     }
 
     // ------------------------------------------------------------------ View builders
 
-    private View BuildDateNumberView(DayViewModel day)
+    private void UpdateDateNumberView(DayCellVisual cell, DayViewModel day)
     {
         var disabled = IsDateDisabled(day.Date);
         var selected = IsDateSelected(day.Date);
@@ -697,30 +770,17 @@ public partial class CalendarView : ContentView
             bubbleBg  = Colors.Transparent;
         }
 
-        var label = new Label
-        {
-            Text = day.Date.Day.ToString(CultureInfo.InvariantCulture),
-            FontSize = DateNumberFontSize,
-            FontAttributes = FontAttributes.Bold,
-            HorizontalTextAlignment = TextAlignment.Center,
-            VerticalTextAlignment = TextAlignment.Center,
-            TextColor = textColor,
-            WidthRequest = DateNumberSize,
-            HeightRequest = DateNumberSize,
-        };
-        var bubble = new Border
-        {
-            BackgroundColor = bubbleBg,
-            StrokeThickness = 0,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Start,
-            Margin = DateNumberMargin,
-            Padding = 0,
-            Content = label,
-        };
-        if (bubbleBg != Colors.Transparent)
-            bubble.StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(2) };
-        return bubble;
+        cell.DateLabel.Text = day.Date.Day.ToString(CultureInfo.InvariantCulture);
+        cell.DateLabel.FontSize = DateNumberFontSize;
+        cell.DateLabel.TextColor = textColor;
+        cell.DateLabel.WidthRequest = DateNumberSize;
+        cell.DateLabel.HeightRequest = DateNumberSize;
+
+        cell.DateBubble.BackgroundColor = bubbleBg;
+        cell.DateBubble.Margin = DateNumberMargin;
+        cell.DateBubble.StrokeShape = bubbleBg != Colors.Transparent
+            ? new RoundRectangle { CornerRadius = new CornerRadius(2) }
+            : null;
     }
 
     private View BuildStampView(Stamp stamp)
@@ -861,19 +921,27 @@ public partial class CalendarView : ContentView
     // ------------------------------------------------------------------ Swipe gestures (PanGestureRecognizer for reliable Android detection)
 
     // Minimum horizontal distance (dp) to trigger a month change.
-    private const double SwipeThreshold = 80d;
-    // If the vertical drift exceeds this ratio of horizontal movement, ignore (user is scrolling vertically).
-    private const double SwipeMaxVerticalRatio = 0.6d;
+    private const double SwipeThreshold = 48d;
+    // Minimum velocity-like delta between updates to make short flicks responsive on Android.
+    private const double SwipeFlickThreshold = 28d;
+    // Horizontal movement must be stronger than vertical drift.
+    private const double SwipeHorizontalBias = 1.25d;
 
     private PanGestureRecognizer? panGesture;
     private double panStartX;
     private double panStartY;
+    private double lastPanX;
     private bool panConsumed;
 
     private void AttachSwipeGestures()
     {
         panGesture = new PanGestureRecognizer();
         panGesture.PanUpdated += OnPanUpdated;
+        foreach (var row in weekRows)
+        {
+            foreach (var day in row.Days)
+                day.PanGesture.PanUpdated += OnPanUpdated;
+        }
         UpdateSwipeGestureState(SwipeEnabled);
     }
 
@@ -894,6 +962,7 @@ public partial class CalendarView : ContentView
             case GestureStatus.Started:
                 panStartX  = e.TotalX;
                 panStartY  = e.TotalY;
+                lastPanX = e.TotalX;
                 panConsumed = false;
                 break;
 
@@ -902,27 +971,36 @@ public partial class CalendarView : ContentView
                     break;
                 var dx = e.TotalX - panStartX;
                 var dy = e.TotalY - panStartY;
+                var stepDx = e.TotalX - lastPanX;
+                lastPanX = e.TotalX;
                 var absDx = Math.Abs(dx);
                 var absDy = Math.Abs(dy);
-                // Ignore if vertical motion dominates.
-                if (absDy > absDx * (1d / SwipeMaxVerticalRatio))
+                if (absDx < 8d)
                     break;
-                if (absDx >= SwipeThreshold)
-                {
-                    panConsumed = true;
-                    if (dx < 0)
-                    {
-                        lastNavDirection = 1;
-                        NextMonthCommand?.Execute(null);
-                    }
-                    else
-                    {
-                        lastNavDirection = -1;
-                        PrevMonthCommand?.Execute(null);
-                    }
-                }
+                if (absDx < absDy * SwipeHorizontalBias)
+                    break;
+                if (absDx >= SwipeThreshold || Math.Abs(stepDx) >= SwipeFlickThreshold)
+                    NavigateBySwipe(dx < 0 ? 1 : -1);
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                panConsumed = false;
                 break;
         }
+    }
+
+    private void NavigateBySwipe(int direction)
+    {
+        if (panConsumed)
+            return;
+
+        panConsumed = true;
+        lastNavDirection = direction;
+        if (direction > 0)
+            NextMonthCommand?.Execute(null);
+        else
+            PrevMonthCommand?.Execute(null);
     }
 
     // ------------------------------------------------------------------ Tap handlers

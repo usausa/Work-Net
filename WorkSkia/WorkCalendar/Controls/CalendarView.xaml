@@ -6,8 +6,8 @@
 
     <Grid x:Name="RootGrid" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="0">
 
-        <!-- Header: prev | Year & Month | next | today -->
-        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto,Auto">
+        <!-- Header: prev | Year & Month | next -->
+        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
             <Button Grid.Column="0" x:Name="PrevButton"
                     Text="◀"
                     Command="{Binding PrevMonthCommand, Source={x:Reference _self}}"
@@ -21,12 +21,6 @@
             <Button Grid.Column="2" x:Name="NextButton"
                     Text="▶"
                     Command="{Binding NextMonthCommand, Source={x:Reference _self}}"
-                    BackgroundColor="Transparent"
-                    BorderWidth="0"
-                    VerticalOptions="Center" />
-            <Button Grid.Column="3" x:Name="TodayButton"
-                    Text="今日"
-                    Command="{Binding GoToTodayCommand, Source={x:Reference _self}}"
                     BackgroundColor="Transparent"
                     BorderWidth="0"
                     VerticalOptions="Center" />
