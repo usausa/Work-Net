@@ -6,25 +6,27 @@
 
     <Grid x:Name="RootGrid" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="0">
 
-        <!-- Header: prev | Year & Month | next -->
-        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
-            <Button Grid.Column="0" x:Name="PrevButton"
-                    Text="◀"
-                    Command="{Binding PrevMonthCommand, Source={x:Reference _self}}"
-                    BackgroundColor="Transparent"
-                    BorderWidth="0"
-                    VerticalOptions="Center" />
-            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center" Spacing="-2">
-                <Label x:Name="YearLabel" Text="" HorizontalTextAlignment="Center" />
-                <Label x:Name="MonthLabel" Text="" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-            </VerticalStackLayout>
-            <Button Grid.Column="2" x:Name="NextButton"
-                    Text="▶"
-                    Command="{Binding NextMonthCommand, Source={x:Reference _self}}"
-                    BackgroundColor="Transparent"
-                    BorderWidth="0"
-                    VerticalOptions="Center" />
-        </Grid>
+        <!-- Header: default content or replaced by HeaderTemplate -->
+        <ContentView Grid.Row="0" x:Name="HeaderContentHost">
+            <Grid x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" x:Name="PrevButton"
+                        Text="◀"
+                        Command="{Binding PrevMonthCommand, Source={x:Reference _self}}"
+                        BackgroundColor="Transparent"
+                        BorderWidth="0"
+                        VerticalOptions="Center" />
+                <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center" Spacing="-2">
+                    <Label x:Name="YearLabel" Text="" HorizontalTextAlignment="Center" />
+                    <Label x:Name="MonthLabel" Text="" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+                <Button Grid.Column="2" x:Name="NextButton"
+                        Text="▶"
+                        Command="{Binding NextMonthCommand, Source={x:Reference _self}}"
+                        BackgroundColor="Transparent"
+                        BorderWidth="0"
+                        VerticalOptions="Center" />
+            </Grid>
+        </ContentView>
 
         <!-- Divider above weekday header -->
         <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
@@ -34,6 +36,8 @@
 
         <!-- Calendar body: 6 equal-height week rows (clipped for slide animation) -->
         <Grid Grid.Row="3" IsClippedToBounds="True">
+            <!-- Month indicator layer (behind weeks grid) -->
+            <ContentView x:Name="MonthIndicatorHost" InputTransparent="True" />
             <Grid x:Name="WeeksHost" RowSpacing="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />

@@ -193,6 +193,33 @@ public partial class CalendarView : ContentView
     public static readonly BindableProperty SundayHeaderColorProperty =
         BindableProperty.Create(nameof(SundayHeaderColor), typeof(Color), typeof(CalendarView), Color.FromArgb("#E53935"));
 
+    // ------------------------------------------------------------------ BindableProperties: Templates
+
+    /// <summary>ヘッダー全体のカスタムテンプレート。null の場合はデフォルトの年月＋ナビボタンを使用。BindingContext は MonthViewModel。</summary>
+    public static readonly BindableProperty HeaderTemplateProperty =
+        BindableProperty.Create(nameof(HeaderTemplate), typeof(DataTemplate), typeof(CalendarView),
+            null, propertyChanged: OnHeaderTemplateChanged);
+
+    /// <summary>月インジケータのカスタムテンプレート。null の場合は MonthIndicatorEnabled に基づくデフォルト表示。BindingContext は MonthViewModel。</summary>
+    public static readonly BindableProperty MonthIndicatorTemplateProperty =
+        BindableProperty.Create(nameof(MonthIndicatorTemplate), typeof(DataTemplate), typeof(CalendarView),
+            null, propertyChanged: OnMonthIndicatorChanged);
+
+    /// <summary>デフォルトの月インジケータ（大きな月数字）を表示するか。MonthIndicatorTemplate が設定されている場合は無視される。</summary>
+    public static readonly BindableProperty MonthIndicatorEnabledProperty =
+        BindableProperty.Create(nameof(MonthIndicatorEnabled), typeof(bool), typeof(CalendarView),
+            false, propertyChanged: OnMonthIndicatorChanged);
+
+    /// <summary>デフォルト月インジケータの文字色（半透明推奨）。</summary>
+    public static readonly BindableProperty MonthIndicatorColorProperty =
+        BindableProperty.Create(nameof(MonthIndicatorColor), typeof(Color), typeof(CalendarView),
+            Color.FromArgb("#10000000"), propertyChanged: OnMonthIndicatorChanged);
+
+    /// <summary>デフォルト月インジケータのフォントサイズ。</summary>
+    public static readonly BindableProperty MonthIndicatorFontSizeProperty =
+        BindableProperty.Create(nameof(MonthIndicatorFontSize), typeof(double), typeof(CalendarView),
+            160d, propertyChanged: OnMonthIndicatorChanged);
+
     // ------------------------------------------------------------------ CLR Properties
 
     public MonthViewModel? ViewModel
@@ -309,6 +336,12 @@ public partial class CalendarView : ContentView
     public Color WeekdayHeaderColor    { get => (Color)GetValue(WeekdayHeaderColorProperty);    set => SetValue(WeekdayHeaderColorProperty, value); }
     public Color SaturdayHeaderColor   { get => (Color)GetValue(SaturdayHeaderColorProperty);   set => SetValue(SaturdayHeaderColorProperty, value); }
     public Color SundayHeaderColor     { get => (Color)GetValue(SundayHeaderColorProperty);     set => SetValue(SundayHeaderColorProperty, value); }
+
+    public DataTemplate? HeaderTemplate         { get => (DataTemplate?)GetValue(HeaderTemplateProperty);        set => SetValue(HeaderTemplateProperty, value); }
+    public DataTemplate? MonthIndicatorTemplate { get => (DataTemplate?)GetValue(MonthIndicatorTemplateProperty); set => SetValue(MonthIndicatorTemplateProperty, value); }
+    public bool MonthIndicatorEnabled           { get => (bool)GetValue(MonthIndicatorEnabledProperty);          set => SetValue(MonthIndicatorEnabledProperty, value); }
+    public Color MonthIndicatorColor            { get => (Color)GetValue(MonthIndicatorColorProperty);           set => SetValue(MonthIndicatorColorProperty, value); }
+    public double MonthIndicatorFontSize        { get => (double)GetValue(MonthIndicatorFontSizeProperty);       set => SetValue(MonthIndicatorFontSizeProperty, value); }
 
     // ------------------------------------------------------------------ Constructor
 
@@ -586,6 +619,10 @@ public partial class CalendarView : ContentView
         // 曜日ヘッダーは初期化時に一度だけ構築する（FirstDayOfWeek/Culture変更時に再構築）
         UpdateWeekdayHeaderLabels();
 
+        // ヘッダー・月インジケータは初期状態をデフォルトで確立する
+        ApplyHeaderTemplate();
+        ApplyMonthIndicatorTemplate();
+
         AttachSwipeGestures();
     }
 
@@ -634,6 +671,26 @@ public partial class CalendarView : ContentView
     {
         if (bindable is CalendarView view)
             view.UpdateSwipeGestureState((bool)newValue);
+    }
+
+    private static void OnHeaderTemplateChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view)
+        {
+            view.ApplyHeaderTemplate();
+            if (view.ViewModel is { } month)
+                view.UpdateHeaderContent(month);
+        }
+    }
+
+    private static void OnMonthIndicatorChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view)
+        {
+            view.ApplyMonthIndicatorTemplate();
+            if (view.ViewModel is { } month)
+                view.UpdateMonthIndicator(month);
+        }
     }
 
     private static void OnSelectionPropertyChanged(BindableObject bindable, object oldValue, object newValue)
@@ -689,10 +746,8 @@ public partial class CalendarView : ContentView
 
         var t0 = sw.Elapsed;
 
-        YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
-        YearLabel.TextColor = YearTextColor;
-        MonthLabel.Text = GetMonthDisplayName(month.Month);
-        MonthLabel.TextColor = MonthTextColor;
+        UpdateHeaderContent(month);
+        UpdateMonthIndicator(month);
 
         // [DIFF-UPDATE: Header] フォント・サイズ・パディングなどの不変プロパティは初回のみ設定
         if (!_headerStyleInitialized)
@@ -777,6 +832,87 @@ public partial class CalendarView : ContentView
     }
 
     private static Task AnimateSlideAsync(int direction) => Task.CompletedTask;
+
+    // ------------------------------------------------------------------ Template helpers
+
+    /// <summary>HeaderTemplate が設定されていれば HeaderContentHost にカスタムビューを生成し、
+    /// 未設定の場合はデフォルトの HeaderGrid に切り替える。</summary>
+    private void ApplyHeaderTemplate()
+    {
+        var template = HeaderTemplate;
+        if (template is null)
+        {
+            // デフォルトに戻す
+            HeaderContentHost.Content = HeaderGrid;
+        }
+        else
+        {
+            var view = (View)template.CreateContent();
+            HeaderContentHost.Content = view;
+        }
+    }
+
+    /// <summary>ヘッダーのコンテンツに現在の月を反映させる。
+    /// カスタムテンプレートの場合は BindingContext に MonthViewModel をセット。
+    /// デフォルトの場合は YearLabel / MonthLabel を直接更新。</summary>
+    private void UpdateHeaderContent(MonthViewModel month)
+    {
+        if (HeaderTemplate is not null)
+        {
+            HeaderContentHost.BindingContext = month;
+        }
+        else
+        {
+            YearLabel.Text      = month.Year.ToString(CultureInfo.InvariantCulture);
+            YearLabel.TextColor = YearTextColor;
+            MonthLabel.Text      = GetMonthDisplayName(month.Month);
+            MonthLabel.TextColor = MonthTextColor;
+        }
+    }
+
+    /// <summary>MonthIndicatorTemplate / MonthIndicatorEnabled に応じて MonthIndicatorHost にビューを設定する。</summary>
+    private void ApplyMonthIndicatorTemplate()
+    {
+        var template = MonthIndicatorTemplate;
+        if (template is not null)
+        {
+            MonthIndicatorHost.Content = (View)template.CreateContent();
+            MonthIndicatorHost.IsVisible = true;
+        }
+        else if (MonthIndicatorEnabled)
+        {
+            MonthIndicatorHost.Content = BuildDefaultMonthIndicator();
+            MonthIndicatorHost.IsVisible = true;
+        }
+        else
+        {
+            MonthIndicatorHost.Content = null;
+            MonthIndicatorHost.IsVisible = false;
+        }
+    }
+
+    /// <summary>月インジケータのコンテンツに現在の月を反映させる。</summary>
+    private void UpdateMonthIndicator(MonthViewModel month)
+    {
+        if (MonthIndicatorTemplate is not null)
+        {
+            MonthIndicatorHost.BindingContext = month;
+        }
+        else if (MonthIndicatorEnabled && MonthIndicatorHost.Content is Label indicatorLabel)
+        {
+            indicatorLabel.Text      = month.Month.ToString(CultureInfo.InvariantCulture);
+            indicatorLabel.TextColor = MonthIndicatorColor;
+            indicatorLabel.FontSize  = MonthIndicatorFontSize;
+        }
+    }
+
+    private static Label BuildDefaultMonthIndicator() => new()
+    {
+        HorizontalTextAlignment = TextAlignment.Center,
+        VerticalTextAlignment   = TextAlignment.Center,
+        FontAttributes = FontAttributes.Bold,
+        InputTransparent = true
+    };
 
     private void UpdateWeekdayHeaderLabels()
     {
