@@ -2,7 +2,7 @@ namespace WorkCalendar.ViewModels;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 
 using WorkCalendar.Models;
 
@@ -27,17 +27,22 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
         IReadOnlyList<Stamp> stamps,
         IReadOnlyList<DateOnly> holidays)
     {
+        var sw = Stopwatch.StartNew();
+
         var (firstDayToShow, _) = GetDisplayRange(year, month);
-        var holidaySet = new HashSet<DateOnly>(holidays);
-        var stampLookup = stamps
-            .GroupBy(static s => s.Date)
-            .ToDictionary(static g => g.Key, static g => (IReadOnlyList<Stamp>)g.ToList());
+
+        var t0 = sw.Elapsed;
+        var holidaySet = holidays.Count == 0 ? null : new HashSet<DateOnly>(holidays);
+        var t1 = sw.Elapsed;
+        var stampLookup = CreateStampLookup(stamps);
+        var t2 = sw.Elapsed;
+        var weeklyCandidates = CreateWeeklyEventCandidates(firstDayToShow, events);
+        var t3 = sw.Elapsed;
 
         var weeks = new List<WeekViewModel>(capacity: WeeksPerMonth);
         for (var w = 0; w < WeeksPerMonth; w++)
         {
             var weekStart = firstDayToShow.AddDays(w * DaysPerWeek);
-            var weekEnd = weekStart.AddDays(DaysPerWeek - 1);
 
             var days = new List<DayViewModel>(capacity: DaysPerWeek);
             for (var d = 0; d < DaysPerWeek; d++)
@@ -53,8 +58,8 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
                 });
             }
 
-            var placements = AssignPlacements(weekStart, weekEnd, events);
-            var slotCount = placements.Count == 0 ? 0 : placements.Max(static p => p.Slot) + 1;
+            var placements = AssignPlacements(weeklyCandidates[w]);
+            var slotCount = GetSlotCount(placements);
 
             weeks.Add(new WeekViewModel
             {
@@ -64,13 +69,25 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
             });
         }
 
-        return new MonthViewModel
+        var t4 = sw.Elapsed;
+
+        var result = new MonthViewModel
         {
             Year = year,
             Month = month,
             Today = today,
             Weeks = weeks,
         };
+
+        sw.Stop();
+        Debug.WriteLine(
+            $"[Build] {year}/{month:D2} {sw.Elapsed.TotalMilliseconds:F3}ms" +
+            $" | HolidaySet: {(t1 - t0).TotalMilliseconds:F3}ms" +
+            $" | StampLookup: {(t2 - t1).TotalMilliseconds:F3}ms" +
+            $" | WeeklyCandidates: {(t3 - t2).TotalMilliseconds:F3}ms" +
+            $" | Weeks: {(t4 - t3).TotalMilliseconds:F3}ms");
+
+        return result;
     }
 
     private DateOnly AlignToWeekStart(DateOnly date)
@@ -83,9 +100,33 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
         return current;
     }
 
-    private static DayKind DetermineKind(DateOnly date, HashSet<DateOnly> holidays)
+    private static Dictionary<DateOnly, IReadOnlyList<Stamp>> CreateStampLookup(IReadOnlyList<Stamp> stamps)
     {
-        if (holidays.Contains(date))
+        var stampLookup = new Dictionary<DateOnly, IReadOnlyList<Stamp>>(stamps.Count);
+        for (var i = 0; i < stamps.Count; i++)
+        {
+            var stamp = stamps[i];
+            if (!stampLookup.TryGetValue(stamp.Date, out var existing))
+            {
+                stampLookup.Add(stamp.Date, [stamp]);
+                continue;
+            }
+
+            if (existing is List<Stamp> list)
+            {
+                list.Add(stamp);
+                continue;
+            }
+
+            stampLookup[stamp.Date] = new List<Stamp> { existing[0], stamp };
+        }
+
+        return stampLookup;
+    }
+
+    private static DayKind DetermineKind(DateOnly date, HashSet<DateOnly>? holidays)
+    {
+        if (holidays?.Contains(date) == true)
         {
             return DayKind.Holiday;
         }
@@ -97,42 +138,62 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
         };
     }
 
-    private static IReadOnlyList<EventPlacement> AssignPlacements(
-        DateOnly weekStart,
-        DateOnly weekEnd,
-        IReadOnlyList<ScheduleEvent> events)
+    private static List<EventCandidate>[] CreateWeeklyEventCandidates(DateOnly firstDayToShow, IReadOnlyList<ScheduleEvent> events)
     {
-        var candidates = events
-            .Where(e => (e.EndDate >= weekStart) && (e.StartDate <= weekEnd))
-            .Select(e =>
+        var weeklyCandidates = new List<EventCandidate>[WeeksPerMonth];
+        for (var i = 0; i < WeeksPerMonth; i++)
+            weeklyCandidates[i] = [];
+
+        for (var i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            var firstWeek = Math.Max(0, (e.StartDate.DayNumber - firstDayToShow.DayNumber) / DaysPerWeek);
+            var lastWeek = Math.Min(WeeksPerMonth - 1, (e.EndDate.DayNumber - firstDayToShow.DayNumber) / DaysPerWeek);
+            for (var weekIndex = firstWeek; weekIndex <= lastWeek; weekIndex++)
             {
+                var weekStart = firstDayToShow.AddDays(weekIndex * DaysPerWeek);
+                var weekEnd = weekStart.AddDays(DaysPerWeek - 1);
                 var clippedStart = e.StartDate < weekStart ? weekStart : e.StartDate;
                 var clippedEnd = e.EndDate > weekEnd ? weekEnd : e.EndDate;
-                return new EventCandidate(
+                weeklyCandidates[weekIndex].Add(new EventCandidate(
                     e,
                     clippedStart.DayNumber - weekStart.DayNumber,
                     clippedEnd.DayNumber - weekStart.DayNumber,
                     e.StartDate < weekStart,
-                    e.EndDate > weekEnd);
-            })
-            .OrderBy(static c => c.StartCol)
-            .ThenByDescending(static c => c.EndCol - c.StartCol)
-            .ToList();
+                    e.EndDate > weekEnd));
+            }
+        }
 
-        var slotOccupancy = new List<bool[]>();
+        for (var i = 0; i < weeklyCandidates.Length; i++)
+        {
+            weeklyCandidates[i].Sort(static (left, right) =>
+            {
+                var startComparison = left.StartCol.CompareTo(right.StartCol);
+                if (startComparison != 0)
+                    return startComparison;
+
+                return (right.EndCol - right.StartCol).CompareTo(left.EndCol - left.StartCol);
+            });
+        }
+
+        return weeklyCandidates;
+    }
+
+    private static IReadOnlyList<EventPlacement> AssignPlacements(List<EventCandidate> candidates)
+    {
+        Span<int> slotOccupancy = stackalloc int[16];
+        var slotCount = 0;
         var placements = new List<EventPlacement>(capacity: candidates.Count);
 
-        foreach (var c in candidates)
+        for (var i = 0; i < candidates.Count; i++)
         {
-            var slot = FindAvailableSlot(slotOccupancy, c.StartCol, c.EndCol);
-            if (slot >= slotOccupancy.Count)
-            {
-                slotOccupancy.Add(new bool[DaysPerWeek]);
-            }
-            for (var col = c.StartCol; col <= c.EndCol; col++)
-            {
-                slotOccupancy[slot][col] = true;
-            }
+            var c = candidates[i];
+            var mask = ((1 << ((c.EndCol - c.StartCol) + 1)) - 1) << c.StartCol;
+            var slot = FindAvailableSlot(slotOccupancy[..slotCount], mask);
+            if (slot >= slotCount)
+                slotCount++;
+            slotOccupancy[slot] |= mask;
+
             placements.Add(new EventPlacement
             {
                 Event = c.Event,
@@ -147,25 +208,27 @@ public sealed class MonthViewBuilder(DayOfWeek weekStartDayOfWeek = DayOfWeek.Mo
         return placements;
     }
 
-    private static int FindAvailableSlot(List<bool[]> occupancy, int startCol, int endCol)
+    private static int FindAvailableSlot(ReadOnlySpan<int> occupancy, int mask)
     {
-        for (var slot = 0; slot < occupancy.Count; slot++)
+        for (var slot = 0; slot < occupancy.Length; slot++)
         {
-            var fits = true;
-            for (var col = startCol; col <= endCol; col++)
-            {
-                if (occupancy[slot][col])
-                {
-                    fits = false;
-                    break;
-                }
-            }
-            if (fits)
-            {
+            if ((occupancy[slot] & mask) == 0)
                 return slot;
-            }
         }
-        return occupancy.Count;
+        return occupancy.Length;
+    }
+
+    private static int GetSlotCount(IReadOnlyList<EventPlacement> placements)
+    {
+        var slotCount = 0;
+        for (var i = 0; i < placements.Count; i++)
+        {
+            var count = placements[i].Slot + 1;
+            if (count > slotCount)
+                slotCount = count;
+        }
+
+        return slotCount;
     }
 
     private readonly record struct EventCandidate(

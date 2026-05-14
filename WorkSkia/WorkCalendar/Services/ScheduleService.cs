@@ -69,6 +69,11 @@ public sealed class ScheduleService : IScheduleService
 
     public IReadOnlyList<ScheduleEvent> GetEvents(DateOnly start, DateOnly end)
     {
+        // [DEBUG] 前々月より前なら空を返す（性能検証用）
+        var twoMonthsAgo = DateOnly.FromDateTime(DateTime.Today).AddMonths(-2);
+        if (start < new DateOnly(twoMonthsAgo.Year, twoMonthsAgo.Month, 1))
+            return Array.Empty<ScheduleEvent>();
+
         var events = new List<ScheduleEvent>();
         var months = EnumerateMonths(start, end);
 
@@ -124,6 +129,11 @@ public sealed class ScheduleService : IScheduleService
 
     public IReadOnlyList<Stamp> GetStamps(DateOnly start, DateOnly end)
     {
+        // [DEBUG] 前々月より前なら空を返す（性能検証用）
+        var twoMonthsAgo = DateOnly.FromDateTime(DateTime.Today).AddMonths(-2);
+        if (start < new DateOnly(twoMonthsAgo.Year, twoMonthsAgo.Month, 1))
+            return Array.Empty<Stamp>();
+
         var stamps = new List<Stamp>();
         var months = EnumerateMonths(start, end);
 

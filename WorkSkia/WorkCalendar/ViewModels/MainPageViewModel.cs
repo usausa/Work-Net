@@ -115,11 +115,17 @@ public sealed class MainPageViewModel : INotifyPropertyChanged
 
     private void LoadMonth(int year, int month)
     {
+        var sw = Stopwatch.StartNew();
         var (rangeStart, rangeEnd) = builder.GetDisplayRange(year, month);
         var events = scheduleService.GetEvents(rangeStart, rangeEnd);
         var stamps = scheduleService.GetStamps(rangeStart, rangeEnd);
         var holidays = holidayService.GetHolidays(rangeStart, rangeEnd);
+
+        var buildStart = sw.Elapsed;
         MonthViewModel = builder.Build(year, month, Today, events, stamps, holidays);
+        var buildEnd = sw.Elapsed;
+
+        Debug.WriteLine($"[LoadMonth] {year}/{month:D2} | Total: {sw.Elapsed.TotalMilliseconds:F2}ms | Build: {(buildEnd - buildStart).TotalMilliseconds:F2}ms | Events: {events.Count}, Stamps: {stamps.Count}, Holidays: {holidays.Count}");
     }
 
     private static void OnDayTapped(DayViewModel day) =>

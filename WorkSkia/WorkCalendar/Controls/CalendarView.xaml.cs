@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -449,6 +450,9 @@ public partial class CalendarView : ContentView
 
         public Command<DayViewModel>? TapCommand { get; set; }
 
+        // スタンプ表示用の再利用可能な Label プール
+        public List<Label> StampLabelPool { get; } = [];
+
         public DayCellVisual()
         {
             DateBubble = new Border
@@ -553,6 +557,8 @@ public partial class CalendarView : ContentView
 
     private void Render(MonthViewModel month)
     {
+        var sw = Stopwatch.StartNew();
+
         // Determine navigation direction from previous displayed month.
         // lastNavDirection is pre-set by swipe; otherwise auto-detect from date comparison.
         if (lastNavDirection == 0 && (previousYear != 0))
@@ -564,6 +570,9 @@ public partial class CalendarView : ContentView
 
         previousYear  = month.Year;
         previousMonth = month.Month;
+
+        var t0 = sw.Elapsed;
+
         YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
         YearLabel.FontSize = YearFontSize;
         YearLabel.TextColor = YearTextColor;
@@ -582,29 +591,60 @@ public partial class CalendarView : ContentView
 
         HeaderGrid.Padding = HeaderPadding;
         WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
+
+        var t1 = sw.Elapsed;
+
         UpdateWeekdayHeaderLabels();
+
+        var t2 = sw.Elapsed;
 
         var slotCount = Math.Max(2, month.Weeks.Count > 0
             ? month.Weeks.Max(static w => w.SlotCount)
             : 0);
 
+        var t3 = sw.Elapsed;
+
         RebuildWeeksHost(month, slotCount);
+
+        var t4 = sw.Elapsed;
+
         AnimateSlideAsync(lastNavDirection).FireAndForget();
         lastNavDirection = 0;
+
+        sw.Stop();
+        Debug.WriteLine(
+            $"[Render] {month.Year}/{month.Month:D2} {sw.Elapsed.TotalMilliseconds:F3}ms" +
+            $" | Header: {(t1 - t0).TotalMilliseconds:F3}ms" +
+            $" | WeekdayLabels: {(t2 - t1).TotalMilliseconds:F3}ms" +
+            $" | SlotCount: {(t3 - t2).TotalMilliseconds:F3}ms" +
+            $" | RebuildWeeksHost: {(t4 - t3).TotalMilliseconds:F3}ms");
     }
 
     private void RebuildWeeksHost(MonthViewModel month, int slotCount)
     {
+        var sw = Stopwatch.StartNew();
         var weekCount = month.Weeks.Count;
+
         for (var i = 0; i < MaxWeekRows; i++)
         {
             var row = weekRows[i];
             row.Root.IsVisible = i < weekCount;
             if (i < weekCount)
+            {
+                var t0 = sw.Elapsed;
                 UpdateWeekRow(row, month.Weeks[i], slotCount);
+                var t1 = sw.Elapsed;
+                Debug.WriteLine(
+                    $"[RebuildWeeksHost] week[{i}] {(t1 - t0).TotalMilliseconds:F3}ms");
+            }
             else
+            {
                 row.ClearDynamicViews();
+            }
         }
+
+        sw.Stop();
+        Debug.WriteLine($"[RebuildWeeksHost] total {sw.Elapsed.TotalMilliseconds:F3}ms");
     }
 
     // Update only fixed day-cell state. Used when selection/color state changes.
@@ -678,18 +718,40 @@ public partial class CalendarView : ContentView
 
     private void UpdateWeekRow(WeekRowVisual row, WeekViewModel week, int slotCount)
     {
+        var sw = Stopwatch.StartNew();
+
         var totalRows = 2 + slotCount;
         row.UpdateRows(slotCount, DateRowHeight, SlotRowHeight);
         row.TopDivider.Color = GridLineColor;
         foreach (var divider in row.VerticalDividers)
             divider.Color = GridLineColor;
 
+        var t0 = sw.Elapsed;
+
         for (var c = 0; c < DaysPerWeek; c++)
             UpdateDayCell(row.Days[c], week.Days[c]);
 
+        var t1 = sw.Elapsed;
+
         row.ClearDynamicViews();
+
+        var t2 = sw.Elapsed;
+
         AddStampViews(row, week, totalRows);
+
+        var t3 = sw.Elapsed;
+
         AddEventViews(row, week);
+
+        var t4 = sw.Elapsed;
+
+        Debug.WriteLine(
+            $"[UpdateWeekRow] {week.Days[0].Date:MM/dd}" +
+            $" | DayCells: {(t1 - t0).TotalMilliseconds:F3}ms" +
+            $" | ClearDynamic: {(t2 - t1).TotalMilliseconds:F3}ms" +
+            $" | Stamps: {(t3 - t2).TotalMilliseconds:F3}ms" +
+            $" | Events: {(t4 - t3).TotalMilliseconds:F3}ms" +
+            $" | Total: {t4.TotalMilliseconds:F3}ms");
     }
 
     private void UpdateDayCell(DayCellVisual cell, DayViewModel day)
@@ -714,14 +776,50 @@ public partial class CalendarView : ContentView
     {
         for (var c = 0; c < DaysPerWeek; c++)
         {
-            foreach (var stamp in week.Days[c].Stamps)
+            var cell = row.Days[c];
+            var stamps = week.Days[c].Stamps;
+
+            // 既存のスタンプ Label を Grid から削除
+            foreach (var label in cell.StampLabelPool)
             {
-                var sv = BuildStampView(stamp);
-                Grid.SetColumn(sv, c);
-                Grid.SetRow(sv, 0);
-                Grid.SetRowSpan(sv, totalRows);
-                row.Root.Children.Add(sv);
-                row.DynamicViews.Add(sv);
+                label.IsVisible = false;
+                row.Root.Children.Remove(label);
+            }
+
+            // 必要なスタンプ数に合わせてプールを拡張
+            while (cell.StampLabelPool.Count < stamps.Count)
+                cell.StampLabelPool.Add(new Label { InputTransparent = true });
+
+            // スタンプを再利用して配置
+            for (var i = 0; i < stamps.Count; i++)
+            {
+                var stamp = stamps[i];
+                var label = cell.StampLabelPool[i];
+
+                label.Text = stamp.Glyph;
+                label.FontSize = stamp.FontSize;
+                label.Opacity = stamp.Opacity;
+                label.HorizontalTextAlignment = TextAlignment.Center;
+                label.VerticalTextAlignment = TextAlignment.Center;
+
+                var m = StampMarginEdge;
+                (label.HorizontalOptions, label.VerticalOptions, label.Margin) = stamp.Position switch
+                {
+                    StampPosition.TopLeft      => (LayoutOptions.Start,  LayoutOptions.Start, new Thickness(m, 0, 0, 0)),
+                    StampPosition.TopCenter    => (LayoutOptions.Center, LayoutOptions.Start, new Thickness(0)),
+                    StampPosition.TopRight     => (LayoutOptions.End,    LayoutOptions.Start, new Thickness(0, 0, m, 0)),
+                    StampPosition.BottomLeft   => (LayoutOptions.Start,  LayoutOptions.End,   new Thickness(m, 0, 0, m)),
+                    StampPosition.BottomCenter => (LayoutOptions.Center, LayoutOptions.End,   new Thickness(0, 0, 0, m)),
+                    StampPosition.BottomRight  => (LayoutOptions.End,    LayoutOptions.End,   new Thickness(0, 0, m, m)),
+                    _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
+                };
+
+                label.IsVisible = true;
+                Grid.SetColumn(label, c);
+                Grid.SetRow(label, 0);
+                Grid.SetRowSpan(label, totalRows);
+                row.Root.Children.Add(label);
+                row.DynamicViews.Add(label);
             }
         }
     }
