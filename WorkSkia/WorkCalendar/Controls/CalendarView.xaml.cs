@@ -320,6 +320,61 @@ public partial class CalendarView : ContentView
 
     private readonly WeekRowVisual[] weekRows = new WeekRowVisual[MaxWeekRows];
 
+    private sealed class EventBorderVisual
+    {
+        private readonly RoundRectangle shape = new();
+
+        public Label Label { get; } = new()
+        {
+            FontAttributes = FontAttributes.Bold,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            VerticalTextAlignment = TextAlignment.Center,
+        };
+
+        public Border Root { get; }
+
+        public TapGestureRecognizer TapGesture { get; } = new();
+
+        public EventBorderVisual()
+        {
+            Root = new Border { StrokeThickness = 0, Content = Label };
+            Root.GestureRecognizers.Add(TapGesture);
+        }
+
+        public void Apply(EventPlacement placement, double fontSize, double rowHeight)
+        {
+            var evt = placement.Event;
+            Label.Text = evt.Title;
+            Label.FontSize = fontSize;
+            Label.TextColor = evt.TextColor;
+            Label.TextDecorations = evt.Underline ? TextDecorations.Underline : TextDecorations.None;
+
+            if (evt.Style == ScheduleStyle.Filled)
+            {
+                var left  = placement.ContinuesFromPreviousWeek ? 0 : 2;
+                var right = placement.ContinuesToNextWeek       ? 0 : 2;
+                shape.CornerRadius = new CornerRadius(left, right, left, right);
+                Root.BackgroundColor = evt.BackgroundColor;
+                Root.StrokeShape     = shape;
+                Root.Padding         = new Thickness(4, 0);
+                Root.HeightRequest   = rowHeight;
+                Root.Margin          = new Thickness(
+                    placement.ContinuesFromPreviousWeek ? 0 : 1, 1,
+                    placement.ContinuesToNextWeek       ? 0 : 1, 0);
+            }
+            else
+            {
+                Root.BackgroundColor = Colors.Transparent;
+                Root.StrokeShape     = null;
+                Root.Padding         = new Thickness(4, 0);
+                Root.HeightRequest   = rowHeight;
+                Root.Margin          = new Thickness(1, 1, 1, 0);
+            }
+
+            TapGesture.CommandParameter = evt;
+        }
+    }
+
     private sealed class WeekRowVisual
     {
         public WeekRowVisual()
@@ -393,10 +448,22 @@ public partial class CalendarView : ContentView
             })
             .ToArray();
 
-        public List<View> DynamicViews { get; } = [];
+        public List<EventBorderVisual> EventPool { get; } = [];
+
+        // [DIFF-UPDATE: UpdateRows] slotCount が変わらなければ RowDefinitions を再生成しない
+        internal int LastSlotCount = -1;
+
+        // [DIFF-UPDATE: HideDynamic] 前回使用した数だけループすれば十分
+        internal int ActiveEventCount;
+        internal readonly int[] ActiveStampCounts = new int[DaysPerWeek];
 
         public void UpdateRows(int slotCount, double dateRowHeight, double slotRowHeight)
         {
+            // [DIFF-UPDATE: UpdateRows] slotCount が同じなら再構築をスキップ
+            if (slotCount == LastSlotCount)
+                return;
+            LastSlotCount = slotCount;
+
             var totalRows = 2 + slotCount;
             Root.RowDefinitions.Clear();
             Root.RowDefinitions.Add(new RowDefinition(new GridLength(dateRowHeight)));
@@ -414,19 +481,30 @@ public partial class CalendarView : ContentView
                 Grid.SetRowSpan(divider, totalRows);
         }
 
-        public void ClearDynamicViews()
+        // Hide pooled event and stamp views without removing them from the visual tree.
+        public void HideDynamicViews()
         {
-            foreach (var view in DynamicViews)
-                Root.Children.Remove(view);
-            DynamicViews.Clear();
+            // [DIFF-UPDATE: HideDynamic] 前回使用数だけループして非表示にする（全件走査を回避）
+            for (var i = 0; i < ActiveEventCount; i++)
+                EventPool[i].Root.IsVisible = false;
+            ActiveEventCount = 0;
+
+            for (var c = 0; c < DaysPerWeek; c++)
+            {
+                var pool = Days[c].StampLabelPool;
+                var count = ActiveStampCounts[c];
+                for (var i = 0; i < count; i++)
+                    pool[i].IsVisible = false;
+                ActiveStampCounts[c] = 0;
+            }
         }
     }
 
     private sealed class DayCellVisual
     {
-        public BoxView Background { get; } = new() { InputTransparent = true };
+        public BoxView Background { get; } = new() { InputTransparent = true, IsVisible = false };
 
-        public BoxView RangeBackground { get; } = new() { InputTransparent = true };
+        public BoxView RangeBackground { get; } = new() { InputTransparent = true, IsVisible = false };
 
         public Border TapTarget { get; } = new()
         {
@@ -453,6 +531,10 @@ public partial class CalendarView : ContentView
         // スタンプ表示用の再利用可能な Label プール
         public List<Label> StampLabelPool { get; } = [];
 
+        // [DIFF-UPDATE: DateBubble] RoundRectangle を毎回 new せず同一インスタンスを再利用
+        private readonly RoundRectangle _dateBubbleShape = new() { CornerRadius = new CornerRadius(2) };
+        internal RoundRectangle DateBubbleShape => _dateBubbleShape;
+
         public DayCellVisual()
         {
             DateBubble = new Border
@@ -474,6 +556,9 @@ public partial class CalendarView : ContentView
     private int previousYear;
     private int previousMonth;
 
+    // [DIFF-UPDATE: Header] Nav ボタン・パディングなどの不変プロパティは初回のみ設定
+    private bool _headerStyleInitialized;
+
     public CalendarView()
     {
         InitializeComponent();
@@ -486,6 +571,9 @@ public partial class CalendarView : ContentView
             WeeksHost.Children.Add(row.Root);
             weekRows[i] = row;
         }
+
+        // 曜日ヘッダーは初期化時に一度だけ構築する（FirstDayOfWeek/Culture変更時に再構築）
+        UpdateWeekdayHeaderLabels();
 
         AttachSwipeGestures();
     }
@@ -500,8 +588,26 @@ public partial class CalendarView : ContentView
 
     private static void OnRenderPropertyChanged(BindableObject bindable, object oldValue, object newValue)
     {
-        if (bindable is CalendarView view && view.ViewModel is MonthViewModel month)
-            view.Render(month);
+        if (bindable is CalendarView view)
+        {
+            // [DIFF-UPDATE: DayCell] 色などのプロパティ変更時はキャッシュを破棄して全セルを再描画
+            view.InvalidateDayCellCaches();
+            if (view.ViewModel is MonthViewModel month)
+                view.Render(month);
+        }
+    }
+
+    // BindableProperty (色・サイズ) 変更時にキャッシュを無効化する
+    private void InvalidateDayCellCaches()
+    {
+        // [DIFF-UPDATE: Header] 不変プロパティも再設定させる
+        _headerStyleInitialized = false;
+        // [DIFF-UPDATE: UpdateRows] slotCount キャッシュをリセット
+        foreach (var row in weekRows)
+        {
+            if (row is null) continue;
+            row.LastSlotCount = -1;
+        }
     }
 
     private static void OnFirstDayOfWeekChanged(BindableObject bindable, object oldValue, object newValue)
@@ -574,39 +680,41 @@ public partial class CalendarView : ContentView
         var t0 = sw.Elapsed;
 
         YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
-        YearLabel.FontSize = YearFontSize;
         YearLabel.TextColor = YearTextColor;
         MonthLabel.Text = GetMonthDisplayName(month.Year, month.Month);
-        MonthLabel.FontSize = MonthFontSize;
         MonthLabel.TextColor = MonthTextColor;
 
-        PrevButton.TextColor = NavButtonColor;
-        PrevButton.FontSize = NavButtonFontSize;
-        PrevButton.WidthRequest = NavButtonWidth;
-        PrevButton.HeightRequest = NavButtonHeight;
-        NextButton.TextColor = NavButtonColor;
-        NextButton.FontSize = NavButtonFontSize;
-        NextButton.WidthRequest = NavButtonWidth;
-        NextButton.HeightRequest = NavButtonHeight;
+        // [DIFF-UPDATE: Header] フォント・サイズ・パディングなどの不変プロパティは初回のみ設定
+        if (!_headerStyleInitialized)
+        {
+            _headerStyleInitialized = true;
+            YearLabel.FontSize  = YearFontSize;
+            MonthLabel.FontSize = MonthFontSize;
 
-        HeaderGrid.Padding = HeaderPadding;
-        WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
+            PrevButton.TextColor    = NavButtonColor;
+            PrevButton.FontSize     = NavButtonFontSize;
+            PrevButton.WidthRequest = NavButtonWidth;
+            PrevButton.HeightRequest = NavButtonHeight;
+            NextButton.TextColor    = NavButtonColor;
+            NextButton.FontSize     = NavButtonFontSize;
+            NextButton.WidthRequest = NavButtonWidth;
+            NextButton.HeightRequest = NavButtonHeight;
+
+            HeaderGrid.Padding        = HeaderPadding;
+            WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
+        }
 
         var t1 = sw.Elapsed;
-
-        UpdateWeekdayHeaderLabels();
-
-        var t2 = sw.Elapsed;
 
         var slotCount = Math.Max(2, month.Weeks.Count > 0
             ? month.Weeks.Max(static w => w.SlotCount)
             : 0);
 
-        var t3 = sw.Elapsed;
+        var t2 = sw.Elapsed;
 
         RebuildWeeksHost(month, slotCount);
 
-        var t4 = sw.Elapsed;
+        var t3 = sw.Elapsed;
 
         AnimateSlideAsync(lastNavDirection).FireAndForget();
         lastNavDirection = 0;
@@ -615,9 +723,8 @@ public partial class CalendarView : ContentView
         Debug.WriteLine(
             $"[Render] {month.Year}/{month.Month:D2} {sw.Elapsed.TotalMilliseconds:F3}ms" +
             $" | Header: {(t1 - t0).TotalMilliseconds:F3}ms" +
-            $" | WeekdayLabels: {(t2 - t1).TotalMilliseconds:F3}ms" +
-            $" | SlotCount: {(t3 - t2).TotalMilliseconds:F3}ms" +
-            $" | RebuildWeeksHost: {(t4 - t3).TotalMilliseconds:F3}ms");
+            $" | SlotCount: {(t2 - t1).TotalMilliseconds:F3}ms" +
+            $" | RebuildWeeksHost: {(t3 - t2).TotalMilliseconds:F3}ms");
     }
 
     private void RebuildWeeksHost(MonthViewModel month, int slotCount)
@@ -639,7 +746,7 @@ public partial class CalendarView : ContentView
             }
             else
             {
-                row.ClearDynamicViews();
+                row.HideDynamicViews();
             }
         }
 
@@ -733,7 +840,7 @@ public partial class CalendarView : ContentView
 
         var t1 = sw.Elapsed;
 
-        row.ClearDynamicViews();
+        row.HideDynamicViews();
 
         var t2 = sw.Elapsed;
 
@@ -748,7 +855,7 @@ public partial class CalendarView : ContentView
         Debug.WriteLine(
             $"[UpdateWeekRow] {week.Days[0].Date:MM/dd}" +
             $" | DayCells: {(t1 - t0).TotalMilliseconds:F3}ms" +
-            $" | ClearDynamic: {(t2 - t1).TotalMilliseconds:F3}ms" +
+            $" | HideDynamic: {(t2 - t1).TotalMilliseconds:F3}ms" +
             $" | Stamps: {(t3 - t2).TotalMilliseconds:F3}ms" +
             $" | Events: {(t4 - t3).TotalMilliseconds:F3}ms" +
             $" | Total: {t4.TotalMilliseconds:F3}ms");
@@ -779,30 +886,26 @@ public partial class CalendarView : ContentView
             var cell = row.Days[c];
             var stamps = week.Days[c].Stamps;
 
-            // 既存のスタンプ Label を Grid から削除
-            foreach (var label in cell.StampLabelPool)
+            // 必要なスタンプ数に合わせてプールを拡張し、初回のみ Grid に追加
+            while (cell.StampLabelPool.Count < stamps.Count)
             {
-                label.IsVisible = false;
-                row.Root.Children.Remove(label);
+                var newLabel = new Label { InputTransparent = true };
+                cell.StampLabelPool.Add(newLabel);
+                Grid.SetColumn(newLabel, c);
+                row.Root.Children.Add(newLabel);
             }
 
-            // 必要なスタンプ数に合わせてプールを拡張
-            while (cell.StampLabelPool.Count < stamps.Count)
-                cell.StampLabelPool.Add(new Label { InputTransparent = true });
-
-            // スタンプを再利用して配置
+            var m = StampMarginEdge;
             for (var i = 0; i < stamps.Count; i++)
             {
-                var stamp = stamps[i];
                 var label = cell.StampLabelPool[i];
-
+                var stamp = stamps[i];
                 label.Text = stamp.Glyph;
                 label.FontSize = stamp.FontSize;
                 label.Opacity = stamp.Opacity;
                 label.HorizontalTextAlignment = TextAlignment.Center;
                 label.VerticalTextAlignment = TextAlignment.Center;
 
-                var m = StampMarginEdge;
                 (label.HorizontalOptions, label.VerticalOptions, label.Margin) = stamp.Position switch
                 {
                     StampPosition.TopLeft      => (LayoutOptions.Start,  LayoutOptions.Start, new Thickness(m, 0, 0, 0)),
@@ -814,27 +917,42 @@ public partial class CalendarView : ContentView
                     _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
                 };
 
-                label.IsVisible = true;
-                Grid.SetColumn(label, c);
                 Grid.SetRow(label, 0);
                 Grid.SetRowSpan(label, totalRows);
-                row.Root.Children.Add(label);
-                row.DynamicViews.Add(label);
+                label.IsVisible = true;
             }
+
+            // [DIFF-UPDATE: HideDynamic] 次回 HideDynamicViews で使用数だけ非表示にするために記録
+            row.ActiveStampCounts[c] = stamps.Count;
         }
     }
 
     private void AddEventViews(WeekRowVisual row, WeekViewModel week)
     {
-        foreach (var placement in week.EventPlacements)
+        var placements = week.EventPlacements;
+
+        // プールを拡張し、初回のみ Grid に追加
+        while (row.EventPool.Count < placements.Count)
         {
-            var ev = BuildEventView(placement);
-            Grid.SetColumn(ev, placement.StartColumn);
-            Grid.SetColumnSpan(ev, placement.ColumnSpan);
-            Grid.SetRow(ev, placement.Slot + 1);
-            row.Root.Children.Add(ev);
-            row.DynamicViews.Add(ev);
+            var visual = new EventBorderVisual();
+            visual.TapGesture.Command = new Command<ScheduleEvent>(OnEventTapped);
+            row.EventPool.Add(visual);
+            row.Root.Children.Add(visual.Root);
         }
+
+        for (var i = 0; i < placements.Count; i++)
+        {
+            var visual = row.EventPool[i];
+            var placement = placements[i];
+            visual.Apply(placement, EventFontSize, EventRowHeight);
+            Grid.SetColumn(visual.Root, placement.StartColumn);
+            Grid.SetColumnSpan(visual.Root, placement.ColumnSpan);
+            Grid.SetRow(visual.Root, placement.Slot + 1);
+            visual.Root.IsVisible = true;
+        }
+
+        // [DIFF-UPDATE: HideDynamic] 次回 HideDynamicViews で使用数だけ非表示にするために記録
+        row.ActiveEventCount = placements.Count;
     }
 
     // ------------------------------------------------------------------ View builders
@@ -871,90 +989,13 @@ public partial class CalendarView : ContentView
         cell.DateLabel.Text = day.Date.Day.ToString(CultureInfo.InvariantCulture);
         cell.DateLabel.FontSize = DateNumberFontSize;
         cell.DateLabel.TextColor = textColor;
-        cell.DateLabel.WidthRequest = DateNumberSize;
+        cell.DateLabel.WidthRequest  = DateNumberSize;
         cell.DateLabel.HeightRequest = DateNumberSize;
 
         cell.DateBubble.BackgroundColor = bubbleBg;
         cell.DateBubble.Margin = DateNumberMargin;
-        cell.DateBubble.StrokeShape = bubbleBg != Colors.Transparent
-            ? new RoundRectangle { CornerRadius = new CornerRadius(2) }
-            : null;
-    }
-
-    private View BuildStampView(Stamp stamp)
-    {
-        var m = StampMarginEdge;
-        var label = new Label
-        {
-            Text = stamp.Glyph,
-            FontSize = stamp.FontSize,
-            Opacity = stamp.Opacity,
-            InputTransparent = true,
-            HorizontalTextAlignment = TextAlignment.Center,
-            VerticalTextAlignment = TextAlignment.Center,
-        };
-        (label.HorizontalOptions, label.VerticalOptions, label.Margin) = stamp.Position switch
-        {
-            StampPosition.TopLeft      => (LayoutOptions.Start,  LayoutOptions.Start, new Thickness(m, 0, 0, 0)),
-            StampPosition.TopCenter    => (LayoutOptions.Center, LayoutOptions.Start, new Thickness(0)),
-            StampPosition.TopRight     => (LayoutOptions.End,    LayoutOptions.Start, new Thickness(0, 0, m, 0)),
-            StampPosition.BottomLeft   => (LayoutOptions.Start,  LayoutOptions.End,   new Thickness(m, 0, 0, m)),
-            StampPosition.BottomCenter => (LayoutOptions.Center, LayoutOptions.End,   new Thickness(0, 0, 0, m)),
-            StampPosition.BottomRight  => (LayoutOptions.End,    LayoutOptions.End,   new Thickness(0, 0, m, m)),
-            _                          => (LayoutOptions.Center, LayoutOptions.Center, new Thickness(0)),
-        };
-        return label;
-    }
-
-    private View BuildEventView(EventPlacement placement)
-    {
-        var evt = placement.Event;
-        var label = new Label
-        {
-            Text = evt.Title,
-            FontSize = EventFontSize,
-            FontAttributes = FontAttributes.Bold,
-            LineBreakMode = LineBreakMode.TailTruncation,
-            VerticalTextAlignment = TextAlignment.Center,
-            TextDecorations = evt.Underline ? TextDecorations.Underline : TextDecorations.None,
-            TextColor = evt.TextColor,
-        };
-        Border border;
-        if (evt.Style == ScheduleStyle.Filled)
-        {
-            var left = placement.ContinuesFromPreviousWeek ? 0 : 2;
-            var right = placement.ContinuesToNextWeek ? 0 : 2;
-            border = new Border
-            {
-                BackgroundColor = evt.BackgroundColor,
-                StrokeThickness = 0,
-                StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(left, right, left, right) },
-                Padding = new Thickness(4, 0),
-                HeightRequest = EventRowHeight,
-                Margin = new Thickness(
-                    placement.ContinuesFromPreviousWeek ? 0 : 1, 1,
-                    placement.ContinuesToNextWeek ? 0 : 1, 0),
-                Content = label,
-            };
-        }
-        else
-        {
-            border = new Border
-            {
-                BackgroundColor = Colors.Transparent,
-                StrokeThickness = 0,
-                Padding = new Thickness(4, 0),
-                HeightRequest = EventRowHeight,
-                Margin = new Thickness(1, 1, 1, 0),
-                Content = label,
-            };
-        }
-        border.GestureRecognizers.Add(new TapGestureRecognizer
-        {
-            Command = new Command<ScheduleEvent>(OnEventTapped),
-            CommandParameter = evt,
-        });
-        return border;
+        // [DIFF-UPDATE: DateBubble] 毎回 new RoundRectangle を避け同一インスタンスを再利用
+        cell.DateBubble.StrokeShape = bubbleBg != Colors.Transparent ? cell.DateBubbleShape : null;
     }
 
     // ------------------------------------------------------------------ Color helpers
