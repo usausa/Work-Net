@@ -74,10 +74,20 @@
         <!-- Calendar control -->
         <controls:CalendarView Grid.Row="0"
                                ViewModel="{Binding MonthViewModel}"
+                               FirstDayOfWeek="{Binding FirstDayOfWeek}"
                                PrevMonthCommand="{Binding PrevMonthCommand}"
                                NextMonthCommand="{Binding NextMonthCommand}"
+                               GoToTodayCommand="{Binding GoToTodayCommand}"
                                DayTappedCommand="{Binding DayTappedCommand}"
-                               EventTappedCommand="{Binding EventTappedCommand}" />
+                               EventTappedCommand="{Binding EventTappedCommand}"
+                               SelectionMode="{Binding SelectionMode}"
+                               SelectedDate="{Binding SelectedDate, Mode=TwoWay}"
+                               SelectedDates="{Binding SelectedDates}"
+                               SelectedStartDate="{Binding SelectedStartDate, Mode=TwoWay}"
+                               SelectedEndDate="{Binding SelectedEndDate, Mode=TwoWay}"
+                               MinDate="{Binding MinDate}"
+                               MaxDate="{Binding MaxDate}"
+                               Culture="{Binding Culture}" />
 
         <!-- Divider below the last week -->
         <BoxView Grid.Row="1" Style="{StaticResource CalendarDivider}" />

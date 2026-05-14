@@ -1,8 +1,12 @@
 namespace WorkCalendar.Controls;
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Microsoft.Maui.Controls.Shapes;
@@ -24,11 +28,68 @@ public partial class CalendarView : ContentView
     public static readonly BindableProperty NextMonthCommandProperty =
         BindableProperty.Create(nameof(NextMonthCommand), typeof(ICommand), typeof(CalendarView));
 
+    public static readonly BindableProperty GoToTodayCommandProperty =
+        BindableProperty.Create(nameof(GoToTodayCommand), typeof(ICommand), typeof(CalendarView));
+
     public static readonly BindableProperty DayTappedCommandProperty =
         BindableProperty.Create(nameof(DayTappedCommand), typeof(ICommand), typeof(CalendarView));
 
     public static readonly BindableProperty EventTappedCommandProperty =
         BindableProperty.Create(nameof(EventTappedCommand), typeof(ICommand), typeof(CalendarView));
+
+    // ------------------------------------------------------------------ BindableProperties: Selection
+
+    public static readonly BindableProperty SelectionModeProperty =
+        BindableProperty.Create(nameof(SelectionMode), typeof(CalendarSelectionMode), typeof(CalendarView),
+            CalendarSelectionMode.None, propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty SelectedDateProperty =
+        BindableProperty.Create(nameof(SelectedDate), typeof(DateOnly?), typeof(CalendarView),
+            null, BindingMode.TwoWay, propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty SelectedDatesProperty =
+        BindableProperty.Create(nameof(SelectedDates), typeof(ObservableCollection<DateOnly>), typeof(CalendarView),
+            null, BindingMode.TwoWay, propertyChanged: OnSelectedDatesChanged);
+
+    public static readonly BindableProperty SelectedStartDateProperty =
+        BindableProperty.Create(nameof(SelectedStartDate), typeof(DateOnly?), typeof(CalendarView),
+            null, BindingMode.TwoWay, propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty SelectedEndDateProperty =
+        BindableProperty.Create(nameof(SelectedEndDate), typeof(DateOnly?), typeof(CalendarView),
+            null, BindingMode.TwoWay, propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty SelectedDayBackgroundProperty =
+        BindableProperty.Create(nameof(SelectedDayBackground), typeof(Color), typeof(CalendarView),
+            Color.FromArgb("#1A73E8"), propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty SelectedDayTextColorProperty =
+        BindableProperty.Create(nameof(SelectedDayTextColor), typeof(Color), typeof(CalendarView),
+            Colors.White, propertyChanged: OnSelectionPropertyChanged);
+
+    public static readonly BindableProperty RangeBackgroundProperty =
+        BindableProperty.Create(nameof(RangeBackground), typeof(Color), typeof(CalendarView),
+            Color.FromArgb("#BDD7F5"), propertyChanged: OnSelectionPropertyChanged);
+
+    // ------------------------------------------------------------------ BindableProperties: Navigation limits
+
+    public static readonly BindableProperty MinDateProperty =
+        BindableProperty.Create(nameof(MinDate), typeof(DateOnly?), typeof(CalendarView),
+            null, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty MaxDateProperty =
+        BindableProperty.Create(nameof(MaxDate), typeof(DateOnly?), typeof(CalendarView),
+            null, propertyChanged: OnRenderPropertyChanged);
+
+    public static readonly BindableProperty DisabledDayTextColorProperty =
+        BindableProperty.Create(nameof(DisabledDayTextColor), typeof(Color), typeof(CalendarView),
+            Color.FromArgb("#C0C0C0"), propertyChanged: OnRenderPropertyChanged);
+
+    // ------------------------------------------------------------------ BindableProperties: Localization
+
+    public static readonly BindableProperty CultureProperty =
+        BindableProperty.Create(nameof(Culture), typeof(CultureInfo), typeof(CalendarView),
+            null, propertyChanged: OnCultureChanged);
 
     // ------------------------------------------------------------------ BindableProperties: Layout / Sizes
 
@@ -64,6 +125,13 @@ public partial class CalendarView : ContentView
 
     public static readonly BindableProperty NavButtonFontSizeProperty =
         BindableProperty.Create(nameof(NavButtonFontSize), typeof(double), typeof(CalendarView), 18d);
+
+    public static readonly BindableProperty FirstDayOfWeekProperty =
+        BindableProperty.Create(nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(CalendarView),
+            DayOfWeek.Monday, propertyChanged: OnFirstDayOfWeekChanged);
+
+    public static readonly BindableProperty SwipeEnabledProperty =
+        BindableProperty.Create(nameof(SwipeEnabled), typeof(bool), typeof(CalendarView), true, propertyChanged: OnSwipeEnabledChanged);
 
     public static readonly BindableProperty HeaderPaddingProperty =
         BindableProperty.Create(nameof(HeaderPadding), typeof(Thickness), typeof(CalendarView), new Thickness(16, 12, 16, 8));
@@ -147,6 +215,12 @@ public partial class CalendarView : ContentView
         set => SetValue(NextMonthCommandProperty, value);
     }
 
+    public ICommand? GoToTodayCommand
+    {
+        get => (ICommand?)GetValue(GoToTodayCommandProperty);
+        set => SetValue(GoToTodayCommandProperty, value);
+    }
+
     public ICommand? DayTappedCommand
     {
         get => (ICommand?)GetValue(DayTappedCommandProperty);
@@ -157,6 +231,50 @@ public partial class CalendarView : ContentView
     {
         get => (ICommand?)GetValue(EventTappedCommandProperty);
         set => SetValue(EventTappedCommandProperty, value);
+    }
+
+    public CalendarSelectionMode SelectionMode
+    {
+        get => (CalendarSelectionMode)GetValue(SelectionModeProperty);
+        set => SetValue(SelectionModeProperty, value);
+    }
+
+    public DateOnly? SelectedDate
+    {
+        get => (DateOnly?)GetValue(SelectedDateProperty);
+        set => SetValue(SelectedDateProperty, value);
+    }
+
+    public ObservableCollection<DateOnly>? SelectedDates
+    {
+        get => (ObservableCollection<DateOnly>?)GetValue(SelectedDatesProperty);
+        set => SetValue(SelectedDatesProperty, value);
+    }
+
+    public DateOnly? SelectedStartDate
+    {
+        get => (DateOnly?)GetValue(SelectedStartDateProperty);
+        set => SetValue(SelectedStartDateProperty, value);
+    }
+
+    public DateOnly? SelectedEndDate
+    {
+        get => (DateOnly?)GetValue(SelectedEndDateProperty);
+        set => SetValue(SelectedEndDateProperty, value);
+    }
+
+    public Color SelectedDayBackground { get => (Color)GetValue(SelectedDayBackgroundProperty); set => SetValue(SelectedDayBackgroundProperty, value); }
+    public Color SelectedDayTextColor  { get => (Color)GetValue(SelectedDayTextColorProperty);  set => SetValue(SelectedDayTextColorProperty, value); }
+    public Color RangeBackground       { get => (Color)GetValue(RangeBackgroundProperty);       set => SetValue(RangeBackgroundProperty, value); }
+
+    public DateOnly? MinDate { get => (DateOnly?)GetValue(MinDateProperty); set => SetValue(MinDateProperty, value); }
+    public DateOnly? MaxDate { get => (DateOnly?)GetValue(MaxDateProperty); set => SetValue(MaxDateProperty, value); }
+    public Color DisabledDayTextColor  { get => (Color)GetValue(DisabledDayTextColorProperty);  set => SetValue(DisabledDayTextColorProperty, value); }
+
+    public CultureInfo? Culture
+    {
+        get => (CultureInfo?)GetValue(CultureProperty);
+        set => SetValue(CultureProperty, value);
     }
 
     public double DateRowHeight        { get => (double)GetValue(DateRowHeightProperty);        set => SetValue(DateRowHeightProperty, value); }
@@ -170,6 +288,8 @@ public partial class CalendarView : ContentView
     public double NavButtonWidth       { get => (double)GetValue(NavButtonWidthProperty);       set => SetValue(NavButtonWidthProperty, value); }
     public double NavButtonHeight      { get => (double)GetValue(NavButtonHeightProperty);      set => SetValue(NavButtonHeightProperty, value); }
     public double NavButtonFontSize    { get => (double)GetValue(NavButtonFontSizeProperty);    set => SetValue(NavButtonFontSizeProperty, value); }
+    public DayOfWeek FirstDayOfWeek    { get => (DayOfWeek)GetValue(FirstDayOfWeekProperty);   set => SetValue(FirstDayOfWeekProperty, value); }
+    public bool SwipeEnabled           { get => (bool)GetValue(SwipeEnabledProperty);           set => SetValue(SwipeEnabledProperty, value); }
     public Thickness HeaderPadding     { get => (Thickness)GetValue(HeaderPaddingProperty);     set => SetValue(HeaderPaddingProperty, value); }
     public double WeekdayHeaderFontSize{ get => (double)GetValue(WeekdayHeaderFontSizeProperty);set => SetValue(WeekdayHeaderFontSizeProperty, value); }
     public Thickness WeekdayHeaderPadding{ get => (Thickness)GetValue(WeekdayHeaderPaddingProperty); set => SetValue(WeekdayHeaderPaddingProperty, value); }
@@ -196,9 +316,15 @@ public partial class CalendarView : ContentView
 
     private const int DaysPerWeek = 7;
 
+    // Direction of the last month navigation: +1 = forward (next), -1 = backward (prev), 0 = jump
+    private int lastNavDirection;
+    private int previousYear;
+    private int previousMonth;
+
     public CalendarView()
     {
         InitializeComponent();
+        AttachSwipeGestures();
     }
 
     // ------------------------------------------------------------------ Property changed callbacks
@@ -215,14 +341,74 @@ public partial class CalendarView : ContentView
             view.Render(month);
     }
 
+    private static void OnFirstDayOfWeekChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view)
+        {
+            view.UpdateWeekdayHeaderLabels();
+            if (view.ViewModel is MonthViewModel month)
+                view.Render(month);
+        }
+    }
+
+    private static void OnSwipeEnabledChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view)
+            view.UpdateSwipeGestureState((bool)newValue);
+    }
+
+    private static void OnSelectionPropertyChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view && view.ViewModel is MonthViewModel month)
+            view.RebuildWeeksHostOnly(month);
+    }
+
+    private static void OnSelectedDatesChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (CalendarView)bindable;
+        if (oldValue is ObservableCollection<DateOnly> old)
+            old.CollectionChanged -= view.OnSelectedDatesCollectionChanged;
+        if (newValue is ObservableCollection<DateOnly> next)
+            next.CollectionChanged += view.OnSelectedDatesCollectionChanged;
+        if (view.ViewModel is MonthViewModel month)
+            view.RebuildWeeksHostOnly(month);
+    }
+
+    private static void OnCultureChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CalendarView view)
+        {
+            view.UpdateWeekdayHeaderLabels();
+            if (view.ViewModel is MonthViewModel month)
+                view.Render(month);
+        }
+    }
+
+    private void OnSelectedDatesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (ViewModel is MonthViewModel month)
+            RebuildWeeksHostOnly(month);
+    }
+
     // ------------------------------------------------------------------ Render
 
     private void Render(MonthViewModel month)
     {
+        // Determine navigation direction from previous displayed month.
+        // lastNavDirection is pre-set by swipe; otherwise auto-detect from date comparison.
+        if (lastNavDirection == 0 && (previousYear != 0))
+        {
+            var prevOrdinal = (previousYear * 12) + previousMonth;
+            var newOrdinal  = (month.Year  * 12) + month.Month;
+            lastNavDirection = newOrdinal > prevOrdinal ? 1 : newOrdinal < prevOrdinal ? -1 : 0;
+        }
+
+        previousYear  = month.Year;
+        previousMonth = month.Month;
         YearLabel.Text = month.Year.ToString(CultureInfo.InvariantCulture);
         YearLabel.FontSize = YearFontSize;
         YearLabel.TextColor = YearTextColor;
-        MonthLabel.Text = $"{month.Month}\u6708";
+        MonthLabel.Text = GetMonthDisplayName(month.Year, month.Month);
         MonthLabel.FontSize = MonthFontSize;
         MonthLabel.TextColor = MonthTextColor;
 
@@ -234,13 +420,24 @@ public partial class CalendarView : ContentView
         NextButton.FontSize = NavButtonFontSize;
         NextButton.WidthRequest = NavButtonWidth;
         NextButton.HeightRequest = NavButtonHeight;
+        TodayButton.FontSize = NavButtonFontSize;
+        TodayButton.TextColor = NavButtonColor;
 
         HeaderGrid.Padding = HeaderPadding;
         WeekdayHeaderGrid.Padding = WeekdayHeaderPadding;
-        UpdateWeekdayHeaderColors();
+        UpdateWeekdayHeaderLabels();
 
-        var slotCount = Math.Max(2, month.Weeks.Max(static w => w.SlotCount));
+        var slotCount = Math.Max(2, month.Weeks.Count > 0
+            ? month.Weeks.Max(static w => w.SlotCount)
+            : 0);
 
+        RebuildWeeksHost(month, slotCount);
+        AnimateSlideAsync(lastNavDirection).FireAndForget();
+        lastNavDirection = 0;
+    }
+
+    private void RebuildWeeksHost(MonthViewModel month, int slotCount)
+    {
         WeeksHost.Children.Clear();
         for (var i = 0; i < month.Weeks.Count; i++)
         {
@@ -250,18 +447,78 @@ public partial class CalendarView : ContentView
         }
     }
 
-    private void UpdateWeekdayHeaderColors()
+    // Rebuild only the week cells (no animation). Used when only selection/color state changes.
+    private void RebuildWeeksHostOnly(MonthViewModel month)
     {
-        // Columns: 0=月 1=火 2=水 3=木 4=金 5=土 6=日
-        var labels = WeekdayHeaderGrid.Children.OfType<Label>().ToList();
-        foreach (var label in labels)
+        var slotCount = Math.Max(2, month.Weeks.Count > 0
+            ? month.Weeks.Max(static w => w.SlotCount)
+            : 0);
+        RebuildWeeksHost(month, slotCount);
+    }
+
+    private async Task AnimateSlideAsync(int direction)
+    {
+        if (direction == 0)
+            return;
+
+        var width = WeeksHost.Width > 0 ? WeeksHost.Width : 400d;
+        WeeksHost.TranslationX = direction * width;
+        await WeeksHost.TranslateTo(0, 0, 250, Easing.CubicOut);
+    }
+
+    private void UpdateWeekdayHeaderLabels()
+    {
+        WeekdayHeaderGrid.Children.Clear();
+        var start = (int)FirstDayOfWeek;
+        for (var i = 0; i < DaysPerWeek; i++)
         {
-            label.FontSize = WeekdayHeaderFontSize;
-            var col = Grid.GetColumn(label);
-            label.TextColor = col == 5 ? SaturdayHeaderColor
-                            : col == 6 ? SundayHeaderColor
-                            : WeekdayHeaderColor;
+            var dayOfWeek = (DayOfWeek)((start + i) % DaysPerWeek);
+            var label = new Label
+            {
+                Text = GetDayOfWeekShortName(dayOfWeek),
+                FontSize = WeekdayHeaderFontSize,
+                HorizontalTextAlignment = TextAlignment.Center,
+                TextColor = dayOfWeek == DayOfWeek.Saturday ? SaturdayHeaderColor
+                          : dayOfWeek == DayOfWeek.Sunday   ? SundayHeaderColor
+                          : WeekdayHeaderColor,
+            };
+            Grid.SetColumn(label, i);
+            WeekdayHeaderGrid.Children.Add(label);
         }
+    }
+
+    private string GetDayOfWeekShortName(DayOfWeek dow)
+    {
+        var culture = Culture;
+        if (culture is not null)
+        {
+            // Use the culture's abbreviated day name, truncated to 1 char for compact display.
+            var abbreviated = culture.DateTimeFormat.GetAbbreviatedDayName(dow);
+            return abbreviated.Length > 0 ? abbreviated[..1].ToUpper(culture) : abbreviated;
+        }
+
+        return dow switch
+        {
+            DayOfWeek.Monday    => "月",
+            DayOfWeek.Tuesday   => "火",
+            DayOfWeek.Wednesday => "水",
+            DayOfWeek.Thursday  => "木",
+            DayOfWeek.Friday    => "金",
+            DayOfWeek.Saturday  => "土",
+            DayOfWeek.Sunday    => "日",
+            _ => string.Empty,
+        };
+    }
+
+    private string GetMonthDisplayName(int year, int month)
+    {
+        var culture = Culture;
+        if (culture is not null)
+        {
+            var dt = new DateTime(year, month, 1);
+            return culture.DateTimeFormat.GetMonthName(month).ToUpper(culture);
+        }
+        return $"{month}\u6708";
     }
 
     private View BuildWeekRow(WeekViewModel week, int slotCount)
@@ -284,13 +541,27 @@ public partial class CalendarView : ContentView
         // Per-column background
         for (var c = 0; c < DaysPerWeek; c++)
         {
-            var bg = GetCellBackgroundColor(week.Days[c]);
-            if (bg == Colors.Transparent) continue;
-            var box = new BoxView { Color = bg, InputTransparent = true };
-            Grid.SetColumn(box, c);
-            Grid.SetRow(box, 0);
-            Grid.SetRowSpan(box, totalRows);
-            grid.Children.Add(box);
+            var day = week.Days[c];
+            var bg = GetCellBackgroundColor(day);
+            if (bg != Colors.Transparent)
+            {
+                var box = new BoxView { Color = bg, InputTransparent = true };
+                Grid.SetColumn(box, c);
+                Grid.SetRow(box, 0);
+                Grid.SetRowSpan(box, totalRows);
+                grid.Children.Add(box);
+            }
+
+            // Range highlight (behind date bubble, full cell height)
+            var rangeBg = GetRangeCellBackground(day.Date);
+            if (rangeBg != Colors.Transparent)
+            {
+                var rangeBox = new BoxView { Color = rangeBg, InputTransparent = true };
+                Grid.SetColumn(rangeBox, c);
+                Grid.SetRow(rangeBox, 0);
+                Grid.SetRowSpan(rangeBox, totalRows);
+                grid.Children.Add(rangeBox);
+            }
         }
 
         // Top divider
@@ -325,12 +596,16 @@ public partial class CalendarView : ContentView
         for (var c = 0; c < DaysPerWeek; c++)
         {
             var day = week.Days[c];
+            var disabled = IsDateDisabled(day.Date);
             var tappable = new Border { BackgroundColor = Colors.Transparent, StrokeThickness = 0 };
-            tappable.GestureRecognizers.Add(new TapGestureRecognizer
+            if (!disabled)
             {
-                Command = new Command<DayViewModel>(OnDayTapped),
-                CommandParameter = day,
-            });
+                tappable.GestureRecognizers.Add(new TapGestureRecognizer
+                {
+                    Command = new Command<DayViewModel>(OnDayTapped),
+                    CommandParameter = day,
+                });
+            }
             Grid.SetColumn(tappable, c);
             Grid.SetRow(tappable, 0);
             Grid.SetRowSpan(tappable, totalRows);
@@ -376,6 +651,33 @@ public partial class CalendarView : ContentView
 
     private View BuildDateNumberView(DayViewModel day)
     {
+        var disabled = IsDateDisabled(day.Date);
+        var selected = IsDateSelected(day.Date);
+
+        Color textColor;
+        Color bubbleBg;
+
+        if (disabled)
+        {
+            textColor = DisabledDayTextColor;
+            bubbleBg  = Colors.Transparent;
+        }
+        else if (selected)
+        {
+            textColor = SelectedDayTextColor;
+            bubbleBg  = SelectedDayBackground;
+        }
+        else if (day.IsToday)
+        {
+            textColor = TodayTextColor;
+            bubbleBg  = TodayBackground;
+        }
+        else
+        {
+            textColor = GetDateTextColor(day);
+            bubbleBg  = Colors.Transparent;
+        }
+
         var label = new Label
         {
             Text = day.Date.Day.ToString(CultureInfo.InvariantCulture),
@@ -383,13 +685,13 @@ public partial class CalendarView : ContentView
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            TextColor = day.IsToday ? TodayTextColor : GetDateTextColor(day),
+            TextColor = textColor,
             WidthRequest = DateNumberSize,
             HeightRequest = DateNumberSize,
         };
         var bubble = new Border
         {
-            BackgroundColor = day.IsToday ? TodayBackground : Colors.Transparent,
+            BackgroundColor = bubbleBg,
             StrokeThickness = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Start,
@@ -397,7 +699,7 @@ public partial class CalendarView : ContentView
             Padding = 0,
             Content = label,
         };
-        if (day.IsToday)
+        if (bubbleBg != Colors.Transparent)
             bubble.StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(2) };
         return bubble;
     }
@@ -501,8 +803,134 @@ public partial class CalendarView : ContentView
         };
     }
 
+    // ------------------------------------------------------------------ Selection / disabled helpers
+
+    private bool IsDateDisabled(DateOnly date)
+    {
+        if (MinDate is DateOnly min && date < min) return true;
+        if (MaxDate is DateOnly max && date > max) return true;
+        return false;
+    }
+
+    private bool IsDateSelected(DateOnly date) => SelectionMode switch
+    {
+        CalendarSelectionMode.Single    => SelectedDate == date,
+        CalendarSelectionMode.Multiple  => SelectedDates?.Contains(date) == true,
+        CalendarSelectionMode.Range     => IsInRange(date, endpoints: true),
+        _ => false,
+    };
+
+    // Returns true for the interior of the range (excluding endpoints, which are drawn as full bubbles).
+    private Color GetRangeCellBackground(DateOnly date)
+    {
+        if (SelectionMode != CalendarSelectionMode.Range)
+            return Colors.Transparent;
+        if (SelectedStartDate is not DateOnly start || SelectedEndDate is not DateOnly end)
+            return Colors.Transparent;
+        if (start > end) (start, end) = (end, start);
+        return (date > start && date < end) ? RangeBackground : Colors.Transparent;
+    }
+
+    private bool IsInRange(DateOnly date, bool endpoints)
+    {
+        if (SelectedStartDate is not DateOnly start || SelectedEndDate is not DateOnly end)
+            return false;
+        if (start > end) (start, end) = (end, start);
+        return endpoints ? (date >= start && date <= end) : (date > start && date < end);
+    }
+
+    // ------------------------------------------------------------------ Swipe gestures
+
+    private SwipeGestureRecognizer? swipeLeft;
+    private SwipeGestureRecognizer? swipeRight;
+
+    private void AttachSwipeGestures()
+    {
+        swipeLeft = new SwipeGestureRecognizer { Direction = SwipeDirection.Left };
+        swipeLeft.Swiped += OnSwipedLeft;
+
+        swipeRight = new SwipeGestureRecognizer { Direction = SwipeDirection.Right };
+        swipeRight.Swiped += OnSwipedRight;
+
+        UpdateSwipeGestureState(SwipeEnabled);
+    }
+
+    private void UpdateSwipeGestureState(bool enabled)
+    {
+        if (swipeLeft is null || swipeRight is null)
+            return;
+
+        RootGrid.GestureRecognizers.Remove(swipeLeft);
+        RootGrid.GestureRecognizers.Remove(swipeRight);
+
+        if (enabled)
+        {
+            RootGrid.GestureRecognizers.Add(swipeLeft);
+            RootGrid.GestureRecognizers.Add(swipeRight);
+        }
+    }
+
+    private void OnSwipedLeft(object? sender, SwipedEventArgs e)
+    {
+        lastNavDirection = 1;
+        NextMonthCommand?.Execute(null);
+    }
+
+    private void OnSwipedRight(object? sender, SwipedEventArgs e)
+    {
+        lastNavDirection = -1;
+        PrevMonthCommand?.Execute(null);
+    }
+
     // ------------------------------------------------------------------ Tap handlers
 
-    private void OnDayTapped(DayViewModel day) => DayTappedCommand?.Execute(day);
+    private void OnDayTapped(DayViewModel day)
+    {
+        var date = day.Date;
+        switch (SelectionMode)
+        {
+            case CalendarSelectionMode.Single:
+                SelectedDate = SelectedDate == date ? null : date;
+                break;
+
+            case CalendarSelectionMode.Multiple:
+                if (SelectedDates is null)
+                    SelectedDates = new ObservableCollection<DateOnly>();
+                var list = SelectedDates;
+                if (list.Contains(date))
+                    list.Remove(date);
+                else
+                    list.Add(date);
+                break;
+
+            case CalendarSelectionMode.Range:
+                if (SelectedStartDate is null || (SelectedStartDate is not null && SelectedEndDate is not null))
+                {
+                    // Start a new range.
+                    SelectedStartDate = date;
+                    SelectedEndDate = null;
+                }
+                else
+                {
+                    // Complete the range.
+                    if (date < SelectedStartDate)
+                        (SelectedStartDate, SelectedEndDate) = (date, SelectedStartDate);
+                    else
+                        SelectedEndDate = date;
+                }
+                break;
+        }
+
+        DayTappedCommand?.Execute(day);
+    }
+
     private void OnEventTapped(ScheduleEvent evt) => EventTappedCommand?.Execute(evt);
+}
+
+file static class TaskExtensions
+{
+    // Fire-and-forget helper that surfaces exceptions to the unhandled exception handler.
+    internal static void FireAndForget(this Task task) =>
+        task.ContinueWith(static t => throw t.Exception!.GetBaseException(),
+            TaskContinuationOptions.OnlyOnFaulted);
 }

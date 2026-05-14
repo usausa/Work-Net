@@ -4,10 +4,10 @@
              x:Class="WorkCalendar.Controls.CalendarView"
              x:Name="_self">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="0">
+    <Grid x:Name="RootGrid" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="0">
 
-        <!-- Header: prev | Year & Month | next -->
-        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto">
+        <!-- Header: prev | Year & Month | next | today -->
+        <Grid Grid.Row="0" x:Name="HeaderGrid" Padding="16,12,16,8" ColumnDefinitions="Auto,*,Auto,Auto">
             <Button Grid.Column="0" x:Name="PrevButton"
                     Text="◀"
                     Command="{Binding PrevMonthCommand, Source={x:Reference _self}}"
@@ -24,32 +24,32 @@
                     BackgroundColor="Transparent"
                     BorderWidth="0"
                     VerticalOptions="Center" />
+            <Button Grid.Column="3" x:Name="TodayButton"
+                    Text="今日"
+                    Command="{Binding GoToTodayCommand, Source={x:Reference _self}}"
+                    BackgroundColor="Transparent"
+                    BorderWidth="0"
+                    VerticalOptions="Center" />
         </Grid>
 
         <!-- Divider above weekday header -->
         <BoxView Grid.Row="1" HeightRequest="0.5" Color="#E0E0E0" />
 
-        <!-- Day of week header -->
-        <Grid Grid.Row="2" x:Name="WeekdayHeaderGrid" Padding="0,6,0,6" ColumnDefinitions="*,*,*,*,*,*,*">
-            <Label Grid.Column="0" Text="月" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="1" Text="火" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="2" Text="水" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="3" Text="木" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="4" Text="金" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="5" Text="土" HorizontalTextAlignment="Center" />
-            <Label Grid.Column="6" Text="日" HorizontalTextAlignment="Center" />
-        </Grid>
+        <!-- Day of week header (populated dynamically from FirstDayOfWeek) -->
+        <Grid Grid.Row="2" x:Name="WeekdayHeaderGrid" Padding="0,6,0,6" ColumnDefinitions="*,*,*,*,*,*,*" />
 
-        <!-- Calendar body: 6 equal-height week rows -->
-        <Grid Grid.Row="3" x:Name="WeeksHost" RowSpacing="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <!-- Calendar body: 6 equal-height week rows (clipped for slide animation) -->
+        <Grid Grid.Row="3" IsClippedToBounds="True">
+            <Grid x:Name="WeeksHost" RowSpacing="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+            </Grid>
         </Grid>
 
     </Grid>
