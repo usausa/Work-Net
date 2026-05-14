@@ -315,6 +315,10 @@ public partial class CalendarView : ContentView
     // ------------------------------------------------------------------ Constructor
 
     private const int DaysPerWeek = 7;
+    private const int MaxWeekRows = 6;
+
+    // Pre-allocated row containers reused across month renders to avoid GC pressure.
+    private readonly Grid[] weekRowContainers = new Grid[MaxWeekRows];
 
     // Direction of the last month navigation: +1 = forward (next), -1 = backward (prev), 0 = jump
     private int lastNavDirection;
@@ -324,6 +328,16 @@ public partial class CalendarView : ContentView
     public CalendarView()
     {
         InitializeComponent();
+
+        // Pre-create the six week-row containers and insert them into the fixed WeeksHost rows.
+        for (var i = 0; i < MaxWeekRows; i++)
+        {
+            var container = new Grid { RowSpacing = 0, ColumnSpacing = 0 };
+            Grid.SetRow(container, i);
+            WeeksHost.Children.Add(container);
+            weekRowContainers[i] = container;
+        }
+
         AttachSwipeGestures();
     }
 
@@ -438,12 +452,17 @@ public partial class CalendarView : ContentView
 
     private void RebuildWeeksHost(MonthViewModel month, int slotCount)
     {
-        WeeksHost.Children.Clear();
-        for (var i = 0; i < month.Weeks.Count; i++)
+        var weekCount = month.Weeks.Count;
+        for (var i = 0; i < MaxWeekRows; i++)
         {
-            var weekView = BuildWeekRow(month.Weeks[i], slotCount);
-            Grid.SetRow(weekView, i);
-            WeeksHost.Children.Add(weekView);
+            var container = weekRowContainers[i];
+            container.Children.Clear();
+            container.IsVisible = i < weekCount;
+            if (i < weekCount)
+            {
+                var weekView = BuildWeekRow(month.Weeks[i], slotCount);
+                container.Children.Add(weekView);
+            }
         }
     }
 
@@ -463,7 +482,7 @@ public partial class CalendarView : ContentView
 
         var width = WeeksHost.Width > 0 ? WeeksHost.Width : 400d;
         WeeksHost.TranslationX = direction * width;
-        await WeeksHost.TranslateTo(0, 0, 250, Easing.CubicOut);
+        await WeeksHost.TranslateToAsync(0, 0, 250, Easing.CubicOut);
     }
 
     private void UpdateWeekdayHeaderLabels()
@@ -839,47 +858,71 @@ public partial class CalendarView : ContentView
         return endpoints ? (date >= start && date <= end) : (date > start && date < end);
     }
 
-    // ------------------------------------------------------------------ Swipe gestures
+    // ------------------------------------------------------------------ Swipe gestures (PanGestureRecognizer for reliable Android detection)
 
-    private SwipeGestureRecognizer? swipeLeft;
-    private SwipeGestureRecognizer? swipeRight;
+    // Minimum horizontal distance (dp) to trigger a month change.
+    private const double SwipeThreshold = 80d;
+    // If the vertical drift exceeds this ratio of horizontal movement, ignore (user is scrolling vertically).
+    private const double SwipeMaxVerticalRatio = 0.6d;
+
+    private PanGestureRecognizer? panGesture;
+    private double panStartX;
+    private double panStartY;
+    private bool panConsumed;
 
     private void AttachSwipeGestures()
     {
-        swipeLeft = new SwipeGestureRecognizer { Direction = SwipeDirection.Left };
-        swipeLeft.Swiped += OnSwipedLeft;
-
-        swipeRight = new SwipeGestureRecognizer { Direction = SwipeDirection.Right };
-        swipeRight.Swiped += OnSwipedRight;
-
+        panGesture = new PanGestureRecognizer();
+        panGesture.PanUpdated += OnPanUpdated;
         UpdateSwipeGestureState(SwipeEnabled);
     }
 
     private void UpdateSwipeGestureState(bool enabled)
     {
-        if (swipeLeft is null || swipeRight is null)
+        if (panGesture is null)
             return;
 
-        RootGrid.GestureRecognizers.Remove(swipeLeft);
-        RootGrid.GestureRecognizers.Remove(swipeRight);
-
+        RootGrid.GestureRecognizers.Remove(panGesture);
         if (enabled)
+            RootGrid.GestureRecognizers.Add(panGesture);
+    }
+
+    private void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
         {
-            RootGrid.GestureRecognizers.Add(swipeLeft);
-            RootGrid.GestureRecognizers.Add(swipeRight);
+            case GestureStatus.Started:
+                panStartX  = e.TotalX;
+                panStartY  = e.TotalY;
+                panConsumed = false;
+                break;
+
+            case GestureStatus.Running:
+                if (panConsumed)
+                    break;
+                var dx = e.TotalX - panStartX;
+                var dy = e.TotalY - panStartY;
+                var absDx = Math.Abs(dx);
+                var absDy = Math.Abs(dy);
+                // Ignore if vertical motion dominates.
+                if (absDy > absDx * (1d / SwipeMaxVerticalRatio))
+                    break;
+                if (absDx >= SwipeThreshold)
+                {
+                    panConsumed = true;
+                    if (dx < 0)
+                    {
+                        lastNavDirection = 1;
+                        NextMonthCommand?.Execute(null);
+                    }
+                    else
+                    {
+                        lastNavDirection = -1;
+                        PrevMonthCommand?.Execute(null);
+                    }
+                }
+                break;
         }
-    }
-
-    private void OnSwipedLeft(object? sender, SwipedEventArgs e)
-    {
-        lastNavDirection = 1;
-        NextMonthCommand?.Execute(null);
-    }
-
-    private void OnSwipedRight(object? sender, SwipedEventArgs e)
-    {
-        lastNavDirection = -1;
-        PrevMonthCommand?.Execute(null);
     }
 
     // ------------------------------------------------------------------ Tap handlers
