@@ -347,7 +347,7 @@
                     GaugeBackgroundColor="#242428"
                     HeightRequest="220"
                     LabelColor="White"
-                    LabelExtent="0.62"
+                    LabelExtent="0.65"
                     LabelFontSize="14"
                     LabelFormat="{}{0:N0}"
                     LabelInterval="2"
