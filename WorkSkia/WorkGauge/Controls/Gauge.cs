@@ -624,6 +624,7 @@ public sealed class Gauge : SKCanvasView
 
     private void DrawArcTrack(SKCanvas canvas, SKRect arcRect)
     {
+        if (ArcTrackColor.Alpha <= 0f) return;
         using var paint = new SKPaint();
         paint.Style = SKPaintStyle.Stroke;
         paint.StrokeWidth = ArcThickness;
@@ -691,6 +692,7 @@ public sealed class Gauge : SKCanvasView
             path.AddArc(arcRect, ToSkiaAngle(startUserAngle), sweepDeg);
             canvas.DrawPath(path, paint);
         }
+
     }
 
     private void DrawTicks(SKCanvas canvas, SKPoint center, float r, bool major)
