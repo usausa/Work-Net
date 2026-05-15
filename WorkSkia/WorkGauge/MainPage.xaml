@@ -24,8 +24,8 @@
                 Grid.Column="0"
                 Spacing="4">
                 <controls:Gauge
-                    ArcExtent="0.70"
-                    ArcThickness="8"
+                    ArcInnerExtent="0.65"
+                    ArcOuterExtent="0.75"
                     ArcTrackColor="#20000000"
                     BezelInnerEndColor="#C0C0C0"
                     BezelInnerStartColor="#707070"
@@ -78,8 +78,8 @@
                 Grid.Column="1"
                 Spacing="4">
                 <controls:Gauge
-                    ArcExtent="0.70"
-                    ArcThickness="8"
+                    ArcInnerExtent="0.65"
+                    ArcOuterExtent="0.75"
                     ArcTrackColor="#30FFFFFF"
                     BezelInnerEndColor="#8090B0"
                     BezelInnerStartColor="#303848"
@@ -151,7 +151,8 @@
                 Grid.Column="0"
                 Spacing="4">
                 <controls:Gauge
-                    ArcThickness="8"
+                    ArcInnerExtent="0.78"
+                    ArcOuterExtent="0.86"
                     ArcTrackColor="#30FFFFFF"
                     BezelInnerEndColor="#8090B0"
                     BezelInnerStartColor="#303848"
@@ -274,7 +275,8 @@
                 Grid.Column="0"
                 Spacing="4">
                 <controls:Gauge
-                    ArcThickness="8"
+                    ArcInnerExtent="0.78"
+                    ArcOuterExtent="0.86"
                     ArcTrackColor="#25000000"
                     BezelInnerEndColor="#B8D4F0"
                     BezelInnerStartColor="#5A6878"
@@ -339,7 +341,9 @@
                 Grid.Column="1"
                 Spacing="4">
                 <controls:Gauge
-                    ArcThickness="8"
+                    ArcInnerExtent="0.80"
+                    ArcOuterExtent="0.88"
+                    ArcTrackColor="Transparent"
                     BezelInnerThickness="0"
                     BezelOuterEndColor="#505058"
                     BezelOuterStartColor="#D0D0D8"
@@ -352,30 +356,25 @@
                     LabelFormat="{}{0:N0}"
                     LabelInterval="2"
                     MajorTickColor="White"
-                    MajorTickInnerExtent="0.76"
+                    MajorTickInnerExtent="0.74"
                     MajorTickInterval="1"
-                    MajorTickOuterExtent="0.92"
+                    MajorTickOuterExtent="0.90"
                     MajorTickThickness="3"
                     MaxValue="8"
                     MinValue="0"
                     MinorTickColor="White"
-                    MinorTickInnerExtent="0.80"
+                    MinorTickInnerExtent="0.78"
                     MinorTickInterval="0.25"
-                    MinorTickOuterExtent="0.88"
+                    MinorTickOuterExtent="0.90"
+                    NeedleEndExtent="0.94"
                     NeedleLeftColor="#CC4400"
                     NeedleRightColor="#DD5010"
                     NeedleStartWidth="8"
                     PivotColor="#CC4400"
                     PivotRadius="6"
+                    ShowValue="False"
                     StartAngle="-150"
                     SweepAngle="270"
-                    Unit="x1000rpm"
-                    UnitColor="#B0B0C0"
-                    UnitFontSize="10"
-                    UnitPosition="Bottom"
-                    ValueColor="White"
-                    ValueFontSize="18"
-                    ValueFormat="{}{0:N1}"
                     Value="{Binding Rpm}">
                     <controls:Gauge.Ranges>
                         <controls:GaugeRange

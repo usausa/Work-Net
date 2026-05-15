@@ -87,6 +87,15 @@ public sealed class Gauge : SKCanvasView
         set => SetValue(GaugeBackgroundColorProperty, value);
     }
 
+    public static readonly BindableProperty GaugeBackgroundColor2Property =
+        BindableProperty.Create(nameof(GaugeBackgroundColor2), typeof(Color), typeof(Gauge),
+            Colors.Transparent, propertyChanged: OnVisualPropertyChanged);
+    public Color GaugeBackgroundColor2
+    {
+        get => (Color)GetValue(GaugeBackgroundColor2Property);
+        set => SetValue(GaugeBackgroundColor2Property, value);
+    }
+
     // ------------------------------------------------------------------ Bezel Outer
     public static readonly BindableProperty BezelOuterThicknessProperty =
         BindableProperty.Create(nameof(BezelOuterThickness), typeof(float), typeof(Gauge), 4f,
@@ -144,22 +153,22 @@ public sealed class Gauge : SKCanvasView
     }
 
     // ------------------------------------------------------------------ Arc
-    public static readonly BindableProperty ArcExtentProperty =
-        BindableProperty.Create(nameof(ArcExtent), typeof(float), typeof(Gauge), 0.82f,
+    public static readonly BindableProperty ArcInnerExtentProperty =
+        BindableProperty.Create(nameof(ArcInnerExtent), typeof(float), typeof(Gauge), 0.77f,
             propertyChanged: OnVisualPropertyChanged);
-    public float ArcExtent
+    public float ArcInnerExtent
     {
-        get => (float)GetValue(ArcExtentProperty);
-        set => SetValue(ArcExtentProperty, value);
+        get => (float)GetValue(ArcInnerExtentProperty);
+        set => SetValue(ArcInnerExtentProperty, value);
     }
 
-    public static readonly BindableProperty ArcThicknessProperty =
-        BindableProperty.Create(nameof(ArcThickness), typeof(float), typeof(Gauge), 14f,
+    public static readonly BindableProperty ArcOuterExtentProperty =
+        BindableProperty.Create(nameof(ArcOuterExtent), typeof(float), typeof(Gauge), 0.87f,
             propertyChanged: OnVisualPropertyChanged);
-    public float ArcThickness
+    public float ArcOuterExtent
     {
-        get => (float)GetValue(ArcThicknessProperty);
-        set => SetValue(ArcThicknessProperty, value);
+        get => (float)GetValue(ArcOuterExtentProperty);
+        set => SetValue(ArcOuterExtentProperty, value);
     }
 
     public static readonly BindableProperty ArcTrackColorProperty =
@@ -573,17 +582,18 @@ public sealed class Gauge : SKCanvasView
         var r = maxR - bezelTotal;
         if (r <= 0) return;
 
-        var arcR = r * ArcExtent;
-        var arcRect = new SKRect(cx - arcR, cy - arcR, cx + arcR, cy + arcR);
+        var arcCenterR = r * (ArcInnerExtent + ArcOuterExtent) / 2f;
+        var arcThickness = r * (ArcOuterExtent - ArcInnerExtent);
+        var arcRect = new SKRect(cx - arcCenterR, cy - arcCenterR, cx + arcCenterR, cy + arcCenterR);
 
         DrawBackground(canvas, center, r);
         DrawBezel(canvas, center, maxR);
-        DrawArcTrack(canvas, arcRect);
+        DrawArcTrack(canvas, arcRect, arcThickness);
 
         if (ranges.Count == 0)
-            DrawArcFill(canvas, center, arcRect);
+            DrawArcFill(canvas, center, arcRect, arcThickness);
         else
-            DrawRanges(canvas, center, arcRect);
+            DrawRanges(canvas, center, arcRect, arcThickness);
 
         DrawTicks(canvas, center, r, false);
         DrawTicks(canvas, center, r, true);
@@ -596,13 +606,29 @@ public sealed class Gauge : SKCanvasView
     // ------------------------------------------------------------------ Drawing
     private void DrawBackground(SKCanvas canvas, SKPoint center, float r)
     {
-        if (GaugeBackgroundColor.Alpha <= 0f) return;
+        var useGradient = GaugeBackgroundColor2.Alpha > 0f;
+        if (!useGradient && GaugeBackgroundColor.Alpha <= 0f) return;
+
         using var paint = new SKPaint();
         paint.Style = SKPaintStyle.Fill;
-        paint.Color = GaugeBackgroundColor.ToSKColor();
         paint.IsAntialias = true;
-        // +1.5f でベゼルストローク内縁のアンチエイリアス滲みを背景色で塗りつぶす
-        canvas.DrawCircle(center, r + 1.5f, paint);
+
+        var drawR = r + 1.5f;
+        if (useGradient)
+        {
+            using var shader = SKShader.CreateRadialGradient(
+                center, drawR,
+                [GaugeBackgroundColor.ToSKColor(), GaugeBackgroundColor2.ToSKColor()],
+                null,
+                SKShaderTileMode.Clamp);
+            paint.Shader = shader;
+        }
+        else
+        {
+            paint.Color = GaugeBackgroundColor.ToSKColor();
+        }
+
+        canvas.DrawCircle(center, drawR, paint);
     }
 
     private void DrawBezel(SKCanvas canvas, SKPoint center, float maxR)
@@ -645,12 +671,12 @@ public sealed class Gauge : SKCanvasView
         }
     }
 
-    private void DrawArcTrack(SKCanvas canvas, SKRect arcRect)
+    private void DrawArcTrack(SKCanvas canvas, SKRect arcRect, float arcThickness)
     {
         if (ArcTrackColor.Alpha <= 0f) return;
         using var paint = new SKPaint();
         paint.Style = SKPaintStyle.Stroke;
-        paint.StrokeWidth = ArcThickness;
+        paint.StrokeWidth = arcThickness;
         paint.IsAntialias = true;
         paint.StrokeCap = SKStrokeCap.Butt;
         paint.Color = ArcTrackColor.ToSKColor();
@@ -659,7 +685,7 @@ public sealed class Gauge : SKCanvasView
         canvas.DrawPath(path, paint);
     }
 
-    private void DrawArcFill(SKCanvas canvas, SKPoint center, SKRect arcRect)
+    private void DrawArcFill(SKCanvas canvas, SKPoint center, SKRect arcRect, float arcThickness)
     {
         if (SweepAngle <= 0) return;
 
@@ -674,7 +700,7 @@ public sealed class Gauge : SKCanvasView
 
         using var paint = new SKPaint();
         paint.Style = SKPaintStyle.Stroke;
-        paint.StrokeWidth = ArcThickness;
+        paint.StrokeWidth = arcThickness;
         paint.IsAntialias = true;
         paint.StrokeCap = SKStrokeCap.Butt;
         paint.Shader = shader;
@@ -683,7 +709,7 @@ public sealed class Gauge : SKCanvasView
         canvas.DrawPath(path, paint);
     }
 
-    private void DrawRanges(SKCanvas canvas, SKPoint center, SKRect arcRect)
+    private void DrawRanges(SKCanvas canvas, SKPoint center, SKRect arcRect, float arcThickness)
     {
         foreach (var range in ranges)
         {
@@ -707,7 +733,7 @@ public sealed class Gauge : SKCanvasView
 
             using var paint = new SKPaint();
             paint.Style = SKPaintStyle.Stroke;
-            paint.StrokeWidth = ArcThickness;
+            paint.StrokeWidth = arcThickness;
             paint.IsAntialias = true;
             paint.StrokeCap = SKStrokeCap.Butt;
             paint.Shader = shader;
@@ -715,7 +741,6 @@ public sealed class Gauge : SKCanvasView
             path.AddArc(arcRect, ToSkiaAngle(startUserAngle), sweepDeg);
             canvas.DrawPath(path, paint);
         }
-
     }
 
     private void DrawTicks(SKCanvas canvas, SKPoint center, float r, bool major)
