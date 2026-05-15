@@ -1,23 +1,21 @@
-﻿namespace WorkGauge;
+namespace WorkGauge;
+
+using WorkGauge.ViewModels;
 
 public partial class MainPage : ContentPage
 {
-    int count = 0;
-
-    public MainPage()
+    public MainPage(MainPageViewModel viewModel)
     {
         InitializeComponent();
-    }
+        BindingContext = viewModel;
 
-    private void OnCounterClicked(object? sender, EventArgs e)
-    {
-        count++;
-
-        if (count == 1)
-            CounterBtn.Text = $"Clicked {count} time";
-        else
-            CounterBtn.Text = $"Clicked {count} times";
-
-        SemanticScreenReader.Announce(CounterBtn.Text);
+        WindGauge.LabelFormatter = v => v switch
+        {
+            0 or 360 => "N",
+            90       => "E",
+            180      => "S",
+            270      => "W",
+            _        => string.Empty,
+        };
     }
 }
