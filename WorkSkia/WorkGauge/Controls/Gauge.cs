@@ -419,15 +419,6 @@ public sealed class Gauge : SKCanvasView
     }
 
     // ------------------------------------------------------------------ Needle / Pivot
-    public static readonly BindableProperty NeedleStartExtentProperty =
-        BindableProperty.Create(nameof(NeedleStartExtent), typeof(float), typeof(Gauge), 0.0f,
-            propertyChanged: OnVisualPropertyChanged);
-    public float NeedleStartExtent
-    {
-        get => (float)GetValue(NeedleStartExtentProperty);
-        set => SetValue(NeedleStartExtentProperty, value);
-    }
-
     public static readonly BindableProperty NeedleEndExtentProperty =
         BindableProperty.Create(nameof(NeedleEndExtent), typeof(float), typeof(Gauge), 0.75f,
             propertyChanged: OnVisualPropertyChanged);
@@ -616,8 +607,9 @@ public sealed class Gauge : SKCanvasView
         var drawR = r + 1.5f;
         if (useGradient)
         {
-            using var shader = SKShader.CreateRadialGradient(
-                center, drawR,
+            using var shader = SKShader.CreateLinearGradient(
+                new SKPoint(center.X - drawR, center.Y - drawR),
+                new SKPoint(center.X + drawR, center.Y + drawR),
                 [GaugeBackgroundColor.ToSKColor(), GaugeBackgroundColor2.ToSKColor()],
                 null,
                 SKShaderTileMode.Clamp);
@@ -887,7 +879,7 @@ public sealed class Gauge : SKCanvasView
         var clamped = (float)Math.Clamp(displayValue, MinValue, MaxValue);
         var userAngle = ValueToUserAngle(clamped);
 
-        var startR = r * NeedleStartExtent;
+        var startR = 0f;
         var endR = r * NeedleEndExtent;
         var startHalfW = NeedleStartWidth / 2f;
         var endHalfW = NeedleEndWidth / 2f;
