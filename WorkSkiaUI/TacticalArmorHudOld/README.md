@@ -4,6 +4,8 @@
 シアン/ティール基調のフォスファー調で、疑似シミュレーション(`ArmorSim`)が全表示を自動駆動します。
 `FighterHud` / `MechHud` とは独立した別プロジェクトです(既存ソースには変更を加えていません)。
 
+![TacticalArmorHud のスクリーンショット](screenshot.png)
+
 ## 実行方法
 
 ```powershell
