@@ -96,8 +96,8 @@ public static partial class HudRenderer
     static void DrawTopBar(SKCanvas c, VehicleSimulator sim, float t)
     {
         // タイトル
-        HudParts.DrawGlowText(c, "VX-11 STRATOS", VW / 2f, 64f, 42f, HudColors.Cyan, glow: 9f);
-        HudParts.DrawText(c, "CYBER FORMULA COCKPIT TELEMETRY SYSTEM", VW / 2f, 93f, 16f, HudColors.Dim);
+        HudParts.DrawGlowText(c, "TYPE-19 STRATOS", VW / 2f, 64f, 42f, HudColors.Cyan, glow: 9f);
+        HudParts.DrawText(c, "FORMULA COCKPIT TELEMETRY SYSTEM", VW / 2f, 93f, 16f, HudColors.Dim);
 
         // タイトル両脇の装飾ライン
         HudParts.DrawLine(c, 470f, 56f, 690f, 56f, 2f, HudColors.Azure.WithAlpha(120));
@@ -122,13 +122,13 @@ public static partial class HudRenderer
         // 右:ポジションなど
         HudParts.DrawGlowText(c, $"P{sim.Position:00}", 1860f, 57f, 32f,
             HudColors.White, SKTextAlign.Right, HudParts.MonoFace, 4f);
-        HudParts.DrawText(c, "POS", 1742f, 56f, 22f, HudColors.Dim, SKTextAlign.Right);
+        HudParts.DrawText(c, "POS", 1670f, 56f, 22f, HudColors.Dim, SKTextAlign.Right);
         HudParts.DrawGlowText(c, $"{sim.SpeedMax,3:0} km/h", 1860f, 93f, 30f,
             HudColors.Cyan, SKTextAlign.Right, HudParts.MonoFace, 4f);
-        HudParts.DrawText(c, "VMAX", 1742f, 92f, 22f, HudColors.Dim, SKTextAlign.Right);
+        HudParts.DrawText(c, "VMAX", 1670f, 92f, 22f, HudColors.Dim, SKTextAlign.Right);
         HudParts.DrawGlowText(c, "ONLINE", 1860f, 127f, 30f,
             HudColors.Green, SKTextAlign.Right, HudParts.MonoFace, 4f);
-        HudParts.DrawText(c, "SYS", 1742f, 126f, 22f, HudColors.Dim, SKTextAlign.Right);
+        HudParts.DrawText(c, "SYS", 1670f, 126f, 22f, HudColors.Dim, SKTextAlign.Right);
     }
 
     // ---------------- 警告・フッタ ----------------
