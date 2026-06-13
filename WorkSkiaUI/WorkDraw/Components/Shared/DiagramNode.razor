@@ -1,0 +1,80 @@
+@using WorkDraw.Components.Pages
+@using WorkDraw.Models
+
+@{
+    var n = Node;
+    var color = StencilCatalog.Find(n.Type)?.Color ?? "#888888";
+    var connectTarget = Owner.InConnectMode && Owner.IsHovered(n) && !Owner.IsConnectSource(n);
+}
+<g transform="translate(@Editor.F(n.X) @Editor.F(n.Y))" class="wd-node"
+   @onmousedown="OnMouseDown" @onmousedown:stopPropagation
+   @ondblclick="OnDblClick"
+   @onmouseover="OnOver" @onmouseout="OnOut">
+
+    @if (n.IsContainer)
+    {
+        <rect width="@Editor.F(n.W)" height="@Editor.F(n.H)" fill="@color" fill-opacity="0.05"
+              stroke="@color" stroke-width="2"
+              stroke-dasharray="@(n.Type == "az" ? "8 4" : null)"/>
+        <rect width="@Editor.F(Editor.TagWidth(n.Label))" height="20" fill="@color"/>
+        @SvgLabel(n.Label, 7, 14, 11, "white", "start")
+    }
+    else
+    {
+        <rect width="@Editor.F(n.W)" height="@Editor.F(n.H)" rx="6" fill="@color"/>
+        <g transform="scale(@Editor.F(n.W / 64) @Editor.F(n.H / 64))">
+            <AwsGlyph Type="@n.Type"/>
+        </g>
+        @SvgLabel(n.Label, n.W / 2, n.H + 16, 12, "#232F3E", "middle")
+    }
+
+    @if (connectTarget)
+    {
+        <rect x="-4" y="-4" width="@Editor.F(n.W + 8)" height="@Editor.F(n.H + 8)" rx="8"
+              fill="none" stroke="#2196F3" stroke-width="3" data-noexport/>
+    }
+
+    @if (Owner.ShowSelection(n))
+    {
+        <rect x="-3" y="-3" width="@Editor.F(n.W + 6)" height="@Editor.F(n.H + 6)"
+              fill="none" stroke="#2196F3" stroke-width="1.5" stroke-dasharray="4 3" data-noexport/>
+        @for (var i = 0; i < 4; i++)
+        {
+            var hi = i;
+            var hx = hi is 1 or 2 ? n.W : 0;
+            var hy = hi is 2 or 3 ? n.H : 0;
+            <rect x="@Editor.F(hx - 4)" y="@Editor.F(hy - 4)" width="8" height="8"
+                  fill="white" stroke="#2196F3" stroke-width="1.5" data-noexport
+                  style="cursor:@Editor.HandleCursor(hi)"
+                  @onmousedown="e => OnHandleDown(hi, e)" @onmousedown:stopPropagation/>
+        }
+    }
+
+    @if (Owner.ShowPorts(n))
+    {
+        foreach (var (px, py) in new[] { (n.W / 2, 0d), (n.W, n.H / 2), (n.W / 2, n.H), (0d, n.H / 2) })
+        {
+            <circle cx="@Editor.F(px)" cy="@Editor.F(py)" r="5.5" class="wd-port" data-noexport
+                    @onmousedown="OnPortDown" @onmousedown:stopPropagation/>
+        }
+    }
+</g>
+
+@code {
+    [Parameter, EditorRequired] public NodeModel Node { get; set; } = default!;
+    [Parameter, EditorRequired] public Editor Owner { get; set; } = default!;
+
+    // Razor では SVG の <text> タグを直接書けない（予約タグ）ため MarkupString で出力する
+    private static MarkupString SvgLabel(string text, double x, double y, int size, string fill, string anchor) =>
+        (MarkupString)($"<text x=\"{Editor.F(x)}\" y=\"{Editor.F(y)}\" text-anchor=\"{anchor}\" " +
+                       $"font-size=\"{size}\" fill=\"{fill}\" class=\"wd-text\">" +
+                       System.Net.WebUtility.HtmlEncode(text) + "</text>");
+
+    // Owner(Editor) 側の状態を書き換えるため、処理後に Editor の再描画を明示的に要求する
+    private async Task OnMouseDown(MouseEventArgs e) { await Owner.OnNodeMouseDown(Node, e); Owner.Refresh(); }
+    private void OnDblClick() { Owner.StartLabelEdit(Node); Owner.Refresh(); }
+    private void OnOver() { Owner.OnNodeOver(Node); Owner.Refresh(); }
+    private void OnOut() { Owner.OnNodeOut(Node); Owner.Refresh(); }
+    private async Task OnPortDown(MouseEventArgs e) { await Owner.OnPortMouseDown(Node, e); Owner.Refresh(); }
+    private async Task OnHandleDown(int i, MouseEventArgs e) { await Owner.OnResizeHandleMouseDown(Node, i, e); Owner.Refresh(); }
+}

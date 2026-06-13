@@ -1,0 +1,155 @@
+@page "/"
+@rendermode InteractiveServer
+@using WorkDraw.Components.Shared
+
+<PageTitle>WorkDraw - AWS構成図エディタ</PageTitle>
+
+<div class="wd-root">
+    <header class="wd-toolbar">
+        <span class="wd-logo">WorkDraw</span>
+        <button class="wd-btn" @onclick="NewDiagram">新規</button>
+        <button class="wd-btn" @onclick="LoadSample">サンプル</button>
+        <label class="wd-btn">
+            開く
+            <InputFile OnChange="OnLoadFile" accept=".json" style="display:none"/>
+        </label>
+        <button class="wd-btn" @onclick="SaveJson">保存</button>
+        <button class="wd-btn" @onclick="ExportPng">PNG出力</button>
+        <span class="wd-sep"></span>
+        <button class="wd-btn" @onclick="() => D.Undo()" title="Ctrl+Z">元に戻す</button>
+        <button class="wd-btn" @onclick="() => D.Redo()" title="Ctrl+Y">やり直す</button>
+        <button class="wd-btn" @onclick="() => D.DeleteSelected()" title="Delete">削除</button>
+        <span class="wd-sep"></span>
+        <label class="wd-toggle" title="グリッドに吸着して移動します">
+            <input type="checkbox" @bind="D.SnapEnabled"/> スナップ
+        </label>
+        <label class="wd-toggle">
+            <input type="checkbox" @bind="D.GridVisible"/> グリッド
+        </label>
+        <span class="wd-sep"></span>
+        <button class="wd-btn" @onclick="ZoomOut">−</button>
+        <span class="wd-zoom">@((D.Zoom * 100).ToString("0"))%</span>
+        <button class="wd-btn" @onclick="ZoomIn">＋</button>
+        <button class="wd-btn" @onclick="ZoomReset">100%</button>
+        <button class="wd-btn" @onclick="ZoomFit">全体表示</button>
+    </header>
+
+    <div class="wd-main">
+        <aside class="wd-palette">
+            @foreach (var grp in StencilCatalog.ByCategory)
+            {
+                <div class="wd-cat">@grp.Key</div>
+                <div class="wd-items">
+                    @foreach (var s in grp)
+                    {
+                        <div class="wd-item" title="クリックまたはキャンバスへドラッグで配置"
+                             @onclick="() => AddAtCenter(s)"
+                             @ondragstart="() => OnPaletteDragStart(s)">
+                            <div class="wd-item-tile" draggable="true"
+                                 ondragstart="event.dataTransfer.setData('text/plain','wd')">
+                                <svg viewBox="0 0 64 64" width="34" height="34">
+                                    <rect x="2" y="2" width="60" height="60" rx="10" fill="@s.Color"/>
+                                    <AwsGlyph Type="@s.Type"/>
+                                </svg>
+                            </div>
+                            <span class="wd-item-name">@s.Name</span>
+                        </div>
+                    }
+                </div>
+            }
+        </aside>
+
+        <div class="wd-canvas-wrap">
+            <svg @ref="_svgRef"
+                 class="wd-svg @(_mode == Mode.Pan ? "wd-panning" : "") @(_mode == Mode.Connect ? "wd-connecting" : "")"
+                 @onmousedown="OnCanvasMouseDown"
+                 @onmousemove="OnCanvasMouseMove"
+                 @onmouseup="OnCanvasMouseUp"
+                 @onwheel="OnWheel" @onwheel:preventDefault
+                 @ondragover:preventDefault="true"
+                 @ondrop="OnCanvasDrop" @ondrop:preventDefault
+                 @oncontextmenu:preventDefault="true">
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#546E7A"/>
+                    </marker>
+                    <marker id="arrow-sel" viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#2196F3"/>
+                    </marker>
+                    <pattern id="grid" width="@D.GridSize" height="@D.GridSize" patternUnits="userSpaceOnUse">
+                        <path d="M @D.GridSize 0 L 0 0 0 @D.GridSize" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+                    </pattern>
+                </defs>
+
+                <g id="scene" transform="@SceneTransform">
+                    @if (D.GridVisible)
+                    {
+                        <rect x="-10000" y="-10000" width="20000" height="20000" fill="url(#grid)" data-noexport/>
+                    }
+
+                    @* コンテナ（VPC・サブネット等）は背面に描画 *@
+                    @foreach (var n in D.NodesInRenderOrder.Where(x => x.IsContainer))
+                    {
+                        <DiagramNode Node="n" Owner="this" @key="n.Id"/>
+                    }
+
+                    @* 接続線 *@
+                    @foreach (var ed in D.Edges)
+                    {
+                        var s = D.Nodes.FirstOrDefault(x => x.Id == ed.SourceId);
+                        var t = D.Nodes.FirstOrDefault(x => x.Id == ed.TargetId);
+                        if (s is null || t is null) { continue; }
+                        var path = DiagramState.RouteEdge(s, t);
+                        var sel = D.SelectedEdgeId == ed.Id;
+                        <g @key="ed.Id" class="wd-edge"
+                           @onmousedown="e => OnEdgeMouseDown(ed, e)" @onmousedown:stopPropagation>
+                            <path d="@path" stroke="transparent" stroke-width="14" fill="none"/>
+                            <path d="@path" stroke="@(sel ? "#2196F3" : "#546E7A")"
+                                  stroke-width="@(sel ? "2.5" : "2")" fill="none"
+                                  marker-end="@(sel ? "url(#arrow-sel)" : "url(#arrow)")"/>
+                        </g>
+                    }
+
+                    @* 接続操作中の仮線 *@
+                    @if (_mode == Mode.Connect && D.Nodes.FirstOrDefault(x => x.Id == _connectFromId) is { } cs)
+                    {
+                        <path d="M @F(cs.Cx) @F(cs.Cy) L @F(_mouseWX) @F(_mouseWY)"
+                              stroke="#2196F3" stroke-width="2" stroke-dasharray="5 4" fill="none"
+                              marker-end="url(#arrow-sel)" data-noexport/>
+                    }
+
+                    @* 通常ノード（アイコン）は前面に描画 *@
+                    @foreach (var n in D.NodesInRenderOrder.Where(x => !x.IsContainer))
+                    {
+                        <DiagramNode Node="n" Owner="this" @key="n.Id"/>
+                    }
+                </g>
+            </svg>
+
+            @* ラベルのインライン編集 *@
+            @if (_editingNodeId is not null && D.Nodes.FirstOrDefault(x => x.Id == _editingNodeId) is { } en)
+            {
+                var left = (en.X - D.ViewX) * D.Zoom;
+                var top = ((en.IsContainer ? en.Y : en.Y + en.H + 2) - D.ViewY) * D.Zoom;
+                var width = Math.Max(120, en.W * D.Zoom);
+                <input class="wd-label-edit"
+                       style="left:@(F(left))px; top:@(F(top))px; width:@(F(width))px"
+                       @ref="_labelInputRef"
+                       @bind="_editingText" @bind:event="oninput"
+                       @onkeydown="OnLabelKeyDown" @onblur="CommitLabel"
+                       @onmousedown:stopPropagation/>
+            }
+        </div>
+    </div>
+
+    <footer class="wd-status">
+        <span class="wd-status-msg">@_statusMsg</span>
+        <span class="wd-status-right">
+            ノード @D.Nodes.Count ／ 接続 @D.Edges.Count ｜
+            ホイール: ズーム ／ 空白ドラッグ: パン ／ ノードの○をドラッグ: 接続 ／
+            ダブルクリック: 名前変更 ／ Delete: 削除 ／ Ctrl+Z: 元に戻す
+        </span>
+    </footer>
+</div>

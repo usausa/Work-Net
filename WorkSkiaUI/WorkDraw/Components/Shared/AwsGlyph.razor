@@ -1,0 +1,135 @@
+@* 64x64 座標系に白いピクトグラムを描画する。背景の色付き角丸は呼び出し側が描く。 *@
+@switch (Type)
+{
+    case "ec2":
+        <rect x="18" y="18" width="28" height="28" fill="none" stroke="white" stroke-width="3"/>
+        <rect x="26" y="26" width="12" height="12" fill="white"/>
+        @foreach (var p in new[] { 24, 32, 40 })
+        {
+            <line x1="@p" y1="12" x2="@p" y2="18" stroke="white" stroke-width="3"/>
+            <line x1="@p" y1="46" x2="@p" y2="52" stroke="white" stroke-width="3"/>
+            <line x1="12" y1="@p" x2="18" y2="@p" stroke="white" stroke-width="3"/>
+            <line x1="46" y1="@p" x2="52" y2="@p" stroke="white" stroke-width="3"/>
+        }
+        break;
+    case "lambda":
+        @T(32, 44, 34, "λ")
+        break;
+    case "ecs":
+        <rect x="14" y="24" width="16" height="16" fill="none" stroke="white" stroke-width="3"/>
+        <rect x="34" y="14" width="16" height="16" fill="none" stroke="white" stroke-width="3"/>
+        <rect x="34" y="34" width="16" height="16" fill="none" stroke="white" stroke-width="3"/>
+        break;
+    case "autoscaling":
+        <path d="M 20 40 A 14 14 0 1 1 26 46" fill="none" stroke="white" stroke-width="3"/>
+        <polygon points="20,40 28,42 22,48" fill="white"/>
+        break;
+    case "s3":
+        <path d="M 18 20 L 22 48 Q 32 53 42 48 L 46 20" fill="none" stroke="white" stroke-width="3"/>
+        <ellipse cx="32" cy="20" rx="14" ry="5" fill="none" stroke="white" stroke-width="3"/>
+        <circle cx="32" cy="36" r="4" fill="white"/>
+        break;
+    case "efs":
+        <rect x="16" y="16" width="32" height="32" rx="3" fill="none" stroke="white" stroke-width="3"/>
+        <line x1="16" y1="27" x2="48" y2="27" stroke="white" stroke-width="3"/>
+        <line x1="16" y1="38" x2="48" y2="38" stroke="white" stroke-width="3"/>
+        break;
+    case "rds":
+        <ellipse cx="32" cy="19" rx="15" ry="6" fill="none" stroke="white" stroke-width="3"/>
+        <path d="M 17 19 L 17 45 Q 32 53 47 45 L 47 19" fill="none" stroke="white" stroke-width="3"/>
+        <path d="M 17 32 Q 32 40 47 32" fill="none" stroke="white" stroke-width="3"/>
+        break;
+    case "dynamodb":
+        <ellipse cx="32" cy="19" rx="15" ry="6" fill="none" stroke="white" stroke-width="3"/>
+        <path d="M 17 19 L 17 45 Q 32 53 47 45 L 47 19" fill="none" stroke="white" stroke-width="3"/>
+        <polygon points="34,24 26,36 31,36 29,46 38,33 33,33" fill="white"/>
+        break;
+    case "elasticache":
+        <ellipse cx="32" cy="19" rx="15" ry="6" fill="none" stroke="white" stroke-width="3"/>
+        <path d="M 17 19 L 17 45 Q 32 53 47 45 L 47 19" fill="none" stroke="white" stroke-width="3"/>
+        <circle cx="26" cy="38" r="3" fill="white"/>
+        <circle cx="38" cy="38" r="3" fill="white"/>
+        break;
+    case "alb":
+        <circle cx="22" cy="32" r="7" fill="none" stroke="white" stroke-width="3"/>
+        <line x1="29" y1="32" x2="44" y2="18" stroke="white" stroke-width="3"/>
+        <line x1="29" y1="32" x2="46" y2="32" stroke="white" stroke-width="3"/>
+        <line x1="29" y1="32" x2="44" y2="46" stroke="white" stroke-width="3"/>
+        <circle cx="47" cy="17" r="4" fill="white"/>
+        <circle cx="49" cy="32" r="4" fill="white"/>
+        <circle cx="47" cy="47" r="4" fill="white"/>
+        break;
+    case "apigw":
+        @T(32, 41, 22, "</>", "Consolas, monospace", "bold")
+        break;
+    case "cloudfront":
+        <circle cx="32" cy="32" r="17" fill="none" stroke="white" stroke-width="3"/>
+        <circle cx="32" cy="15" r="4" fill="white"/>
+        <circle cx="17" cy="40" r="4" fill="white"/>
+        <circle cx="47" cy="40" r="4" fill="white"/>
+        <line x1="32" y1="15" x2="17" y2="40" stroke="white" stroke-width="2"/>
+        <line x1="17" y1="40" x2="47" y2="40" stroke="white" stroke-width="2"/>
+        <line x1="47" y1="40" x2="32" y2="15" stroke="white" stroke-width="2"/>
+        break;
+    case "route53":
+        <circle cx="32" cy="32" r="17" fill="none" stroke="white" stroke-width="3"/>
+        @T(32, 39, 17, "53", weight: "bold")
+        break;
+    case "igw":
+        <line x1="14" y1="32" x2="50" y2="32" stroke="white" stroke-width="3"/>
+        <polygon points="50,32 41,26 41,38" fill="white"/>
+        <polygon points="14,32 23,26 23,38" fill="white"/>
+        break;
+    case "natgw":
+        <line x1="14" y1="32" x2="42" y2="32" stroke="white" stroke-width="3"/>
+        <polygon points="44,32 35,26 35,38" fill="white"/>
+        <line x1="48" y1="18" x2="48" y2="46" stroke="white" stroke-width="4"/>
+        break;
+    case "sqs":
+        <rect x="14" y="18" width="36" height="8" rx="2" fill="white"/>
+        <rect x="14" y="29" width="36" height="8" rx="2" fill="white" opacity="0.8"/>
+        <rect x="14" y="40" width="36" height="8" rx="2" fill="white" opacity="0.6"/>
+        break;
+    case "sns":
+        <polygon points="16,26 16,38 28,38 42,48 42,16 28,26" fill="white"/>
+        <path d="M 46 24 Q 52 32 46 40" fill="none" stroke="white" stroke-width="3"/>
+        break;
+    case "waf":
+        <path d="M 32 12 L 50 19 L 50 34 Q 50 47 32 53 Q 14 47 14 34 L 14 19 Z" fill="none" stroke="white" stroke-width="3"/>
+        <path d="M 24 32 L 30 38 L 41 25" fill="none" stroke="white" stroke-width="3"/>
+        break;
+    case "iam":
+        <circle cx="24" cy="26" r="9" fill="none" stroke="white" stroke-width="3"/>
+        <line x1="30" y1="33" x2="48" y2="50" stroke="white" stroke-width="3"/>
+        <line x1="42" y1="44" x2="48" y2="38" stroke="white" stroke-width="3"/>
+        break;
+    case "cloudwatch":
+        <circle cx="32" cy="32" r="17" fill="none" stroke="white" stroke-width="3"/>
+        <line x1="32" y1="32" x2="32" y2="21" stroke="white" stroke-width="3"/>
+        <line x1="32" y1="32" x2="41" y2="37" stroke="white" stroke-width="3"/>
+        break;
+    case "user":
+        <circle cx="32" cy="24" r="9" fill="white"/>
+        <path d="M 16 50 Q 16 36 32 36 Q 48 36 48 50 Z" fill="white"/>
+        break;
+    case "internet":
+        <circle cx="32" cy="32" r="17" fill="none" stroke="white" stroke-width="3"/>
+        <ellipse cx="32" cy="32" rx="8" ry="17" fill="none" stroke="white" stroke-width="2"/>
+        <line x1="15" y1="32" x2="49" y2="32" stroke="white" stroke-width="2"/>
+        break;
+    default:
+        @* コンテナ系（VPC・サブネット・AZ）のパレット用プレビュー *@
+        <rect x="14" y="18" width="36" height="28" rx="3" fill="none" stroke="white" stroke-width="3" stroke-dasharray="6 3"/>
+        break;
+}
+
+@code {
+    [Parameter] public string Type { get; set; } = "";
+
+    // Razor では SVG の <text> タグを直接書けない（予約タグ）ため MarkupString で出力する
+    private static MarkupString T(int x, int y, int size, string content,
+        string family = "Segoe UI, sans-serif", string weight = "normal") =>
+        (MarkupString)($"<text x=\"{x}\" y=\"{y}\" text-anchor=\"middle\" font-size=\"{size}\" " +
+                       $"font-weight=\"{weight}\" font-family=\"{family}\" fill=\"white\">" +
+                       System.Net.WebUtility.HtmlEncode(content) + "</text>");
+}

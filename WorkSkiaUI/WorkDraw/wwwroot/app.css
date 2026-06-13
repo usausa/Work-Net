@@ -1,0 +1,252 @@
+/* ===== 基本 ===== */
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    height: 100%;
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+    font-size: 14px;
+    color: #1f2933;
+    overflow: hidden;
+}
+
+h1:focus { outline: none; }
+
+/* ===== 全体レイアウト ===== */
+.wd-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f4f6f8;
+}
+
+.wd-main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ===== ツールバー ===== */
+.wd-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #232f3e;
+    color: #fff;
+    flex-wrap: wrap;
+}
+
+.wd-logo {
+    font-weight: 700;
+    font-size: 16px;
+    color: #ff9900;
+    margin-right: 12px;
+    letter-spacing: 0.5px;
+}
+
+.wd-btn {
+    background: #37475a;
+    color: #fff;
+    border: 1px solid #4a5b70;
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wd-btn:hover { background: #485c74; }
+.wd-btn:active { background: #2c3a4a; }
+
+label.wd-btn { display: inline-block; }
+
+.wd-sep {
+    width: 1px;
+    height: 22px;
+    background: #4a5b70;
+    margin: 0 6px;
+}
+
+.wd-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.wd-zoom {
+    min-width: 48px;
+    text-align: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== パレット ===== */
+.wd-palette {
+    width: 232px;
+    background: #fff;
+    border-right: 1px solid #d9dee4;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.wd-cat {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5d6b7a;
+    margin: 10px 4px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wd-cat:first-child { margin-top: 2px; }
+
+.wd-items {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.wd-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 2px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: grab;
+    text-align: center;
+}
+
+.wd-item:hover {
+    background: #f0f6ff;
+    border-color: #b8d4f5;
+}
+
+.wd-item-tile {
+    line-height: 0;
+    cursor: grab;
+}
+
+.wd-item-tile:active { cursor: grabbing; }
+
+.wd-item-name {
+    font-size: 10px;
+    color: #3e4c59;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+/* ===== キャンバス ===== */
+.wd-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.wd-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #fdfdfd;
+    cursor: default;
+}
+
+.wd-svg.wd-panning { cursor: grabbing; }
+.wd-svg.wd-connecting { cursor: crosshair; }
+
+.wd-node { cursor: move; }
+
+.wd-text {
+    user-select: none;
+    pointer-events: none;
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+}
+
+.wd-edge { cursor: pointer; }
+
+.wd-port {
+    fill: #fff;
+    stroke: #2196f3;
+    stroke-width: 1.5;
+    cursor: crosshair;
+}
+
+.wd-port:hover {
+    fill: #2196f3;
+}
+
+/* ===== ラベル編集 ===== */
+.wd-label-edit {
+    position: absolute;
+    z-index: 10;
+    font-size: 12px;
+    padding: 3px 6px;
+    border: 1.5px solid #2196f3;
+    border-radius: 3px;
+    outline: none;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== ステータスバー ===== */
+.wd-status {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 12px;
+    background: #eceff3;
+    border-top: 1px solid #d9dee4;
+    font-size: 12px;
+    color: #5d6b7a;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.wd-status-msg {
+    color: #1f2933;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wd-status-right {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== Blazor 既定のエラーUI ===== */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
