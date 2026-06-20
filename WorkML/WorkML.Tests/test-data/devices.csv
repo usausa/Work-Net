@@ -1,0 +1,3 @@
+DeviceId,SiteId,BaseVoltage,RatedCurrent,ChannelCount
+dev01,site01,100,20,1
+dev02,site01,200,30,1
