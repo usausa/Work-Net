@@ -148,17 +148,6 @@
 
 ---
 
-## 付録: プレビュー版からの API 名変更
-
-GA で preview 時代の一部 API 名が変わっています（古い記事に注意）。
-
-| プレビュー版 | GA 版 (1.x) |
-| --- | --- |
-| `CreateAIAgent(...)` | `AsAIAgent(...)` |
-| `AgentThread` | `AgentSession` |
-| `agent.GetNewThread()` | `await agent.CreateSessionAsync()` |
-| `AgentRunResponse` / `AgentRunResponseUpdate` | `AgentResponse` / `AgentResponseUpdate` |
-
 ## 参考（一次情報・2026-06-20 確認）
 
 - 公式ドキュメント / 概要: <https://learn.microsoft.com/en-us/agent-framework/> ・ <https://learn.microsoft.com/en-us/agent-framework/overview/>
