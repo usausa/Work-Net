@@ -9,6 +9,7 @@
     <File Path="FEATURES.md" />
     <File Path="README.md" />
     <File Path="README.Tui.md" />
+    <File Path="WHY-AGENTS.md" />
   </Folder>
   <Folder Name="/Tui/">
     <Project Path="TuiAgentSampleCore/TuiAgentSampleCore.csproj" />
