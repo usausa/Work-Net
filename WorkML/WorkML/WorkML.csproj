@@ -8,12 +8,6 @@
     <RootNamespace>WorkML</RootNamespace>
   </PropertyGroup>
 
-  <!-- テストプロジェクトはサブフォルダにあるため、アプリのコンパイル対象から除外する -->
-  <ItemGroup>
-    <Compile Remove="WorkML.Tests\**" />
-    <None Remove="WorkML.Tests\**" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Update="sample-data\**\*.csv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
