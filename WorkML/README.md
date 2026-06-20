@@ -26,12 +26,12 @@ Azure の時系列基盤モデル **TimeGEN-1** を .NET から呼び、予測�
 ### ビルド
 ```
 cd WorkML
-dotnet build
+dotnet build WorkML.slnx
 ```
 
 ### 実行（Azure 未接続でも動く）
 ```
-dotnet run
+dotnet run --project WorkML/WorkML.csproj
 ```
 環境変数が未設定なら、**CSV 読込 → p.u. 正規化 → `unique_id, ds, y` 形式への変換 → 送信用 JSON の生成**までを表示して終了する。Azure 未契約でもデータ整形とリクエスト内容を確認できる。
 
@@ -40,14 +40,17 @@ PowerShell で環境変数を設定して実行する:
 ```
 $env:TIMEGEN_ENDPOINT = "https://<your-endpoint>"
 $env:TIMEGEN_APIKEY   = "<your-key>"
-dotnet run
+dotnet run --project WorkML/WorkML.csproj
 ```
 TimeGEN-1 エンドポイントへ予測リクエストを送り、系列ごとの予測値を表示する。
 ※ キー/エンドポイントはコードに直書きせず、環境変数（または User Secrets）で渡す。
 
-### サンプルデータ（`sample-data/`）
+### サンプルデータ（`WorkML/sample-data/`）
 - `devices.csv`: 装置マスタ（3装置・site01/site02・基本電圧 **100V/200V** 混在・チャンネル数 **2/3/1** と可変）
-- `readings.csv`: **5分間隔**の電圧ログ（6系列 × 12点）。`dev03-ch1` は終盤に電圧降下（劣化の予兆）を含む
+- **装置ごとの長期間ログ**（**5分間隔 = 1日288件**、**60日分 = 17,280件/チャンネル**）:
+  - `dev01.csv`（2ch・34,560行）/ `dev02.csv`（3ch・51,840行）/ `dev03.csv`（1ch・17,280行）
+  - `dev03-ch1` は終盤に電圧降下（劣化の予兆）を含む
+- `generate-sample-data.ps1`: 上記データの生成スクリプト（固定シードで再現可能）。件数を変えたいときはこれを編集して再生成する。
 
 ### 出力の見方
 - `unique_id` は `{Site}-{Device}-ch{n}`（例 `site02-dev03-ch1`）。**1チャンネル = 1系列**。
@@ -55,16 +58,16 @@ TimeGEN-1 エンドポイントへ予測リクエストを送り、系列ごと�
 
 ## プロジェクト構成
 ```
-WorkML/
-  WorkML.csproj      .NET 10 / コンソール
-  Program.cs         実行サンプル（CSV→正規化→JSON→予測）
-  Core/              ChannelReading / DeviceSpec / PerUnit(p.u.正規化) / CsvLoader
-  TimeGen/           TimeGenClient(HttpClient) / TimeGenModels(DTO)
-  sample-data/       devices.csv / readings.csv（5分間隔）
-  WorkML.Tests/      xUnit テスト（PerUnit / CsvLoader）
-  WorkML.slnx        ソリューション
-  docs/              設計・実装メモ
-  Data/              作業まとめ
+WorkML/                     ソリューションルート
+  WorkML.slnx               ソリューション
+  WorkML/                   アプリ（コンソール / net10.0）
+    WorkML.csproj
+    Program.cs              CSV→正規化→JSON→予測
+    Core/                   ChannelReading / DeviceSpec / PerUnit(p.u.正規化) / CsvLoader
+    TimeGen/                TimeGenClient(HttpClient) / TimeGenModels(DTO)
+    sample-data/            装置ごとの長期間 CSV（dev01/02/03.csv）＋ 生成スクリプト
+  WorkML.Tests/             xUnit テスト（PerUnit / CsvLoader）
+  docs/                     設計・実装メモ・作業まとめ
 ```
 
 ## 方針（決定事項）
@@ -80,4 +83,4 @@ WorkML/
 ## ドキュメント
 - [設計・サンプル仕様](docs/PredictiveMaintenance-AutoML.md)
 - [物語版（経緯と学び）](docs/blog-predictive-maintenance-timegen.md)
-- [作業まとめ](Data/作業まとめ.md)
+- [作業まとめ](docs/作業まとめ.md)

@@ -12,7 +12,10 @@ public static class Program
         var dataDir = Path.Combine(AppContext.BaseDirectory, "sample-data");
         var devices = CsvLoader.LoadDevices(Path.Combine(dataDir, "devices.csv"))
             .ToDictionary(static d => d.DeviceId);
-        var readings = CsvLoader.LoadReadings(Path.Combine(dataDir, "readings.csv"));
+        // 装置ごとの CSV（{DeviceId}.csv）をまとめて読み込む（長期間データ）
+        var readings = devices.Values
+            .SelectMany(d => CsvLoader.LoadReadings(Path.Combine(dataDir, $"{d.DeviceId}.csv")))
+            .ToList();
 
         // p.u. 正規化して long 形式 (unique_id, ds, y) に変換
         var points = readings
