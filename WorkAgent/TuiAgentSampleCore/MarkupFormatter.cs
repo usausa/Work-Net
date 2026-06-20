@@ -14,11 +14,17 @@ public static class MarkupFormatter
 {
     private const string Fence = "```";
 
-    public static string ToConsoleMarkup(string markdown)
+    /// <param name="useBold">
+    /// 見出しと <c>**太字**</c> を強調 (bold) するか。実ターミナル (Spectre) では
+    /// 「bold + 明るい白」が配色によって背景と同化するため、その場合は <see langword="false"/> を渡す。
+    /// </param>
+    /// <param name="mutedColor">箇条書き <c>-</c> や引用 <c>|</c> など、本文以外の記号に使う色。</param>
+    public static string ToConsoleMarkup(string markdown, bool useBold = true, string mutedColor = "silver")
     {
         var builder = new StringBuilder();
         var inFence = false;
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var heading = useBold ? "bold white" : "white";
 
         for (var i = 0; i < lines.Length; i++)
         {
@@ -30,30 +36,31 @@ public static class MarkupFormatter
                 continue;
             }
 
-            // 応答の文章は白。コードはアクセント (aqua)。箇条書き等の記号は silver。
+            // 応答の本文は白。見出しと **太字** は useBold で強調の有無を切り替える。
+            // コードはアクセント (aqua)、箇条書き等の記号は mutedColor とし、本文の白と分ける。
             if (inFence)
             {
                 builder.Append("[aqua]  ").Append(Escape(line)).Append("[/]");
             }
             else if (line.StartsWith("## ", StringComparison.Ordinal))
             {
-                builder.Append("[bold white]").Append(Inline(line[3..])).Append("[/]");
+                builder.Append('[').Append(heading).Append(']').Append(Inline(line[3..], useBold)).Append("[/]");
             }
             else if (line.StartsWith("# ", StringComparison.Ordinal))
             {
-                builder.Append("[bold white]").Append(Inline(line[2..])).Append("[/]");
+                builder.Append('[').Append(heading).Append(']').Append(Inline(line[2..], useBold)).Append("[/]");
             }
             else if (line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("* ", StringComparison.Ordinal))
             {
-                builder.Append("  [silver]-[/] [white]").Append(Inline(line[2..])).Append("[/]");
+                builder.Append("  [").Append(mutedColor).Append("]-[/] [white]").Append(Inline(line[2..], useBold)).Append("[/]");
             }
             else if (line.StartsWith("> ", StringComparison.Ordinal))
             {
-                builder.Append("[silver]|[/] [white italic]").Append(Inline(line[2..])).Append("[/]");
+                builder.Append('[').Append(mutedColor).Append("]|[/] [white italic]").Append(Inline(line[2..], useBold)).Append("[/]");
             }
             else if (line.Length > 0)
             {
-                builder.Append("[white]").Append(Inline(line)).Append("[/]");
+                builder.Append("[white]").Append(Inline(line, useBold)).Append("[/]");
             }
 
             if (i < lines.Length - 1)
@@ -115,7 +122,7 @@ public static class MarkupFormatter
         return builder.ToString();
     }
 
-    private static string Inline(string text)
+    private static string Inline(string text, bool useBold)
     {
         var builder = new StringBuilder();
         var i = 0;
@@ -126,7 +133,9 @@ public static class MarkupFormatter
                 var end = text.IndexOf("**", i + 2, StringComparison.Ordinal);
                 if (end > 0)
                 {
-                    builder.Append("[bold]").Append(Escape(text[(i + 2)..end])).Append("[/]");
+                    // useBold:false のときは囲みの白を継承させ、bold は付けない (背景同化の回避)。
+                    var segment = Escape(text[(i + 2)..end]);
+                    builder.Append(useBold ? $"[bold]{segment}[/]" : segment);
                     i = end + 2;
                     continue;
                 }

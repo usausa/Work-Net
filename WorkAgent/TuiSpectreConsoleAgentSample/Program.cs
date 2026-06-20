@@ -50,7 +50,7 @@ while (true)
     await RespondAsync(agent, input);
 }
 
-AnsiConsole.MarkupLine("[silver]session closed.[/]");
+AnsiConsole.MarkupLine("[grey70]session closed.[/]");
 return 0;
 
 static IAgentConversation CreateAgent() => new SimulatedAgentConversation();
@@ -60,11 +60,11 @@ static string? ReadInput()
 {
     if (Console.IsInputRedirected)
     {
-        AnsiConsole.Markup("[bold green]you[/] [silver]>[/] ");
+        AnsiConsole.Markup("[bold green]you[/] [grey70]>[/] ");
         return Console.ReadLine();
     }
 
-    return AnsiConsole.Prompt(new TextPrompt<string>("[bold green]you[/] [silver]>[/]").AllowEmpty());
+    return AnsiConsole.Prompt(new TextPrompt<string>("[bold green]you[/] [grey70]>[/]").AllowEmpty());
 }
 
 static void PrintHeader(string model)
@@ -77,13 +77,13 @@ static void PrintHeader(string model)
         AnsiConsole.MarkupLine($"  [{palette[i % palette.Length]}]{Markup.Escape(logo[i])}[/]");
     }
 
-    AnsiConsole.MarkupLine($"  [silver]{Markup.Escape(AgentBranding.Tagline)}[/]");
+    AnsiConsole.MarkupLine($"  [grey70]{Markup.Escape(AgentBranding.Tagline)}[/]");
     AnsiConsole.Write(new Rule($"[bold aqua] {AgentBranding.Title} - Spectre.Console [/]").RuleStyle("grey").Centered());
     AnsiConsole.MarkupLine(
-        $"[silver]model[/] [aqua]{Markup.Escape(model)}[/]    [silver]|[/]    [yellow]simulated[/]    [silver]|[/]    [silver]commands[/] [silver]/clear[/] [silver]/exit[/]");
+        $"[grey70]model[/] [aqua]{Markup.Escape(model)}[/]    [grey70]|[/]    [yellow]simulated[/]    [grey70]|[/]    [grey70]commands[/] [grey70]/clear[/] [grey70]/exit[/]");
     foreach (var tip in AgentBranding.Tips)
     {
-        AnsiConsole.MarkupLine($"[silver]- {Markup.Escape(tip)}[/]");
+        AnsiConsole.MarkupLine($"[grey70]- {Markup.Escape(tip)}[/]");
     }
 
     AnsiConsole.WriteLine();
@@ -190,32 +190,34 @@ internal static class SpectreChatView
         if (state.Thinking)
         {
             var frame = SpinnerFrames[state.SpinnerIndex % SpinnerFrames.Length];
-            rows.Add(new Markup($"[yellow]{frame} thinking...[/]  [silver]{Markup.Escape(state.LastThought)}[/]"));
+            rows.Add(new Markup($"[yellow]{frame} thinking...[/]  [grey70]{Markup.Escape(state.LastThought)}[/]"));
         }
 
         // 枠 (Panel) は付けず、役割を色付きの見出し行で示す。
         foreach (var tool in state.Tools)
         {
-            rows.Add(new Markup($"[blue]> {Markup.Escape(tool.Name)}[/]  [silver]{Markup.Escape(tool.Arguments)}[/]"));
+            rows.Add(new Markup($"[blue]> {Markup.Escape(tool.Name)}[/]  [grey70]{Markup.Escape(tool.Arguments)}[/]"));
             var result = tool.Result ?? "running...";
             foreach (var line in result.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             {
-                rows.Add(new Markup($"  [silver]{Markup.Escape(line)}[/]"));
+                rows.Add(new Markup($"  [grey70]{Markup.Escape(line)}[/]"));
             }
         }
 
         if (state.Answer.Length > 0 || state.Completed)
         {
             rows.Add(new Markup($"[aqua]> {Markup.Escape(agentName)}[/]"));
+            // 本文 (応答の文章) は白。実ターミナルでは bold + 明るい白が背景と同化するため
+            // useBold:false で素の白にし、記号類は本文と分かるよう明るめのグレーにする。
             var content = state.Completed
-                ? MarkupFormatter.ToConsoleMarkup(state.Answer.ToString())
-                : Markup.Escape(state.Answer.ToString());
+                ? MarkupFormatter.ToConsoleMarkup(state.Answer.ToString(), useBold: false, mutedColor: "grey70")
+                : $"[white]{Markup.Escape(state.Answer.ToString())}[/]";
             rows.Add(new Markup(content));
         }
 
         if (state.Completed)
         {
-            rows.Add(new Markup($"[silver]{state.Tokens} tokens, {stopwatch.ElapsedMilliseconds} ms[/]"));
+            rows.Add(new Markup($"[grey70]{state.Tokens} tokens, {stopwatch.ElapsedMilliseconds} ms[/]"));
         }
 
         return new Rows(rows);
