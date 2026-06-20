@@ -1,3 +1,38 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="AGENTS.md" />
+    <File Path="Analyzers.ruleset" />
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="FEATURES.md" />
+    <File Path="README.md" />
+    <File Path="README.Tui.md" />
+  </Folder>
+  <Folder Name="/Tui/">
+    <Project Path="TuiAgentSampleCore/TuiAgentSampleCore.csproj" />
+    <Project Path="TuiConsoloniaAgentSample/TuiConsoloniaAgentSample.csproj" />
+    <Project Path="TuiSharpConsoleUiAgentSample/TuiSharpConsoleUiAgentSample.csproj" />
+    <Project Path="TuiSpectreConsoleAgentSample/TuiSpectreConsoleAgentSample.csproj" />
+    <Project Path="TuiTerminalGuiAgentSample/TuiTerminalGuiAgentSample.csproj" />
+  </Folder>
   <Project Path="BasicAgentSample/BasicAgentSample.csproj" />
+  <Folder Name="/Feature/">
+    <Project Path="AgentSampleCore/AgentSampleCore.csproj" />
+    <Project Path="Feature01Tools/Feature01Tools.csproj" />
+    <Project Path="Feature02StructuredOutput/Feature02StructuredOutput.csproj" />
+    <Project Path="Feature03Sessions/Feature03Sessions.csproj" />
+    <Project Path="Feature04Middleware/Feature04Middleware.csproj" />
+    <Project Path="Feature05ToolApproval/Feature05ToolApproval.csproj" />
+    <Project Path="Feature06ContextProvider/Feature06ContextProvider.csproj" />
+    <Project Path="Feature07MultiAgent/Feature07MultiAgent.csproj" />
+    <Project Path="Feature08Telemetry/Feature08Telemetry.csproj" />
+    <Project Path="Feature09Streaming/Feature09Streaming.csproj" />
+    <Project Path="Feature10Rag/Feature10Rag.csproj" />
+    <Project Path="Feature11Todo/Feature11Todo.csproj" />
+    <Project Path="Feature12FileAccess/Feature12FileAccess.csproj" />
+    <Project Path="Feature13Compaction/Feature13Compaction.csproj" />
+    <Project Path="Feature14Evaluation/Feature14Evaluation.csproj" />
+  </Folder>
 </Solution>

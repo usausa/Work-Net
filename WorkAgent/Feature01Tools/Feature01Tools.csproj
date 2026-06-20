@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Feature01Tools</RootNamespace>
+    <!-- 全サンプルで同じ UserSecretsId を共有し、APIキー設定を一度で済ませる -->
+    <UserSecretsId>agent-sample</UserSecretsId>
+    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgentSampleCore\AgentSampleCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 共通の警告抑制をリンク参照する -->
+    <Compile Include="..\AgentSampleCore\GlobalSuppressions.cs" Link="GlobalSuppressions.cs" />
+    <!-- 共通の接続設定をリンクし、出力ディレクトリへコピーする -->
+    <None Include="..\AgentSampleCore\appsettings.json" Link="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

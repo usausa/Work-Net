@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TuiConsoloniaAgentSample.MainWindow"
+        Title="AI Agent · Terminal UI">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Enter" Command="{Binding SendCommand}" />
+    </Window.KeyBindings>
+    <DockPanel Margin="1">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="{Binding Logo}" Foreground="Cyan" />
+            <TextBlock Text="{Binding Tagline}" Foreground="Silver" />
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="0,1,0,0">
+            <TextBlock Grid.Column="0" Text="you › " Foreground="LimeGreen" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding Input}" Watermark="メッセージを入力…" />
+            <Button Grid.Column="2" Content=" Send " Command="{Binding SendCommand}" Margin="1,0,0,0" />
+        </Grid>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Foreground="Yellow" Margin="0,1,0,0" />
+
+        <ScrollViewer x:Name="Transcript">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,1">
+                            <TextBlock Text="{Binding Header}" Foreground="{Binding HeaderBrush}" />
+                            <TextBlock Text="{Binding Body}" Foreground="{Binding BodyBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

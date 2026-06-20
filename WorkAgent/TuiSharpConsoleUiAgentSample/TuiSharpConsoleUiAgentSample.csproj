@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TuiSharpConsoleUiAgentSample</RootNamespace>
+    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpConsoleUI" Version="2.4.79-rc.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TuiAgentSampleCore\TuiAgentSampleCore.csproj" />
+  </ItemGroup>
+
+</Project>
