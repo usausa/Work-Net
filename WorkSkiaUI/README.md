@@ -13,6 +13,7 @@
 | [FighterHud](FighterHud/README.md) | WPF + SkiaSharp (.NET 8) | 戦闘機のタクティカル HUD デモ |
 | [MechHud](MechHud/README.md) | WPF + SkiaSharp (.NET 8) | 陸戦人型機動兵器（メカ）の HUD デモ |
 | [TacticalArmorHud](TacticalArmorHudOld/README.md) | WPF + SkiaSharp (.NET 8) | 戦術機コックピット HUD（TSF 風）デモ |
+| [Trader](Trader/README.md) | WPF + SkiaSharp (.NET 10) | TradingView 風のトレーディングチャート |
 | [WorkDraw](WorkDraw/README.md) | Blazor Server (.NET 10) | draw.io 風の AWS 構成図エディタ |
 
 ---
@@ -59,6 +60,14 @@ FighterHud をベースにした陸戦人型機動兵器（メカ）向けの HU
 
 [<img src="TacticalArmorHudOld/screenshot.png" width="640" alt="TacticalArmorHud">](TacticalArmorHudOld/README.md)
 
+### [Trader](Trader/README.md)
+
+TradingView 風のトレーディングチャート。ローソク足 / ライン / エリアの描画、パン・ズーム、
+クロスヘア、SMA / EMA / 出来高インジケーターを備え、5 銘柄 × 6 時間足の疑似マーケットデータが
+リアルタイムに更新されます。
+
+[<img src="Trader/docs/screenshot.png" width="640" alt="Trader">](Trader/README.md)
+
 ### [WorkDraw](WorkDraw/README.md)
 
 Blazor Server 製の draw.io 風ダイアグラムエディタ。AWS 構成図に特化したステンシルを備え、
@@ -70,13 +79,19 @@ Blazor Server 製の draw.io 風ダイアグラムエディタ。AWS 構成図�
 
 ## ビルド / 実行
 
-各プロジェクトのフォルダで以下を実行します。
+全プロジェクトをまとめてビルドする場合は、リポジトリ直下の `WorkSkiaUI.slnx` を使います。
+
+```powershell
+dotnet build WorkSkiaUI.slnx -c Release
+```
+
+個別に実行する場合は、各プロジェクトのフォルダで以下を実行します。
 
 ```powershell
 dotnet run -c Release
 ```
 
-- **EnergyLineHmi / EnergyLineHmiIso / WorkCar / FighterHud / MechHud / TacticalArmorHud**: Windows 上で WPF ウィンドウが開きます（要 .NET SDK）。
+- **EnergyLineHmi / EnergyLineHmiIso / WorkCar / FighterHud / MechHud / TacticalArmorHud / Trader**: Windows 上で WPF ウィンドウが開きます（要 .NET SDK）。
 - **WorkDraw**: 起動後にコンソール表示の URL（例: `http://localhost:5233`）をブラウザで開きます。
 
 > .NET 10 SDK があれば .NET 8 ターゲットを含む全プロジェクトをビルドできます。

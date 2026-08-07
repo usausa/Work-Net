@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="EnergyLineHmi/EnergyLineHmi.csproj" />
+  <Project Path="EnergyLineHmiIso/EnergyLineHmiIso.csproj" />
+  <Project Path="FighterHud/FighterHud.csproj" />
+  <Project Path="MechHud/MechHud.csproj" />
+  <Project Path="TacticalArmorHudOld/TacticalArmorHud.csproj" />
+  <Project Path="Trader/Trader.csproj" />
+  <Project Path="WorkCar/WorkCar.csproj" />
+  <Project Path="WorkDraw/WorkDraw.csproj" />
+</Solution>

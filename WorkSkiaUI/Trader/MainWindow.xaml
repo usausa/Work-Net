@@ -1,0 +1,59 @@
+<Window x:Class="Trader.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ch="clr-namespace:Trader.Charting"
+        Title="Trader — TradingView風チャート (WPF + SkiaSharp)"
+        Width="1360" Height="820"
+        Background="{StaticResource BgBrush}"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel>
+
+        <!-- ツールバー
+             各チップの選択値は Tag に持たせ、コードビハインド側で解決する。
+             GroupName で「銘柄」「時間足」「チャートタイプ」の排他グループを分けている。 -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="10,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="⚡ Trader" Foreground="{StaticResource TextBrush}"
+                           FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Border Style="{StaticResource VSep}"/>
+
+                <!-- 銘柄: Symbols.All からコードビハインドで動的に生成する -->
+                <StackPanel x:Name="SymbolPanel" Orientation="Horizontal"/>
+                <Border Style="{StaticResource VSep}"/>
+
+                <!-- 時間足: Tag は分単位。切り替えると系列そのものが差し替わる -->
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="1分" Tag="1" Checked="OnTfChecked" IsChecked="True"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="5分" Tag="5" Checked="OnTfChecked"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="15分" Tag="15" Checked="OnTfChecked"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="1時間" Tag="60" Checked="OnTfChecked"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="4時間" Tag="240" Checked="OnTfChecked"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="tf" Content="日足" Tag="1440" Checked="OnTfChecked"/>
+                <Border Style="{StaticResource VSep}"/>
+
+                <!-- チャートタイプと表示オプション: データは変えず描画方法だけを切り替える -->
+                <RadioButton Style="{StaticResource Chip}" GroupName="mode" Content="ローソク" Tag="Candles" Checked="OnModeChecked" IsChecked="True"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="mode" Content="ライン" Tag="Line" Checked="OnModeChecked"/>
+                <RadioButton Style="{StaticResource Chip}" GroupName="mode" Content="エリア" Tag="Area" Checked="OnModeChecked"/>
+                <Border Style="{StaticResource VSep}"/>
+
+                <CheckBox x:Name="CbSma" Style="{StaticResource ChipCheck}" Content="SMA 20" IsChecked="True" Click="OnIndicator"/>
+                <CheckBox x:Name="CbEma" Style="{StaticResource ChipCheck}" Content="EMA 50" IsChecked="True" Click="OnIndicator"/>
+                <CheckBox x:Name="CbVol" Style="{StaticResource ChipCheck}" Content="出来高" IsChecked="True" Click="OnIndicator"/>
+                <Border Style="{StaticResource VSep}"/>
+
+                <Button Style="{StaticResource ToolButton}" Content="最新へ" Click="OnFit"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ステータスバー: 最終値・本数・操作ヒント。内容はティックごとに書き換わる -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="10,4">
+            <TextBlock x:Name="StatusText" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
+        </Border>
+
+        <!-- チャート本体: 残り領域いっぱいを SkiaSharp が直接描画する -->
+        <ch:ChartControl x:Name="Chart"/>
+
+    </DockPanel>
+</Window>
