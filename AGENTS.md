@@ -4,6 +4,7 @@
 - **Instance field:** Do not use `_` prefix for member variables
 - **Warnings:** Ensure there are no build warnings
 - **Suppress warnings:** If warning suppression is needed, ask before applying the fix
+- **Line endings:** Never change existing line endings, use CRLF for newly created text files
 
 # ドキュメント作成・技術調査
 
